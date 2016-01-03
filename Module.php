@@ -5,15 +5,11 @@
  * @license http://www.yiiframework.com/license/
  */
 
-namespace yii\debug;
+namespace giantbits\crelish;
 
 use Yii;
 use yii\base\Application;
 use yii\base\BootstrapInterface;
-use yii\helpers\Html;
-use yii\helpers\Url;
-use yii\web\View;
-use yii\web\ForbiddenHttpException;
 
 /**
  * The Yii Debug Module provides the debug toolbar and debugger
@@ -39,63 +35,27 @@ class Module extends \yii\base\Module implements BootstrapInterface {
    */
   public function init() {
     parent::init();
-    $this->dataPath = Yii::getAlias($this->dataPath);
-    //$this->initPanels();
+
+    //$this->dataPath = Yii::getAlias($this->dataPath);
   }
 
   /**
    * @inheritdoc
    */
   public function bootstrap($app) {
-    $this->logTarget = Yii::$app->getLog()->targets['debug'] = new LogTarget($this);
-
     // delay attaching event handler to the view component after it is fully configured
-    $app->on(Application::EVENT_BEFORE_REQUEST, function () use ($app) {
-      $app->getView()->on(View::EVENT_END_BODY, [$this, 'renderToolbar']);
-    });
-
     $app->getUrlManager()->addRules([
       [
-        'class' => 'yii\web\UrlRule',
-        'route' => $this->id,
-        'pattern' => $this->id,
+        'class' => 'giantbits\crelish\components\CrelishBaseUrlRule'
       ],
-      [
-        'class' => 'yii\web\UrlRule',
-        'route' => $this->id . '/<controller>/<action>',
-        'pattern' => $this->id . '/<controller:[\w\-]+>/<action:[\w\-]+>',
-      ]
     ], FALSE);
-  }
 
-  /**
-   * @inheritdoc
-   */
-  public function beforeAction($action) {
-    if (!$this->enableDebugLogs) {
-      foreach (Yii::$app->getLog()->targets as $target) {
-        $target->enabled = FALSE;
-      }
-    }
+    // Force theming from base app.
+    $this->setViewPath('@app/views');
 
-    if (!parent::beforeAction($action)) {
-      return FALSE;
-    }
-
-    // do not display debug toolbar when in debug view mode
-    Yii::$app->getView()->off(View::EVENT_END_BODY, [$this, 'renderToolbar']);
-
-    if ($this->checkAccess()) {
-      $this->resetGlobalSettings();
-      return TRUE;
-    }
-    elseif ($action->id === 'toolbar') {
-      // Accessing toolbar remotely is normal. Do not throw exception.
-      return FALSE;
-    }
-    else {
-      throw new ForbiddenHttpException('You are not allowed to access this page.');
-    }
+    $app->on(Application::EVENT_BEFORE_REQUEST, function () use ($app){
+     // var_dump($app);
+    });
   }
 
   /**
@@ -103,28 +63,6 @@ class Module extends \yii\base\Module implements BootstrapInterface {
    */
   protected function resetGlobalSettings() {
     Yii::$app->assetManager->bundles = [];
-  }
-
-  /**
-   * Renders mini-toolbar at the end of page body.
-   *
-   * @param \yii\base\Event $event
-   */
-  public function renderToolbar($event) {
-    if (!$this->checkAccess() || Yii::$app->getRequest()->getIsAjax()) {
-      return;
-    }
-    $url = Url::toRoute([
-      '/' . $this->id . '/default/toolbar',
-      'tag' => $this->logTarget->tag,
-    ]);
-    echo '<div id="yii-debug-toolbar" data-url="' . Html::encode($url) . '" style="display:none" class="yii-debug-toolbar-bottom"></div>';
-    /* @var $view View */
-    $view = $event->sender;
-
-    // echo is used in order to support cases where asset manager is not available
-    echo '<style>' . $view->renderPhpFile(__DIR__ . '/assets/toolbar.css') . '</style>';
-    echo '<script>' . $view->renderPhpFile(__DIR__ . '/assets/toolbar.js') . '</script>';
   }
 
   /**

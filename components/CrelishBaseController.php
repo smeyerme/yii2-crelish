@@ -6,7 +6,7 @@
  * Time: 17:17
  */
 
-namespace app\components;
+namespace giantbits\crelish\components;
 
 use yii;
 use yii\base\Controller;
@@ -76,43 +76,35 @@ class CrelishBaseController extends Controller {
 
     // Switch template.
     $this->template = $this->selectTemplate($this->meta);
-
     $this->title = $this->meta['title'];
 
-
     // Render template.
-    return $this->render($this->template, ['content' => $this->out, 'data'=>$this->meta]);
-  }
-
-  protected function processModularFile($file) {
-    $rawContent = $this->loadFileContent($file);
-
-    //$headers = $this->getMetaHeaders();
-    $meta = $this->fileHandler->parseFileMeta($rawContent);
-
-    $processedContent = $this->fileHandler->prepareFileContent($rawContent, $meta, true);
-    $processedContent = $this->fileHandler->parseFileContent($processedContent);
-
-    $template = $this->selectTemplate($meta, $file);
-
-    return $this->renderPartial($template, ['content' => $processedContent, 'data'=>$meta]);
+    return $this->render($this->template, [
+      'content' => $this->out,
+      'data' => $this->meta
+    ]);
   }
 
   protected function buildRenderOutput() {
 
     $type = (!empty($this->meta['type'])) ? $this->meta['type'] : NULL;
 
-    switch ($type) {
-      case 'modular':
+    //Check for processor class.
+    //Run processor.
+    //Run default processor.
+    $processorClass = 'giantbits\crelish\plugin\core\\' . ucfirst($type) . 'TypeProcessor';
 
+    if(class_exists($processorClass)) {
 
-        break;
+      $processor = new $processorClass;
+      $processor->fileHandler = $this->fileHandler;
+      $processor->configHandler = $this->configHandler;
+      $this->out = $processor->processOutput();
 
-      default:
-        $this->out = $this->fileHandler->prepareFileContent($this->rawContent, $this->meta);
-        $this->out = $this->fileHandler->parseFileContent($this->out);
+    } else {
+      $this->out = $this->fileHandler->prepareFileContent($this->rawContent, $this->meta);
+      $this->out = $this->fileHandler->parseFileContent($this->out);
     }
-
   }
 
   protected function selectTemplate($meta, $file = NULL) {
@@ -120,7 +112,7 @@ class CrelishBaseController extends Controller {
 
     $requestTemplate = $this->requestUrl;
 
-    if(!empty($file)) {
+    if (!empty($file)) {
       $pathArr = explode("/", $file);
       $segment = count($pathArr) - 2;
       $requestTemplate = preg_replace('/[0-9]+/', '', $pathArr[$segment]);
@@ -131,7 +123,7 @@ class CrelishBaseController extends Controller {
       $template = (!empty($file) ? 'modular/' : '') . $requestTemplate;
     }
 
-    if (file_exists(Yii::$app->view->theme->basePath . '/frontend/'  . (!empty($file) ? 'modular/' : '') . $requestTemplate . '.mustache')) {
+    if (file_exists(Yii::$app->view->theme->basePath . '/frontend/' . (!empty($file) ? 'modular/' : '') . $requestTemplate . '.mustache')) {
       $template = (!empty($file) ? 'modular/' : '') . $requestTemplate . '.mustache';
     }
 
@@ -387,12 +379,4 @@ class CrelishBaseController extends Controller {
       }
     }
   }
-
-  protected function getAbsolutePath($path) {
-    if (substr($path, 0, 1) !== '/') {
-      $path = $this->getRootDir() . $path;
-    }
-    return rtrim($path, '/') . '/';
-  }
-
 }

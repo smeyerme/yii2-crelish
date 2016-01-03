@@ -6,7 +6,7 @@
  * Time: 18:25
  */
 
-namespace app\components;
+namespace giantbits\crelish\components;
 
 use yii\base\Component;
 use yii\helpers\Url;

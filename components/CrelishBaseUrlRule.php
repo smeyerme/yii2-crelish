@@ -6,7 +6,7 @@
  * Time: 20:17
  */
 
-namespace app\components;
+namespace giantbits\crelish\components;
 
 use yii\helpers\Url;
 use yii\web\UrlRuleInterface;
@@ -43,7 +43,7 @@ class CrelishBaseUrlRule extends Object implements UrlRuleInterface
       'pathRequested' => (!empty($pathInfo)) ? $pathInfo : 'home'
     ];
 
-    return ['frontend/run', $params];
-    return false;  // this rule does not apply
+    return ['crelish/frontend/run', $params];
+    //return false;  // this rule does not apply
   }
 }
