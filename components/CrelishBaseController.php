@@ -52,7 +52,7 @@ class CrelishBaseController extends Controller {
     $this->discoverRequestFile();
 
     if (file_exists($this->requestFile)) {
-      $this->rawContent = $this->loadFileContent($this->requestFile);
+      $this->rawContent = $this->fileHandler->loadFileContent($this->requestFile);
     }
     else {
       header($_SERVER['SERVER_PROTOCOL'] . ' 404 Not Found');
@@ -65,6 +65,7 @@ class CrelishBaseController extends Controller {
     // Build render output.
     $this->buildRenderOutput();
 
+    //Service stuff.
     $this->readPages();
     $this->sortPages();
     $this->discoverCurrentPage();
@@ -75,7 +76,7 @@ class CrelishBaseController extends Controller {
     }
 
     // Switch template.
-    $this->template = $this->selectTemplate($this->meta);
+    $this->template = $this->fileHandler->selectTemplate($this->requestUrl, $this->meta);
     $this->title = $this->meta['title'];
 
     // Render template.
@@ -96,44 +97,15 @@ class CrelishBaseController extends Controller {
 
     if(class_exists($processorClass)) {
 
-      $processor = new $processorClass;
+      $processor = new $processorClass($this->requestUrl, $this->requestFile, $this->meta, $this->rawContent, $this->fileHandler, $this->configHandler);
       $processor->fileHandler = $this->fileHandler;
       $processor->configHandler = $this->configHandler;
-      $this->out = $processor->processOutput();
+      $this->out = $processor->getProcessorOutput();
 
     } else {
       $this->out = $this->fileHandler->prepareFileContent($this->rawContent, $this->meta);
       $this->out = $this->fileHandler->parseFileContent($this->out);
     }
-  }
-
-  protected function selectTemplate($meta, $file = NULL) {
-    $template = (!empty($file) ? 'modular/' : '') . 'default.mustache';
-
-    $requestTemplate = $this->requestUrl;
-
-    if (!empty($file)) {
-      $pathArr = explode("/", $file);
-      $segment = count($pathArr) - 2;
-      $requestTemplate = preg_replace('/[0-9]+/', '', $pathArr[$segment]);
-    }
-
-    // Check if there is a template/view by the name of the requested path.
-    if (file_exists(Yii::$app->view->theme->basePath . '/frontend/' . (!empty($file) ? 'modular/' : '') . $requestTemplate)) {
-      $template = (!empty($file) ? 'modular/' : '') . $requestTemplate;
-    }
-
-    if (file_exists(Yii::$app->view->theme->basePath . '/frontend/' . (!empty($file) ? 'modular/' : '') . $requestTemplate . '.mustache')) {
-      $template = (!empty($file) ? 'modular/' : '') . $requestTemplate . '.mustache';
-    }
-
-    // Manually defined templates have highest priority.
-    if (!empty($meta['template'])) {
-      $template = $meta['template'];
-    }
-
-    return $template;
-
   }
 
   protected function readPages() {
@@ -277,10 +249,6 @@ class CrelishBaseController extends Controller {
     }
   }
 
-  public function loadFileContent($file) {
-    return file_get_contents($file);
-  }
-
   public function load404Content($file) {
     $errorFileDir = substr($file, strlen($this->configHandler->getConfig('content_dir')));
     do {
@@ -293,7 +261,7 @@ class CrelishBaseController extends Controller {
       throw new RuntimeException('Required "' . $errorFile . '" not found');
     }
 
-    return $this->loadFileContent($this->configHandler->getConfig('content_dir') . $errorFile);
+    return $this->fileHandler->loadFileContent($this->configHandler->getConfig('content_dir') . $errorFile);
   }
 
   public function getRawContent() {

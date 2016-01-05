@@ -165,7 +165,50 @@ class CrelishFileHandler extends Component {
     return $this->requestFile;
   }
 
-  public function parseFolderContent() {
+  public function loadFileContent($file) {
+    return file_get_contents($file);
+  }
 
+  public function selectTemplate($requestUrl, $meta, $file = NULL) {
+    $template = (!empty($file) ? 'modular/' : '') . 'default.mustache';
+
+    $requestTemplate = $requestUrl;
+
+
+    if (!empty($file)) {
+         $pathArr = explode("/", $file);
+      $segment = count($pathArr) - 2;
+      $requestTemplate = preg_replace('/[0-9]+/', '', $pathArr[$segment]);
+    }
+
+    // Check if there is a template/view by the name of the requested path.
+    if (file_exists(\Yii::$app->view->theme->basePath . '/frontend/' . (!empty($file) ? 'modular/' : '') . $requestTemplate)) {
+      $template = (!empty($file) ? 'modular/' : '') . $requestTemplate;
+    }
+
+    if (file_exists(\Yii::$app->view->theme->basePath . '/frontend/' . (!empty($file) ? 'modular/' : '') . $requestTemplate . '.mustache')) {
+      $template = (!empty($file) ? 'modular/' : '') . $requestTemplate . '.mustache';
+    }
+
+    // Manually defined templates have highest priority.
+    if (!empty($meta['template'])) {
+      $template = $meta['template'];
+    }
+
+    return $template;
+
+  }
+
+  public function parseFolderContent($path) {
+    $filesArr = [];
+
+    $files = \yii\helpers\FileHelper::findFiles($path);
+    if (isset($files[0])) {
+      foreach ($files as $file) {
+        $filesArr[] = $file;
+      }
+    }
+
+    return $filesArr;
   }
 }
