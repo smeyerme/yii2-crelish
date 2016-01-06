@@ -21,14 +21,14 @@ class CrelishBaseTypeProcessor extends Component {
   public $rawContent;
   public $content;
 
-  public function __construct($requestUrl, $requestFile, $meta, $rawContent, $fileHandler, $configHandler, $config = [])
+  public function __construct($requestUrl, $requestFile, &$meta, $rawContent, $fileHandler, $configHandler, $config = [])
   {
 
     $this->requestUrl= $requestUrl;
     $this->requestFile = $requestFile;
     $this->configHandler = $configHandler;
     $this->fileHandler = $fileHandler;
-    $this->meta = $meta;
+    $this->meta = &$meta;
     $this->rawContent = $rawContent;
 
     parent::__construct($config);
