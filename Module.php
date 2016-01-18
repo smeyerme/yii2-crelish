@@ -34,6 +34,7 @@ class Module extends \yii\base\Module implements BootstrapInterface {
    * @inheritdoc
    */
   public function init() {
+
     parent::init();
 
     //$this->dataPath = Yii::getAlias($this->dataPath);
@@ -48,7 +49,7 @@ class Module extends \yii\base\Module implements BootstrapInterface {
       [
         'class' => 'giantbits\crelish\components\CrelishBaseUrlRule'
       ],
-    ], FALSE);
+    ], TRUE);
 
     // Force theming from base app.
     $this->setViewPath('@app/views');

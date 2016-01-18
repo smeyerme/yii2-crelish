@@ -11,340 +11,285 @@ namespace giantbits\crelish\components;
 use yii;
 use yii\base\Controller;
 
-class CrelishBaseController extends Controller {
+class CrelishBaseController extends Controller
+{
 
-  public $title;
-  const SORT_ASC = 0;
-  const SORT_DESC = 1;
-  const SORT_NONE = 2;
+    public $title;
+    const SORT_ASC = 0;
+    const SORT_DESC = 1;
+    const SORT_NONE = 2;
 
-  protected $locked = FALSE;
-  protected $plugins;
-  protected $requestUrl;
-  protected $requestFile;
-  protected $rawContent;
-  protected $meta;
-  protected $out;
-  protected $pages;
-  protected $currentPage;
-  protected $previousPage;
-  protected $nextPage;
-  protected $template;
+    protected $locked = FALSE;
+    protected $plugins;
+    protected $requestUrl;
+    protected $requestFile;
+    protected $rawContent;
+    protected $meta;
+    protected $out;
+    protected $pages;
+    public $pageCollection;
+    protected $page;
+    protected $previousPage;
+    protected $nextPage;
+    protected $template;
 
-  protected $fileHandler;
-  protected $configHandler;
+    protected $fileHandler;
+    protected $configHandler;
 
-  public function init() {
-    parent::init();
+    public function init()
+    {
+        Yii::$app->language = Yii::$app->request->get('language');
 
-    $this->configHandler = new CrelishConfig();
-    $this->configHandler->loadConfig();
+        $this->configHandler = new CrelishConfig();
+        $this->configHandler->loadConfig();
 
-    $this->fileHandler = new CrelishFileHandler();
-    $this->fileHandler->setConfig($this->configHandler);
-  }
+        $this->fileHandler = new CrelishFileHandler();
+        $this->fileHandler->setConfig($this->configHandler);
 
-  public function actionRun() {
-    $this->layout = 'main';
-    $this->requestUrl = Yii::$app->request->get('pathRequested');
+        /* Workflow.
 
-    // Discover requested file.
-    $this->discoverRequestFile();
+        1) Build page collection.
+          - used for routing (specially explicit ordering [01., 02., etc])
+          - used for navigation building (on page menus etc)
+        */
+        $this->pageCollection = $this->fileHandler->buildPageCollection();
+        $this->resolvePathRequested();
 
-    if (file_exists($this->requestFile)) {
-      $this->rawContent = $this->fileHandler->loadFileContent($this->requestFile);
-    }
-    else {
-      header($_SERVER['SERVER_PROTOCOL'] . ' 404 Not Found');
-      $this->rawContent = $this->load404Content($this->requestFile);
-    }
+        parent::init();
 
-    $headers = $this->getMetaHeaders();
-    $this->meta = $this->fileHandler->parseFileMeta($this->rawContent, $headers);
-
-    // Build render output.
-    $this->buildRenderOutput();
-
-    //Service stuff.
-    $this->readPages();
-    $this->sortPages();
-    $this->discoverCurrentPage();
-
-    // Switch layout if defined.
-    if (!empty($this->meta['layout'])) {
-      $this->layout = $this->meta['layout'];
     }
 
-    // Switch template.
-    $this->template = $this->fileHandler->selectTemplate($this->requestUrl, $this->meta);
-    $this->title = $this->meta['title'];
+    private function resolvePathRequested()
+    {
+        $page = null;
+        $this->requestUrl = Yii::$app->request->get('pathRequested');
 
-    // Render template.
-    return $this->render($this->template, [
-      'content' => $this->out,
-      'data' => $this->meta
-    ]);
-  }
-
-  protected function buildRenderOutput() {
-
-    $type = (!empty($this->meta['type'])) ? $this->meta['type'] : NULL;
-
-    //Check for processor class.
-    //Run processor.
-    //Run default processor.
-    $processorClass = 'giantbits\crelish\plugin\core\\' . ucfirst($type) . 'TypeProcessor';
-
-    if(class_exists($processorClass)) {
-
-      $processor = new $processorClass($this->requestUrl, $this->requestFile, $this->meta, $this->rawContent, $this->fileHandler, $this->configHandler);
-      $processor->fileHandler = $this->fileHandler;
-      $processor->configHandler = $this->configHandler;
-      $this->out = $processor->getProcessorOutput();
-
-    } else {
-      $this->out = $this->fileHandler->prepareFileContent($this->rawContent, $this->meta);
-      $this->out = $this->fileHandler->parseFileContent($this->out);
-    }
-  }
-
-  protected function readPages() {
-    $this->pages = array();
-    $files = $this->getFiles(Yii::$app->basePath . '/' . $this->configHandler->getConfig('content_dir'), $this->configHandler->getConfig('content_ext'));
-
-    foreach ($files as $i => $file) {
-      // skip 404 page
-      if (basename($file) == '404' . $this->configHandler->getConfig('content_ext')) {
-        unset($files[$i]);
-        continue;
-      }
-
-      $id = substr($file, strlen($this->configHandler->getConfig('content_dir')), -strlen($this->configHandler->getConfig('content_ext')));
-
-      // drop inaccessible pages (e.g. drop "sub.md" if "sub/index.md" exists)
-      $conflictFile = $this->configHandler->getConfig('content_dir') . $id . '/index' . $this->configHandler->getConfig('content_ext');
-      if (in_array($conflictFile, $files, TRUE)) {
-        continue;
-      }
-
-      $url = $this->getPageUrl($id);
-      if ($file != $this->requestFile) {
-        $rawContent = file_get_contents($file);
-        $meta = $this->fileHandler->parseFileMeta($rawContent, $this->getMetaHeaders());
-      }
-      else {
-        $rawContent = &$this->rawContent;
-        $meta = &$this->meta;
-      }
-
-      // build page data
-      // title, description, author and date are assumed to be pretty basic data
-      // everything else is accessible through $page['meta']
-      $page = array(
-        'id' => $id,
-        'url' => $url,
-        'title' => &$meta['title'],
-        'description' => &$meta['description'],
-        'author' => &$meta['author'],
-        'time' => &$meta['time'],
-        'date' => &$meta['date'],
-        'date_formatted' => &$meta['date_formatted'],
-        'raw_content' => &$rawContent,
-        'meta' => &$meta
-      );
-
-      if ($file == $this->requestFile) {
-        $page['content'] = &$this->out;
-      }
-
-      unset($rawContent, $meta);
-      $this->pages[$id] = $page;
-    }
-  }
-
-  public function getPageUrl($page) {
-    return $page;
-  }
-
-  protected function getFiles($directory, $fileExtension = '', $order = self::SORT_ASC) {
-    $directory = rtrim($directory, '/');
-    $result = array();
-
-    // Scandir() reads files in alphabetical order
-    $files = scandir($directory, $order);
-    $fileExtensionLength = strlen($fileExtension);
-    if ($files !== FALSE) {
-      foreach ($files as $file) {
-        // exclude hidden files/dirs starting with a .; this also excludes the special dirs . and ..
-        // exclude files ending with a ~ (vim/nano backup) or # (emacs backup)
-        if ((substr($file, 0, 1) === '.') || in_array(substr($file, -1), array(
-            '~',
-            '#'
-          ))
-        ) {
-          continue;
+        if (!empty($this->requestUrl)) {
+            $keys = explode('/', $this->requestUrl);
+            foreach ($keys as $key) {
+                if (empty($page)) {
+                    $page = $this->pageCollection[$key];
+                }
+                if (isset($page[$key])) {
+                    $page = $page[$key];
+                } else {
+                    $page = $page;
+                }
+            }
         }
 
-        if (is_dir($directory . '/' . $file)) {
-          // get files recursively
-          $result = array_merge($result, $this->getFiles($directory . '/' . $file, $fileExtension, $order));
-        }
-        elseif (empty($fileExtension) || (substr($file, -$fileExtensionLength) === $fileExtension)) {
-          $result[] = $directory . '/' . $file;
-        }
-      }
+        $this->page = $page;
     }
 
-    return $result;
-  }
+    public function actionRun()
+    {
+        $this->layout = 'main';
 
-  public function getRequestUrl() {
-    return $this->requestUrl;
-  }
-
-  protected function discoverRequestFile() {
-    if (empty($this->requestUrl)) {
-      $this->requestFile = $this->configHandler->getConfig('content_dir') . 'index' . $this->configHandler->getConfig('content_ext');
-    }
-    else {
-      // prevent content_dir breakouts using malicious request URLs
-      // we don't use realpath() here because we neither want to check for file existance
-      // nor prohibit symlinks which intentionally point to somewhere outside the content_dir
-      // it is STRONGLY RECOMMENDED to use open_basedir
-      $requestUrl = str_replace('\\', '/', $this->requestUrl);
-      $requestUrlParts = explode('/', $requestUrl);
-
-      $requestFileParts = array();
-      foreach ($requestUrlParts as $requestUrlPart) {
-        if (($requestUrlPart === '') || ($requestUrlPart === '.')) {
-          continue;
-        }
-        elseif ($requestUrlPart === '..') {
-          array_pop($requestFileParts);
-          continue;
+        if ($this->page) {
+            $this->requestFile = $this->page['pathOrig'];
+        } else {
+            throw new \yii\web\NotFoundHttpException();
         }
 
-        $requestFileParts[] = $requestUrlPart;
-      }
+        $this->rawContent = $this->fileHandler->loadFileContent($this->requestFile);
 
-      if (empty($requestFileParts)) {
-        $this->requestFile = $this->configHandler->getConfig('content_dir') . 'index' . $this->configHandler->getConfig('content_ext');
-        return;
-      }
+        $headers = $this->getMetaHeaders();
+        $this->meta = $this->fileHandler->parseFileMeta($this->rawContent, $headers, $this->requestFile);
 
-      // discover the content file to serve
-      // Note: $requestFileParts neither contains a trailing nor a leading slash
-      $this->requestFile = Yii::$app->basePath . '/' . $this->configHandler->getConfig('content_dir') . implode('/', $requestFileParts);
+        // Build render output.
+        $this->buildRenderOutput();
 
-      if (is_dir($this->requestFile)) {
-        // if no index file is found, try a accordingly named file in the previous dir
-        // if this file doesn't exist either, show the 404 page, but assume the index
-        $indexFile = $this->requestFile . '/index' . $this->configHandler->getConfig('content_ext');
-        if (file_exists($indexFile) || !file_exists($this->requestFile . $this->configHandler->getConfig('content_ext'))) {
-          $this->requestFile = $indexFile;
-          return;
-        }
-      }
-      $this->requestFile .= $this->configHandler->getConfig('content_ext');
-    }
-  }
-
-  public function load404Content($file) {
-    $errorFileDir = substr($file, strlen($this->configHandler->getConfig('content_dir')));
-    do {
-      $errorFileDir = dirname($errorFileDir);
-      $errorFile = $errorFileDir . '/404' . $this->configHandler->getConfig('content_ext');
-    } while (!file_exists($this->configHandler->getConfig('content_dir') . $errorFile) && ($errorFileDir !== '.'));
-
-    if (!file_exists($this->configHandler->getConfig('content_dir') . $errorFile)) {
-      $errorFile = ($errorFileDir === '.') ? '404' . $this->configHandler->getConfig('content_ext') : $errorFile;
-      throw new RuntimeException('Required "' . $errorFile . '" not found');
-    }
-
-    return $this->fileHandler->loadFileContent($this->configHandler->getConfig('content_dir') . $errorFile);
-  }
-
-  public function getRawContent() {
-    return $this->rawContent;
-  }
-
-  public function getMetaHeaders() {
-    $headers = array(
-      'title' => 'Title',
-      'description' => 'Description',
-      'author' => 'Author',
-      'date' => 'Date',
-      'robots' => 'Robots',
-      'template' => 'Template'
-    );
-
-    //$this->triggerEvent('onMetaHeaders', array(&$headers));
-    return $headers;
-  }
-
-  protected function sortPages() {
-    // sort pages
-    $order = $this->configHandler->getConfig('pages_order');
-    $alphaSortClosure = function ($a, $b) use ($order) {
-      $aSortKey = (basename($a['id']) === 'index') ? dirname($a['id']) : $a['id'];
-      $bSortKey = (basename($b['id']) === 'index') ? dirname($b['id']) : $b['id'];
-
-      $cmp = strcmp($aSortKey, $bSortKey);
-      return $cmp * (($order == 'desc') ? -1 : 1);
-    };
-
-    if ($this->configHandler->getConfig('pages_order_by') == 'date') {
-      // sort by date
-      uasort($this->pages, function ($a, $b) use ($alphaSortClosure, $order) {
-        if (empty($a['time']) || empty($b['time'])) {
-          $cmp = (empty($a['time']) - empty($b['time']));
-        }
-        else {
-          $cmp = ($b['time'] - $a['time']);
+        // Switch layout if defined.
+        if (!empty($this->meta['layout'])) {
+            $this->layout = $this->meta['layout'];
         }
 
-        if ($cmp === 0) {
-          // never assume equality; fallback to alphabetical order
-          return $alphaSortClosure($a, $b);
+        // Switch template.
+        $this->template = $this->fileHandler->selectTemplate($this->requestUrl, $this->meta);
+        $this->title = $this->meta['title'];
+
+        $contentArray = explode("===", $this->out);
+
+        if (count($contentArray) == 1) {
+            $contentArray[1] = $contentArray[0];
+            $contentArray[0] = '';
         }
 
-        return $cmp * (($order == 'desc') ? 1 : -1);
-      });
+        $pageData = array_merge([
+            'summary' => $contentArray[0],
+            'content' => $contentArray[1]
+        ], $this->meta);
+
+        // Render template.
+        return $this->render($this->template, [
+            'page' => $pageData
+        ]);
     }
-    else {
-      // sort alphabetically
-      uasort($this->pages, $alphaSortClosure);
+
+    protected function buildRenderOutput()
+    {
+
+        $type = (!empty($this->meta['type'])) ? $this->meta['type'] : NULL;
+
+        //Check for processor class.
+        //Run processor.
+        //Run default processor.
+        $processorClass = 'giantbits\crelish\plugin\core\\' . ucfirst($type) . 'TypeProcessor';
+
+        if (class_exists($processorClass)) {
+
+            $processor = new $processorClass($this->requestUrl, $this->requestFile, $this->meta, $this->rawContent, $this->fileHandler, $this->configHandler);
+            $processor->fileHandler = $this->fileHandler;
+            $processor->configHandler = $this->configHandler;
+            $this->out = $processor->getProcessorOutput();
+
+        } else {
+            $this->out = $this->fileHandler->prepareFileContent($this->rawContent, $this->meta);
+            $this->out = $this->fileHandler->parseFileContent($this->out);
+        }
     }
-  }
 
-  protected function discoverCurrentPage() {
-    $pageIds = array_keys($this->pages);
+    protected function readPages()
+    {
+        $this->pages = array();
+        $files = $this->getFiles(Yii::$app->basePath . '/' . $this->configHandler->getConfig('content_dir'), $this->configHandler->getConfig('content_ext'));
 
-    $contentDir = $this->configHandler->getConfig('content_dir');
-    $contentExt = $this->configHandler->getConfig('content_ext');
-    $currentPageId = substr($this->requestFile, strlen($contentDir), -strlen($contentExt));
-    $currentPageIndex = array_search($currentPageId, $pageIds);
-    if ($currentPageIndex !== FALSE) {
-      $this->currentPage = &$this->pages[$currentPageId];
+        foreach ($files as $i => $file) {
+            // skip 404 page
+            if (basename($file) == '404' . $this->configHandler->getConfig('content_ext')) {
+                unset($files[$i]);
+                continue;
+            }
 
-      if (($this->configHandler->getConfig('order_by') == 'date') && ($this->configHandler->getConfig('order') == 'desc')) {
-        $previousPageOffset = 1;
-        $nextPageOffset = -1;
-      }
-      else {
-        $previousPageOffset = -1;
-        $nextPageOffset = 1;
-      }
+            $id = substr($file, strlen($this->configHandler->getConfig('content_dir')), -strlen($this->configHandler->getConfig('content_ext')));
 
-      if (isset($pageIds[$currentPageIndex + $previousPageOffset])) {
-        $previousPageId = $pageIds[$currentPageIndex + $previousPageOffset];
-        $this->previousPage = &$this->pages[$previousPageId];
-      }
+            // drop inaccessible pages (e.g. drop "sub.md" if "sub/index.md" exists)
+            $conflictFile = $this->configHandler->getConfig('content_dir') . $id . '/index' . $this->configHandler->getConfig('content_ext');
+            if (in_array($conflictFile, $files, TRUE)) {
+                continue;
+            }
 
-      if (isset($pageIds[$currentPageIndex + $nextPageOffset])) {
-        $nextPageId = $pageIds[$currentPageIndex + $nextPageOffset];
-        $this->nextPage = &$this->pages[$nextPageId];
-      }
+            $url = $this->getPageUrl($id);
+            if ($file != $this->requestFile) {
+                $rawContent = file_get_contents($file);
+                $meta = $this->fileHandler->parseFileMeta($rawContent, $this->getMetaHeaders());
+            } else {
+                $rawContent = &$this->rawContent;
+                $meta = &$this->meta;
+            }
+
+            // build page data
+            // title, description, author and date are assumed to be pretty basic data
+            // everything else is accessible through $page['meta']
+            $page = array(
+                'id' => $id,
+                'url' => $url,
+                'title' => &$meta['title'],
+                'description' => &$meta['description'],
+                'author' => &$meta['author'],
+                'time' => &$meta['time'],
+                'date' => &$meta['date'],
+                'date_formatted' => &$meta['date_formatted'],
+                'raw_content' => &$rawContent,
+                'meta' => &$meta
+            );
+
+            if ($file == $this->requestFile) {
+                $page['content'] = &$this->out;
+            }
+
+            unset($rawContent, $meta);
+            $this->pages[$id] = $page;
+        }
     }
-  }
+
+    public function getPageUrl($page)
+    {
+        return $page;
+    }
+
+    protected function getFiles($directory, $fileExtension = '', $order = self::SORT_ASC)
+    {
+        $directory = rtrim($directory, '/');
+        $result = array();
+
+        // Scandir() reads files in alphabetical order
+        $files = scandir($directory, $order);
+        $fileExtensionLength = strlen($fileExtension);
+        if ($files !== FALSE) {
+            foreach ($files as $file) {
+                // exclude hidden files/dirs starting with a .; this also excludes the special dirs . and ..
+                // exclude files ending with a ~ (vim/nano backup) or # (emacs backup)
+                if ((substr($file, 0, 1) === '.') || in_array(substr($file, -1), array(
+                        '~',
+                        '#'
+                    ))
+                ) {
+                    continue;
+                }
+
+                if (is_dir($directory . '/' . $file)) {
+                    // get files recursively
+                    $result = array_merge($result, $this->getFiles($directory . '/' . $file, $fileExtension, $order));
+                } elseif (empty($fileExtension) || (substr($file, -$fileExtensionLength) === $fileExtension)) {
+                    $result[] = $directory . '/' . $file;
+                }
+            }
+        }
+
+        return $result;
+    }
+
+    public function getRequestUrl()
+    {
+        return $this->requestUrl;
+    }
+
+    public function getRawContent()
+    {
+        return $this->rawContent;
+    }
+
+    public function getMetaHeaders()
+    {
+        $headers = array(
+            'title' => 'Title',
+            'description' => 'Description',
+            'author' => 'Author',
+            'date' => 'Date',
+            'robots' => 'Robots',
+            'template' => 'Template'
+        );
+
+        //$this->triggerEvent('onMetaHeaders', array(&$headers));
+        return $headers;
+    }
+
+    public function getNav($level = 1)
+    {
+        $pages = [];
+
+        if (empty(Yii::$app->controller->pageCollection)) {
+            $pageCollection = [];
+        } else {
+            $pageCollection = Yii::$app->controller->pageCollection;
+        }
+
+        foreach ($pageCollection as $page) {
+            if ($page['structureLevel'] > $level) {
+                continue;
+            }
+
+            $pageData = Yii::$app->controller->fileHandler->loadFileContent($page['pathOrig']);
+            $headers = Yii::$app->controller->getMetaHeaders();
+            $pageData = array_merge_recursive($page, Yii::$app->controller->fileHandler->parseFileMeta($pageData, $headers, $page['pathOrig']));
+
+            $pages[] = [
+                'title' => (!empty($pageData['menu'])) ? $pageData['menu'] : $pageData['title'],
+                'uri' => $pageData['self_url']
+            ];
+        }
+
+        echo Yii::$app->view->render('nav.mustache', ['pages' => $pages]);
+    }
 }

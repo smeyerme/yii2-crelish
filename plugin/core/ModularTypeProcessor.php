@@ -12,74 +12,76 @@ use giantbits\crelish\components\CrelishBaseTypeProcessor;
 use yii\base\View;
 
 
-class ModularTypeProcessor extends CrelishBaseTypeProcessor {
+class ModularTypeProcessor extends CrelishBaseTypeProcessor
+{
 
-  private $collection;
+    private $collection;
 
-  public function init() {
+    public function init()
+    {
 
-    $this->buildCollection();
-    parent::init();
-  }
-
-  protected function buildCollection() {
-    $collection = [];
-
-    if (!$this->meta['content']['items']) {
-      return;
+        $this->buildCollection();
+        parent::init();
     }
 
-    //Get path of file.
-    $path = substr($this->requestFile, 0, strrpos($this->requestFile, DIRECTORY_SEPARATOR));
+    protected function buildCollection()
+    {
+        $collection = [];
 
-    $this->collection = $this->fileHandler->parseFolderContent($path);
-
-    //Sort collection.
-    if(!empty($this->meta['content']['order'])) {
-      $orderedCollection = [];
-
-      //Check if custom sorting is defined.
-      if(!empty($this->meta['content']['order']['custom'])){
-        foreach($this->meta['content']['order']['custom'] as $item){
-          foreach($this->collection as $unsortedItem) {
-            if(strpos($unsortedItem, $item) !== false) {
-              $orderedCollection[] = $unsortedItem;
-            }
-          }
+        if (!$this->meta['data']['items']) {
+            return;
         }
 
-        $this->collection = $orderedCollection;
-      }
+        //Get path of file.
+        $path = substr($this->requestFile, 0, strrpos($this->requestFile, DIRECTORY_SEPARATOR));
 
+        $this->collection = $this->fileHandler->parseFolderContent($path);
+
+        //Sort collection.
+        if (!empty($this->meta['data']['order'])) {
+            $orderedCollection = [];
+
+            //Check if custom sorting is defined.
+            if (!empty($this->meta['data']['order']['custom'])) {
+                foreach ($this->meta['data']['order']['custom'] as $item) {
+                    foreach ($this->collection as $unsortedItem) {
+                        if (strpos($unsortedItem, $item) !== false) {
+                            $orderedCollection[] = $unsortedItem;
+                        }
+                    }
+                }
+                $this->collection = $orderedCollection;
+            }
+        }
     }
 
-  }
+    protected function processModularFile($file)
+    {
+        $rawContent = $this->fileHandler->loadFileContent($file);
 
-  protected function processModularFile($file) {
-    $rawContent = $this->fileHandler->loadFileContent($file);
+        //$headers = $this->getMetaHeaders();
+        $meta = $this->fileHandler->parseFileMeta($rawContent, [], $file);
 
-    //$headers = $this->getMetaHeaders();
-    $meta = $this->fileHandler->parseFileMeta($rawContent);
+        $processedContent = $this->fileHandler->prepareFileContent($rawContent, $meta, TRUE);
+        $processedContent = $this->fileHandler->parseFileContent($processedContent);
 
-    $processedContent = $this->fileHandler->prepareFileContent($rawContent, $meta, TRUE);
-    $processedContent = $this->fileHandler->parseFileContent($processedContent);
+        $template = $this->fileHandler->selectTemplate($this->requestUrl, $meta, $file);
 
-    $template = $this->fileHandler->selectTemplate($this->requestUrl, $meta, $file);
-
-    //Render the thing.
-    return \Yii::$app->controller->renderPartial($template, [
-      'content' => $processedContent,
-      'data' => $meta
-    ]);
-  }
-
-  public function getProcessorOutput() {
-
-    foreach($this->collection as $file){
-      $this->content .= $this->processModularFile($file);
+        //Render the thing.
+        return \Yii::$app->controller->renderPartial($template, [
+            'content' => $processedContent,
+            'data' => $meta
+        ]);
     }
 
-    return $this->content;
-  }
+    public function getProcessorOutput()
+    {
+
+        foreach ($this->collection as $file) {
+            $this->content .= $this->processModularFile($file);
+        }
+
+        return $this->content;
+    }
 
 }
