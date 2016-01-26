@@ -34,7 +34,6 @@ class ModularTypeProcessor extends CrelishBaseTypeProcessor
 
         //Get path of file.
         $path = substr($this->requestFile, 0, strrpos($this->requestFile, DIRECTORY_SEPARATOR));
-
         $this->collection = $this->fileHandler->parseFolderContent($path);
 
         //Sort collection.
@@ -75,9 +74,16 @@ class ModularTypeProcessor extends CrelishBaseTypeProcessor
 
     public function getProcessorOutput()
     {
-
         foreach ($this->collection as $file) {
-            $this->content .= $this->processModularFile($file);
+
+            if(\Yii::$app->language !== false ){
+                if(strpos($file, \Yii::$app->language . '.md') !== false) {
+                    $this->content .= $this->processModularFile($file);
+                }
+            } else if(substr_count(substr($file, -6), '.') == 1) {
+                $this->content .= $this->processModularFile($file);
+            }
+
         }
 
         return $this->content;

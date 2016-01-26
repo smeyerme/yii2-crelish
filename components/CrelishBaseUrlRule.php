@@ -31,7 +31,12 @@ class CrelishBaseUrlRule extends Object implements UrlRuleInterface
     public function parseRequest($manager, $request)
     {
         $pathInfo = $request->getPathInfo();
-        $pathInfo = str_replace('.html', '', $pathInfo);
+
+        if(strpos($pathInfo, '.html') === false) {
+            $pathInfo = $pathInfo . '/';
+        } else {
+            $pathInfo = str_replace('.html', '', $pathInfo);
+        }
 
         $langCode = substr($pathInfo, 0, strpos($pathInfo, '/'));
         $langFreePath = substr($pathInfo, strpos($pathInfo, '/') + 1);

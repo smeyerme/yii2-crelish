@@ -107,6 +107,7 @@ class CrelishBaseController extends Controller
         // Switch template.
         $this->template = $this->fileHandler->selectTemplate($this->requestUrl, $this->meta);
         $this->title = $this->meta['title'];
+        $this->view->title = $this->configHandler->config['site_title'] . ' ' . $this->title;
 
         $contentArray = explode("===", $this->out);
 

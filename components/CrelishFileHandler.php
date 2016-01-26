@@ -264,11 +264,11 @@ class CrelishFileHandler extends Component
             $pageLevel = substr_count($pagePathRelative, '/');
             $pageId = preg_replace('/^[0-9]+\.+/', '', substr($pagePathRelative, 0, strrpos($pagePathRelative, '/')));
 
-            $pagePathRelative = \Yii::$app->urlManager->createUrl([$pagePathRelative, 'language    ' => \Yii::$app->language]);
+            $pagePathRelative = \Yii::$app->urlManager->createUrl([$pagePathRelative, 'language' => \Yii::$app->language]);
 
             $pagesSimple[$pageId] = [
                 'pathOrig' => str_replace('.md', '.' . \Yii::$app->language . '.md', $page),
-                'pathRelative' => $pagePathRelative,
+                'pathRelative' => str_replace('.md', '.' . \Yii::$app->language . '.md', $pagePathRelative),
                 'structureLevel' => $pageLevel
             ];
         }
