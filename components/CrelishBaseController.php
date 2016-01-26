@@ -294,4 +294,11 @@ class CrelishBaseController extends Controller
 
         echo Yii::$app->view->render('nav.mustache', ['pages' => $pages]);
     }
+
+    public function afterAction($action, $result)
+    {
+        $this->fileHandler->createStaticFile($action->controller->requestUrl, $result);
+
+        return parent::afterAction($action, $result);
+    }
 }

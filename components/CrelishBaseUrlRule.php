@@ -23,7 +23,11 @@ class CrelishBaseUrlRule extends Object implements UrlRuleInterface
     public function createUrl($manager, $route, $params)
     {
         if (isset($params['language'])) {
-            return $params['language'] . '/' . $route . '.html';
+            if(!empty($params['language'])) {
+                return $params['language'] . '/' . $route . '.html';
+            } else {
+                return $route . '.html';
+            }
         }
         return Yii::$app->language . '/' . $route . '.html';
     }
@@ -32,17 +36,27 @@ class CrelishBaseUrlRule extends Object implements UrlRuleInterface
     {
         $pathInfo = $request->getPathInfo();
 
-        if(strpos($pathInfo, '.html') === false) {
+        if(empty($pathInfo)) {
+            $url=Yii::$app->urlManager->createAbsoluteUrl(['home', 'language'=>'']);
+            Yii::$app->getResponse()->redirect($url);
+        }
+
+        if(strpos($pathInfo, '.html') === false && substr($pathInfo, -1) !== '/') {
             $pathInfo = $pathInfo . '/';
         } else {
             $pathInfo = str_replace('.html', '', $pathInfo);
         }
 
-        $langCode = substr($pathInfo, 0, strpos($pathInfo, '/'));
-        $langFreePath = substr($pathInfo, strpos($pathInfo, '/') + 1);
+        if(substr_count($pathInfo, '/') === 0) {
+            $langFreePath = $pathInfo;
+            $langCode = '';
+        } else {
+            $langCode = substr($pathInfo, 0, strpos($pathInfo, '/'));
+            $langFreePath = str_replace($langCode, $pathInfo, '');
+        }
 
         $params = [
-            'pathRequested' => (!empty($langFreePath)) ? $langFreePath : 'home',
+            'pathRequested' => $langFreePath,
             'language' => $langCode
         ];
 

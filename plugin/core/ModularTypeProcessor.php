@@ -76,7 +76,7 @@ class ModularTypeProcessor extends CrelishBaseTypeProcessor
     {
         foreach ($this->collection as $file) {
 
-            if(\Yii::$app->language !== false ){
+            if(!empty(\Yii::$app->language)){
                 if(strpos($file, \Yii::$app->language . '.md') !== false) {
                     $this->content .= $this->processModularFile($file);
                 }
