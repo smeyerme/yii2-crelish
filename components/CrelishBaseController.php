@@ -141,7 +141,8 @@ class CrelishBaseController extends Controller
             $processor = new $processorClass($this->requestUrl, $this->requestFile, $this->meta, $this->rawContent, $this->fileHandler, $this->configHandler);
             $processor->fileHandler = $this->fileHandler;
             $processor->configHandler = $this->configHandler;
-            $this->out = $processor->getProcessorOutput();
+            $processedContent = $processor->getProcessorOutput();
+            $this->out = $this->fileHandler->prepareFileContent($processedContent, $this->meta);
 
         } else {
             $this->out = $this->fileHandler->prepareFileContent($this->rawContent, $this->meta);

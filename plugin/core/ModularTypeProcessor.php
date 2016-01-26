@@ -64,7 +64,6 @@ class ModularTypeProcessor extends CrelishBaseTypeProcessor
 
         $processedContent = $this->fileHandler->prepareFileContent($rawContent, $meta, TRUE);
         $processedContent = $this->fileHandler->parseFileContent($processedContent);
-
         $template = $this->fileHandler->selectTemplate($this->requestUrl, $meta, $file);
 
         //Render the thing.

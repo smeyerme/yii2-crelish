@@ -8,11 +8,9 @@
 
 namespace giantbits\crelish\components;
 
-use Faker\Provider\File;
+use app\assets\AppAsset;
 use yii\base\Component;
 use yii\helpers\FileHelper;
-use yii\mustache\helpers\Url;
-use yii\web\Request;
 
 class CrelishFileHandler extends Component
 {
@@ -144,17 +142,10 @@ class CrelishFileHandler extends Component
 
         // replace %site_title%
         $content = str_replace('%site_title%', $this->config->getConfig('site_title'), $content);
-
-        // replace %base_url%
-        if (1 == 1) {
-            // always use `%base_url%?sub/page` syntax for internal links
-            // we'll replace the links accordingly, depending on enabled rewriting
-            $content = str_replace('%base_url%?', $this->getBaseUrl(), $content);
-        } else {
-            // actually not necessary, but makes the URL look a little nicer
-            $content = str_replace('%base_url%?', $this->getBaseUrl() . '?', $content);
-        }
         $content = str_replace('%base_url%', rtrim($this->getBaseUrl(), '/'), $content);
+
+        $assetBundle = AppAsset::register(\Yii::$app->view);
+        $content = str_replace('%asset_url%', $assetBundle->baseUrl, $content);
 
         // Replace %self_url% with link to it self.
         $content = str_replace('%self_url%?', $this->getBaseUrl(), $content);
