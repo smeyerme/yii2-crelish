@@ -203,8 +203,7 @@ class CrelishFileHandler extends Component
     {
         $template = (!empty($file) ? 'modular/' : '') . 'default.mustache';
 
-        $requestTemplate = $requestUrl;
-
+        $requestTemplate = str_replace('.html', '',  $requestUrl);
 
         if (!empty($file)) {
             $pathArr = explode("/", $file);
@@ -306,6 +305,7 @@ class CrelishFileHandler extends Component
 
         if(count($pathSegments) == 1) {
             file_put_contents(\Yii::$app->basePath . DIRECTORY_SEPARATOR .'web' . DIRECTORY_SEPARATOR . $pathSegments[count($pathSegments) - 1], $content);
+            chmod(\Yii::$app->basePath . DIRECTORY_SEPARATOR .'web' . DIRECTORY_SEPARATOR . $pathSegments[count($pathSegments) - 1], 0777);
         }
 
         $staticFile = array_pop($pathSegments);
@@ -313,7 +313,7 @@ class CrelishFileHandler extends Component
 
 
         if(!is_dir(\Yii::$app->basePath . DIRECTORY_SEPARATOR . 'web' . DIRECTORY_SEPARATOR . $path)) {
-            mkdir(\Yii::$app->basePath . DIRECTORY_SEPARATOR . 'web' . DIRECTORY_SEPARATOR . $path, 0775, true);
+            mkdir(\Yii::$app->basePath . DIRECTORY_SEPARATOR . 'web' . DIRECTORY_SEPARATOR . $path, 0777, true);
         }
 
         file_put_contents(\Yii::$app->basePath . DIRECTORY_SEPARATOR .'web' . DIRECTORY_SEPARATOR . $path . DIRECTORY_SEPARATOR . $staticFile, $content);

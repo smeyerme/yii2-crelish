@@ -62,13 +62,17 @@ class CrelishBaseController extends Controller
     private function resolvePathRequested()
     {
         $page = null;
-        $this->requestUrl = Yii::$app->request->get('pathRequested');
+        $this->requestUrl = Yii::$app->request->getPathInfo();
 
         if (!empty($this->requestUrl)) {
 
             $keys = explode('/', $this->requestUrl);
+
             foreach ($keys as $key) {
-                if (empty($page)) {
+
+                $key = str_replace(".html", "", $key);
+
+                if (empty($page) && key_exists($key, $this->pageCollection)) {
                     $page = $this->pageCollection[$key];
                 }
                 if (isset($page[$key])) {
@@ -299,7 +303,9 @@ class CrelishBaseController extends Controller
 
     public function afterAction($action, $result)
     {
-        $this->fileHandler->createStaticFile(\Yii::$app->request->getPathInfo(), $result);
+        if( key_exists('cache_static', $action->controller->meta) && $action->controller->meta['cache_static'] == true) {
+            $this->fileHandler->createStaticFile(\Yii::$app->request->getPathInfo(), $result);
+        }
 
         return parent::afterAction($action, $result);
     }
