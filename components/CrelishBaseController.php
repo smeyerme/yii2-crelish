@@ -65,6 +65,7 @@ class CrelishBaseController extends Controller
         $this->requestUrl = Yii::$app->request->get('pathRequested');
 
         if (!empty($this->requestUrl)) {
+
             $keys = explode('/', $this->requestUrl);
             foreach ($keys as $key) {
                 if (empty($page)) {
@@ -83,6 +84,7 @@ class CrelishBaseController extends Controller
 
     public function actionRun()
     {
+
         $this->layout = 'main';
 
         if ($this->page) {
@@ -297,7 +299,7 @@ class CrelishBaseController extends Controller
 
     public function afterAction($action, $result)
     {
-        $this->fileHandler->createStaticFile($action->controller->requestUrl, $result);
+        $this->fileHandler->createStaticFile(\Yii::$app->request->getPathInfo(), $result);
 
         return parent::afterAction($action, $result);
     }

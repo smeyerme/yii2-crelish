@@ -305,17 +305,18 @@ class CrelishFileHandler extends Component
         $pathSegments = explode('/', $file);
 
         if(count($pathSegments) == 1) {
-            file_put_contents(\Yii::$app->basePath . DIRECTORY_SEPARATOR .'web' . DIRECTORY_SEPARATOR . $pathSegments[count($pathSegments) - 1] . '.html', $content);
+            file_put_contents(\Yii::$app->basePath . DIRECTORY_SEPARATOR .'web' . DIRECTORY_SEPARATOR . $pathSegments[count($pathSegments) - 1], $content);
         }
 
         $staticFile = array_pop($pathSegments);
         $path = implode(DIRECTORY_SEPARATOR, $pathSegments);
 
-        if(!is_dir(\Yii::$app->basePath . DIRECTORY_SEPARATOR . 'web' . $path)) {
-            mkdir(\Yii::$app->basePath . DIRECTORY_SEPARATOR . 'web' . $path, 077, true);
+
+        if(!is_dir(\Yii::$app->basePath . DIRECTORY_SEPARATOR . 'web' . DIRECTORY_SEPARATOR . $path)) {
+            mkdir(\Yii::$app->basePath . DIRECTORY_SEPARATOR . 'web' . DIRECTORY_SEPARATOR . $path, 0775, true);
         }
 
-        file_put_contents(\Yii::$app->basePath . DIRECTORY_SEPARATOR .'web' . DIRECTORY_SEPARATOR . $path . DIRECTORY_SEPARATOR . $staticFile . '.html', $content);
+        file_put_contents(\Yii::$app->basePath . DIRECTORY_SEPARATOR .'web' . DIRECTORY_SEPARATOR . $path . DIRECTORY_SEPARATOR . $staticFile, $content);
 
     }
 }

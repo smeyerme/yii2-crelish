@@ -29,7 +29,7 @@ class CrelishBaseUrlRule extends Object implements UrlRuleInterface
                 return $route . '.html';
             }
         }
-        return Yii::$app->language . '/' . $route . '.html';
+        return $route . '.html';
     }
 
     public function parseRequest($manager, $request)
@@ -37,12 +37,16 @@ class CrelishBaseUrlRule extends Object implements UrlRuleInterface
         $pathInfo = $request->getPathInfo();
 
         if(empty($pathInfo)) {
-            $url=Yii::$app->urlManager->createAbsoluteUrl(['home', 'language'=>'']);
-            Yii::$app->getResponse()->redirect($url);
+            header('Location: /home.html');
+            die();
         }
 
-        if(strpos($pathInfo, '.html') === false && substr($pathInfo, -1) !== '/') {
-            $pathInfo = $pathInfo . '/';
+        if(strpos($pathInfo, '.html') === false) {
+            if(substr($pathInfo, -1) !== '/') {
+                $pathInfo = $pathInfo . '/';
+            } else {
+                $pathInfo = $pathInfo;
+            }
         } else {
             $pathInfo = str_replace('.html', '', $pathInfo);
         }
@@ -52,7 +56,7 @@ class CrelishBaseUrlRule extends Object implements UrlRuleInterface
             $langCode = '';
         } else {
             $langCode = substr($pathInfo, 0, strpos($pathInfo, '/'));
-            $langFreePath = str_replace($langCode, $pathInfo, '');
+            $langFreePath = str_replace($langCode . "/", '', $pathInfo);
         }
 
         $params = [
