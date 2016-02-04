@@ -31,8 +31,5 @@
     "psr-4": {
       "crelish\\": ""
     }
-  },
-  "extra": {
-    "bootstrap": "crelish\\Bootstrap"
   }
 }
