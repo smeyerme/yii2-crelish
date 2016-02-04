@@ -5,7 +5,7 @@
  * @license http://www.yiiframework.com/license/
  */
 
-namespace giantbits\crelish;
+namespace crelish;
 
 use Yii;
 use yii\base\Application;
@@ -48,7 +48,7 @@ class Module extends \yii\base\Module implements BootstrapInterface {
     // delay attaching event handler to the view component after it is fully configured
     $app->getUrlManager()->addRules([
       [
-        'class' => 'giantbits\crelish\components\CrelishBaseUrlRule'
+        'class' => 'crelish\components\CrelishBaseUrlRule'
       ],
     ], TRUE);
 

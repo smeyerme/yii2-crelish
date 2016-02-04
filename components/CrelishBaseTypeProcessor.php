@@ -6,7 +6,7 @@
  * Time: 13:52
  */
 
-namespace giantbits\crelish\components;
+namespace crelish\components;
 
 
 use yii\base\Component;

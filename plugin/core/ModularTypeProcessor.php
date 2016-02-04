@@ -6,10 +6,10 @@
  * Time: 13:33
  */
 
-namespace giantbits\crelish\plugin\core;
+namespace crelish\plugin\core;
 
-use giantbits\crelish\components\CrelishBaseTypeProcessor;
-use giantbits\crelish\components\CrelishFileDataProvider;
+use crelish\components\CrelishBaseTypeProcessor;
+use crelish\components\CrelishFileDataProvider;
 use yii\base\View;
 
 

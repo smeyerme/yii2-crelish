@@ -6,7 +6,7 @@
  * Time: 17:17
  */
 
-namespace giantbits\crelish\components;
+namespace crelish\components;
 
 //use app\assets\AppAsset;
 use yii;
@@ -147,7 +147,7 @@ class CrelishBaseController extends Controller
     //Check for processor class.
     //Run processor.
     //Run default processor.
-    $processorClass = 'giantbits\crelish\plugin\core\\' . ucfirst($type) . 'TypeProcessor';
+    $processorClass = 'crelish\plugin\core\\' . ucfirst($type) . 'TypeProcessor';
 
     if (class_exists($processorClass)) {
 
