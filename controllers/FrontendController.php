@@ -6,9 +6,9 @@
  * Time: 17:19
  */
 
-namespace giantbits\crelish\controllers;
+namespace crelish\controllers;
 
-use giantbits\crelish\components\CrelishBaseController;
+use crelish\components\CrelishBaseController;
 
 class FrontendController extends CrelishBaseController {
 

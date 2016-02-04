@@ -6,7 +6,7 @@
  * Time: 20:57
  */
 
-namespace giantbits\crelish\components;
+namespace crelish\components;
 
 use yii\base\Component;
 use yii\helpers\FileHelper;
