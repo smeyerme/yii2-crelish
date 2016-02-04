@@ -8,7 +8,7 @@
   ],
   "type": "yii2-extension",
   "license": "BSD-3-Clause",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "support": {
     "issues": "https://github.com/giantbits/yii2-crelish/issues",
     "forum": "http://www.crelish.io/forum/",
@@ -26,5 +26,13 @@
     "symfony/yaml": "^2.7",
     "cedx/yii2-mustache": "^0.4.2",
     "anahkiasen/underscore-php" : "dev-master"
+  },
+  "autoload": {
+    "psr-4": {
+      "crelish\\": ""
+    }
+  },
+  "extra": {
+    "bootstrap": "crelish\\Bootstrap"
   }
 }
