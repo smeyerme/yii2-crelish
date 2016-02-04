@@ -39,7 +39,7 @@ class CrelishConfig extends Component {
     $config = NULL;
 
     $defaultConfig = array(
-      'site_title' => 'Crelish',
+      'site_title' => 'Forum-Holzkarriere -',
       'base_url' => '',
       'rewrite_url' => NULL,
       'theme' => 'index',

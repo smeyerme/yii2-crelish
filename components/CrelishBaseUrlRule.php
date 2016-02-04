@@ -15,32 +15,56 @@ use yii\base\Object;
 class CrelishBaseUrlRule extends Object implements UrlRuleInterface
 {
 
-    public function init()
-    {
-        parent::init();
+  public function init()
+  {
+    parent::init();
+  }
+
+  public function createUrl($manager, $route, $params)
+  {
+    if (isset($params['language'])) {
+      if (!empty($params['language'])) {
+        return $params['language'] . '/' . $route . '.html';
+      } else {
+        return $route . '.html';
+      }
+    }
+    return $route . '.html';
+  }
+
+  public function parseRequest($manager, $request)
+  {
+    $pathInfo = $request->getPathInfo();
+
+    if (empty($pathInfo)) {
+      header('Location: /home.html');
+      die();
     }
 
-    public function createUrl($manager, $route, $params)
-    {
-        if (isset($params['language'])) {
-            return $params['language'] . '/' . $route . '.html';
-        }
-        return Yii::$app->language . '/' . $route . '.html';
+    if (strpos($pathInfo, '.html') === false) {
+      if (substr($pathInfo, -1) !== "/") {
+        header('Location: /' . $pathInfo . '.html');
+        die();
+      } else {
+        $pathInfo = $pathInfo;
+      }
+    } else {
+      $pathInfo = str_replace('.html', '', $pathInfo);
     }
 
-    public function parseRequest($manager, $request)
-    {
-        $pathInfo = $request->getPathInfo();
-        $pathInfo = str_replace('.html', '', $pathInfo);
-
-        $langCode = substr($pathInfo, 0, strpos($pathInfo, '/'));
-        $langFreePath = substr($pathInfo, strpos($pathInfo, '/') + 1);
-
-        $params = [
-            'pathRequested' => (!empty($langFreePath)) ? $langFreePath : 'home',
-            'language' => $langCode
-        ];
-
-        return ['crelish/frontend/run', $params];
+    if (substr_count($pathInfo, '/') === 0) {
+      $langFreePath = $pathInfo;
+      $langCode = '';
+    } else {
+      $langCode = substr($pathInfo, 0, strpos($pathInfo, '/'));
+      $langFreePath = str_replace($langCode . "/", '', $pathInfo);
     }
+
+    $params = [
+      'pathRequested' => $langFreePath,
+      'language' => $langCode
+    ];
+
+    return ['crelish/frontend/run', $params];
+  }
 }

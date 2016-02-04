@@ -44,6 +44,7 @@ class Module extends \yii\base\Module implements BootstrapInterface {
    * @inheritdoc
    */
   public function bootstrap($app) {
+
     // delay attaching event handler to the view component after it is fully configured
     $app->getUrlManager()->addRules([
       [
