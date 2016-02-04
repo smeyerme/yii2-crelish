@@ -1,29 +1,28 @@
 {
-    "name": "crelish/yii2-crelish",
-    "description": "Content management for the Yii framework",
-    "keywords": ["yii2", "crelish", "cmp"],
-    "type": "yii2-extension",
-    "license": "BSD-3-Clause",
-    "version": "0.0.1",
-    "support": {
-        "issues": "https://github.com/giantbits/yii2-crelish/issues",
-        "forum": "http://www.crelish.io/forum/",
-        "wiki": "http://www.crelish.io/wiki/",
-        "source": "https://github.com/giantbits/yii2-crelish"
-    },
-    "authors": [
-        {
-            "name": "Steffen Gudis",
-            "email": "steffen.gudis@gmail.com"
-        }
-    ],
-    "require": {
-        "yiisoft/yii2": ">=2.0.4",
-        "yiisoft/yii2-bootstrap": "*"
-    },
-    "autoload": {
-        "psr-4": {
-            "crelish\\debug\\": ""
-        }
+  "name": "crelish/yii2-crelish",
+  "description": "Content management for the Yii framework",
+  "keywords": [
+    "yii2",
+    "crelish",
+    "cmp"
+  ],
+  "type": "yii2-extension",
+  "license": "BSD-3-Clause",
+  "version": "0.0.1",
+  "support": {
+    "issues": "https://github.com/giantbits/yii2-crelish/issues",
+    "forum": "http://www.crelish.io/forum/",
+    "wiki": "http://www.crelish.io/wiki/",
+    "source": "https://github.com/giantbits/yii2-crelish"
+  },
+  "authors": [
+    {
+      "name": "Steffen Gudis",
+      "email": "steffen.gudis@gmail.com"
     }
+  ],
+  "require": {
+    "yiisoft/yii2": ">=2.0.4",
+    "anahkiasen/underscore-php" : "dev-master"
+  }
 }
