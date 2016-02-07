@@ -49,8 +49,10 @@ class Module extends \yii\base\Module implements BootstrapInterface {
     $app->getUrlManager()->addRules([
       [
         'class' => 'crelish\components\CrelishBaseUrlRule'
-      ],
+      ]
     ], TRUE);
+
+    $app->defaultRoute = 'crelish/frontend/run';
 
     // Force theming from base app.
     $this->setViewPath('@app/views');
@@ -59,6 +61,8 @@ class Module extends \yii\base\Module implements BootstrapInterface {
      // var_dump($app);
     });
   }
+
+
 
   /**
    * Resets potentially incompatible global settings done in app config.

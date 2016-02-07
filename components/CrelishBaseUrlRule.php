@@ -8,11 +8,12 @@
 
 namespace crelish\components;
 
+use Underscore\Types\Arrays;
+use Underscore\Types\Strings;
 use yii;
 use yii\web\UrlRuleInterface;
-use yii\base\Object;
 
-class CrelishBaseUrlRule extends Object implements UrlRuleInterface
+class CrelishBaseUrlRule implements UrlRuleInterface
 {
 
   public function init()
@@ -22,14 +23,35 @@ class CrelishBaseUrlRule extends Object implements UrlRuleInterface
 
   public function createUrl($manager, $route, $params)
   {
-    if (isset($params['language'])) {
-      if (!empty($params['language'])) {
-        return $params['language'] . '/' . $route . '.html';
-      } else {
-        return $route . '.html';
-      }
+
+    $url = '';
+
+    if($route != 'crelish/frontend/run') {
+      return false;
     }
-    return $route . '.html';
+
+    if (array_key_exists('language', $params) && !empty($params['languages'])) {
+      $url .= $params['languages'];
+    }
+
+    if (array_key_exists('pathRequested', $params) && !empty($params['pathRequested'])) {
+      if($url != '') {
+        $url .= '/';
+      }
+
+      $url .= $params['pathRequested'];
+    }
+
+    $paramsClean = Arrays::remove($params, 'language');
+    $paramsClean = Arrays::remove($paramsClean, 'pathRequested');
+
+    $paramsExposed = '?';
+    foreach($paramsClean as $key => $value) {
+      $paramsExposed .= $key . '=' . $value . '&';
+    }
+    $paramsExposed = rtrim($paramsExposed, '&');
+
+    return $params['pathRequested'] . '.html' . $paramsExposed;
   }
 
   public function parseRequest($manager, $request)
@@ -60,10 +82,10 @@ class CrelishBaseUrlRule extends Object implements UrlRuleInterface
       $langFreePath = str_replace($langCode . "/", '', $pathInfo);
     }
 
-    $params = [
+    $params = array_merge($request->queryParams , [
       'pathRequested' => $langFreePath,
       'language' => $langCode
-    ];
+    ]);
 
     return ['crelish/frontend/run', $params];
   }
