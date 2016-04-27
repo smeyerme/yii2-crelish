@@ -7,7 +7,7 @@
 
 namespace crelish;
 
-use Yii;
+use yii;
 use yii\base\Application;
 use yii\base\BootstrapInterface;
 
@@ -45,21 +45,35 @@ class Module extends \yii\base\Module implements BootstrapInterface {
    */
   public function bootstrap($app) {
 
-    // delay attaching event handler to the view component after it is fully configured
-    $app->getUrlManager()->addRules([
-      [
-        'class' => 'crelish\components\CrelishBaseUrlRule'
-      ]
-    ], TRUE);
+    if ($app instanceof \yii\web\Application) {
+      $app->getUrlManager()->addRules([
+        ['class' => 'yii\web\UrlRule', 'pattern' => $this->id, 'route' => $this->id . '/default/index'],
+        ['class' => 'yii\web\UrlRule', 'pattern' => $this->id . '/<id:\w+>', 'route' => $this->id . '/default/view'],
+        ['class' => 'yii\web\UrlRule', 'pattern' => $this->id . '/<controller:[\w\-]+>/<action:[\w\-]+>', 'route' => $this->id . '/<controller>/<action>'],
+        ['class' => 'giantbits\crelish\components\CrelishBaseUrlRule'],
+      ], TRUE);
+    } elseif ($app instanceof \yii\console\Application) {
+      $app->controllerMap[$this->id] = [
+        'class' => 'yii\gii\console\GenerateController',
+        'generators' => array_merge($this->coreGenerators(), $this->generators),
+        'module' => $this,
+      ];
+    }
+  }
 
-    $app->defaultRoute = 'crelish/frontend/run';
+  public function beforeAction($action)
+  {
+    if (!parent::beforeAction($action)) {
+      return false;
+    }
 
-    // Force theming from base app.
-    $this->setViewPath('@app/views');
+    //if (Yii::$app instanceof \yii\web\Application && !$this->checkAccess()) {
+    //  throw new ForbiddenHttpException('You are not allowed to access this page.');
+    //}
 
-    $app->on(Application::EVENT_BEFORE_REQUEST, function () use ($app){
-     // var_dump($app);
-    });
+    $this->resetGlobalSettings();
+
+    return true;
   }
 
 
@@ -68,7 +82,9 @@ class Module extends \yii\base\Module implements BootstrapInterface {
    * Resets potentially incompatible global settings done in app config.
    */
   protected function resetGlobalSettings() {
-    Yii::$app->assetManager->bundles = [];
+    if (Yii::$app instanceof \yii\web\Application) {
+      Yii::$app->assetManager->bundles = [];
+    }
   }
 
   /**
