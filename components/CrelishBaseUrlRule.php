@@ -6,7 +6,7 @@
  * Time: 20:17
  */
 
-namespace crelish\components;
+namespace giantbits\crelish\components;
 
 use Underscore\Types\Arrays;
 use Underscore\Types\Strings;

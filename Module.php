@@ -5,7 +5,7 @@
  * @license http://www.yiiframework.com/license/
  */
 
-namespace crelish;
+namespace giantbits\crelish;
 
 use yii;
 use yii\base\Application;
