@@ -5,7 +5,7 @@
  * @license http://www.yiiframework.com/license/
  */
 
-namespace crelish\crelish;
+namespace giantbits\crelish;
 
 use yii\web\AssetBundle;
 
@@ -16,10 +16,16 @@ use yii\web\AssetBundle;
  * @since 2.0
  */
 class CrelishAsset extends AssetBundle {
-  public $sourcePath = '@yii/crelish/assets';
+  public $sourcePath = '@app/vendor/giantbits/yii2-crelish/assets';
   public $css = [
-    'main.css',
-    'toolbar.css',
+    'https://cdnjs.cloudflare.com/ajax/libs/jquery.perfect-scrollbar/0.6.11/css/perfect-scrollbar.css',
+    'css/flat-ui.css',
+    'css/crelish.css',
+  ];
+  public $js = [
+    'js/flat-ui.min.js',
+    'js/crelish.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/jquery.perfect-scrollbar/0.6.11/js/min/perfect-scrollbar.jquery.min.js',
   ];
   public $depends = [
     'yii\web\YiiAsset',

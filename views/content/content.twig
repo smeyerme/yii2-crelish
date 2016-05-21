@@ -1,0 +1,14 @@
+{{ use('/yii/grid/GridView') }}
+{{ use('/giantbits/crelish/widgets') }}
+<div class="row">
+  <div class="col-md-2 palette palette-asbestos gc-no-padding-top">
+    <h6>Type filter</h6>
+    <ul role="menu" class="gc-content-filter-nav">
+      {{ element_nav_widget() }}
+    </ul>
+  </div>
+  <div class="col-md-10 palette-clouds gc-text-color-default">
+    <h6>Content</h6>
+    {{ grid_view_widget({'dataProvider': dataProvider, 'columns': columns}) | raw }}
+  </div>
+</div>
