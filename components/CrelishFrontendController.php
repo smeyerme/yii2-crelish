@@ -8,6 +8,7 @@
 
 namespace giantbits\crelish\components;
 
+use giantbits\crelish\components\CrelisJsonDataProvider;
 use yii;
 use yii\base\Controller;
 
@@ -65,9 +66,45 @@ class CrelishFrontendController extends Controller
     // Add content aka. do the magic.
     $data = yii\helpers\Json::decode(file_get_contents(\Yii::getAlias('@app/workspace/data/') . $ds . $this->entryPoint['type'] . $ds . $this->entryPoint['uuid'] . '.json'));
 
+    // Process data and render.
+    $data = $this->processContent($data);
+    //var_dump($data['matrix']['main']);
+    //die();
+    return $this->render($this->viewTemplate, ['data' => $data]);
 
-    return $this->render($this->viewTemplate, ['data'=>$data]);
+  }
 
+  private function processContent($data)
+  {
+    $processedData = [];
+
+    foreach($data as $key => $content) {
+
+      // @todo: Change detection to field type based from content definition
+      switch($key) {
+        case 'matrix':
+          if(empty($processedData[$key])) {
+            $processedData[$key] = [];
+          }
+
+          foreach($content as $section => $subContent) {
+
+            if(empty($processedData[$key][$section])) {
+              $processedData[$key][$section] = '';
+            }
+
+            foreach($subContent as $subContentdata){
+              $sourceData = new CrelishJsonDataProvider($subContentdata['type'], [] , $subContentdata['uuid']);
+              $processedData[$key][$section] .= $this->renderPartial($subContentdata['type'] . '.twig', ['data' => $sourceData->one()]);
+            }
+          }
+          break;
+        default:
+        $processedData[$key] = $content;
+      }
+    }
+
+    return $processedData;
   }
 
   private function resolvePathRequested()

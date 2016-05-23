@@ -6,7 +6,7 @@
  * Time: 20:57
  */
 
-namespace crelish\components;
+namespace giantbits\crelish\components;
 
 use Underscore\Parse;
 use Underscore\Types\Arrays;
@@ -15,18 +15,23 @@ use yii\data\ArrayDataProvider;
 use yii\helpers\FileHelper;
 use yii\widgets\LinkPager;
 
-class CrelisJsonDataProvider extends Component
+class CrelishJsonDataProvider extends Component
 {
 
   private $sourceFolder;
   private $allModels;
   private $filter;
 
-  public function __construct($sourceFolder, $settings)
+  public function __construct($sourceFolder, $settings, $uuid)
   {
-
+    $ds = DIRECTORY_SEPARATOR;
     $this->sourceFolder = $sourceFolder;
-    $this->allModels = $this->parseFolderContent($this->sourceFolder);
+
+    if (!empty($uuid)) {
+      $this->allModels[] = \yii\helpers\Json::decode(file_get_contents(\Yii::getAlias('@app/workspace/data/') . $ds . $sourceFolder . $ds . $uuid . '.json'));
+    } else {
+      $this->allModels = $this->parseFolderContent($this->sourceFolder);
+    }
 
     if (Arrays::has($settings, 'filter')) {
       $this->filterModels($settings['filter']);
@@ -49,9 +54,9 @@ class CrelisJsonDataProvider extends Component
 
   private function sortModels($sort)
   {
-    $this->allModels = Arrays::sort($this->allModels, function($model) use ($sort) {
+    $this->allModels = Arrays::sort($this->allModels, function ($model) use ($sort) {
       return $model[$sort['by']];
-    } , $sort['dir']);
+    }, $sort['dir']);
   }
 
   public function parseFolderContent($folder)
@@ -102,5 +107,10 @@ class CrelisJsonDataProvider extends Component
     $result = ['models' => array_values($models), 'pager' => $pager];
 
     return $result;
+  }
+
+  public function one()
+  {
+    return $this->allModels[0];
   }
 }
