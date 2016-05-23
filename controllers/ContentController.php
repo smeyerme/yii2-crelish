@@ -35,7 +35,7 @@ class ContentController extends Controller
       // Add core fields.
       $this->elementDefinition->fields[] = Json::decode('{ "label": "UUID", "key": "uuid", "type": "textInput", "visibleInGrid": true, "rules": [["required"], ["string", {"max": 128}]], "options": {"disabled":true}}', false);
       $this->elementDefinition->fields[] = Json::decode('{ "label": "Path", "key": "path", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
-      $this->elementDefinition->fields[] = Json::decode('{ "label": "Slug", "key": "slug", "type": "textInput", "visibleInGrid": true, "rules": [["required"], ["string", {"max": 128}]]}', false);
+      $this->elementDefinition->fields[] = Json::decode('{ "label": "Slug", "key": "slug", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
       $this->elementDefinition->fields[] = Json::decode('{ "label": "State", "key": "state", "type": "dropDownList", "visibleInGrid": true, "rules": [["required"], ["string", {"max": 128}]], "options": {"prompt":"Please set state"}, "items": {"0":"Offline", "1":"Draft", "2":"Online", "3":"Archived"}}', false);
     }
 
@@ -82,8 +82,10 @@ class ContentController extends Controller
       }
     } else {
       // Load model from file.
-      $data['CrelishDynamicModel'] = Json::decode(file_get_contents(\Yii::getAlias('@app/workspace/data/') . DIRECTORY_SEPARATOR . $this->type . DIRECTORY_SEPARATOR . $this->model->uuid . '.json'));
-      $this->model->load($data);
+      if(!empty($this->model->uuid)) {
+        $data['CrelishDynamicModel'] = Json::decode(file_get_contents(\Yii::getAlias('@app/workspace/data/') . DIRECTORY_SEPARATOR . $this->type . DIRECTORY_SEPARATOR . $this->model->uuid . '.json'));
+        $this->model->load($data);
+      }
     }
 
     ob_start();
@@ -110,7 +112,7 @@ class ContentController extends Controller
       } elseif ($field->type == 'dropDownList') {
         echo $form->field($this->model, $field->key)->{$field->type}((array)$field->items, (array)$fieldOptions)->label($field->label);
       } elseif ($field->type == 'matrixConnector') {
-        echo  $form->field($this->model, 'matrix')->textArea(["disabled" => true, "value" => var_export($data['CrelishDynamicModel'][$field->key], true)]);
+        echo  $form->field($this->model, 'matrix')->textArea(["disabled" => true, "value" => empty($data) ? '' : var_export($data['CrelishDynamicModel'][$field->key], true)]);
         //["options"=> ]
       } else {
         echo $form->field($this->model, $field->key)->{$field->type}((array)$fieldOptions)->label($field->label);
@@ -132,119 +134,20 @@ class ContentController extends Controller
 
     return $this->render('content.twig', [
       'dataProvider' => $modelProvider->raw(),
-      'columns' => $modelProvider->columns
+      'columns' => $modelProvider->columns,
+      'type' => $type
     ]);
   }
 
   public function actionCreate()
   {
 
-    $type = (!empty(\Yii::$app->getRequest()->getQueryParam('type'))) ? \Yii::$app->getRequest()->getQueryParam('type') : null;
-    $uuid = (!empty(\Yii::$app->getRequest()->getQueryParam('uuid'))) ? \Yii::$app->getRequest()->getQueryParam('uuid') : null;
+    $content = $this->buildForm();
 
-    // Build form for type.
-    $filePath = \Yii::getAlias('@app/workspace/data/elements') . DIRECTORY_SEPARATOR . $type . '.json';
-    $elementDefinition = Json::decode(file_get_contents($filePath), false);
-
-    $fields = [];
-    foreach ($elementDefinition->fields as $field) {
-      array_push($fields, $field->key);
-    }
-
-    $model = new CrelishDynamicModel($fields);
-    $model->identifier = $type;
-    if (!empty($uuid)) {
-      $model->uuid = $uuid;
-    }
-
-    foreach ($elementDefinition->fields as $field) {
-
-      $model->defineLabel($field->key, $field->label);
-      if (!empty($field->rules)) {
-
-        foreach ($field->rules as $rule) {
-          if (empty($rule[1])) {
-            $model->addRule([$field->key], $rule[0]);
-          } else {
-            $model->addRule([$field->key], $rule[0], (array)$rule[1]);
-          }
-        }
-      }
-    }
-
-    // Load Post-Data and save.
-    if (!empty(\Yii::$app->request->post())) {
-      $model->load(\Yii::$app->request->post());
-      if ($model->validate()) {
-        $model->save();
-        return \Yii::$app->getResponse()->redirect(Url::to(['content/update', 'type' => $type, 'uuid' => $model->uuid]));
-      } else {
-        $errors = $model->errors;
-      }
-    }
-
-    // Pre-render elements.
-    ob_start();
-    $form = ActiveForm::begin([
-      'id' => 'content-form',
-      'layout' => 'horizontal'
-    ]);
-
-    echo '<div class="row palette-clouds gc-text-color-default"><div class="col-md-12">';
-
-    foreach ($elementDefinition->fields as $field) {
-      if (strpos($field->type, 'widget_') !== false) {
-        $widget = str_replace("widget_", '', $field->type);
-        echo $form->field($model, $field->key)->widget($widget::className())->label($field->label);
-      } else {
-        echo $form->field($model, $field->key)->{$field->type}()->label($field->label);
-      }
-    }
-
-    echo '</div></div>';
-    ActiveForm::end();
-
-    /*echo Tabs::widget([
-        'items' => [
-            [
-                'label' => 'One',
-                'content' => 'Anim pariatur cliche...',
-                'active' => true
-            ],
-            [
-                'label' => 'Two',
-                'content' => 'Anim pariatur cliche 2...',
-                'headerOptions' => [],
-                'options' => ['id' => 'myveryownID'],
-            ],
-            [
-                'label' => 'Example',
-                'url' => 'http://www.example.com',
-            ],
-            [
-                'label' => 'Dropdown',
-                'items' => [
-                     [
-                         'label' => 'DropdownA',
-                         'content' => 'DropdownA, Anim pariatur cliche...',
-                     ],
-                     [
-                         'label' => 'DropdownB',
-                         'content' => 'DropdownB, Anim pariatur cliche...',
-                     ],
-                ],
-            ],
-        ],
-    ]);*/
-
-    $renderedForm = ob_get_clean();
-
-    // Set content to render.
-    $content = $renderedForm;
-
-    // Render it.
     return $this->render('create.twig', [
-      'content' => $content
+      'content' => $content,
+      'type' => $this->type,
+      'uuid' => $this->uuid
     ]);
   }
 
