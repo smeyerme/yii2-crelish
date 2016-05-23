@@ -10,7 +10,6 @@ namespace giantbits\crelish\controllers;
 
 use crelish\components\CrelishFileDataProvider;
 use giantbits\crelish\components\CrelishDynamicModel;
-use yii\helpers\Html;
 use yii\web\Controller;
 use yii\bootstrap\ActiveForm;
 use yii\helpers\Json;
@@ -130,7 +129,7 @@ class ContentController extends Controller
     $type = !empty($this->type) ? $this->type : 'page';
 
     $modelProvider = new CrelishFileDataProvider($type);
-    $elements = new CrelishFileDataProvider('elements', ['key' => 'key']);
+    //$elements = new CrelishFileDataProvider('elements', ['key' => 'key']);
 
     return $this->render('content.twig', [
       'dataProvider' => $modelProvider->raw(),

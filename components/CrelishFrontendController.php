@@ -11,13 +11,14 @@ namespace giantbits\crelish\components;
 use giantbits\crelish\components\CrelisJsonDataProvider;
 use yii;
 use yii\base\Controller;
+use Underscore\Parse;
+use Underscore\Types\Arrays;
 
 class CrelishFrontendController extends Controller
 {
 
   private $entryPoint;
   private $requestUrl;
-  private $pageCollection;
   private $viewTemplate;
 
   public function init()
@@ -68,8 +69,7 @@ class CrelishFrontendController extends Controller
 
     // Process data and render.
     $data = $this->processContent($data);
-    //var_dump($data['matrix']['main']);
-    //die();
+
     return $this->render($this->viewTemplate, ['data' => $data]);
 
   }
@@ -77,12 +77,20 @@ class CrelishFrontendController extends Controller
   private function processContent($data)
   {
     $processedData = [];
+    $filePath = \Yii::getAlias('@app/workspace/data/elements') . DIRECTORY_SEPARATOR . $this->entryPoint['type'] . '.json';
+    $elementDefinition = yii\helpers\Json::decode(file_get_contents($filePath), false);
 
     foreach($data as $key => $content) {
+      $fieldType = Arrays::find($elementDefinition->fields, function($value) use ($key) {
+        return $value->key == $key;
+      });
 
-      // @todo: Change detection to field type based from content definition
-      switch($key) {
-        case 'matrix':
+      if(is_object($fieldType)) {
+        $fieldType = $fieldType->type;
+      }
+
+      switch($fieldType) {
+        case 'matrixConnector':
           if(empty($processedData[$key])) {
             $processedData[$key] = [];
           }
@@ -95,7 +103,11 @@ class CrelishFrontendController extends Controller
 
             foreach($subContent as $subContentdata){
               $sourceData = new CrelishJsonDataProvider($subContentdata['type'], [] , $subContentdata['uuid']);
-              $processedData[$key][$section] .= $this->renderPartial($subContentdata['type'] . '.twig', ['data' => $sourceData->one()]);
+
+              // @todo: nesting again.
+              $sourceData = $this->processContent($sourceData->one());
+
+              $processedData[$key][$section] .= $this->renderPartial($subContentdata['type'] . '.twig', ['data' => $sourceData]);
             }
           }
           break;
