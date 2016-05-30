@@ -10,6 +10,7 @@ namespace giantbits\crelish\controllers;
 
 use crelish\components\CrelishFileDataProvider;
 use giantbits\crelish\components\CrelishDynamicModel;
+use giantbits\crelish\widgets\MatrixConnetor;
 use yii\web\Controller;
 use yii\bootstrap\ActiveForm;
 use yii\helpers\Json;
@@ -32,96 +33,12 @@ class ContentController extends Controller
       $this->elementDefinition = Json::decode(file_get_contents($this->filePath), false);
 
       // Add core fields.
-      $this->elementDefinition->fields[] = Json::decode('{ "label": "UUID", "key": "uuid", "type": "textInput", "visibleInGrid": true, "rules": [["required"], ["string", {"max": 128}]], "options": {"disabled":true}}', false);
+      $this->elementDefinition->fields[] = Json::decode('{ "label": "UUID", "key": "uuid", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]], "options": {"disabled":true}}', false);
       $this->elementDefinition->fields[] = Json::decode('{ "label": "Path", "key": "path", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
       $this->elementDefinition->fields[] = Json::decode('{ "label": "Slug", "key": "slug", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
       $this->elementDefinition->fields[] = Json::decode('{ "label": "State", "key": "state", "type": "dropDownList", "visibleInGrid": true, "rules": [["required"], ["string", {"max": 128}]], "options": {"prompt":"Please set state"}, "items": {"0":"Offline", "1":"Draft", "2":"Online", "3":"Archived"}}', false);
     }
 
-  }
-
-  private function buildForm($action = 'update')
-  {
-    // Build form for type.
-    $fields = [];
-
-    foreach ($this->elementDefinition->fields as $field) {
-      array_push($fields, $field->key);
-    }
-
-    $this->model = new CrelishDynamicModel($fields);
-    $this->model->identifier = $this->type;
-    if (!empty($this->uuid)) {
-      $this->model->uuid = $this->uuid;
-    }
-
-    foreach ($this->elementDefinition->fields as $field) {
-      $this->model->defineLabel($field->key, $field->label);
-      if (!empty($field->rules)) {
-
-        foreach ($field->rules as $rule) {
-          if (empty($rule[1])) {
-            $this->model->addRule([$field->key], $rule[0]);
-          } else {
-            $this->model->addRule([$field->key], $rule[0], (array)$rule[1]);
-          }
-        }
-      }
-    }
-
-    if (!empty(\Yii::$app->request->post())) {
-      $this->model->load(\Yii::$app->request->post());
-      if ($this->model->validate()) {
-        $this->model->save();
-        \Yii::$app->session->setFlash('success', 'Content saved successfully...');
-        header("Location: " . Url::to(['content/update', 'type' => $this->type, 'uuid' => $this->model->uuid]));
-        exit(0);
-      } else {
-        $errors = $this->model->errors;
-      }
-    } else {
-      // Load model from file.
-      if(!empty($this->model->uuid)) {
-        $data['CrelishDynamicModel'] = Json::decode(file_get_contents(\Yii::getAlias('@app/workspace/data/') . DIRECTORY_SEPARATOR . $this->type . DIRECTORY_SEPARATOR . $this->model->uuid . '.json'));
-        $this->model->load($data);
-      }
-    }
-
-    ob_start();
-    $form = ActiveForm::begin([
-      'id' => 'content-form',
-      'layout' => 'horizontal'
-    ]);
-
-    // Start output.
-    echo '<div class="row palette-clouds gc-text-color-default"><div class="col-md-12">';
-
-    // Display messages.
-    foreach (\Yii::$app->session->getAllFlashes() as $key => $message) {
-      echo '<div class="alert alert-' . $key . '">' . $message . '</div>';
-    }
-
-    // Build form fields.
-    foreach ($this->elementDefinition->fields as $field) {
-      $fieldOptions = !empty($field->options) ? $field->options : [];
-
-      if (strpos($field->type, 'widget_') !== false) {
-        $widget = str_replace("widget_", '', $field->type);
-        echo $form->field($this->model, $field->key)->widget($widget::className())->label($field->label);
-      } elseif ($field->type == 'dropDownList') {
-        echo $form->field($this->model, $field->key)->{$field->type}((array)$field->items, (array)$fieldOptions)->label($field->label);
-      } elseif ($field->type == 'matrixConnector') {
-        echo  $form->field($this->model, 'matrix')->textArea(["disabled" => true, "value" => empty($data) ? '' : var_export($data['CrelishDynamicModel'][$field->key], true)]);
-        //["options"=> ]
-      } else {
-        echo $form->field($this->model, $field->key)->{$field->type}((array)$fieldOptions)->label($field->label);
-      }
-    }
-
-    echo '</div></div>';
-    ActiveForm::end();
-
-    return ob_get_clean();
   }
 
   public function actionIndex()
@@ -176,5 +93,100 @@ class ContentController extends Controller
     }
     \Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
     return $return_json;
+  }
+
+  private function buildForm($action = 'update')
+  {
+    // Build form for type.
+    $fields = [];
+
+    foreach ($this->elementDefinition->fields as $field) {
+      array_push($fields, $field->key);
+    }
+
+    $this->model = new CrelishDynamicModel($fields);
+    $this->model->identifier = $this->type;
+    
+    // Set uuid if existant.
+    if (!empty($this->uuid)) {
+      $this->model->uuid = $this->uuid;
+    }
+
+    // Add validation rules.
+    foreach ($this->elementDefinition->fields as $field) {
+      $this->model->defineLabel($field->key, $field->label);
+      if (!empty($field->rules)) {
+
+        foreach ($field->rules as $rule) {
+          if (empty($rule[1])) {
+            $this->model->addRule([$field->key], $rule[0]);
+          } else {
+            $this->model->addRule([$field->key], $rule[0], (array)$rule[1]);
+          }
+        }
+      }
+    }
+
+    // Load model from file.
+    if(!empty($this->model->uuid)) {
+      $data['CrelishDynamicModel'] = Json::decode(file_get_contents(\Yii::getAlias('@app/workspace/data/') . DIRECTORY_SEPARATOR . $this->type . DIRECTORY_SEPARATOR . $this->model->uuid . '.json'));
+      $this->model->load($data);
+    }
+
+    // Save content if post request.
+    if (!empty(\Yii::$app->request->post()) && !\Yii::$app->request->isAjax) {
+      $oldData = [];
+      // Load old data.
+      if(!empty($this->model->uuid)) {
+        $oldData = Json::decode(file_get_contents(\Yii::getAlias('@app/workspace/data/') . DIRECTORY_SEPARATOR . $this->type . DIRECTORY_SEPARATOR . $this->model->uuid . '.json'));
+      }
+      $this->model->attributes = $_POST['CrelishDynamicModel'] + $oldData;
+
+      if ($this->model->validate()) {
+        $this->model->save();
+        \Yii::$app->session->setFlash('success', 'Content saved successfully...');
+        header("Location: " . Url::to(['content/update', 'type' => $this->type, 'uuid' => $this->model->uuid]));
+        exit(0);
+      } else {
+        $errors = $this->model->errors;
+      }
+    }
+
+    ob_start();
+    $form = ActiveForm::begin([
+      'id' => 'content-form',
+      'layout' => 'horizontal'
+    ]);
+
+    // Start output.
+    echo '<div class="row palette-clouds gc-text-color-default"><div class="col-md-12">';
+
+    // Display messages.
+    foreach (\Yii::$app->session->getAllFlashes() as $key => $message) {
+      echo '<div class="alert alert-' . $key . '">' . $message . '</div>';
+    }
+
+    // Build form fields.
+    foreach ($this->elementDefinition->fields as $field) {
+      $fieldOptions = !empty($field->options) ? $field->options : [];
+
+      if (strpos($field->type, 'widget_') !== false) {
+        $widget = str_replace("widget_", '', $field->type);
+        echo $form->field($this->model, $field->key)->widget($widget::className())->label($field->label);
+      } elseif ($field->type == 'dropDownList') {
+        echo $form->field($this->model, $field->key)->{$field->type}((array)$field->items, (array)$fieldOptions)->label($field->label);
+      } elseif ($field->type == 'matrixConnector') {
+        // Trying to add some riot magic here
+        //echo  $form->field($this->model, 'matrix')->textArea(["disabled" => true, "value" => empty($data) ? '' : var_export($data['CrelishDynamicModel'][$field->key], true)]);
+        echo MatrixConnetor::widget(['data' => $data['CrelishDynamicModel'][$field->key]]);
+      } else {
+        echo $form->field($this->model, $field->key)->{$field->type}((array)$fieldOptions)->label($field->label);
+      }
+    }
+
+    echo '</div></div>';
+    ActiveForm::end();
+
+    return ob_get_clean();
   }
 }

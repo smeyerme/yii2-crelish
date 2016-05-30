@@ -26,24 +26,28 @@ class CrelishDynamicModel extends \yii\base\DynamicModel
     return $this->_attributeLabels;
   }
 
-  public function loadData($data, $formName = null)
+  public function save()
   {
-    $path = \Yii::getAlias('@app') . DIRECTORY_SEPARATOR . 'workspace' . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . $this->identifier . DIRECTORY_SEPARATOR . $this->uuid . '.json';
-  }
-
-  public function save() {
     $modelArray = [];
-    if(empty($this->uuid)) {
+    if (empty($this->uuid)) {
       $this->uuid = $this->GUIDv4();
     }
 
     $modelArray['uuid'] = $this->uuid;
 
-    foreach ($this->attributes() as $attribute){
-      $modelArray[$attribute] = $this->{$attribute};
+    // Set data, detect json.
+    foreach ($this->attributes() as $attribute) {
+
+      $jsonCheck = @json_decode($this->{$attribute});
+      if (json_last_error() == JSON_ERROR_NONE) {
+        // Is JSON.
+        $modelArray[$attribute] = Json::decode($this->{$attribute});
+      } else {
+        $modelArray[$attribute] = $this->{$attribute};
+      }
     }
 
-    $outModel = Json::htmlEncode($modelArray);
+    $outModel = Json::encode($modelArray);
     $path = \Yii::getAlias('@app') . DIRECTORY_SEPARATOR . 'workspace' . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . $this->identifier . DIRECTORY_SEPARATOR . $this->uuid . '.json';
     file_put_contents($path, $outModel);
     @chmod($path, 0777);
@@ -51,7 +55,7 @@ class CrelishDynamicModel extends \yii\base\DynamicModel
     return true;
   }
 
-  function GUIDv4 ($trim = true)
+  function GUIDv4($trim = true)
   {
     // Windows
     if (function_exists('com_create_guid') === true) {
@@ -75,12 +79,12 @@ class CrelishDynamicModel extends \yii\base\DynamicModel
     $hyphen = chr(45);                  // "-"
     $lbrace = $trim ? "" : chr(123);    // "{"
     $rbrace = $trim ? "" : chr(125);    // "}"
-    $guidv4 = $lbrace.
-      substr($charid,  0,  8).$hyphen.
-      substr($charid,  8,  4).$hyphen.
-      substr($charid, 12,  4).$hyphen.
-      substr($charid, 16,  4).$hyphen.
-      substr($charid, 20, 12).
+    $guidv4 = $lbrace .
+      substr($charid, 0, 8) . $hyphen .
+      substr($charid, 8, 4) . $hyphen .
+      substr($charid, 12, 4) . $hyphen .
+      substr($charid, 16, 4) . $hyphen .
+      substr($charid, 20, 12) .
       $rbrace;
     return $guidv4;
   }

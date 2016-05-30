@@ -40,6 +40,7 @@ class ElementNav extends Widget
     $elements = new CrelishFileDataProvider('elements', ['key' => 'key', 'sort'=> ['by'=>'label', 'dir'=>'ASC']]);
 
     foreach($elements->all()['models'] as $element) {
+      if(array_key_exists('selectable', $element) && $element['selectable'] === false) continue;
       $css = ($this->type == $element['key']) ? 'gc-active-filter' : '';
       $nav .= Html::tag('li', Html::a($element['label'], ['content/' . $this->action, 'type' => $element['key']]), ['class' => $css]);
     }

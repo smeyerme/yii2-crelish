@@ -1,20 +1,20 @@
 <div class="row">
   <ul class="nav nav-list gc-nav-side-bar gc-mt-24">
-    <li class="">
-      <a href="#fakelink" class="active">
+    <li class="{{ app.controller.id == 'dashboard' ? 'active' : '' }}">
+      <a href="{{ url('crelish/dashboard/index') }}" class="active">
         <span class="fui-home"></span> Dashboard
         <span class="badge pull-right">19</span>
       </a>
     </li>
-    <li class="active">
+    <li class="{{ app.controller.id == 'content' ? 'active' : '' }}">
       <a href="{{ url('crelish/content/index') }}">
         <span class="fui-new"></span> Content
         <span class="badge pull-right">130</span>
       </a>
     </li>
-    <li>
-      <a href="#fakelink">
-        <span class="fui-image"></span> Media
+    <li class="{{ app.controller.id == 'asset' ? 'active' : '' }}">
+      <a href="{{ url('crelish/asset/index') }}">
+        <span class="fui-image"></span> Assets
         <span class="badge pull-right">9</span>
       </a>
     </li>

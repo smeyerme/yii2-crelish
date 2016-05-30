@@ -105,9 +105,9 @@ class CrelishFrontendController extends Controller
               $sourceData = new CrelishJsonDataProvider($subContentdata['type'], [] , $subContentdata['uuid']);
 
               // @todo: nesting again.
-              $sourceData = $this->processContent($sourceData->one());
+              $sourceDataOut = $this->processContent($sourceData->one());
 
-              $processedData[$key][$section] .= $this->renderPartial($subContentdata['type'] . '.twig', ['data' => $sourceData]);
+              $processedData[$key][$section] .= $this->renderPartial($subContentdata['type'] . '.twig', ['data' => $sourceDataOut]);
             }
           }
           break;

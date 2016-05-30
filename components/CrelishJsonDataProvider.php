@@ -13,24 +13,32 @@ use Underscore\Types\Arrays;
 use yii\base\Component;
 use yii\data\ArrayDataProvider;
 use yii\helpers\FileHelper;
+use yii\helpers\Json;
 use yii\widgets\LinkPager;
 
 class CrelishJsonDataProvider extends Component
 {
 
-  private $sourceFolder;
+  private $type;
   private $allModels;
   private $filter;
+  private $definitions;
 
-  public function __construct($sourceFolder, $settings, $uuid)
+  public function __construct($type, $settings, $uuid)
   {
     $ds = DIRECTORY_SEPARATOR;
-    $this->sourceFolder = $sourceFolder;
+    $this->type = $type;
 
     if (!empty($uuid)) {
-      $this->allModels[] = \yii\helpers\Json::decode(file_get_contents(\Yii::getAlias('@app/workspace/data/') . $ds . $sourceFolder . $ds . $uuid . '.json'));
+      $this->allModels[] = \yii\helpers\Json::decode(file_get_contents(\Yii::getAlias('@app/workspace/data/') . $ds . $type . $ds . $uuid . '.json'));
+
+      $filePath = \Yii::getAlias('@app/workspace/data/elements') . DIRECTORY_SEPARATOR . $type . '.json';
+      $this->definitions = Json::decode(file_get_contents($filePath), false);
+
+      // Add core fields.
+      $this->definitions->fields[] = Json::decode('{ "label": "UUID", "key": "uuid", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]], "options": {"disabled":true}}', false);
     } else {
-      $this->allModels = $this->parseFolderContent($this->sourceFolder);
+      $this->allModels = $this->parseFolderContent($this->type);
     }
 
     if (Arrays::has($settings, 'filter')) {
@@ -112,5 +120,10 @@ class CrelishJsonDataProvider extends Component
   public function one()
   {
     return $this->allModels[0];
+  }
+
+  public function definitions()
+  {
+    return $this->definitions;
   }
 }
