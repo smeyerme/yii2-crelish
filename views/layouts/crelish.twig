@@ -1,0 +1,83 @@
+{{ register_asset_bundle('giantbits/crelish/CrelishAsset') }}  {# asset root for yii advanced template #}
+{{ void(this.beginPage()) }}
+<!DOCTYPE html>
+<html lang="{{ app.language }}">
+<head>
+  <meta charset="{{ app.charset }}">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ html.encode(this.title) }}</title>
+  {{ html.csrfMetaTags | raw }}
+  {{ void(this.head) }}
+</head>
+<body class="crelish">
+{{ void(this.beginBody()) }}
+
+<div class="container-fluid palette-wet-asphalt gc-main-wrapper">
+  <div class="row gc-full-height">
+    <div class="gc-h-strech col-md-2 palette-midnight-blue gc-full-height">
+      <div class="palette gc-advance-width gc-palette-darker">
+        <div class="container-fluid">crelish</div>
+      </div>
+      <div class="gc-side-bar-nav palette gc-no-padding">
+        {% include "_side_nav.twig" %}
+      </div>
+    </div>
+    <div class="gc-h-strech col-md-10">
+      <div class="palette palette-green-sea gc-advance-width gc-mb-24">
+        <div class="container-fluid">
+          {% include '@crelish/views/' ~ app.controller.id ~ '/' ~ app.controller.action.id ~ "_header_bar.twig" %}
+        </div>
+      </div>
+
+      <section id="crelish-wrapper">
+        <div class="container-fluid">
+          {{ content | raw }}
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- Modal definitions -->
+<div class="modal fade" id="confirm-delete" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+  <div class="modal-dialog gc-no-border-radius">
+    <div class="modal-content gc-no-border-radius">
+      <div class="modal-header gc-no-border">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+        <h4 class="modal-title" id="myModalLabel">Confirm Delete</h4>
+      </div>
+      <div class="modal-body">
+        <p>You are about to delete <b><i class="title"></i></b> record, this procedure is irreversible.</p>
+        <p>Do you want to proceed?</p>
+      </div>
+      <div class="modal-footer gc-no-border">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger btn-ok" data-url="{{ url('crelish/content/delete.html') }}" data-uuid="{{ app.getRequest.getQueryParam('uuid') }}" data-model="{{ app.getRequest.getQueryParam('type') }}">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="confirm-cancel" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+  <div class="modal-dialog gc-no-border-radius">
+    <div class="modal-content gc-no-border-radius">
+      <div class="modal-header gc-no-border">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+        <h4 class="modal-title" id="myModalLabel">Confirm cancel</h4>
+      </div>
+      <div class="modal-body">
+        <p>You are about to cancel your current action.</p>
+        <p>Do you want to proceed?</p>
+      </div>
+      <div class="modal-footer gc-no-border">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger btn-ok-cancel" data-href="{{ url('crelish/content/index.html') }}">Proceed</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{{ void(this.endBody()) }}
+</body>
+</html>
+{{ void(this.endPage()) }}

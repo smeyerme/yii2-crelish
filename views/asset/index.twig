@@ -1,0 +1,26 @@
+<div class="row">
+  <div class="o-grid palette palette-asbestos gc-no-padding-top">
+    <div class="o-grid__cell" id="dropZone">
+      <form action="{{ url('crelish/asset/upload') }}"
+            class="dropzone"
+            id="crelish-drop-zone"></form>
+    </div>
+  </div>
+  <div class="o-grid palette palette-clouds gc-text-color-default gc-no-padding-top">
+    Test
+  </div>
+</div>
+
+<script type="text/javascript">
+  Dropzone.options.crelishDropZone = {
+    paramName: "file", // The name that will be used to transfer the file
+    maxFilesize: 25, // MB
+    dictDefaultMessage: "<span class=\"c-badge c-badge--secondary gc-shadow__soft\">Click or drag files here to upload.</span>",
+    accept: function(file, done) {
+      if (file.name == "justinbieber.jpg") {
+        done("Naha, you don't.");
+      }
+      else { done(); }
+    }
+  };
+</script>

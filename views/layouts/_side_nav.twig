@@ -1,0 +1,40 @@
+<div class="row">
+  <ul class="nav nav-list gc-nav-side-bar gc-mt-24">
+    <li class="{{ app.controller.id == 'dashboard' ? 'active' : '' }}">
+      <a href="{{ url('crelish/dashboard/index') }}" class="active">
+        <span class="fui-home"></span> Dashboard
+        <span class="badge pull-right">19</span>
+      </a>
+    </li>
+    <li class="{{ app.controller.id == 'content' ? 'active' : '' }}">
+      <a href="{{ url('crelish/content/index') }}">
+        <span class="fui-new"></span> Content
+        <span class="badge pull-right">130</span>
+      </a>
+    </li>
+    <li class="{{ app.controller.id == 'asset' ? 'active' : '' }}">
+      <a href="{{ url('crelish/asset/index') }}">
+        <span class="fui-image"></span> Assets
+        <span class="badge pull-right">9</span>
+      </a>
+    </li>
+    <li>
+      <a href="#fakelink">
+        <span class="fui-user"></span> User
+        <span class="badge pull-right">69</span>
+      </a>
+    </li>
+    <li class="disabled">
+      <a href="#fakelink">
+        <span class="fui-star"></span> Globals
+        <span class="badge pull-right">21</span>
+      </a>
+    </li>
+    <li>
+      <a href="#fakelink">
+        <span class="fui-gear"></span> Settings
+        <span class="badge pull-right">40</span>
+      </a>
+    </li>
+  </ul>
+</div>

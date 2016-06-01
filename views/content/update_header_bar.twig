@@ -1,0 +1,19 @@
+{{ use('/giantbits/crelish/widgets') }}
+<div class="row">
+  <div class="col-md-4">
+    Content
+  </div>
+  <div class="col-md-8">
+    <div class="btn-group pull-right">
+      <button class="btn btn-primary btn-sm btn-save" type="button" onclick="$('#content-form').submit();">
+        <span class="fui-check"></span> Save content</span>
+      </button>
+      <button data-toggle="modal" data-target="#confirm-cancel" data-href="{{ url('crelish/content/index.html') }}" class="btn btn-inverse btn-sm" type="button">
+        <span class="fui-exit"></span> Cancel</span>
+      </button>
+      <button class="btn btn-danger btn-sm" data-record-id="54" data-record-title="Something cool" data-toggle="modal" data-target="#confirm-delete">
+        <span class="fui-trash"></span></span>
+      </button>
+    </div>
+  </div>
+</div>

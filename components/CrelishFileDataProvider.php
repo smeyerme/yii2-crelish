@@ -8,11 +8,14 @@
 
 namespace crelish\components;
 
-use Underscore\Parse;
 use Underscore\Types\Arrays;
 use yii\base\Component;
 use yii\data\ArrayDataProvider;
+use yii\grid\ActionColumn;
 use yii\helpers\FileHelper;
+use yii\helpers\Html;
+use yii\helpers\Json;
+use yii\helpers\Url;
 use yii\widgets\LinkPager;
 
 class CrelishFileDataProvider extends Component
@@ -21,12 +24,58 @@ class CrelishFileDataProvider extends Component
   private $sourceFolder;
   private $allModels;
   private $filter;
+  private $_columns;
+  private $key = 'uuid';
 
-  public function __construct($sourceFolder, $settings)
+  public function getColumns()
+  {
+    $columns = [];
+    $filePath = \Yii::getAlias('@app/workspace/data/elements') . DIRECTORY_SEPARATOR . $this->sourceFolder . '.json';
+
+    $fieldDefinitions = Json::decode(file_get_contents($filePath), false);
+
+    $columns[] = 'uuid';
+    $columns[] = 'type';
+    $columns[] = 'path';
+    $columns[] = 'slug';
+    $columns[] = 'state';
+
+    foreach ($fieldDefinitions->fields as $field) {
+      if (!empty($field->visibleInGrid) && $field->visibleInGrid) {
+        $columns[] = $field->key;
+      }
+    }
+
+    $columns[] = [
+      'class' => ActionColumn::className(),
+      'template' => '{update}',
+      'buttons' => [
+        'update' => function ($url, $model) {
+          return Html::a('<span class="glyphicon glyphicon-edit"></span>', $url, [
+            'title' => \Yii::t('app', 'Edit'),
+          ]);
+        }
+      ],
+      'urlCreator' => function ($action, $model, $key, $index) {
+        if ($action === 'update') {
+          $url = Url::toRoute(['content/update', 'type' => $this->sourceFolder, 'uuid'=>$model['uuid']]);
+          return $url;
+        }
+      }
+    ];
+
+    return array_values($columns);
+  }
+
+  public function __construct($sourceFolder, $settings = [])
   {
 
     $this->sourceFolder = $sourceFolder;
-    $this->allModels = $this->parseFolderContent($this->sourceFolder);
+    $this->allModels = $this->parseFolderContent();
+
+    if (Arrays::has($settings, 'key')) {
+      $this->key = $settings['key'];
+    }
 
     if (Arrays::has($settings, 'filter')) {
       $this->filterModels($settings['filter']);
@@ -49,17 +98,17 @@ class CrelishFileDataProvider extends Component
 
   private function sortModels($sort)
   {
-    $this->allModels = Arrays::sort($this->allModels, function($model) use ($sort) {
+    $this->allModels = Arrays::sort($this->allModels, function ($model) use ($sort) {
       return $model[$sort['by']];
-    } , $sort['dir']);
+    }, $sort['dir']);
   }
 
-  public function parseFolderContent($folder)
+  public function parseFolderContent()
   {
     $filesArr = [];
     $allModels = [];
 
-    $fullFolder = \Yii::$app->basePath . DIRECTORY_SEPARATOR . 'workspace' . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . $folder;
+    $fullFolder = \Yii::$app->basePath . DIRECTORY_SEPARATOR . 'workspace' . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . $this->sourceFolder;
 
     $files = FileHelper::findFiles($fullFolder);
     if (isset($files[0])) {
@@ -72,6 +121,7 @@ class CrelishFileDataProvider extends Component
       $content = file_get_contents($file);
       $modelArr = json_decode($content, true);
       $modelArr['id'] = $file;
+      $modelArr['type'] = $this->sourceFolder;
       $allModels[] = $modelArr;
     }
 
@@ -81,7 +131,7 @@ class CrelishFileDataProvider extends Component
   public function all()
   {
     $provider = new ArrayDataProvider([
-      'key' => 'id',
+      'key' => $this->key,
       'allModels' => $this->allModels,
       'pagination' => [
         'totalCount' => count($this->allModels),
@@ -102,5 +152,25 @@ class CrelishFileDataProvider extends Component
     $result = ['models' => array_values($models), 'pager' => $pager];
 
     return $result;
+  }
+
+  public function raw()
+  {
+    $provider = new ArrayDataProvider([
+      'key' => $this->key,
+      'allModels' => $this->allModels,
+      'sort' => [
+        'attributes' => [$this->key, 'systitle'],
+      ],
+      'pagination' => [
+        'totalCount' => count($this->allModels),
+        'pageSize' => 15,
+        'forcePageParam' => true,
+        //'route' => $_GET['pathRequested'],
+        //'urlManager' => \Yii::$app->getUrlManager(),
+      ],
+    ]);
+
+    return $provider;
   }
 }
