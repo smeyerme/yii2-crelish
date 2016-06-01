@@ -159,7 +159,7 @@ class ContentController extends Controller
     ]);
 
     // Start output.
-    echo '<div class="row palette-clouds gc-text-color-default"><div class="col-md-12">';
+    echo '<div class="row palette-clouds gc-text-color-default gc-shadow__soft"><div class="col-md-12">';
 
     // Display messages.
     foreach (\Yii::$app->session->getAllFlashes() as $key => $message) {
@@ -178,7 +178,8 @@ class ContentController extends Controller
       } elseif ($field->type == 'matrixConnector') {
         // Trying to add some riot magic here
         //echo  $form->field($this->model, 'matrix')->textArea(["disabled" => true, "value" => empty($data) ? '' : var_export($data['CrelishDynamicModel'][$field->key], true)]);
-        echo MatrixConnetor::widget(['data' => $data['CrelishDynamicModel'][$field->key]]);
+        $matrix =  !empty($data['CrelishDynamicModel'][$field->key]) ? $data['CrelishDynamicModel'][$field->key] : [];
+        echo MatrixConnetor::widget(['data' => $matrix]);
       } else {
         echo $form->field($this->model, $field->key)->{$field->type}((array)$fieldOptions)->label($field->label);
       }
