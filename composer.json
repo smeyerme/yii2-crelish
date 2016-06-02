@@ -1,6 +1,6 @@
 {
-  "name": "crelish/yii2-crelish",
-  "description": "Content management for the Yii framework",
+  "name": "giantbits/yii2-crelish",
+  "description": "Content management for the Yii2 framework",
   "keywords": [
     "yii2",
     "crelish",
@@ -24,7 +24,6 @@
   "require": {
     "yiisoft/yii2": ">=2.0.4",
     "symfony/yaml": "^2.7",
-    "cedx/yii2-mustache": "^0.4.2",
     "anahkiasen/underscore-php" : "dev-master"
   },
   "autoload": {
