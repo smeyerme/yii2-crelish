@@ -106,7 +106,7 @@ class ContentController extends Controller
 
     $this->model = new CrelishDynamicModel($fields);
     $this->model->identifier = $this->type;
-    
+
     // Set uuid if existant.
     if (!empty($this->uuid)) {
       $this->model->uuid = $this->uuid;
@@ -159,7 +159,7 @@ class ContentController extends Controller
     ]);
 
     // Start output.
-    echo '<div class="row palette-clouds gc-text-color-default gc-shadow__soft"><div class="col-md-12">';
+    echo '<div class="gc-bc--palette-clouds gc-bs--soft">';
 
     // Display messages.
     foreach (\Yii::$app->session->getAllFlashes() as $key => $message) {
@@ -185,7 +185,7 @@ class ContentController extends Controller
       }
     }
 
-    echo '</div></div>';
+    echo '</div>';
     ActiveForm::end();
 
     return ob_get_clean();

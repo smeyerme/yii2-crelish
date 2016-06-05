@@ -1,14 +1,14 @@
 {{ use('/yii/grid/GridView') }}
 {{ use('/giantbits/crelish/widgets') }}
-<div class="row">
-  <div class="col-md-2 palette palette-asbestos gc-no-padding-top">
+<div class="o-grid gc-bc--palette-clouds">
+  <div class="o-grid__cell o-grid__cell--width-20">
     <h6>Type filter</h6>
-    <ul role="menu" class="gc-content-filter-nav">
+    <ul role="menu" class="gc-nav__content-filter">
       {{ element_nav_widget({'type':type}) }}
     </ul>
   </div>
-  <div class="col-md-10 palette-clouds gc-text-color-default gc-shadow__soft">
+  <div class="o-grid__cell gc-bs--soft">
     <h6>Content</h6>
-    {{ grid_view_widget({'dataProvider': dataProvider, 'columns': columns}) | raw }}
+    {{ grid_view_widget({'dataProvider': dataProvider, 'columns': columns, 'tableOptions': {'class':'table table-striped'}}) | raw }}
   </div>
 </div>
