@@ -9,31 +9,29 @@
   {{ html.csrfMetaTags | raw }}
   {{ void(this.head) }}
 </head>
-<body class="crelish">
+<body class="crelish gc-bc--palette-wetasphalt">
 {{ void(this.beginBody()) }}
 
-<div class="container-fluid gc-bc--palette-wetasphalt gc-main-wrapper">
-  <div class="row gc-full-height">
-    <div class="gc-h-strech col-md-2 palette-midnight-blue gc-full-height">
-      <div class="palette gc-advance-width gc-palette-darker">
-        <div class="container-fluid">crelish</div>
+<div class="gc-h--100 o-container o-container--super gc-bc--palette-wetasphalt">
+  <div class="o-grid">
+    <div class="o-grid__cell--width-20">
+      <div class="gc-lp--1 gc-section-top-bar gc-bc--palette-dark-blue">
+        crelish
       </div>
-      <div class="gc-side-bar-nav palette gc-no-padding">
+      <div class="gc-nav__sidebar gc-bc--palette-midnightblue gc-pt--2">
         {% include "_side_nav.twig" %}
       </div>
     </div>
-    <div class="gc-h-strech col-md-10">
-      <div class="palette palette-green-sea gc-advance-width gc-mb-24">
-        <div class="container-fluid">
-          {% include '@crelish/views/' ~ app.controller.id ~ '/' ~ app.controller.action.id ~ "_header_bar.twig" %}
-        </div>
+    <div class="o-grid__cell o-grid__cell--no-gutter">
+
+      <div class="gc-bc--palette-green-sea gc-section-top-bar">
+        {% include '@crelish/views/' ~ app.controller.id ~ '/' ~ app.controller.action.id ~ "_header_bar.twig" %}
       </div>
 
-      <section id="crelish-wrapper">
-        <div class="container-fluid">
-          {{ content | raw }}
-        </div>
+      <section class="gc-p--ltr-2">
+        {{ content | raw }}
       </section>
+
     </div>
   </div>
 </div>
