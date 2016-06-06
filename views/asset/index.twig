@@ -1,15 +1,18 @@
-<div class="row">
-  <div class="o-grid palette palette-asbestos gc-no-padding-top">
-    <div class="o-grid__cell" id="dropZone">
-      <form action="{{ url('crelish/asset/upload') }}"
-            class="dropzone"
-            id="crelish-drop-zone"></form>
-    </div>
-  </div>
-  <div class="o-grid palette palette-clouds gc-text-color-default gc-no-padding-top">
-    Test
+{{ use('/yii/widgets/ListView') }}
+
+<div class="o-grid gc-bc--palette-asbestos">
+  <div class="o-grid__cell gc-ta--center gc-p--1" id="dropZone">
+    <form action="{{ url('crelish/asset/upload') }}"
+      class="dropzone"
+      id="crelish-drop-zone"></form>
   </div>
 </div>
+<div class="o-grid gc-bc--palette-clouds gc-bs--soft">
+  <div class="o-grid__cell">
+    {{ list_view_widget({'dataProvider': dataProvider, 'itemView': 'asset_item.twig', 'itemOptions': {'tag':false}, 'options': {'class':'o-grid o-grid--wrap o-grid--no-gutter'}, 'summaryOptions':{'class': 'o-grid o-grid__cell o-grid__cell--width-100'}}) | raw }}
+  </div>
+</div>
+
 
 <script type="text/javascript">
   Dropzone.options.crelishDropZone = {

@@ -29,6 +29,10 @@ html, body {
 	margin-top: 2em;
 }
 
+.gc-bc--palette-white {
+	background-color: #ffffff;
+}
+
 .gc-bc--palette-wetasphalt {
 	background-color: #34495e;
 }
@@ -45,8 +49,16 @@ html, body {
 	background-color: #ecf0f1;
 }
 
+.gc-bc--palette-silver {
+	background-color: #bdc3c7;
+}
+
 .gc-bc--palette-green-sea {
 	background-color: #16a085;
+}
+
+.gc-bc--palette-asbestos {
+	background-color: #7f8c8d;
 }
 
 .gc-gutter--revert {
@@ -97,9 +109,47 @@ html, body {
 	box-shadow: 0px 33px 76px -18px rgba(0,0,0,0.22);
 }
 
+.gc-to--ellipsis {
+	text-overflow: ellipsis;
+}
+
 .gc-p--ltr-2 {
 	padding: 2em;
     padding-bottom: 0;
+}
+
+.gc-p--1 {
+	padding: 1em;
+}
+
+.gc-p--lbr-1 {
+	padding-left: 1em;
+	padding-right: 1em;
+	padding-bottom: 1em;
+}
+
+.gc-m--lbr-1 {
+	margin-right: 1em;
+	margin-bottom: 1em;
+}
+
+.gc-ta--center {
+	text-align: center;
+}
+
+.gc-box--h-60 {
+
+
+	display: block;
+	/* Fallback for non-webkit */
+	display: -webkit-box;
+	max-width: 400px;
+	/* Fallback for non-webkit */
+	line-height: 1.15;
+	-webkit-line-clamp: 3;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 ul.gc-nav__content-filter {
@@ -145,6 +195,10 @@ ul.gc-nav__content-filter li>a:active {
 	margin-top: 0.35em;
 }
 
+.gc-o--hidden {
+	overflow: hidden;
+}
+
 .crelish *,
 .crelish input,
 .crelish select,
@@ -174,6 +228,15 @@ div.help-block.help-block-error {
 .crelish .modal-dialog {
 	z-index: 9999;
 }
+
+/* DROPZONE */
+.dz-filename span {
+	white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    display: block;
+}
+
 
 
 /* PACE JS */
