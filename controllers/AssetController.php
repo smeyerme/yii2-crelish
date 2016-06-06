@@ -9,6 +9,7 @@
 namespace giantbits\crelish\controllers;
 
 use yii\base\Controller;
+use crelish\components\CrelishFileDataProvider;
 
 class AssetController extends Controller
 {
@@ -22,11 +23,15 @@ class AssetController extends Controller
 
   public function actionIndex()
   {
-    return $this->render('index.twig');
+    $modelProvider = new CrelishFileDataProvider('asset');
+
+    return $this->render('index.twig', [
+      'dataProvider' => $modelProvider->raw()
+    ]);
   }
 
   public function actionUpload()
   {
-    return; 
+    return;
   }
 }
