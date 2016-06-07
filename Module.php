@@ -78,7 +78,7 @@ class Module extends \yii\base\Module implements BootstrapInterface {
 
     return true;
   }
-  
+
   /**
    * Resets potentially incompatible global settings done in app config.
    */

@@ -9,7 +9,10 @@
 namespace giantbits\crelish\controllers;
 
 use yii\base\Controller;
-use crelish\components\CrelishFileDataProvider;
+use yii\web\UploadedFile;
+use yii\helpers\Json;
+use giantbits\crelish\components\CrelishFileDataProvider;
+use giantbits\crelish\components\CrelishDynamicModel;
 
 class AssetController extends Controller
 {
@@ -23,7 +26,9 @@ class AssetController extends Controller
 
   public function actionIndex()
   {
-    $modelProvider = new CrelishFileDataProvider('asset');
+    $modelProvider = new CrelishFileDataProvider('asset', [
+      'sort' => ['by' => 'systitle', 'dir' => 'desc']
+    ]);
 
     return $this->render('index.twig', [
       'dataProvider' => $modelProvider->raw()
@@ -32,6 +37,40 @@ class AssetController extends Controller
 
   public function actionUpload()
   {
-    return;
+
+
+    $file = \yii\web\UploadedFile::getInstanceByName('file');
+
+    if($file) {
+      $destName = time() . '_' .$file->name;
+      $file->saveAs(\Yii::getAlias('@webroot') . DIRECTORY_SEPARATOR . '_lib' . DIRECTORY_SEPARATOR . $destName);
+
+      $filePath = \Yii::getAlias('@app/workspace/data/elements') . DIRECTORY_SEPARATOR . 'asset' . '.json';
+      $elementDefinition = Json::decode(file_get_contents($filePath), false);
+
+      // Add core fields.
+      $elementDefinition->fields[] = Json::decode('{ "label": "UUID", "key": "uuid", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]], "options": {"disabled":true}}', false);
+      $elementDefinition->fields[] = Json::decode('{ "label": "Path", "key": "path", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
+      $elementDefinition->fields[] = Json::decode('{ "label": "Slug", "key": "slug", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
+      $elementDefinition->fields[] = Json::decode('{ "label": "State", "key": "state", "type": "dropDownList", "visibleInGrid": true, "rules": [["required"], ["string", {"max": 128}]], "options": {"prompt":"Please set state"}, "items": {"0":"Offline", "1":"Draft", "2":"Online", "3":"Archived"}}', false);
+
+      $fields = [];
+
+      foreach ($elementDefinition->fields as $field) {
+        array_push($fields, $field->key);
+      }
+
+      $model = new CrelishDynamicModel($fields);
+      $model->identifier = 'asset';
+      $model->systitle = $destName;
+      $model->title = $destName;
+      $model->src = \Yii::getAlias( '@web' ) . '/' . '_lib' . '/' . $destName;
+      $model->type = $file->type;
+      $model->size = $file->size;
+      $model->save();
+    }
+
+
+    return false;
   }
 }

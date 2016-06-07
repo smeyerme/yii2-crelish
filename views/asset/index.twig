@@ -1,15 +1,29 @@
 {{ use('/yii/widgets/ListView') }}
+{{ use('/yii/widgets/Pjax') }}
 
 <div class="o-grid gc-bc--palette-asbestos">
   <div class="o-grid__cell gc-ta--center gc-p--1" id="dropZone">
-    <form action="{{ url('crelish/asset/upload') }}"
+    <form action="{{ url('crelish/asset/upload.html') }}"
       class="dropzone"
       id="crelish-drop-zone"></form>
   </div>
 </div>
 <div class="o-grid gc-bc--palette-clouds gc-bs--soft">
   <div class="o-grid__cell">
-    {{ list_view_widget({'dataProvider': dataProvider, 'itemView': 'asset_item.twig', 'itemOptions': {'tag':false}, 'options': {'class':'o-grid o-grid--wrap o-grid--no-gutter'}, 'summaryOptions':{'class': 'o-grid o-grid__cell o-grid__cell--width-100'}}) | raw }}
+    {{ pjax_begin({'id':'assetList', 'enablePushState': false}) }}
+    {{ list_view_widget({
+    'dataProvider': dataProvider,
+    'pager': {
+      'maxButtonCount': 5,
+      'options': {
+        'class': 'pagination gc-bc--palette-silver o-grid__cell o-grid__cell--width-100'
+      }
+    },
+    'itemView': 'asset_item.twig',
+    'itemOptions': {'tag':false},
+    'options': {'class':'o-grid o-grid--wrap o-grid--no-gutter'},
+    'summaryOptions':{'class': 'o-grid o-grid__cell o-grid__cell--width-100'}}) | raw }}
+    {{ pjax_end() }}
   </div>
 </div>
 
@@ -17,8 +31,19 @@
 <script type="text/javascript">
   Dropzone.options.crelishDropZone = {
     paramName: "file", // The name that will be used to transfer the file
-    maxFilesize: 25, // MB
+    maxFilesize: 250, // MB
     dictDefaultMessage: "<span class=\"c-badge c-badge--secondary gc-shadow__soft\">Click or drag files here to upload.</span>",
+    init: function() {
+      var myDropzone = this;
+
+      this.on("complete", function(file) {
+        setTimeout(function() {
+          $.pjax.reload({container:'#assetList'});
+          myDropzone.removeFile(file);
+        }, 250);
+      });
+
+    },
     accept: function(file, done) {
       if (file.name == "justinbieber.jpg") {
         done("Naha, you don't.");

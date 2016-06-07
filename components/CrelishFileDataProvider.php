@@ -6,7 +6,7 @@
  * Time: 20:57
  */
 
-namespace crelish\components;
+namespace giantbits\crelish\components;
 
 use Underscore\Types\Arrays;
 use yii\base\Component;

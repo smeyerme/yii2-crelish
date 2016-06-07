@@ -111,6 +111,9 @@ html, body {
 
 .gc-to--ellipsis {
 	text-overflow: ellipsis;
+    width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
 }
 
 .gc-p--ltr-2 {
@@ -227,6 +230,31 @@ div.help-block.help-block-error {
 
 .crelish .modal-dialog {
 	z-index: 9999;
+}
+
+
+/* BLAZE CSS */
+.pagination {
+	text-align: center;
+}
+
+.pagination li:first-child>a,
+.pagination li:first-child>span,
+.dataTables_paginate li:first-child>a,
+.dataTables_paginate li:first-child>span,
+.pagination li:last-child>a,
+.pagination li:last-child>span,
+.pagination li:last-child>a:hover,
+.pagination li:last-child>span:hover,
+.pagination li:last-child>a:focus,
+.pagination li:last-child>span:focus,
+.dataTables_paginate li:last-child>a,
+.dataTables_paginate li:last-child>span,
+.dataTables_paginate li:last-child>a:hover,
+.dataTables_paginate li:last-child>span:hover,
+.dataTables_paginate li:last-child>a:focus,
+.dataTables_paginate li:last-child>span:focus {
+	border-radius: 0;
 }
 
 /* DROPZONE */
