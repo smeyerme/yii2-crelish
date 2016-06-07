@@ -8,7 +8,7 @@
 
 namespace giantbits\crelish\controllers;
 
-use crelish\components\CrelishFileDataProvider;
+use giantbits\crelish\components\CrelishFileDataProvider;
 use giantbits\crelish\components\CrelishDynamicModel;
 use giantbits\crelish\widgets\MatrixConnetor;
 use yii\web\Controller;

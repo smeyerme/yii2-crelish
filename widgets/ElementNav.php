@@ -1,7 +1,7 @@
 <?php
 namespace giantbits\crelish\widgets;
 
-use crelish\components\CrelishFileDataProvider;
+use giantbits\crelish\components\CrelishFileDataProvider;
 use yii\base\Widget;
 use yii\helpers\Html;
 use yii\helpers\Url;
