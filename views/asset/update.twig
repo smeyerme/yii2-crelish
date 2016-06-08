@@ -1,4 +1,16 @@
-{{ alerts | raw }}
+{{ use('yii/bootstrap/ActiveForm') }}
+
+{% if alerts %}
+<div class="o-grid" style="margin-bottom: -1em;">
+  <div class="o-grid__cell o-grid__cell--no-gutter">
+    {{ alerts | raw }}
+  </div>
+</div>
+{% endif %}
+{% set form = active_form_begin({
+'id' : 'asset-form',
+'layout' : 'default'
+}) %}
 <div class="o-grid gc-bc--palette-clouds gc-bs--soft">
   <div class="o-grid__cell o-grid__cell--width-75 o-grid__cell--no-gutter">
     <div class="c-card c-card--high gc-m--lbr-1 gc-bc--palette-white">
@@ -10,12 +22,14 @@
           <img src="{{ model.src }}" class="o-image">
         </div>
         <div class="description gc-box--h-60 gc-to--ellipsis">
-          {{ model.description | raw }}
+          {{ form.field(model, 'description').textarea({'rows':6}).label('') | raw }}
         </div>
       </div>
     </div>
   </div>
   <div class="o-grid__cell o-grid__cell">
-    <a class="c-button c-button--error" href="{{ url('asset/delete', {uuid: model.uuid}) }}">Delete</a>
+    {{ form.field(model, 'title') | raw }}
+    {{ form.field(model, 'state').dropdownlist({0:'Offline',1:'Draft',2:'Published',3:'Archived'}) | raw }}
   </div>
 </div>
+{{ active_form_end() }}
