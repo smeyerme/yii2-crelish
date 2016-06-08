@@ -1,0 +1,21 @@
+{{ alerts | raw }}
+<div class="o-grid gc-bc--palette-clouds gc-bs--soft">
+  <div class="o-grid__cell o-grid__cell--width-75 o-grid__cell--no-gutter">
+    <div class="c-card c-card--high gc-m--lbr-1 gc-bc--palette-white">
+      <div class="c-card__content c-heading dz-filename gc-bc--palette-silver gc-to--ellipsis">
+        {{ model.systitle }}
+      </div>
+      <div class="c-card__content">
+        <div class="image gc-o--hidden">
+          <img src="{{ model.src }}" class="o-image">
+        </div>
+        <div class="description gc-box--h-60 gc-to--ellipsis">
+          {{ model.description | raw }}
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="o-grid__cell o-grid__cell">
+    <a class="c-button c-button--error" href="{{ url('asset/delete', {uuid: model.uuid}) }}">Delete</a>
+  </div>
+</div>
