@@ -116,6 +116,14 @@ html, body {
     white-space: nowrap;
 }
 
+.gc-p--tb-1 {
+	padding: 1em 0 1em 0;
+}
+
+.gc-p--tb-2 {
+	padding: 2em 0 2em 0;
+}
+
 .gc-p--ltr-2 {
 	padding: 2em;
     padding-bottom: 0;
@@ -140,9 +148,11 @@ html, body {
 	text-align: center;
 }
 
+.gc-tc--inherit {
+	color: inherit;
+}
+
 .gc-box--h-60 {
-
-
 	display: block;
 	/* Fallback for non-webkit */
 	display: -webkit-box;

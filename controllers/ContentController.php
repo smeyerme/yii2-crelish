@@ -9,6 +9,7 @@
 namespace giantbits\crelish\controllers;
 
 use giantbits\crelish\components\CrelishFileDataProvider;
+use giantbits\crelish\components\CrelishJsonDataProvider;
 use giantbits\crelish\components\CrelishDynamicModel;
 use giantbits\crelish\widgets\MatrixConnetor;
 use yii\web\Controller;
@@ -45,7 +46,8 @@ class ContentController extends Controller
   {
     $type = !empty($this->type) ? $this->type : 'page';
 
-    $modelProvider = new CrelishFileDataProvider($type);
+    //$modelProvider = new CrelishFileDataProvider($type);
+    $modelProvider = new CrelishJsonDataProvider($type, [], null);
     //$elements = new CrelishFileDataProvider('elements', ['key' => 'key']);
 
     return $this->render('content.twig', [
@@ -57,7 +59,6 @@ class ContentController extends Controller
 
   public function actionCreate()
   {
-
     $content = $this->buildForm();
 
     return $this->render('create.twig', [
@@ -163,7 +164,7 @@ class ContentController extends Controller
 
     // Display messages.
     foreach (\Yii::$app->session->getAllFlashes() as $key => $message) {
-      echo '<div class="alert alert-' . $key . '">' . $message . '</div>';
+      echo '<div class="o-alert o-alert-' . $key . '">' . $message . '</div>';
     }
 
     // Build form fields.

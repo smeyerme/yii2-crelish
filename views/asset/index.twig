@@ -1,6 +1,11 @@
 {{ use('/yii/widgets/ListView') }}
 {{ use('/yii/widgets/Pjax') }}
 
+<div class="o-grid" style="margin-bottom: -1em;">
+  <div class="o-grid__cell o-grid__cell--no-gutter">
+    {{ alerts | raw }}
+  </div>
+</div>
 <div class="o-grid gc-bc--palette-asbestos">
   <div class="o-grid__cell gc-ta--center gc-p--1" id="dropZone">
     <form action="{{ url('crelish/asset/upload.html') }}"
@@ -22,7 +27,7 @@
     'itemView': 'asset_item.twig',
     'itemOptions': {'tag':false},
     'options': {'class':'o-grid o-grid--wrap o-grid--no-gutter'},
-    'summaryOptions':{'class': 'o-grid o-grid__cell o-grid__cell--width-100'}}) | raw }}
+    'summaryOptions':{'class': 'o-grid o-grid__cell o-grid__cell--width-100 gc-p--tb-1'}}) | raw }}
     {{ pjax_end() }}
   </div>
 </div>
