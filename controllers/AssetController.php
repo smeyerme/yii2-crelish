@@ -8,6 +8,7 @@
 
 namespace giantbits\crelish\controllers;
 
+use giantbits\crelish\components\CrelishDynamicJsonModel;
 use yii\base\Controller;
 use yii\web\UploadedFile;
 use yii\helpers\Json;
@@ -19,6 +20,9 @@ class AssetController extends Controller
 {
 
   public $layout = 'crelish.twig';
+  private $model;
+  private $type;
+  private $uuid;
 
   public function init()
   {
@@ -42,13 +46,39 @@ class AssetController extends Controller
     ]);
   }
 
-  public function actionView()
+  public function actionUpdate()
   {
-    $id = !empty( \Yii::$app->getRequest()->getQueryParam('uuid') ) ?  \Yii::$app->getRequest()->getQueryParam('uuid') : null;
-    $modelProvider = new CrelishJsonDataProvider('asset', [], $id);
+    $uuid = !empty( \Yii::$app->getRequest()->getQueryParam('uuid') ) ?  \Yii::$app->getRequest()->getQueryParam('uuid') : null;
+    $model = new CrelishDynamicJsonModel([], ['uuid' => $uuid, 'type' => 'asset']);
 
-    return $this->render('view.twig', [
-      'model' => $modelProvider->one()
+    // Save content if post request.
+    if (!empty(\Yii::$app->request->post()) && !\Yii::$app->request->isAjax) {
+      $oldData = [];
+      // Load old data.
+      if(!empty($model->uuid)) {
+        $oldData = Json::decode(file_get_contents(\Yii::getAlias('@app/workspace/data/') . DIRECTORY_SEPARATOR . 'asset' . DIRECTORY_SEPARATOR . $model->uuid . '.json'));
+      }
+      $model->attributes = $_POST['CrelishDynamicJsonModel'] + $oldData;
+
+      if ($model->validate()) {
+        $model->save();
+        \Yii::$app->session->setFlash('success', 'Asset saved successfully...');
+        header("Location: " . Url::to(['asset/update', 'uuid' => $model->uuid]));
+        exit(0);
+      } else {
+        var_dump($model->errors);
+        \Yii::$app->session->setFlash('error', 'Asset save failed...');
+      }
+    }
+
+    $alerts = '';
+    foreach (\Yii::$app->session->getAllFlashes() as $key => $message) {
+      $alerts .= '<div class="c-alerts__alert c-alerts__alert--' . $key . '">' . $message . '</div>';
+    }
+
+    return $this->render('update.twig', [
+      'model' => $model,
+      'alerts' => $alerts
     ]);
   }
 
