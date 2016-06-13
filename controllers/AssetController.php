@@ -91,7 +91,7 @@ class AssetController extends Controller
       $destName = time() . '_' . $file->name;
       $file->saveAs(\Yii::getAlias('@webroot') . DIRECTORY_SEPARATOR . '_lib' . DIRECTORY_SEPARATOR . $destName);
 
-      $filePath = \Yii::getAlias('@app/workspace/data/elements') . DIRECTORY_SEPARATOR . 'asset' . '.json';
+      $filePath = \Yii::getAlias('@app/workspace/elements') . DIRECTORY_SEPARATOR . 'asset' . '.json';
       $elementDefinition = Json::decode(file_get_contents($filePath), false);
 
       // Add core fields.

@@ -1,0 +1,17 @@
+<div class="o-grid__cell o-grid__cell--width-20">
+	<a href="{{ url('asset/update', {uuid: model.uuid}) }}" class="gc-tc--inherit">
+		<div class="c-card c-card--high gc-m--lbr-1 gc-bc--palette-white">
+			<div class="c-card__content c-heading dz-filename gc-bc--palette-silver gc-to--ellipsis">
+				{{ model.systitle }}
+			</div>
+			<div class="c-card__content">
+				<div class="image gc-o--hidden">
+					<img class="lazy" data-original="{{ model.src }}" height="140" >
+				</div>
+				<div class="description gc-box--h-60 gc-to--ellipsis">
+					{{ model.description | raw }}
+				</div>
+			</div>
+		</div>
+	</a>
+</div>

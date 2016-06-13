@@ -77,7 +77,7 @@ class CrelishFrontendController extends Controller
   private function processContent($data)
   {
     $processedData = [];
-    $filePath = \Yii::getAlias('@app/workspace/data/elements') . DIRECTORY_SEPARATOR . $this->entryPoint['type'] . '.json';
+    $filePath = \Yii::getAlias('@app/workspace/elements') . DIRECTORY_SEPARATOR . $this->entryPoint['type'] . '.json';
     $elementDefinition = yii\helpers\Json::decode(file_get_contents($filePath), false);
 
     foreach($data as $key => $content) {

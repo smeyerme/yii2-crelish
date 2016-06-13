@@ -9,7 +9,7 @@ use yii\helpers\Json;
 use yii\helpers\Url;
 use yii\web\Link;
 
-class MatrixConnetor extends Widget
+class MatrixConnector extends Widget
 {
   private $data;
 
@@ -34,7 +34,7 @@ class MatrixConnetor extends Widget
         $dataItem = new CrelishJsonDataProvider($reference['type'], [], $reference['uuid']);
         $itemData = $dataItem->one();
 
-        foreach ($dataItem->definitions()->fields as $field ) {
+        foreach ($dataItem->definitions->fields as $field ) {
           if($field->visibleInGrid) {
             $info[] = ['label'=>$field->label, 'value'=> $itemData[$field->key]];
           }
