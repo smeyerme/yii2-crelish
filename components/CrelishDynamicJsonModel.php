@@ -10,6 +10,7 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
   public $identifier;
   public $uuid;
   public $type;
+  public $fieldDefinitions;
 
   public function init()
   {
@@ -17,7 +18,7 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
 
     // Build definitions.
     if(!empty($this->type)) {
-      $filePath = \Yii::getAlias('@app/workspace/data/elements') . DIRECTORY_SEPARATOR . $this->type . '.json';
+      $filePath = \Yii::getAlias('@app/workspace/elements') . DIRECTORY_SEPARATOR . $this->type . '.json';
       $elementDefinition = Json::decode(file_get_contents($filePath), false);
 
       // Add core fields.
@@ -31,12 +32,15 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
       $elementDefinition->fields[] = Json::decode('{ "label": "Publish from", "key": "from", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
       $elementDefinition->fields[] = Json::decode('{ "label": "Publish to", "key": "to", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
 
+      $this->fieldDefinitions = $elementDefinition;
       $fields = [];
 
       // Build field array.
       foreach ($elementDefinition->fields as $field) {
         array_push($fields, $field->key);
       }
+
+      $this->identifier = $this->type;
 
       // Populate attributes.
       foreach ($fields as $name => $value) {
@@ -46,8 +50,6 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
           $this->defineAttribute($name, $value);
         }
       }
-
-      $this->identifier = $this->type;
 
       // Add validation rules.
       foreach ($elementDefinition->fields as $field) {
@@ -70,6 +72,11 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
         $this->load($data);
       }
     }
+  }
+
+  public function getFields()
+  {
+    return $this->fields;
   }
 
   public function defineLabel($name, $label)

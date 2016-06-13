@@ -28,6 +28,7 @@ class CrelishAsset extends AssetBundle {
     'js/flat-ui-pro.min.js',
     'js/pace.min.js',
     'js/crelish.js',
+    '//cdn.jsdelivr.net/jquery.lazyload/1.9.3/jquery.lazyload.min.js',
     '//cdn.jsdelivr.net/perfect-scrollbar/0.6.11/js/perfect-scrollbar.jquery.min.js',
     '//cdn.jsdelivr.net/riot/2.4/riot+compiler.min.js',
     '//cdn.jsdelivr.net/riotgear/latest/rg.min.js',

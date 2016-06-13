@@ -2,6 +2,7 @@
 namespace giantbits\crelish\widgets;
 
 use giantbits\crelish\components\CrelishFileDataProvider;
+use giantbits\crelish\components\CrelishJsonDataProvider;
 use yii\base\Widget;
 use yii\helpers\Html;
 use yii\helpers\Url;
@@ -37,7 +38,8 @@ class ElementNav extends Widget
   public function run()
   {
     $nav = '';
-    $elements = new CrelishFileDataProvider('elements', ['key' => 'key', 'sort'=> ['by'=>'label', 'dir'=>'ASC']]);
+    //$elements = new CrelishFileDataProvider('elements', ['key' => 'key', 'sort'=> ['by'=>'label', 'dir'=>'ASC']]);
+    $elements = new CrelishJsonDataProvider('elements', ['key' => 'key', 'sort'=> ['by'=>'label', 'dir'=>'ASC']]);
 
     foreach($elements->all()['models'] as $element) {
       if(array_key_exists('selectable', $element) && $element['selectable'] === false) continue;

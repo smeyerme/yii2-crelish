@@ -51,7 +51,7 @@ class CrelishFileDataProvider extends Component
   public function getColumns()
   {
     $columns = [];
-    $filePath = \Yii::getAlias('@app/workspace/data/elements') . DIRECTORY_SEPARATOR . $this->sourceFolder . '.json';
+    $filePath = \Yii::getAlias('@app/workspace/elements') . DIRECTORY_SEPARATOR . $this->sourceFolder . '.json';
 
     $fieldDefinitions = Json::decode(file_get_contents($filePath), false);
 

@@ -24,26 +24,21 @@ class CrelishJsonDataProvider extends Component
 
   private $type;
   private $allModels;
-  private $filter;
-  private $_columns;
   private $definitions;
   private $key = 'uuid';
   private $uuid;
+  private $pathAlias;
 
-  public function __construct($type, $settings, $uuid)
+  public function __construct($type, $settings = [], $uuid = null)
   {
     $ds = DIRECTORY_SEPARATOR;
     $this->type = $type;
 
+    $this->pathAlias = ($this->type == 'elements') ? '@app/workspace/' : '@app/workspace/data/';
+
     if (!empty($uuid)) {
       $this->uuid = $uuid;
-      $this->allModels[] = \yii\helpers\Json::decode(file_get_contents(\Yii::getAlias('@app/workspace/data/') . $ds . $type . $ds . $uuid . '.json'));
-
-      $filePath = \Yii::getAlias('@app/workspace/data/elements') . DIRECTORY_SEPARATOR . $type . '.json';
-      $this->definitions = Json::decode(file_get_contents($filePath), false);
-
-      // Add core fields.
-      $this->definitions->fields[] = Json::decode('{ "label": "UUID", "key": "uuid", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]], "options": {"disabled":true}}', false);
+      $this->allModels[] = \yii\helpers\Json::decode(file_get_contents(\Yii::getAlias($this->pathAlias) . $ds . $type . $ds . $uuid . '.json'));
     } else {
       $this->allModels = $this->parseFolderContent($this->type);
     }
@@ -79,7 +74,7 @@ class CrelishJsonDataProvider extends Component
     $filesArr = [];
     $allModels = [];
 
-    $fullFolder = \Yii::$app->basePath . DIRECTORY_SEPARATOR . 'workspace' . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . $folder;
+    $fullFolder = \Yii::getAlias($this->pathAlias). DIRECTORY_SEPARATOR . $folder;
 
     $files = FileHelper::findFiles($fullFolder);
     if (isset($files[0])) {
@@ -92,6 +87,7 @@ class CrelishJsonDataProvider extends Component
       $content = file_get_contents($file);
       $modelArr = json_decode($content, true);
       $modelArr['id'] = $file;
+      $modelArr['type'] = $this->type;
       $allModels[] = $modelArr;
     }
 
@@ -152,28 +148,27 @@ class CrelishJsonDataProvider extends Component
   public function delete()
   {
     $ds = DIRECTORY_SEPARATOR;
-    return @unlink(\Yii::getAlias('@app/workspace/data/') . $ds . $this->type . $ds . $this->uuid . '.json');
+    return @unlink(\Yii::getAlias($this->pathAlias) . $ds . $this->type . $ds . $this->uuid . '.json');
   }
 
-  public function definitions()
+  public function getDefinitions()
   {
+    $filePath = \Yii::getAlias('@app/workspace/elements') . DIRECTORY_SEPARATOR . $this->type . '.json';
+    $this->definitions = new \stdClass();
+
+    // Add core fields.
+    $this->definitions->fields[] = Json::decode('{ "label": "UUID", "key": "uuid", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]], "options": {"disabled":true}}', false);
+    $this->definitions->fields = array_merge($this->definitions->fields, Json::decode(file_get_contents($filePath), false)->fields);
+    $this->definitions->fields[] = Json::decode('{ "label": "State", "key": "state", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]], "options": {"disabled":true}}', false);
+
     return $this->definitions;
   }
 
   public function getColumns()
   {
     $columns = [];
-    $filePath = \Yii::getAlias('@app/workspace/data/elements') . DIRECTORY_SEPARATOR . $this->type . '.json';
 
-    $fieldDefinitions = Json::decode(file_get_contents($filePath), false);
-
-    $columns[] = 'uuid';
-    $columns[] = 'type';
-    $columns[] = 'path';
-    $columns[] = 'slug';
-    $columns[] = 'state';
-
-    foreach ($fieldDefinitions->fields as $field) {
+    foreach ($this->getDefinitions()->fields as $field) {
       if (!empty($field->visibleInGrid) && $field->visibleInGrid) {
         $columns[] = $field->key;
       }
