@@ -30,6 +30,23 @@
   <div class="o-grid__cell o-grid__cell">
     {{ form.field(model, 'title') | raw }}
     {{ form.field(model, 'state').dropdownlist({0:'Offline',1:'Draft',2:'Published',3:'Archived'}) | raw }}
+    {{ form.field(model, 'colormain_hex', { 'inputOptions': { 'class': 'form-control colorspawn' }}) | raw }}
+
+    <div class="form-group field-crelishdynamicjsonmodel-state required">
+      <label class="control-label" for="crelishdynamicjsonmodel-state">Color palette</label>
+      <ul class="gc-list--inline">
+        {% for color in model.colorpalette %}
+          <li data-toggle="tooltip" title="" data-original-title="rgb({{ color[0] }}, {{ color[1] }} , {{ color[2] }})<br>{{ model.colormain_hex }}" style="width: 20px; height: 30px; background-color: rgb({{ color[0] }}, {{ color[1] }}, {{ color[2] }});"></li>
+        {% endfor %}
+      </ul>
+    </div>
+
   </div>
 </div>
 {{ active_form_end() }}
+<script>
+
+  $('.colorspawn').css('border-bottom', '4px solid {{ model.colormain_hex  }}');
+
+  $('[data-toggle="tooltip"]').tooltip({html: true});
+</script>

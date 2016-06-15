@@ -29,6 +29,20 @@ html, body {
 	margin-top: 2em;
 }
 
+.gc-list--inline {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.gc-list--inline:after {
+	clear: both;
+}
+
+.gc-list--inline li {
+	float: left;
+}
+
 .gc-bc--palette-white {
 	background-color: #ffffff;
 }

@@ -60,8 +60,12 @@
   };
 
   $("#assetList").on("pjax:end", function() {
-    $("img.lazy").lazyload({});
+    $("img.lazy").lazyload({
+      placeholder: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEUAAACnej3aAAAAAXRSTlMAQObYZgAAAApJREFUCNdjYAAAAAIAAeIhvDMAAAAASUVORK5CYII='
+    });
   });
 
-  $("img.lazy").lazyload({});
+  $("img.lazy").lazyload({
+    placeholder: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEUAAACnej3aAAAAAXRSTlMAQObYZgAAAApJREFUCNdjYAAAAAIAAeIhvDMAAAAASUVORK5CYII='
+  });
 </script>
