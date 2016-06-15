@@ -58,4 +58,10 @@
       else { done(); }
     }
   };
+
+  $("#assetList").on("pjax:end", function() {
+    $("img.lazy").lazyload({});
+  });
+
+  $("img.lazy").lazyload({});
 </script>

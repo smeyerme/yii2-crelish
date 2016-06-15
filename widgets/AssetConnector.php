@@ -3,35 +3,23 @@ namespace giantbits\crelish\widgets;
 
 use giantbits\crelish\components\CrelishJsonDataProvider;
 use yii\base\Widget;
-use yii\helpers\Html;
 use yii\helpers\Json;
 use yii\helpers\Url;
-use yii\web\Link;
 
 class AssetConnector extends Widget
 {
-  private $data;
+  public $data;
+  public $formKey;
 
-  public function __construct($config = [])
+  public function init()
   {
-
-    if (!empty($config['data'])) {
-      $this->processData($config['data']);
-    }
-
-    parent::__construct();
-  }
-
-  private function processData($data)
-  {
-    $processedData = [];
-
-    $this->data = Json::encode($processedData);
+    parent::init();
   }
 
   public function run()
   {
-
+    $formKey = $this->formKey;
+    $data = $this->data;
     $postUrl = Url::to('/crelish/asset/upload.html');
 
     $modelProvider = new CrelishJsonDataProvider('asset', [
@@ -39,7 +27,14 @@ class AssetConnector extends Widget
     ], null);
 
     $out = <<<EOT
-    <button type="button" class="btn btn-primary" data-toggle="modal" data-target=".bs-example-modal-lg">Large modal</button>
+    <div class="form-group field-crelishdynamicmodel-body required">
+      <label class="control-label col-sm-3" for="crelishdynamicmodel-body">Asset</label>
+      <div class="col-sm-6">
+        <input type="text" name="CrelishDynamicJsonModel[$formKey]" id="CrelishDynamicJsonModel_$formKey" value="$data" />
+        <button type="button" class="btn btn-primary" data-toggle="modal" data-target=".bs-example-modal-lg">Large modal</button>
+        <div class="help-block help-block-error "></div>
+      </div>
+    </div>
     
     <div class="modal fade bs-example-modal-lg" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel" id="asset-modal">
       <div class="modal-dialog modal-lg">
@@ -61,15 +56,22 @@ EOT;
     
     
     <script type="text/javascript">
-      
-      Dropzone.options.crelishDropZone = {
-        
-      };
-      
+         
+      var activateAssetAssignment = function() {
+        $("#asset-modal a.asset-item").each(function() {
+          $(this).on('click', function(e) {
+            e.preventDefault();
+            $("#CrelishDynamicJsonModel_$this->formKey").val($(this).data("asset"));
+            $("#asset-modal").modal('hide');
+          });
+        });
+      };      
+         
       $("#assetList").on("pjax:end", function() {
         $("img.lazy").lazyload({
           container:$("#asset-modal")
         });
+        activateAssetAssignment();
       });
       
       $('#asset-modal').on('shown.bs.modal', function (e) {
@@ -102,7 +104,10 @@ EOT;
           event : "doIt"
         });
         
-        var timeout = setTimeout(function() { $("img.lazy").trigger("doIt") }, 2500);
+        var timeout = setTimeout(function() { 
+          $("img.lazy").trigger("doIt");
+          activateAssetAssignment();
+        }, 2500);
              
       });
      

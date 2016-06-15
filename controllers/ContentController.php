@@ -96,42 +96,7 @@ class ContentController extends Controller
   private function buildForm($action = 'update')
   {
     // Build form for type.
-    $fields = [];
-
-    //$elm = new CrelishJsonDataProvider($this->type);
-    //$this->elementDefinition = $elm->getDefinitions();
-
-    /*foreach ($this->elementDefinition->fields as $field) {
-      array_push($fields, $field->key);
-    }*/
-
     $this->model = new CrelishDynamicJsonModel([], ['type' => $this->type, 'uuid' => $this->uuid]);
-    
-    // Set uuid if existant.
-    if (!empty($this->uuid)) {
-      $this->model->uuid = $this->uuid;
-    }
-
-    /* Add validation rules.
-    foreach ($this->elementDefinition->fields as $field) {
-      $this->model->defineLabel($field->key, $field->label);
-      if (!empty($field->rules)) {
-
-        foreach ($field->rules as $rule) {
-          if (empty($rule[1])) {
-            $this->model->addRule([$field->key], $rule[0]);
-          } else {
-            $this->model->addRule([$field->key], $rule[0], (array)$rule[1]);
-          }
-        }
-      }
-    }*/
-
-    /* Load model from file.
-    if(!empty($this->model->uuid)) {
-      $data['CrelishDynamicModel'] = Json::decode(file_get_contents(\Yii::getAlias('@app/workspace/data/') . DIRECTORY_SEPARATOR . $this->type . DIRECTORY_SEPARATOR . $this->model->uuid . '.json'));
-      $this->model->load($data);
-    }*/
 
     // Save content if post request.
     if (!empty(\Yii::$app->request->post()) && !\Yii::$app->request->isAjax) {
@@ -140,7 +105,7 @@ class ContentController extends Controller
       if(!empty($this->model->uuid)) {
         $oldData = Json::decode(file_get_contents(\Yii::getAlias('@app/workspace/data/') . DIRECTORY_SEPARATOR . $this->type . DIRECTORY_SEPARATOR . $this->model->uuid . '.json'));
       }
-      $this->model->attributes = $_POST['CrelishDynamicModel'] + $oldData;
+      $this->model->attributes = $_POST['CrelishDynamicJsonModel'] + $oldData;
 
       if ($this->model->validate()) {
         $this->model->save();
@@ -163,7 +128,7 @@ class ContentController extends Controller
 
     // Display messages.
     foreach (\Yii::$app->session->getAllFlashes() as $key => $message) {
-      echo '<div class="o-alert o-alert-' . $key . '">' . $message . '</div>';
+      echo '<div class="c-alerts__alert c-alerts__alert--' . $key . '">' . $message . '</div>';
     }
 
     // Build form fields.
@@ -176,13 +141,9 @@ class ContentController extends Controller
       } elseif ($field->type == 'dropDownList') {
         echo $form->field($this->model, $field->key)->{$field->type}((array)$field->items, (array)$fieldOptions)->label($field->label);
       } elseif ($field->type == 'matrixConnector') {
-        // Trying to add some riot magic here
-        //echo  $form->field($this->model, 'matrix')->textArea(["disabled" => true, "value" => empty($data) ? '' : var_export($data['CrelishDynamicModel'][$field->key], true)]);
-        $matrix =  !empty($data['CrelishDynamicModel'][$field->key]) ? $data['CrelishDynamicModel'][$field->key] : [];
-        echo MatrixConnector::widget(['data' => $matrix]);
+        echo MatrixConnector::widget(['formKey' => $field->key, 'data' => $this->model{$field->key}]);
       } elseif ($field->type == 'assetConnector') {
-        $asset =  !empty($data['CrelishDynamicModel'][$field->key]) ? $data['CrelishDynamicModel'][$field->key] : [];
-        echo AssetConnector::widget(['data' => $asset]);
+        echo AssetConnector::widget(['formKey' => $field->key, 'data' => $this->model{$field->key}]);
       } else {
         echo $form->field($this->model, $field->key)->{$field->type}((array)$fieldOptions)->label($field->label);
       }
