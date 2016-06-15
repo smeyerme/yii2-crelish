@@ -237,6 +237,16 @@ ul.gc-nav__content-filter li>a:active {
  	border: 1px solid #bdc3c7;
  }
 
+.btn-separator:after {
+	content: ' ';
+	display: block;
+	float: left;
+	background: #ADADAD;
+	margin: 0 10px;
+	height: 34px;
+	width: 1px;
+}
+
 
 div.help-block {
 	margin-top: -1px;

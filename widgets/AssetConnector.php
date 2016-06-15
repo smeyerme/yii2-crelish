@@ -19,7 +19,51 @@ class AssetConnector extends Widget
   public function run()
   {
     $formKey = $this->formKey;
-    $data = $this->data;
+    $imgWrapper = $stringValue ="";
+
+    if(is_array($this->data)) {
+      $data = (object) $this->data;
+      $stringValue = Json::encode($this->data);
+
+      $imgWrapper = <<<EOT
+      <div style="width: 200px;">
+          <div class="c-card c-card--high gc-m--lbr-1 gc-bc--palette-white">
+            <div class="c-card__content c-heading dz-filename gc-bc--palette-silver gc-to--ellipsis" id="asset-title">
+              $data->title
+            </div>
+            <div class="c-card__content">
+              <div class="image gc-o--hidden" style="background-color: $data->colormain_hex;">
+                <img class="lazy" data-original="$data->src" height="140" src="$data->src" id="asset-path" />
+              </div>
+              <div class="description gc-box--h-60 gc-to--ellipsis" id="asset-description">
+                $data->description
+              </div>
+            </div>
+          </div>
+        </div>
+EOT;
+    } else {
+      $data = new \stdClass();
+
+      $imgWrapper = <<<EOT
+      <div style="width: 200px;">
+          <div class="c-card c-card--high gc-m--lbr-1 gc-bc--palette-white">
+            <div class="c-card__content c-heading dz-filename gc-bc--palette-silver gc-to--ellipsis" id="asset-title">
+             
+            </div>
+            <div class="c-card__content">
+              <div class="image gc-o--hidden">
+                <img class="lazy" data-original="" height="140" src="" id="asset-path" />
+              </div>
+              <div class="description gc-box--h-60 gc-to--ellipsis" id="asset-description">
+                
+              </div>
+            </div>
+          </div>
+        </div>
+EOT;
+    }
+
     $postUrl = Url::to('/crelish/asset/upload.html');
 
     $modelProvider = new CrelishJsonDataProvider('asset', [
@@ -30,8 +74,11 @@ class AssetConnector extends Widget
     <div class="form-group field-crelishdynamicmodel-body required">
       <label class="control-label col-sm-3" for="crelishdynamicmodel-body">Asset</label>
       <div class="col-sm-6">
-        <input type="text" name="CrelishDynamicJsonModel[$formKey]" id="CrelishDynamicJsonModel_$formKey" value="$data" />
-        <button type="button" class="btn btn-primary" data-toggle="modal" data-target=".bs-example-modal-lg">Large modal</button>
+      
+        $imgWrapper
+        
+        <input type="hidden" name="CrelishDynamicJsonModel[$formKey]" id="CrelishDynamicJsonModel_$formKey" value='$stringValue' />
+        <button type="button" class="btn btn-primary" data-toggle="modal" data-target=".bs-example-modal-lg">Select asset</button>
         <div class="help-block help-block-error "></div>
       </div>
     </div>
@@ -41,7 +88,7 @@ class AssetConnector extends Widget
         <div class="modal-content">
           <div class="modal-header">
             <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-            <h4 class="modal-title" id="myModalLabel">Modal title</h4>
+            <h4 class="modal-title" id="myModalLabel">Asset selection</h4>
           </div>
           <div class="modal-body">
 EOT;
@@ -56,20 +103,25 @@ EOT;
     
     
     <script type="text/javascript">
-         
+      
       var activateAssetAssignment = function() {
         $("#asset-modal a.asset-item").each(function() {
           $(this).on('click', function(e) {
             e.preventDefault();
-            $("#CrelishDynamicJsonModel_$this->formKey").val($(this).data("asset"));
+            var asset = $(this).data("asset");
+            $("#CrelishDynamicJsonModel_$this->formKey").val(JSON.stringify(asset));
+            $("#asset-path").attr("src", asset.src);
+            $("#asset-title").text(asset.title);
+            $("#asset-description").text(asset.description);
             $("#asset-modal").modal('hide');
           });
         });
-      };      
+      };
          
       $("#assetList").on("pjax:end", function() {
         $("img.lazy").lazyload({
-          container:$("#asset-modal")
+          container:$("#asset-modal"),
+          placeholder: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEUAAACnej3aAAAAAXRSTlMAQObYZgAAAApJREFUCNdjYAAAAAIAAeIhvDMAAAAASUVORK5CYII='
         });
         activateAssetAssignment();
       });
@@ -101,6 +153,7 @@ EOT;
         
         $("img.lazy").lazyload({
           container:$("#asset-modal"),
+          placeholder: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEUAAACnej3aAAAAAXRSTlMAQObYZgAAAApJREFUCNdjYAAAAAIAAeIhvDMAAAAASUVORK5CYII=',
           event : "doIt"
         });
         
