@@ -11,16 +11,16 @@ use yii\web\Link;
 
 class MatrixConnector extends Widget
 {
-  private $data;
+  public $data;
+  public $formKey;
 
-  public function __construct($config = [])
+  public function init()
   {
+    parent::init();
 
-    if(!empty($config['data'])) {
-      $this->processData($config['data']);
+    if(!empty($this->data)) {
+      $this->data = $this->processData($this->data);
     }
-
-    parent::__construct();
   }
 
   private function processData($data)
@@ -48,7 +48,7 @@ class MatrixConnector extends Widget
       }
     }
 
-    $this->data = Json::encode($processedData);
+    return Json::encode($processedData);
   }
 
   public function run()
@@ -84,7 +84,7 @@ class MatrixConnector extends Widget
 
           </div>
         </div>
-        <input type="hidden" name="CrelishDynamicModel[matrix]" id="CrelishDynamicModel_matrix" value="{ JSON.stringify(data) }" />
+        <input type="hidden" name="CrelishDynamicJsonModel[$this->formKey]" id="CrelishDynamicJsonModel_matrix" value="{ JSON.stringify(data) }" />
 
         // Logic goes here.
         var app = this
