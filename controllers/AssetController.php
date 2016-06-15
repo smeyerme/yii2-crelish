@@ -115,6 +115,7 @@ class AssetController extends Controller
       $model->src = \Yii::getAlias('@web') . '/' . '_lib' . '/' . $destName;
       $model->type = $file->type;
       $model->size = $file->size;
+      $model->state = 2;
       $model->save();
 
       try {
