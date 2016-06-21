@@ -157,9 +157,14 @@ class CrelishJsonDataProvider extends Component
     $this->definitions = new \stdClass();
 
     // Add core fields.
-    $this->definitions->fields[] = Json::decode('{ "label": "UUID", "key": "uuid", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]], "options": {"disabled":true}}', false);
+    $this->definitions->fields[] = Json::decode('{ "label": "UUID", "key": "uuid", "type": "textInput", "visibleInGrid": false, "rules": [["string", {"max": 128}]], "options": {"disabled":true}}', false);
     $this->definitions->fields = array_merge($this->definitions->fields, Json::decode(file_get_contents($filePath), false)->fields);
     $this->definitions->fields[] = Json::decode('{ "label": "State", "key": "state", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]], "options": {"disabled":true}}', false);
+    //$this->definitions->fields[] = Json::decode('{ "label": "Created", "key": "created", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
+    //$this->definitions->fields[] = Json::decode('{ "label": "Updated", "key": "updated", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
+    //$this->definitions->fields[] = Json::decode('{ "label": "Publish from", "key": "from", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
+    //$this->definitions->fields[] = Json::decode('{ "label": "Publish to", "key": "to", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
+    //$this->definitions->fields[] = Json::decode('{ "label": "Element", "key": "elementType", "type": "textInput", "visibleInGrid": false, "rules": [["string", {"max": 128}]]}', false);
 
     return $this->definitions;
   }
@@ -181,6 +186,7 @@ class CrelishJsonDataProvider extends Component
         'update' => function ($url, $model) {
           return Html::a('<span class="glyphicon glyphicon-edit"></span>', $url, [
             'title' => \Yii::t('app', 'Edit'),
+            'data-pjax' => '0'
           ]);
         }
       ],

@@ -18,6 +18,7 @@ use yii\web\AssetBundle;
 class CrelishAsset extends AssetBundle {
   public $sourcePath = '@app/vendor/giantbits/yii2-crelish/assets';
   public $css = [
+    '//cdn.jsdelivr.net/bootstrap.jasny/3.13/css/jasny-bootstrap.min.css',
     '//cdn.jsdelivr.net/perfect-scrollbar/0.6.11/css/perfect-scrollbar.min.css',
     '//cdn.jsdelivr.net/blazecss/latest/blaze.min.css',
     '//cdn.jsdelivr.net/dropzone/4.3.0/basic.min.css',
@@ -25,9 +26,7 @@ class CrelishAsset extends AssetBundle {
     'css/crelish.css',
   ];
   public $js = [
-    'js/flat-ui-pro.min.js',
-    'js/pace.min.js',
-    'js/crelish.js',
+    '//cdn.jsdelivr.net/bootstrap.jasny/3.13/js/jasny-bootstrap.min.js',
     '//cdn.jsdelivr.net/jquery.lazyload/1.9.3/jquery.lazyload.min.js',
     '//cdn.jsdelivr.net/perfect-scrollbar/0.6.11/js/perfect-scrollbar.jquery.min.js',
     '//cdn.jsdelivr.net/riot/2.4/riot+compiler.min.js',
@@ -35,7 +34,10 @@ class CrelishAsset extends AssetBundle {
     '//cdn.giantbits.com/Fgh53Ya0i/riotcontrol.js',
     '//cdn.jsdelivr.net/chart.js/1.0.2/Chart.min.js',
     '//cdn.jsdelivr.net/sortable/latest/Sortable.min.js',
-    '//cdn.jsdelivr.net/dropzone/4.3.0/dropzone.min.js'
+    '//cdn.jsdelivr.net/dropzone/4.3.0/dropzone.min.js',
+    'js/flat-ui-pro.min.js',
+    'js/pace.min.js',
+    'js/crelish.js'
   ];
   public $jsOptions = ['position' => \yii\web\View::POS_HEAD];
   public $depends = [

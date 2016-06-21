@@ -8,6 +8,7 @@
 
 namespace giantbits\crelish\controllers;
 
+use ColorThief\ColorThief;
 use giantbits\crelish\components\CrelishDynamicJsonModel;
 use yii\base\Controller;
 use yii\web\UploadedFile;
@@ -89,7 +90,8 @@ class AssetController extends Controller
 
     if ($file) {
       $destName = time() . '_' . $file->name;
-      $file->saveAs(\Yii::getAlias('@webroot') . DIRECTORY_SEPARATOR . '_lib' . DIRECTORY_SEPARATOR . $destName);
+      $targetFile = \Yii::getAlias('@webroot') . DIRECTORY_SEPARATOR . '_lib' . DIRECTORY_SEPARATOR . $destName;
+      $file->saveAs($targetFile);
 
       $filePath = \Yii::getAlias('@app/workspace/elements') . DIRECTORY_SEPARATOR . 'asset' . '.json';
       $elementDefinition = Json::decode(file_get_contents($filePath), false);
@@ -113,10 +115,21 @@ class AssetController extends Controller
       $model->src = \Yii::getAlias('@web') . '/' . '_lib' . '/' . $destName;
       $model->type = $file->type;
       $model->size = $file->size;
+      $model->state = 2;
       $model->save();
+
+      try {
+        $domColor = ColorThief::getColor($targetFile, 20);
+        $palColor = ColorThief::getPalette(\Yii::getAlias('@webroot') . DIRECTORY_SEPARATOR . '_lib' . DIRECTORY_SEPARATOR . $destName);
+        $model->colormain_rgb = Json::encode($domColor);
+        $model->colormain_hex =  '#' . sprintf('%02x', $domColor[0]) . sprintf('%02x', $domColor[1]) . sprintf('%02x', $domColor[2]);
+        $model->save();
+        $model->colorpalette =  Json::encode($palColor);
+        $model->save();
+      } catch (Exception $e) {
+        \Yii::$app->session->setFlash('secondary', 'Color theft could not be completed. (Image too large?)');
+      }
     }
-
-
     return false;
   }
 

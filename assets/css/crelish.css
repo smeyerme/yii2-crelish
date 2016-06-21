@@ -29,6 +29,20 @@ html, body {
 	margin-top: 2em;
 }
 
+.gc-list--inline {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.gc-list--inline:after {
+	clear: both;
+}
+
+.gc-list--inline li {
+	float: left;
+}
+
 .gc-bc--palette-white {
 	background-color: #ffffff;
 }
@@ -223,6 +237,16 @@ ul.gc-nav__content-filter li>a:active {
  	border: 1px solid #bdc3c7;
  }
 
+.btn-separator:after {
+	content: ' ';
+	display: block;
+	float: left;
+	background: #ADADAD;
+	margin: 0 10px;
+	height: 34px;
+	width: 1px;
+}
+
 
 div.help-block {
 	margin-top: -1px;
@@ -239,6 +263,24 @@ div.help-block.help-block-error {
 	z-index: 9999;
 }
 
+.gc-panel--wrap {
+	overflow-x: hidden;
+}
+
+.gc-panel--content {
+
+}
+
+.gc-panel--main {
+	width: 100%;
+	overflow: hidden;
+}
+
+.gc-panel--off {
+	width: 100%;
+	overflow: hidden;
+	float: left;
+}
 
 /* BLAZE CSS */
 .pagination {
