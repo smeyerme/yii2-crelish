@@ -263,6 +263,24 @@ div.help-block.help-block-error {
 	z-index: 9999;
 }
 
+.gc-panel--wrap {
+	overflow-x: hidden;
+}
+
+.gc-panel--content {
+
+}
+
+.gc-panel--main {
+	width: 100%;
+	overflow: hidden;
+}
+
+.gc-panel--off {
+	width: 100%;
+	overflow: hidden;
+	float: left;
+}
 
 /* BLAZE CSS */
 .pagination {

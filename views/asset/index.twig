@@ -8,6 +8,7 @@
   </div>
 </div>
 {% endif %}
+
 <div class="o-grid gc-bc--palette-asbestos">
   <div class="o-grid__cell gc-ta--center gc-p--1" id="dropZone">
     <form action="{{ url('crelish/asset/upload.html') }}"
@@ -17,7 +18,7 @@
 </div>
 <div class="o-grid gc-bc--palette-clouds gc-bs--soft">
   <div class="o-grid__cell">
-    {{ pjax_begin({'id':'assetList', 'enablePushState': false}) }}
+    {{ pjax_begin({'id':'assetList'}) }}
     {{ list_view_widget({
     'dataProvider': dataProvider,
     'pager': {
