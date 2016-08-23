@@ -115,6 +115,8 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
     file_put_contents($path, $outModel);
     @chmod($path, 0777);
 
+    \Yii::$app->cache->flush();
+
     return true;
   }
 
@@ -149,6 +151,6 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
       substr($charid, 16, 4) . $hyphen .
       substr($charid, 20, 12) .
       $rbrace;
-    return $guidv4;
+    return strtolower($guidv4);
   }
 }

@@ -11,13 +11,12 @@ namespace giantbits\crelish\components;
 use giantbits\crelish\components\CrelisJsonDataProvider;
 use yii;
 use yii\base\Controller;
-use Underscore\Parse;
 use Underscore\Types\Arrays;
 
 class CrelishFrontendController extends Controller
 {
 
-  private $entryPoint;
+  public $entryPoint;
   private $requestUrl;
   private $viewTemplate;
 
@@ -69,7 +68,7 @@ class CrelishFrontendController extends Controller
 
     // Process data and render.
     $data = $this->processContent($data);
-
+    
     return $this->render($this->viewTemplate, ['data' => $data]);
 
   }
@@ -80,39 +79,74 @@ class CrelishFrontendController extends Controller
     $filePath = \Yii::getAlias('@app/workspace/elements') . DIRECTORY_SEPARATOR . $this->entryPoint['type'] . '.json';
     $elementDefinition = yii\helpers\Json::decode(file_get_contents($filePath), false);
 
-    foreach($data as $key => $content) {
-      $fieldType = Arrays::find($elementDefinition->fields, function($value) use ($key) {
-        return $value->key == $key;
-      });
+    if ($data) {
+      foreach ($data as $key => $content) {
+        $fieldType = Arrays::find($elementDefinition->fields, function ($value) use ($key) {
+          return $value->key == $key;
+        });
 
-      if(is_object($fieldType)) {
-        $fieldType = $fieldType->type;
-      }
+        if (is_object($fieldType)) {
+          $fieldType = $fieldType->type;
+        }
 
-      switch($fieldType) {
-        case 'matrixConnector':
-          if(empty($processedData[$key])) {
-            $processedData[$key] = [];
-          }
+        switch ($fieldType) {
+          case 'dataList':
+            $filterArray = null;
+            $sortArray = null;
 
-          foreach($content as $section => $subContent) {
-
-            if(empty($processedData[$key][$section])) {
-              $processedData[$key][$section] = '';
+            if(!empty($content['filter'])) {
+              foreach ($content['filter'] as $filter) {
+                
+                if(is_array($filter)) {
+                   foreach($filter as $key => $value) {
+                     $filterArray[$key] = $value;
+                   }
+                } else {
+                  $queryValue = Yii::$app->getRequest()->getQueryParam($filter);
+                  if(!empty($queryValue)) {
+                    $filterArray[$filter] = $queryValue;
+                  }  
+                }                
+              }
             }
 
-            foreach($subContent as $subContentdata){
-              $sourceData = new CrelishJsonDataProvider($subContentdata['type'], [] , $subContentdata['uuid']);
-
-              // @todo: nesting again.
-              $sourceDataOut = $this->processContent($sourceData->one());
-
-              $processedData[$key][$section] .= $this->renderPartial($subContentdata['type'] . '.twig', ['data' => $sourceDataOut]);
+            if(!empty($content['sort'])) {
+              $sortArray['by'] = $content['sort']['by'];
+              $sortArray['dir'] = $content['sort']['dir'];
             }
-          }
-          break;
-        default:
-        $processedData[$key] = $content;
+            
+            // Generate data source.
+            $dataProvider = new CrelishJsonDataProvider($content['source'],['filter' => $filterArray, 'sort'=>$sortArray]);
+            $processedData[$key] = $dataProvider->raw();
+
+            break;
+          case 'matrixConnector':
+            if (empty($processedData[$key])) {
+              $processedData[$key] = [];
+            }
+
+            if ($content) {
+              foreach ($content as $section => $subContent) {
+
+                if (empty($processedData[$key][$section])) {
+                  $processedData[$key][$section] = '';
+                }
+
+                foreach ($subContent as $subContentdata) {
+                  $sourceData = new CrelishJsonDataProvider($subContentdata['type'], [], $subContentdata['uuid']);
+
+                  // @todo: nesting again.
+                  $sourceDataOut = $this->processContent($sourceData->one());
+
+                  $processedData[$key][$section] .= $this->renderPartial($subContentdata['type'] . '.twig', ['data' => $sourceDataOut]);
+                }
+              }
+            }
+
+            break;
+          default:
+            $processedData[$key] = $content;
+        }
       }
     }
 
@@ -136,17 +170,38 @@ class CrelishFrontendController extends Controller
       }
     }
 
-    $this->entryPoint = ['type' => $type, 'slug' => $slug, 'path' => $path, 'uuid' => '0ae074da-d888-4e8a-9d4a-d78e677a5821'];
+    $entryDataJoint = new CrelishJsonDataProvider($type, ['filter' => ['slug' => $slug]]);
+    $entryModel = $entryDataJoint->one();
+
+    $this->entryPoint = ['type' => $type, 'slug' => $slug, 'path' => $path, 'uuid' => $entryModel['uuid']];
   }
 
   private function setLayout()
   {
-    $this->layout = "@app/views/layouts/" . $this->entryPoint['slug'];
+
+    $ds = DIRECTORY_SEPARATOR;
+    $path = Yii::$app->view->theme->basePath . $ds . 'layouts' . $ds . $this->entryPoint['slug'] . '.twig';
+
+    if(file_exists($path)) {
+      $this->layout = "@app/views/layouts/" . $this->entryPoint['slug'];
+    } else {
+      $this->layout = "@app/views/layouts/main";
+    }
   }
 
   private function setViewTemplate()
   {
-    $this->viewTemplate = $this->entryPoint['slug'] . '.twig';
+    $ds = DIRECTORY_SEPARATOR;
+    $path = Yii::$app->view->theme->basePath . $ds . Yii::$app->controller->id . $ds . $this->entryPoint['slug'] . '.twig';
+    $pathByType = Yii::$app->view->theme->basePath . $ds . Yii::$app->controller->id . $ds . $this->entryPoint['type'] . '.twig';
+
+    if(file_exists($path)) {
+        $this->viewTemplate = $this->entryPoint['slug'] . '.twig';
+    } elseif(file_exists($pathByType)) {
+        $this->viewTemplate = $this->entryPoint['type'] . '.twig';
+    } else {
+      $this->viewTemplate = 'main.twig';
+    }
   }
 
 }

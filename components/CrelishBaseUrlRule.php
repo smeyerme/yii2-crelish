@@ -51,7 +51,13 @@ class CrelishBaseUrlRule implements UrlRuleInterface
     }
     $paramsExposed = rtrim($paramsExposed, '&');
 
-    return $params['pathRequested'] . '.html' . $paramsExposed;
+    if(strpos($params['pathRequested'], ".html") === false){
+      return $params['pathRequested'] . '.html' . $paramsExposed;
+    } else {
+      return $params['pathRequested'] . $paramsExposed;
+    }
+
+
   }
 
   public function parseRequest($manager, $request)

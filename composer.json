@@ -25,7 +25,9 @@
     "yiisoft/yii2": ">=2.0.4",
     "symfony/yaml": "^2.7",
     "anahkiasen/underscore-php" : "dev-master",
-    "ksubileau/color-thief-php": "^1.3"
+    "ksubileau/color-thief-php": "^1.3",
+    "yiisoft/yii2-twig": "~2.0.0",
+    "yiidoc/yii2-redactor": "*"
   },
   "autoload": {
     "psr-4": {

@@ -48,9 +48,10 @@ class Module extends \yii\base\Module implements BootstrapInterface {
 
     if ($app instanceof \yii\web\Application) {
       $app->getUrlManager()->addRules([
-        ['class' => 'yii\web\UrlRule', 'pattern' => $this->id . '/<controller:[\w\-]+>/<action:[\w\-]+>', 'route' => $this->id . '/<controller>/<action>'],
-        ['class' => 'yii\web\UrlRule', 'pattern' => $this->id . '/<id:\w+>', 'route' => $this->id . '/default/view'],
-        ['class' => 'yii\web\UrlRule', 'pattern' => $this->id, 'route' => $this->id . '/default/index'],
+        ['class' => 'yii\web\UrlRule', 'pattern' => '<controller:[\w\-]+>/<action:[\w\-]+>', 'route' => '/<controller>/<action>'],
+        ['class' => 'yii\web\UrlRule', 'pattern' => 'crelish/<controller:[\w\-]+>/<action:[\w\-]+>', 'route' => 'crelish/<controller>/<action>'],
+        ['class' => 'yii\web\UrlRule', 'pattern' => 'crelish/<id:\w+>', 'route' => 'crelish/default/view'],
+        ['class' => 'yii\web\UrlRule', 'pattern' =>  'crelish', 'route' => 'crelish/default/index'],
         ['class' => 'giantbits\crelish\components\CrelishBaseUrlRule'],
       ], TRUE);
     } elseif ($app instanceof \yii\console\Application) {

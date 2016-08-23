@@ -304,7 +304,7 @@ class CrelishBaseController extends Controller
       ];
     }
 
-    echo Yii::$app->view->render('nav.mustache', ['pages' => $pages]);
+    echo Yii::$app->view->render('nav.twig', ['pages' => $pages]);
   }
 
   public function afterAction($action, $result)
@@ -687,7 +687,7 @@ class CrelishBaseController extends Controller
 "country":"Deutschland",
 "company":"Deutsche Doka Schalungstechnik GmbH",
 "address":"DE-Nürnberg Altdorf\r\n",
-"link":"http:\/\/www.doka.com\/web\/about\/jobs-career\/careers-with-doka\/index.de.php",
+"link":"http:\/\/www.doka.com\/web\/about\/job-career\/careers-with-doka\/index.de.php",
 "link_portrait":null,
 "logo":"Doka_logo_fhk.gif",
 "portrait":null
@@ -795,7 +795,7 @@ class CrelishBaseController extends Controller
 "country":"Schweiz",
 "company":"KIFA AG",
 "address":"CH-Aadorf",
-"link":"http:\/\/www.kifa.ch\/unternehmen\/jobs\/",
+"link":"http:\/\/www.kifa.ch\/unternehmen\/job\/",
 "link_portrait":null,
 "logo":"Kifa_Logo_huk.gif",
 "portrait":null
@@ -855,7 +855,7 @@ class CrelishBaseController extends Controller
 "country":"Deutschland",
 "company":"bluepool GmbH",
 "address":"DE-Leinfelden-Echterdingen",
-"link":"http:\/\/www.bluepool.de\/jobs",
+"link":"http:\/\/www.bluepool.de\/job",
 "link_portrait":null,
 "logo":"Bluepool_logo_fhk.gif",
 "portrait":null
@@ -951,7 +951,7 @@ class CrelishBaseController extends Controller
 "country":"Österreich",
 "company":"myNEXXT",
 "address":"AT-1060 Wien",
-"link":"http:\/\/www.mynexxt.at\/jobs-for-leaders\/",
+"link":"http:\/\/www.mynexxt.at\/job-for-leaders\/",
 "link_portrait":null,
 "logo":"mynexxt_logo_fhk.png",
 "portrait":null
@@ -975,7 +975,7 @@ class CrelishBaseController extends Controller
 "country":"Österreich",
 "company":"F. LIST GMBH",
 "address":"AT-2842 Thomasberg",
-"link":"http:\/\/f-list.at\/jobs\/stellenangebote\/",
+"link":"http:\/\/f-list.at\/job\/stellenangebote\/",
 "link_portrait":null,
 "logo":"flist_logo.png",
 "portrait":null
@@ -987,7 +987,7 @@ class CrelishBaseController extends Controller
 "country":"Österreich",
 "company":"myNEXXT",
 "address":"AT-1060 Wien",
-"link":"http:\/\/www.mynexxt.at\/jobs-for-leaders\/",
+"link":"http:\/\/www.mynexxt.at\/job-for-leaders\/",
 "link_portrait":null,
 "logo":"mynexxt_logo_fhk.png",
 "portrait":null
@@ -1323,7 +1323,7 @@ class CrelishBaseController extends Controller
 "country":"Österreich",
 "company":"Holzindustrie Schweighofer",
 "address":"D-Görlitz-Sachsen \/ A-Wien",
-"link":"http:\/\/www.schweighofer.at\/deutsch\/jobs\/index.html",
+"link":"http:\/\/www.schweighofer.at\/deutsch\/job\/index.html",
 "link_portrait":null,
 "logo":"Schweighofer_Logo_HuK.gif",
 "portrait":null
@@ -1527,7 +1527,7 @@ class CrelishBaseController extends Controller
 "country":"Österreich",
 "company":"Altholz - Baumgartner & Co GmbH",
 "address":"AT-4553 Schierbach",
-"link":"http:\/\/www.altholz.net\/unternehmen\/jobs-bei-altholz\/",
+"link":"http:\/\/www.altholz.net\/unternehmen\/job-bei-altholz\/",
 "link_portrait":null,
 "logo":"altholz_logo.png",
 "portrait":null
@@ -1719,7 +1719,7 @@ class CrelishBaseController extends Controller
 "country":"Schweiz",
 "company":"KIFA AG",
 "address":"CH-Aadorf",
-"link":"http:\/\/www.kifa.ch\/unternehmen\/jobs\/",
+"link":"http:\/\/www.kifa.ch\/unternehmen\/job\/",
 "link_portrait":null,
 "logo":"Kifa_Logo_huk.gif",
 "portrait":null
@@ -1791,7 +1791,7 @@ class CrelishBaseController extends Controller
 "country":"Österreich",
 "company":"F. LIST GMBH",
 "address":"AT-2842 Thomasberg",
-"link":"http:\/\/f-list.at\/jobs\/stellenangebote\/",
+"link":"http:\/\/f-list.at\/job\/stellenangebote\/",
 "link_portrait":null,
 "logo":"flist_logo.png",
 "portrait":null
@@ -1851,7 +1851,7 @@ class CrelishBaseController extends Controller
 "country":"Schweiz",
 "company":"Künzli Davos",
 "address":"CH-Davos",
-"link":"http:\/\/www.kuenzli-davos.ch\/unternehmen\/jobs-karriere\/",
+"link":"http:\/\/www.kuenzli-davos.ch\/unternehmen\/job-karriere\/",
 "link_portrait":"http:\/\/www.kuenzli-davos.ch",
 "logo":"Kuenzli_Davos_Logo_HuK.gif",
 "portrait":"Mit Holz. Um die Vorteile seiner Lebendigkeit und Natürlichkeit für Sie ausschöpfen zu können, braucht es Sachkompetenz und Freude am Material. Wir wissen um die fast unbe- schränkten Einsatzmöglichkeiten des Holzes und setzen diese lebenskonform um. Dabei begleiten und beraten wir Sie umfassend von der Idee bis zum fertigen Objekt."
@@ -1875,7 +1875,7 @@ class CrelishBaseController extends Controller
 "country":"Deutschland",
 "company":"REHAU AG + CO",
 "address":"DE-Rehau",
-"link":"http:\/\/jobs.rehau.com\/",
+"link":"http:\/\/job.rehau.com\/",
 "link_portrait":null,
 "logo":"Rehau_logo_fhk.gif",
 "portrait":null
@@ -1923,7 +1923,7 @@ class CrelishBaseController extends Controller
 "country":"Deutschland",
 "company":"claus rodenberg waldkontor gmbh",
 "address":"DE-Kastorf\r\n",
-"link":"http:\/\/waldkontor.com\/de\/mitarbeiter\/jobs.htm",
+"link":"http:\/\/waldkontor.com\/de\/mitarbeiter\/job.htm",
 "link_portrait":null,
 "logo":"waldkontor_logo_fhk.gif",
 "portrait":null
@@ -2223,7 +2223,7 @@ class CrelishBaseController extends Controller
 "country":"Deutschland",
 "company":"Carl Götz GmbH",
 "address":"DE-Neu Ulm\r\n",
-"link":"http:\/\/www.carlgoetz.de\/jobs\/stellenangebote.html",
+"link":"http:\/\/www.carlgoetz.de\/job\/stellenangebote.html",
 "link_portrait":null,
 "logo":"Goetz_logo_fhk.gif",
 "portrait":null
@@ -2319,7 +2319,7 @@ class CrelishBaseController extends Controller
 "country":"Deutschland",
 "company":"claus rodenberg waldkontor gmbh",
 "address":"DE-Kastorf\r\n",
-"link":"http:\/\/waldkontor.com\/de\/mitarbeiter\/jobs.htm",
+"link":"http:\/\/waldkontor.com\/de\/mitarbeiter\/job.htm",
 "link_portrait":null,
 "logo":"waldkontor_logo_fhk.gif",
 "portrait":null
@@ -2463,7 +2463,7 @@ class CrelishBaseController extends Controller
 "country":"Österreich",
 "company":"F. LIST GMBH",
 "address":"AT-2842 Thomasberg",
-"link":"http:\/\/f-list.at\/jobs\/stellenangebote\/",
+"link":"http:\/\/f-list.at\/job\/stellenangebote\/",
 "link_portrait":null,
 "logo":"flist_logo.png",
 "portrait":null
@@ -2523,7 +2523,7 @@ class CrelishBaseController extends Controller
 "country":"Österreich",
 "company":"myNEXXT",
 "address":"AT-1060 Wien",
-"link":"http:\/\/www.mynexxt.at\/jobs-for-leaders\/",
+"link":"http:\/\/www.mynexxt.at\/job-for-leaders\/",
 "link_portrait":null,
 "logo":"mynexxt_logo_fhk.png",
 "portrait":null
@@ -2595,7 +2595,7 @@ class CrelishBaseController extends Controller
 "country":"Deutschland",
 "company":"Carl Götz GmbH",
 "address":"DE-Neu Ulm\r\n",
-"link":"http:\/\/www.carlgoetz.de\/jobs\/stellenangebote.html",
+"link":"http:\/\/www.carlgoetz.de\/job\/stellenangebote.html",
 "link_portrait":null,
 "logo":"Goetz_logo_fhk.gif",
 "portrait":null
@@ -2871,7 +2871,7 @@ class CrelishBaseController extends Controller
 "country":"Schweiz",
 "company":"Alpnach Norm-Schrankelemente AG",
 "address":"CH-Alpnach Dorf",
-"link":"http:\/\/www.alpnachnorm.ch\/unternehmen\/aktuelles\/jobs.html",
+"link":"http:\/\/www.alpnachnorm.ch\/unternehmen\/aktuelles\/job.html",
 "link_portrait":null,
 "logo":"Alpnach_Logo_fhk.gif",
 "portrait":null
@@ -2894,7 +2894,7 @@ class CrelishBaseController extends Controller
     $data = json_decode($jsonData);
 
     foreach($data as $job) {
-      $fileName = Yii::$app->basePath . DIRECTORY_SEPARATOR . 'workspace' . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'jobs' . DIRECTORY_SEPARATOR . $this->normalizeString($job->title.'_'.$job->company) . ".json";
+      $fileName = Yii::$app->basePath . DIRECTORY_SEPARATOR . 'workspace' . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'job' . DIRECTORY_SEPARATOR . $this->normalizeString($job->title.'_'.$job->company) . ".json";
       $job->type = "Fachkräfte";
       file_put_contents($fileName, \Underscore\Parse::toJSON($job));
     }

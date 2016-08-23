@@ -52,6 +52,8 @@ class CrelishDynamicModel extends \yii\base\DynamicModel
     file_put_contents($path, $outModel);
     @chmod($path, 0777);
 
+    \Yii::$app->cache->flush();
+
     return true;
   }
 

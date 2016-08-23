@@ -200,7 +200,7 @@ class CrelishFileHandler extends Component
 
   public function selectTemplate($requestUrl, $meta, $file = NULL)
   {
-    $template = (!empty($file) ? 'modular/' : '') . 'default.mustache';
+    $template = (!empty($file) ? 'modular/' : '') . 'default.twig';
 
     $requestTemplate = str_replace('.html', '', $requestUrl);
 
