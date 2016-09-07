@@ -15,13 +15,11 @@ use yii\web\UploadedFile;
 use yii\helpers\Json;
 use yii\helpers\Url;
 use giantbits\crelish\components\CrelishJsonDataProvider;
-use giantbits\crelish\components\CrelishDynamicModel;
 
 class AssetController extends Controller
 {
 
   public $layout = 'crelish.twig';
-  private $model;
   private $type;
   private $uuid;
 
@@ -108,7 +106,7 @@ class AssetController extends Controller
         array_push($fields, $field->key);
       }
 
-      $model = new CrelishDynamicModel($fields);
+      $model = new CrelishDynamicJsonModel($fields);
       $model->identifier = 'asset';
       $model->systitle = $destName;
       $model->title = $destName;

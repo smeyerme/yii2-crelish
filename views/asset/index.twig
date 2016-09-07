@@ -30,7 +30,7 @@
     'itemView': 'asset_item.twig',
     'itemOptions': {'tag':false},
     'options': {'class':'o-grid o-grid--wrap o-grid--no-gutter'},
-    'summaryOptions':{'class': 'o-grid o-grid__cell o-grid__cell--width-100 gc-p--tb-1'}}) | raw }}
+    'summaryOptions':{'class': 'o-grid o-grid__cell o-grid__cell--width-100 gc-p--tb-1 gc-widget--summary'}}) | raw }}
     {{ pjax_end() }}
   </div>
 </div>
@@ -62,11 +62,22 @@
 
   $("#assetList").on("pjax:end", function() {
     $("img.lazy").lazyload({
-      placeholder: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEUAAACnej3aAAAAAXRSTlMAQObYZgAAAApJREFUCNdjYAAAAAIAAeIhvDMAAAAASUVORK5CYII='
+      placeholder: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEUAAACnej3aAAAAAXRSTlMAQObYZgAAAApJREFUCNdjYAAAAAIAAeIhvDMAAAAASUVORK5CYII=',
+      event : "doIt"
     });
   });
 
   $("img.lazy").lazyload({
-    placeholder: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEUAAACnej3aAAAAAXRSTlMAQObYZgAAAApJREFUCNdjYAAAAAIAAeIhvDMAAAAASUVORK5CYII='
+    placeholder: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEUAAACnej3aAAAAAXRSTlMAQObYZgAAAApJREFUCNdjYAAAAAIAAeIhvDMAAAAASUVORK5CYII=',
+    event : "doIt"
   });
+
+  $(document).on('ps-scroll-x', function () {
+    clearTimeout($.data(this, 'scrollTimer'));
+    $.data(this, 'scrollTimer', setTimeout(function() {
+      // do something
+      $("img.lazy").trigger("doIt");
+    }, 250));
+  });
+
 </script>

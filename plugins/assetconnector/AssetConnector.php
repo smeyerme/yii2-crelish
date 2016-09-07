@@ -1,5 +1,5 @@
 <?php
-namespace giantbits\crelish\widgets;
+namespace giantbits\crelish\plugins\assetconnector;
 
 use giantbits\crelish\components\CrelishJsonDataProvider;
 use yii\base\Widget;
@@ -25,23 +25,28 @@ class AssetConnector extends Widget
       $data = (object) $this->data;
       $stringValue = Json::encode($this->data);
 
+      // Load asset.
+      $asset = new CrelishJsonDataProvider($data->type, [], $data->uuid);
+      $asset = (object) $asset->one();
+
       $imgWrapper = <<<EOT
       <div style="width: 200px;">
           <div class="c-card c-card--high gc-m--lbr-1 gc-bc--palette-white">
             <div class="c-card__content c-heading dz-filename gc-bc--palette-silver gc-to--ellipsis" id="asset-title">
-              $data->title
+              $asset->title
             </div>
             <div class="c-card__content">
-              <div class="image gc-o--hidden" style="background-color: $data->colormain_hex;">
-                <img class="lazy" data-original="$data->src" height="140" src="$data->src" id="asset-path" />
+              <div class="image gc-o--hidden" style="background-color: $asset->colormain_hex;">
+                <img class="lazy" data-original="$asset->src" height="140" src="$asset->src" id="asset-path" />
               </div>
               <div class="description gc-box--h-60 gc-to--ellipsis" id="asset-description">
-                $data->description
+                $asset->description
               </div>
             </div>
           </div>
         </div>
 EOT;
+
     } else {
       $data = new \stdClass();
 
@@ -109,7 +114,7 @@ EOT;
           $(this).on('click', function(e) {
             e.preventDefault();
             var asset = $(this).data("asset");
-            $("#CrelishDynamicJsonModel_$this->formKey").val(JSON.stringify(asset));
+            $("#CrelishDynamicJsonModel_$this->formKey").val(JSON.stringify({ type: "asset", uuid: asset.uuid }));
             $("#asset-path").attr("src", asset.src);
             $("#asset-title").text(asset.title);
             $("#asset-description").text(asset.description);
@@ -120,13 +125,15 @@ EOT;
          
       $("#assetList").on("pjax:end", function() {
         $("img.lazy").lazyload({
-          container:$("#asset-modal"),
+          container:$(".modal-body"),
           placeholder: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEUAAACnej3aAAAAAXRSTlMAQObYZgAAAApJREFUCNdjYAAAAAIAAeIhvDMAAAAASUVORK5CYII='
         });
         activateAssetAssignment();
       });
       
       $('#asset-modal').on('shown.bs.modal', function (e) {
+        // Enable scrolling.
+        $('#asset-modal').perfectScrollbar();
         
         $("#dropZone").dropzone({
           url: '$postUrl',

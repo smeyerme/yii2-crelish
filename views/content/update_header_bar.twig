@@ -1,19 +1,13 @@
 {{ use('/giantbits/crelish/widgets') }}
-<div class="o-grid">
-  <div class="o-grid__cell o-grid__cell--width-40">
-    Content
-  </div>
-  <div class="o-grid__cell">
-    <div class="btn-group pull-right">
-      <button class="btn btn-primary btn-sm btn-save" type="button" onclick="$('#content-form').submit();">
-        <span class="fui-check"></span> Save content</span>
-      </button>
-      <button data-toggle="modal" data-target="#confirm-cancel" data-href="{{ url('crelish/content/index.html') }}" class="btn btn-inverse btn-sm" type="button">
-        <span class="fui-exit"></span> Cancel</span>
-      </button>
-      <button class="btn btn-danger btn-sm" data-record-id="54" data-record-title="Something cool" data-toggle="modal" data-target="#confirm-delete">
-        <span class="fui-trash"></span></span>
-      </button>
-    </div>
-  </div>
-</div>
+<span class="gc-p--1">
+  Content
+</span>
+<span class="c-nav__item c-nav__item--right gc-bc--palette-nephritis btn-save" type="button" onclick="$('#content-form').submit();">
+  <span class="fui-check"></span> Save content</span>
+</span>
+<span class="c-nav__item c-nav__item--right gc-bc--palette-asbestos" data-toggle="modal" data-target="#confirm-cancel" data-href="{{ url('crelish/content/index.html') }}">
+  <span class="fui-exit"></span> Cancel</span>
+</span>
+<span class="c-nav__item c-nav__item--right gc-bc--palette-pomgranate" data-toggle="modal" data-target="#confirm-delete">
+  <span class="fui-trash"></span></span>
+</span>

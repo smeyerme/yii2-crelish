@@ -1,7 +1,6 @@
 <?php
 namespace giantbits\crelish\widgets;
 
-use giantbits\crelish\components\CrelishFileDataProvider;
 use giantbits\crelish\components\CrelishJsonDataProvider;
 use yii\base\Widget;
 use yii\helpers\Html;
@@ -41,7 +40,8 @@ class ElementNav extends Widget
   {
     $nav = '';
     $elements = new CrelishJsonDataProvider('elements', ['key' => 'key', 'sort'=> ['by'=>'label', 'dir'=>'ASC']]);
-    $params[0] = "create";
+
+    $params[0] = $this->action;
 
     foreach(\Yii::$app->getRequest()->getQueryParams() as $param => $value) {
       $params[$param] = $value;

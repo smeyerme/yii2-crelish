@@ -1,16 +1,12 @@
 {{ use('/giantbits/crelish/widgets') }}
-<div class="o-grid">
-  <div class="o-grid__cell o-grid__cell--width-40">
-    Content
-  </div>
-  <div class="o-grid__cell">
-    <div class="btn-group pull-right">
-      <button data-toggle="dropdown" class="btn btn-primary  btn-sm dropdown-toggle" type="button">
-        <span class="fui-plus"></span> Add content <span class="caret"></span>
-      </button>
-      <ul role="menu" class="dropdown-menu">
-        {{ element_nav_widget({"action":"create"}) }}
-      </ul>
-    </div>
-  </div>
-</div>
+<span class="gc-p--1">
+  Content
+</span>
+<span class="dropdown c-nav__item c-nav__item--right">
+  <span class="dropdown-toggle" data-toggle="dropdown">
+      <span class="fui-plus"></span> Add content <span class="caret"></span>
+  </span>
+  <ul role="menu" class="dropdown-menu">
+    {{ element_nav_widget({"action":"create"}) }}
+  </ul>
+</span>

@@ -1,5 +1,5 @@
 <?php
-namespace giantbits\crelish\widgets;
+namespace giantbits\crelish\plugins\matrixconnector;
 
 use giantbits\crelish\components\CrelishDynamicJsonModel;
 use giantbits\crelish\components\CrelishJsonDataProvider;
@@ -90,7 +90,7 @@ EOT;
                       return Html::a('<span class="glyphicon glyphicon-plus"></span>', $url, [
                         'title' => \Yii::t('app', 'Add'),
                         'data-pjax' => '0',
-                        'data-content' => Json::encode(['uuid' => $model['uuid'], 'type' => $model['type'] ])
+                        'data-content' => Json::encode(['uuid' => $model['uuid'], 'type' => $model['ctype'] ])
                       ]);
                     }
                   ]

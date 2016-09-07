@@ -20,7 +20,8 @@ class CrelishAsset extends AssetBundle {
   public $css = [
     '//cdn.jsdelivr.net/bootstrap.jasny/3.13/css/jasny-bootstrap.min.css',
     '//cdn.jsdelivr.net/perfect-scrollbar/0.6.11/css/perfect-scrollbar.min.css',
-    '//cdn.jsdelivr.net/blazecss/latest/blaze.min.css',
+    '//cdn.jsdelivr.net/blazecss/2.13.0/blaze.min.css',
+    '//cdn.jsdelivr.net/blazecss/2.13.0/blaze.animations.min.css',
     '//cdn.jsdelivr.net/dropzone/4.3.0/basic.min.css',
     'css/flat-ui-pro.min.css',
     'css/crelish.css',

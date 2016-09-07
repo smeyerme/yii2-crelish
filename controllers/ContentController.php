@@ -13,6 +13,7 @@ use giantbits\crelish\components\CrelishDynamicJsonModel;
 use giantbits\crelish\widgets\MatrixConnector;
 use giantbits\crelish\widgets\AssetConnector;
 use giantbits\crelish\widgets\DataList;
+use giantbits\crelish\plugins;
 use yii\web\Controller;
 use yii\bootstrap\ActiveForm;
 use yii\helpers\Json;
@@ -130,9 +131,9 @@ class ContentController extends Controller
             } elseif ($field->type == 'dropDownList') {
                 echo $form->field($this->model, $field->key)->{$field->type}((array)$field->items, (array)$fieldOptions)->label($field->label);
             } elseif ($field->type == 'matrixConnector') {
-                echo MatrixConnector::widget(['formKey' => $field->key, 'data' => $this->model{$field->key}]);
+                echo plugins\matrixconnector\MatrixConnector::widget(['formKey' => $field->key, 'data' => $this->model{$field->key}]);
             } elseif ($field->type == 'assetConnector') {
-                echo AssetConnector::widget(['formKey' => $field->key, 'data' => $this->model{$field->key}]);
+                echo plugins\assetconnector\AssetConnector::widget(['formKey' => $field->key, 'data' => $this->model{$field->key}]);
             } elseif ($field->type == 'dataList') {
                 echo DataList::widget(['formKey' => $field->key, 'data' => $this->model{$field->key}]);
             } else {
