@@ -121,6 +121,8 @@ class ContentController extends Controller
             echo '<div class="c-alerts__alert c-alerts__alert--' . $key . '">' . $message . '</div>';
         }
 
+        // TODO: This has to be dynamicaly handled like it's done in frontend.
+
         // Build form fields.
         foreach ($this->model->fieldDefinitions->fields as $field) {
             $fieldOptions = !empty($field->options) ? $field->options : [];

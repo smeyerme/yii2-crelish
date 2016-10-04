@@ -37,7 +37,7 @@ class CrelishJsonDataProvider extends Component
     $ds = DIRECTORY_SEPARATOR;
     $this->type = $type;
 
-    $this->pathAlias = ($this->type == 'elements') ? '@app/workspace/' : '@app/workspace/data/';
+    $this->pathAlias = ($this->type == 'elements') ? '@app/workspace' : '@app/workspace/data';
 
     if (!empty($uuid)) {
       $this->uuid = $uuid;

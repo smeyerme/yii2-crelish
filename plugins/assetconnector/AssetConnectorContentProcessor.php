@@ -13,6 +13,5 @@ class AssetConnectorContentProcessor extends Component
 
     $include = new CrelishJsonDataProvider('asset', [], $data['uuid']);
     $processedData[$key] = $include->one();
-
   }
 }
