@@ -32,16 +32,36 @@ class CrelishJsonDataProvider extends Component
   private $uuid;
   private $pathAlias;
 
-  public function __construct($ctype, $settings = [], $uuid = null)
+  /**
+   * Resolve language specific data source folder / file.
+   * If no folder for the current language is found take the default language
+   * source.
+   * @param  string $uuid [description]
+   * @return [type]       [description]
+   */
+  private function resolveDataSource($uuid = '')
   {
     $ds = DIRECTORY_SEPARATOR;
-    $this->ctype = $ctype;
+    $fileDataSource = '';
 
+    $langDataFolder = (\Yii::$app->params['defaultLanguage'] != \Yii::$app->language) ? $ds . \Yii::$app->language : '';
+    $fileDataSource = \Yii::getAlias($this->pathAlias) . $ds . $this->ctype . $langDataFolder . $ds . $uuid . '.json';
+
+    if(!file_exists(\Yii::getAlias($this->pathAlias) . $ds . $this->ctype . $langDataFolder . $ds . $uuid . '.json')) {
+      $fileDataSource = \Yii::getAlias($this->pathAlias) . $ds . $this->ctype . $ds . $uuid . '.json';
+    }
+
+    return $fileDataSource;
+  }
+
+  public function __construct($ctype, $settings = [], $uuid = null)
+  {
+    $this->ctype = $ctype;
     $this->pathAlias = ($this->ctype == 'elements') ? '@app/workspace' : '@app/workspace/data';
 
     if (!empty($uuid)) {
       $this->uuid = $uuid;
-      if ($theFile = @file_get_contents(\Yii::getAlias($this->pathAlias) . $ds . $ctype . $ds . $uuid . '.json'))
+      if ($theFile = @file_get_contents($this->resolveDataSource($uuid)))
         $this->allModels[] = $this->processSingle(\yii\helpers\Json::decode($theFile), true);
       else
         $this->allModels[] = [];

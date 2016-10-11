@@ -9,6 +9,7 @@
 namespace giantbits\crelish\components;
 
 //use giantbits\crelish\components\CrelisJsonDataProvider;
+use Yii;
 use yii\base\Controller;
 use Underscore\Types\Arrays;
 
@@ -88,7 +89,8 @@ class CrelishFrontendController extends Controller
     $this->setViewTemplate();
 
     // Add content aka. do the magic.
-    $data = \yii\helpers\Json::decode(file_get_contents(\Yii::getAlias('@app/workspace/data/') . $ds . $this->entryPoint['ctype'] . $ds . $this->entryPoint['uuid'] . '.json'));
+    $langDataFolder = (Yii::$app->params['defaultLanguage'] != Yii::$app->language) ? $ds . Yii::$app->language : '';
+    $data = \yii\helpers\Json::decode(file_get_contents(\Yii::getAlias('@app/workspace/data') . $ds . $this->entryPoint['ctype'] . $langDataFolder . $ds . $this->entryPoint['uuid'] . '.json'));
 
     // Process data and render.
     $data = $this->processContent($this->entryPoint['ctype'], $data);

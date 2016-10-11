@@ -25,6 +25,12 @@ class Module extends \yii\base\Module implements BootstrapInterface {
   private $dataPath;
 
   /**
+   * [$defaultLanguage description]
+   * @var [type]
+   */
+  public $defaultLanguage;
+
+  /**
    * Returns Yii logo ready to use in `<img src="`
    *
    * @return string base64 representation of the image
@@ -55,7 +61,7 @@ class Module extends \yii\base\Module implements BootstrapInterface {
   private function processLanguage()
   {
     Yii::$app->sourceLanguage = 'en-US';
-    //Yii::$app->language = 'de-CH';
+    Yii::$app->params['defaultLanguage'] = 'de-CH';
   }
 
   /**
@@ -88,12 +94,12 @@ class Module extends \yii\base\Module implements BootstrapInterface {
       ]);
 
       $app->getUrlManager()->addRules([
-        ['class' => 'giantbits\crelish\components\CrelishBaseUrlRule'],
-        //['class' => 'yii\web\UrlRule', 'pattern' => '<lang:[\w\-]+]>/<controller:[\w\-]+>/<action:[\w\-]+>', 'route' => '/<controller>/<action>'],
-        ['class' => 'yii\web\UrlRule', 'pattern' => '<controller:[\w\-]+>/<action:[\w\-]+>', 'route' => '/<controller>/<action>'],
         ['class' => 'yii\web\UrlRule', 'pattern' => 'crelish/<controller:[\w\-]+>/<action:[\w\-]+>', 'route' => 'crelish/<controller>/<action>'],
         ['class' => 'yii\web\UrlRule', 'pattern' => 'crelish/<id:\w+>', 'route' => 'crelish/default/view'],
-        ['class' => 'yii\web\UrlRule', 'pattern' =>  'crelish', 'route' => 'crelish/default/index']
+        ['class' => 'yii\web\UrlRule', 'pattern' =>  'crelish', 'route' => 'crelish/default/index'],
+        ['class' => 'giantbits\crelish\components\CrelishBaseUrlRule'],
+        ['class' => 'yii\web\UrlRule', 'pattern' => '<controller:[\w\-]+>/<action:[\w\-]+>', 'route' => '/<controller>/<action>']
+        //['class' => 'yii\web\UrlRule', 'pattern' => '<lang:[\w\-]+]>/<controller:[\w\-]+>/<action:[\w\-]+>', 'route' => '/<controller>/<action>']
       ], TRUE);
     } elseif ($app instanceof \yii\console\Application) {
       $app->controllerMap[$this->id] = [
