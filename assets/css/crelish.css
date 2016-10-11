@@ -10,6 +10,11 @@
   padding-top: 2em;
 }
 
+.gc-ptb--2 {
+  padding-top: 2em;
+  padding-bottom: 2em;
+}
+
 .gc-mt--1 {
   margin-top: 1em;
 }
@@ -229,7 +234,7 @@ ul.gc-nav__content-filter li > a:active {
 .crelish input,
 .crelish select,
 .crelish textarea {
-  border-radius: 0;
+  /*border-radius: 0;*/
 }
 
 .crelish input,
@@ -237,6 +242,11 @@ ul.gc-nav__content-filter li > a:active {
 .crelish .redactor-editor,
 .crelish textarea {
   border: 1px solid #bdc3c7;
+  background-color: #f6f6f6;
+}
+
+.crelish label {
+  font-weight: 600;
 }
 
 .btn-separator:after {
@@ -338,4 +348,3 @@ div.help-block.help-block-error {
   width: 100%;
   height: 2px;
 }
-

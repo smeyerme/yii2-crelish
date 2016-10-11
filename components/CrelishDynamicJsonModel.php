@@ -9,7 +9,7 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
   private $_attributeLabels;
   public $identifier;
   public $uuid;
-  public $type;
+  public $ctype;
   public $fieldDefinitions;
 
   public function init()
@@ -17,8 +17,8 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
     parent::init();
 
     // Build definitions.
-    if(!empty($this->type)) {
-      $filePath = \Yii::getAlias('@app/workspace/elements') . DIRECTORY_SEPARATOR . $this->type . '.json';
+    if(!empty($this->ctype)) {
+      $filePath = \Yii::getAlias('@app/workspace/elements') . DIRECTORY_SEPARATOR . $this->ctype . '.json';
       $elementDefinition = Json::decode(file_get_contents($filePath), false);
 
       // Add core fields.
@@ -40,7 +40,7 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
         array_push($fields, $field->key);
       }
 
-      $this->identifier = $this->type;
+      $this->identifier = $this->ctype;
 
       // Populate attributes.
       foreach ($fields as $name => $value) {
@@ -68,7 +68,7 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
 
       // Load model from file.
       if(!empty($this->uuid)) {
-        $data['CrelishDynamicJsonModel'] = Json::decode(file_get_contents(\Yii::getAlias('@app/workspace/data/') . DIRECTORY_SEPARATOR . $this->type . DIRECTORY_SEPARATOR . $this->uuid . '.json'));
+        $data['CrelishDynamicJsonModel'] = Json::decode(file_get_contents(\Yii::getAlias('@app/workspace/data/') . DIRECTORY_SEPARATOR . $this->ctype . DIRECTORY_SEPARATOR . $this->uuid . '.json'));
         $this->load($data);
       }
     }

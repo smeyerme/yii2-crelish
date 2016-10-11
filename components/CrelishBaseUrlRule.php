@@ -93,6 +93,10 @@ class CrelishBaseUrlRule implements UrlRuleInterface
       'language' => $langCode
     ]);
 
+    if(!empty($langCode)) {
+      \Yii::$app->language = $langCode;
+    }
+
     return ['crelish/frontend/run', $params];
   }
 }
