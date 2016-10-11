@@ -33,18 +33,20 @@ class MatrixConnector extends Widget
       foreach ($item as $reference) {
 
         $info = [];
-        $dataItem = new CrelishJsonDataProvider($reference['type'], [], $reference['uuid']);
+        $dataItem = new CrelishJsonDataProvider($reference['ctype'], [], $reference['uuid']);
         $itemData = $dataItem->one();
 
         foreach ($dataItem->definitions->fields as $field ) {
           if($field->visibleInGrid) {
-            $info[] = ['label'=>$field->label, 'value'=> $itemData[$field->key]];
+            if(!empty($field->label) && !empty($itemData[$field->key])) {
+              $info[] = ['label'=>$field->label, 'value'=> $itemData[$field->key]];
+            }
           }
         }
 
         $processedData[$key][] = [
           'uuid' => $reference['uuid'],
-          'type' => $reference['type'],
+          'ctype' => $reference['ctype'],
           'info' => $info
         ];
       }
@@ -57,17 +59,17 @@ class MatrixConnector extends Widget
   {
     $elementType = !empty($_GET['cet']) ? $_GET['cet'] : 'page';
     $modelProvider = new CrelishJsonDataProvider($elementType, [], null);
-    $filterModel = new CrelishDynamicJsonModel(['type' => $elementType]);
+    $filterModel = new CrelishDynamicJsonModel(['ctype' => $elementType]);
 
     $out = <<<EOT
     <div class="form-group field-crelishdynamicmodel-body required">
-      <label class="control-label col-sm-3" for="crelishdynamicmodel-body">Matrix</label>
-      <div class="col-sm-6">
-        <todo></todo>
+      <label class="control-label" for="crelishdynamicmodel-body">Matrix</label>
+      <div class="">
+        <matrix></matrix>
         <div class="help-block help-block-error "></div>
       </div>
     </div>
-    
+
     <div class="modal fade matrix-modal-$this->formKey" tabindex="-1" role="dialog" aria-labelledby="matrix-modal-$this->formKey" id="matrix-modal-$this->formKey">
       <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -90,13 +92,13 @@ EOT;
                       return Html::a('<span class="glyphicon glyphicon-plus"></span>', $url, [
                         'title' => \Yii::t('app', 'Add'),
                         'data-pjax' => '0',
-                        'data-content' => Json::encode(['uuid' => $model['uuid'], 'type' => $model['ctype'] ])
+                        'data-content' => Json::encode(['uuid' => $model['uuid'], 'ctype' => $model['ctype'] ])
                       ]);
                     }
                   ]
                 ]
               ],
-              'type' => $elementType,
+              'ctype' => $elementType,
               'formKey' => $this->formKey
             ]);
 
@@ -107,15 +109,23 @@ EOT;
     </div>
 
     <script type="riot/tag">
-      <todo>
+      <matrix>
         <div class="o-grid">
           <div class="o-grid__cell" each={ item, i in data }>
             <span class="c-badge">{ item }</span>
 
             <div id="sortable">
-            
+
               <div class="c-card" each={ i }>
-                <div class="c-card__content c-card__content--divider c-heading"><span class="glyphicon glyphicon-move" aria-hidden="true"></span> { type }</div>
+
+                <div class="c-card__content c-card__content--divider c-heading">
+                  <span class="glyphicon glyphicon-move" aria-hidden="true"></span>
+                  { ctype }
+                  <span class="c-input-group pull-right">
+                    <button class="c-button gc-bc--palette-wetasphalt c-button--xsmall"><i class="glyphicon glyphicon-pencil"></i></button>
+                    <button class="c-button gc-bc--palette-pomgranate c-button--xsmall"><i class="glyphicon glyphicon-trash"></i></button>
+                  </span>
+                </div>
                 <div class="c-card__content">
                   <dl>
                     <span each={ info }>
@@ -125,7 +135,7 @@ EOT;
                   </dl>
                 </div>
               </div>
-              
+
             </div>
             <button type="button" class="c-button c-button--ghost-primary c-button--block gc-mt--1" data-target=".matrix-modal-$this->formKey" onclick="openMatrixModal('{ item }')">Add content</button>
           </div>
@@ -185,17 +195,17 @@ EOT;
             });
           }
         });
-      </todo>
+      </matrix>
     </script>
-    
+
     <script>
       var targetArea = 'main';
-    
+
       var openMatrixModal = function( area ) {
         targetArea = area;
-        $('.matrix-modal-$this->formKey').modal('show'); 
+        $('.matrix-modal-$this->formKey').modal('show');
       };
-    
+
       var activateContentMatrix = function() {
         $("#matrix-modal-$this->formKey a").each(function() {
           $(this).on('click', function(e) {
@@ -205,12 +215,12 @@ EOT;
             console.log($("#CrelishDynamicJsonModel_$this->formKey").val(), origData, targetArea);
             origData[targetArea].push( content );
             $("#CrelishDynamicJsonModel_$this->formKey").val(JSON.stringify(origData));
-            
+
             $("#content-form").submit();
           });
         });
       };
-    
+
       Array.prototype.move = function (old_index, new_index) {
         if (new_index >= this.length) {
           var k = new_index - this.length;
@@ -221,16 +231,16 @@ EOT;
         this.splice(new_index, 0, this.splice(old_index, 1)[0]);
         return this; // for testing purposes
       };
-      
+
       $("#matrix-modal-$this->formKey").on("pjax:end", function() {
         activateContentMatrix();
       });
-      
+
       $('#asset-modal').on('shown.bs.modal', function (e) {
         activateContentMatrix();
       });
-      
-      var tags = riot.mount('todo', {
+
+      var tags = riot.mount('*', {
         data: $this->data
       });
     </script>

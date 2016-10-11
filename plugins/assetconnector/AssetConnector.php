@@ -26,7 +26,7 @@ class AssetConnector extends Widget
       $stringValue = Json::encode($this->data);
 
       // Load asset.
-      $asset = new CrelishJsonDataProvider($data->type, [], $data->uuid);
+      $asset = new CrelishJsonDataProvider($data->ctype, [], $data->uuid);
       $asset = (object) $asset->one();
 
       $imgWrapper = <<<EOT
@@ -54,14 +54,14 @@ EOT;
       <div style="width: 200px;">
           <div class="c-card c-card--high gc-m--lbr-1 gc-bc--palette-white">
             <div class="c-card__content c-heading dz-filename gc-bc--palette-silver gc-to--ellipsis" id="asset-title">
-             
+
             </div>
             <div class="c-card__content">
               <div class="image gc-o--hidden">
                 <img class="lazy" data-original="" height="140" src="" id="asset-path" />
               </div>
               <div class="description gc-box--h-60 gc-to--ellipsis" id="asset-description">
-                
+
               </div>
             </div>
           </div>
@@ -79,15 +79,15 @@ EOT;
     <div class="form-group field-crelishdynamicmodel-body required">
       <label class="control-label col-sm-3" for="crelishdynamicmodel-body">Asset</label>
       <div class="col-sm-6">
-      
+
         $imgWrapper
-        
+
         <input type="hidden" name="CrelishDynamicJsonModel[$formKey]" id="CrelishDynamicJsonModel_$formKey" value='$stringValue' />
         <button type="button" class="btn btn-primary" data-toggle="modal" data-target=".bs-example-modal-lg">Select asset</button>
         <div class="help-block help-block-error "></div>
       </div>
     </div>
-    
+
     <div class="modal fade bs-example-modal-lg" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel" id="asset-modal">
       <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -105,16 +105,16 @@ EOT;
         </div>
       </div>
     </div>
-    
-    
+
+
     <script type="text/javascript">
-      
+
       var activateAssetAssignment = function() {
         $("#asset-modal a.asset-item").each(function() {
           $(this).on('click', function(e) {
             e.preventDefault();
             var asset = $(this).data("asset");
-            $("#CrelishDynamicJsonModel_$this->formKey").val(JSON.stringify({ type: "asset", uuid: asset.uuid }));
+            $("#CrelishDynamicJsonModel_$this->formKey").val(JSON.stringify({ ctype: "asset", uuid: asset.uuid }));
             $("#asset-path").attr("src", asset.src);
             $("#asset-title").text(asset.title);
             $("#asset-description").text(asset.description);
@@ -122,7 +122,7 @@ EOT;
           });
         });
       };
-         
+
       $("#assetList").on("pjax:end", function() {
         $("img.lazy").lazyload({
           container:$(".modal-body"),
@@ -130,11 +130,11 @@ EOT;
         });
         activateAssetAssignment();
       });
-      
+
       $('#asset-modal').on('shown.bs.modal', function (e) {
         // Enable scrolling.
         $('#asset-modal').perfectScrollbar();
-        
+
         $("#dropZone").dropzone({
           url: '$postUrl',
           paramName: "file", // The name that will be used to transfer the file
@@ -142,14 +142,14 @@ EOT;
           dictDefaultMessage: "<span class=\"c-badge c-badge--secondary gc-shadow__soft\">Click or drag files here to upload.</span>",
           init: function() {
             var myDropzone = this;
-    
+
             this.on("complete", function(file) {
               setTimeout(function() {
                 $.pjax.reload({container:'#assetList'});
                 myDropzone.removeFile(file);
               }, 250);
             });
-    
+
           },
           accept: function(file, done) {
             if (file.name == "justinbieber.jpg") {
@@ -157,21 +157,21 @@ EOT;
             } else { done(); }
           }
         });
-        
+
         $("img.lazy").lazyload({
           container:$("#asset-modal"),
           placeholder: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEUAAACnej3aAAAAAXRSTlMAQObYZgAAAApJREFUCNdjYAAAAAIAAeIhvDMAAAAASUVORK5CYII=',
           event : "doIt"
         });
-        
-        var timeout = setTimeout(function() { 
+
+        var timeout = setTimeout(function() {
           $("img.lazy").trigger("doIt");
           activateAssetAssignment();
         }, 2500);
-             
+
       });
-     
-      
+
+
     </script>
 
 EOT;

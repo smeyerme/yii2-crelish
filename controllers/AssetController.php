@@ -20,7 +20,7 @@ class AssetController extends Controller
 {
 
   public $layout = 'crelish.twig';
-  private $type;
+  private $ctype;
   private $uuid;
 
   public function init()
@@ -48,7 +48,7 @@ class AssetController extends Controller
   public function actionUpdate()
   {
     $uuid = !empty( \Yii::$app->getRequest()->getQueryParam('uuid') ) ?  \Yii::$app->getRequest()->getQueryParam('uuid') : null;
-    $model = new CrelishDynamicJsonModel([], ['uuid' => $uuid, 'type' => 'asset']);
+    $model = new CrelishDynamicJsonModel([], ['uuid' => $uuid, 'ctype' => 'asset']);
 
     // Save content if post request.
     if (!empty(\Yii::$app->request->post()) && !\Yii::$app->request->isAjax) {
@@ -111,7 +111,7 @@ class AssetController extends Controller
       $model->systitle = $destName;
       $model->title = $destName;
       $model->src = \Yii::getAlias('@web') . '/' . '_lib' . '/' . $destName;
-      $model->type = $file->type;
+      $model->mime = $file->type;
       $model->size = $file->size;
       $model->state = 2;
       $model->save();

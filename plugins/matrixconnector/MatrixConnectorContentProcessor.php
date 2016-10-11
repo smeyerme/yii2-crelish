@@ -23,12 +23,12 @@ class MatrixConnectorContentProcessor extends Component
         }
 
         foreach ($subContent as $subContentdata) {
-          $sourceData = new CrelishJsonDataProvider($subContentdata['type'], [], $subContentdata['uuid']);
+          $sourceData = new CrelishJsonDataProvider($subContentdata['ctype'], [], $subContentdata['uuid']);
 
           // @todo: nesting again.
-          $sourceDataOut = $caller->processContent($subContentdata['type'], $sourceData->one());
+          $sourceDataOut = $caller->processContent($subContentdata['ctype'], $sourceData->one());
 
-          $processedData[$key][$section] .= $caller->renderPartial($subContentdata['type'] . '.twig', ['data' => $sourceDataOut]);
+          $processedData[$key][$section] .= $caller->renderPartial($subContentdata['ctype'] . '.twig', ['data' => $sourceDataOut]);
         }
       }
 
