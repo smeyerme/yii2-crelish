@@ -151,7 +151,7 @@ class CrelishFrontendController extends Controller
    */
   private function resolvePathRequested()
   {
-    $slug = $path =  \giantbits\crelish\Module::getInstance()->entryPoint['path'];
+    $slug = $path =  \giantbits\crelish\Module::getInstance()->entryPoint['slug'];
     $ctype = \giantbits\crelish\Module::getInstance()->entryPoint['ctype'];
     $this->requestUrl = \Yii::$app->request->getPathInfo();
 
