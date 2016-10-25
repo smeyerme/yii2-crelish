@@ -1,21 +1,22 @@
 <?php
 /**
- * Created by PhpStorm.
- * User: devop
- * Date: 29.11.15
- * Time: 20:17
+ *
  */
-
 namespace giantbits\crelish\components;
 
 use Underscore\Types\Arrays;
-use Underscore\Types\Strings;
-use yii;
+//use Underscore\Types\Strings;
 use yii\web\UrlRuleInterface;
 
+/**
+ *
+ */
 class CrelishBaseUrlRule implements UrlRuleInterface
 {
-
+  /**
+   * [init description]
+   * @return [type] [description]
+   */
   public function init()
   {
     parent::init();
