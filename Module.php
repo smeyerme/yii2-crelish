@@ -37,6 +37,15 @@ class Module extends \yii\base\Module implements BootstrapInterface {
   public $theme = 'default';
 
   /**
+   * [$theme description]
+   * @var string
+   */
+  public $entryPoint = [
+    'ctype' => 'page',
+    'path' => 'home'
+  ];
+
+  /**
    * Returns Yii logo ready to use in `<img src="`
    *
    * @return string base64 representation of the image

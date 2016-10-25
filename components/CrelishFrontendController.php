@@ -78,7 +78,7 @@ class CrelishFrontendController extends Controller
   public function actionRun()
   {
     $ds = DIRECTORY_SEPARATOR;
-    // 1. Determine entry point. (Hardcoded for now > type:page, slug:home, path:''
+    // 1. Determine entry point.
     // 2. Load entry point content.
     // 3. Assemble sub content from parent entry point content.
 
@@ -151,8 +151,8 @@ class CrelishFrontendController extends Controller
    */
   private function resolvePathRequested()
   {
-    $slug = $path = '';
-    $ctype = 'page';
+    $slug = $path =  \giantbits\crelish\Module::getInstance()->entryPoint['path'];
+    $ctype = \giantbits\crelish\Module::getInstance()->entryPoint['ctype'];
     $this->requestUrl = \Yii::$app->request->getPathInfo();
 
     if (!empty($this->requestUrl)) {
