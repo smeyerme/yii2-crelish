@@ -31,6 +31,12 @@ class Module extends \yii\base\Module implements BootstrapInterface {
   public $defaultLanguage;
 
   /**
+   * [$theme description]
+   * @var string
+   */
+  public $theme = 'default';
+
+  /**
    * Returns Yii logo ready to use in `<img src="`
    *
    * @return string base64 representation of the image
