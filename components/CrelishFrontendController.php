@@ -205,5 +205,4 @@ class CrelishFrontendController extends Controller
       $this->viewTemplate = 'main.twig';
     }
   }
-
 }
