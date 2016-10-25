@@ -43,13 +43,13 @@ class CrelishFrontendController extends Controller
     // Set theme.
     // @todo: Move to config.
     $this->view->theme = new \yii\base\Theme([
-      'pathMap' => ['@app/views' => '@app/themes/klangfarbe'],
-      'basePath' => '@app/themes/klangfarbe',
-      'baseUrl' => '@web/themes/klangfarbe',
+      'pathMap' => ['@app/views' => '@app/themes/' . \giantbits\crelish\Module::getInstance()->theme],
+      'basePath' => '@app/themes/' . \giantbits\crelish\Module::getInstance()->theme,
+      'baseUrl' => '@web/themes/' . \giantbits\crelish\Module::getInstance()->theme,
     ]);
 
     // Force theming.
-    $this->setViewPath('@app/themes/klangfarbe/' . $this->id);
+    $this->setViewPath('@app/themes/' . \giantbits\crelish\Module::getInstance()->theme . '/' . $this->id);
 
     // Define entry point.
     $this->resolvePathRequested();
