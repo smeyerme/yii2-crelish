@@ -7,10 +7,32 @@ use giantbits\crelish\components\CrelishDynamicJsonModel;
 use giantbits\crelish\components\CrelishBaseController;
 use yii\helpers\Json;
 use yii\helpers\Url;
+use yii\filters\AccessControl;
 
 class ContentController extends CrelishBaseController
 {
     public $layout = 'crelish.twig';
+
+    public function behaviors()
+    {
+        return [
+            'access' => [
+                'class' => AccessControl::className(),
+                'rules' => [
+                    [
+                        'allow' => true,
+                        'actions' => ['login'],
+                        'roles' => ['?'],
+                    ],
+                    [
+                        'allow' => true,
+                        'actions' => [],
+                        'roles' => ['@'],
+                    ],
+                ],
+            ],
+        ];
+    }
 
     public function init()
     {

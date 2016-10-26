@@ -8,24 +8,49 @@ use giantbits\crelish\plugins;
 use yii\bootstrap\ActiveForm;
 use yii\web\Controller;
 use yii\helpers\Html;
+use yii\helpers\Url;
 
 class CrelishBaseController extends Controller {
 	protected $ctype, $uuid, $filePath, $elementDefinition, $model;
 
-	protected function buildForm($action = 'update')
+	protected function buildForm($action = 'update', $settings=array())
 	{
+		//default settings
+		$defaults = array(
+			'id'=>'content-form',
+			'outerClass'=>'gc-bc--palette-clouds gc-bs--soft gc-ptb--2',
+			'groupClass'=>'c-card',
+			'tabs'=>[]
+		);
+
+		$settings = $settings + $defaults;
+
 		// Build form for type.
 		$this->model = new CrelishDynamicJsonModel([], ['ctype' => $this->ctype, 'uuid' => $this->uuid]);
 
 		// Save content if post request.
-		if (!empty(\Yii::$app->request->post()) && !\Yii::$app->request->isAjax) {
+		if (in_array($action, array('update','create')) && !empty(\Yii::$app->request->post()) && !\Yii::$app->request->isAjax) {
 			$oldData = [];
 			// Load old data.
 			if (!empty($this->model->uuid)) {
 				$oldData = Json::decode(file_get_contents(\Yii::getAlias('@app/workspace/data/').DIRECTORY_SEPARATOR.$this->ctype.DIRECTORY_SEPARATOR.$this->model->uuid.'.json'));
 			}
-
-			$this->model->attributes = $_POST['CrelishDynamicJsonModel'] + $oldData;
+			$attributes = $_POST['CrelishDynamicJsonModel'] + $oldData;
+			foreach ($attributes as $key => $val) {
+				foreach($this->model->fieldDefinitions->fields as $field) {
+					if ($field->key == $key) {
+						if (isset($field->transform)) {
+							if (!isset($oldData[$key]) || $oldData[$key] != $attributes[$key]) {
+								//we need to transform!
+								$transformer = 'giantbits\\crelish\\components\\transformer\\CrelishFieldTransformer'.ucfirst(strtolower($field->transform));
+								$transformer::transform($attributes[$key]);
+							}
+						}
+						break;
+					}
+				}
+			}
+			$this->model->attributes = $attributes;
 
 			if ($this->model->validate()) {
 				$this->model->save();
@@ -39,12 +64,12 @@ class CrelishBaseController extends Controller {
 
 		ob_start();
 		$form = ActiveForm::begin([
-			'id' => 'content-form',
+			'id' => $settings['id'],
 			//'layout' => 'horizontal',
 		]);
 
 		// Start output.
-		echo '<div class="gc-bc--palette-clouds gc-bs--soft gc-ptb--2">';
+		echo Html::beginTag("div", ['class'=>$settings['outerClass']]);
 
 		// Display messages.
 		foreach (\Yii::$app->session->getAllFlashes() as $key => $message) {
@@ -62,13 +87,22 @@ class CrelishBaseController extends Controller {
 		//var_dump($tabs);
 		foreach($tabs as $tab) {
 			// Loop through tabs.
+			//check tab overrides
+			if (isset($settings['tabs'][$tab->key])) {
+				foreach ($settings['tabs'][$tab->key] as $key => $val) {
+					$tab->$key = $val;
+				}
+			}
+			if (isset($tab->visible) && $tab->visible === false) {
+				continue;
+			}
 
 			foreach($tab->groups as $group) {
 				// Loop through groups.
 				$widthClass = (!empty($group->settings->width)) ? 'o-grid__cell--width-' . $group->settings->width : '';
 
 				echo Html::beginTag('div', ['class'=>'o-grid__cell ' . $widthClass]);
-				echo Html::beginTag('div', ['class'=>'c-card']);
+				echo Html::beginTag('div', ['class'=>$settings['groupClass']]);
 				echo Html::tag('div', $group->label , ['class'=>'c-card__item c-card__item--divider']);
 				echo Html::beginTag('div', ['class'=>'c-card__item']);
 
@@ -92,6 +126,8 @@ class CrelishBaseController extends Controller {
 						echo plugins\assetconnector\AssetConnector::widget(['formKey' => $field->key, 'data' => $this->model{$field->key}]);
 					} elseif ($field->type == 'dataList') {
 						echo DataList::widget(['formKey' => $field->key, 'data' => $this->model{$field->key}]);
+					} elseif ($field->type == 'submitButton') {
+						echo Html::submitButton($field->label,array('class'=>'c-button c-button--brand c-button--block'));
 					} else {
 						echo $form->field($this->model, $field->key)->{$field->type}((array) $fieldOptions)->label($field->label);
 					}

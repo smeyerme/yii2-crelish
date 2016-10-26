@@ -1,0 +1,24 @@
+{{ register_asset_bundle('giantbits/crelish/CrelishAsset') }}  {# asset root for yii advanced template #}
+{{ void(this.beginPage()) }}
+<!DOCTYPE html>
+<html lang="{{ app.language }}">
+<head>
+  <meta charset="{{ app.charset }}">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ html.encode(this.title) }}</title>
+  {{ html.csrfMetaTags | raw }}
+  {{ void(this.head) }}
+</head>
+<body class="crelish c-text gc-bc--palette-wetasphalt">
+{{ void(this.beginBody()) }}
+
+
+
+<div class="u-center-block__content">
+    {{ content | raw }}
+</div>
+
+{{ void(this.endBody()) }}
+</body>
+</html>
+{{ void(this.endPage()) }}

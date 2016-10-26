@@ -37,7 +37,7 @@ class Module extends \yii\base\Module implements BootstrapInterface {
   public $theme = 'default';
 
   /**
-   * [$theme description]
+   * [$entryPoint description]
    * @var string
    */
   public $entryPoint = [
