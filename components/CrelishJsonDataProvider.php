@@ -79,11 +79,15 @@ class CrelishJsonDataProvider extends Component
     }
 
     if (Arrays::has($settings, 'filter')) {
-      $this->filterModels($settings['filter']);
+      if(!empty($settings['filter'])) {
+        $this->filterModels($settings['filter']);
+      }
     }
 
     if (Arrays::has($settings, 'sort')) {
-      $this->sortModels($settings['sort']);
+      if(!empty($settings['sort'])) {
+        $this->sortModels($settings['sort']);
+      }
     }
 
     parent::__construct();
@@ -120,6 +124,7 @@ class CrelishJsonDataProvider extends Component
   private function filterModels($filter)
   {
     if (is_array($filter)) {
+
       foreach ($filter as $key => $keyValue) {
 
         if (is_array($keyValue)) {
@@ -137,7 +142,7 @@ class CrelishJsonDataProvider extends Component
           } else {
             $this->allModels = Arrays::filter($this->allModels, function ($value) use ($key, $keyValue) {
 
-              if (is_array($value[$key])) {
+              if (!empty($value[$key]) && is_array($value[$key])) {
                 $value[$key] = Arrays::implode($value[$key], "||");
               } elseif (strpos($key, "|") !== false) {
                 $key = str_replace("|", ".", $key);

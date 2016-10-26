@@ -122,8 +122,8 @@ class CrelishFrontendController extends Controller
           return $value->key == $key;
         });
 
-        if (is_object($fieldType)) {
-          $fieldType = $fieldType->type;
+        if (!empty($fieldType) && is_object($fieldType)) {
+          $fieldType = $fieldType->ctype;
         }
 
         if(!empty($fieldType)) {
