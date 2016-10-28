@@ -10,6 +10,7 @@ class AssetConnector extends Widget
 {
   public $data;
   public $formKey;
+  public $field;
 
   public function init()
   {
@@ -74,10 +75,10 @@ EOT;
     $modelProvider = new CrelishJsonDataProvider('asset', [
       'sort' => ['by' => 'systitle', 'dir' => 'desc']
     ], null);
-
+    $label = $this->field->label;
     $out = <<<EOT
     <div class="form-group field-crelishdynamicmodel-body required">
-      <label class="control-label col-sm-3" for="crelishdynamicmodel-body">Asset</label>
+      <label class="control-label col-sm-3" for="crelishdynamicmodel-body">$label</label>
       <div class="col-sm-6">
 
         $imgWrapper

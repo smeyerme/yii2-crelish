@@ -172,6 +172,9 @@ class CrelishJsonDataProvider extends Component
 
     $fullFolder = \Yii::getAlias($this->pathAlias) . DIRECTORY_SEPARATOR . $folder;
 
+    if (!file_exists($fullFolder)) {
+      mkdir($fullFolder);
+    }
     $files = FileHelper::findFiles($fullFolder);
     if (isset($files[0])) {
       foreach ($files as $file) {

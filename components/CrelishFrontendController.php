@@ -127,7 +127,6 @@ class CrelishFrontendController extends Controller
         }
 
         if(!empty($fieldType)) {
-
           // Get processor class.
           $processorClass = 'giantbits\crelish\plugins\\' . strtolower($fieldType) . '\\' . ucfirst($fieldType) . 'ContentProcessor';
 

@@ -7,6 +7,7 @@ use giantbits\crelish\widgets\DataList;
 use giantbits\crelish\plugins;
 use yii\bootstrap\ActiveForm;
 use yii\web\Controller;
+use yii\helpers\Json;
 use yii\helpers\Html;
 use yii\helpers\Url;
 
@@ -121,9 +122,9 @@ class CrelishBaseController extends Controller {
 					} elseif ($field->type == 'dropDownList') {
 						echo $form->field($this->model, $field->key)->{$field->type}((array) $field->items, (array) $fieldOptions)->label($field->label);
 					} elseif ($field->type == 'matrixConnector') {
-						echo plugins\matrixconnector\MatrixConnector::widget(['formKey' => $field->key, 'data' => $this->model{$field->key}]);
+						echo plugins\matrixconnector\MatrixConnector::widget(['formKey' => $field->key, 'data' => $this->model{$field->key},'field'=>$field]);
 					} elseif ($field->type == 'assetConnector') {
-						echo plugins\assetconnector\AssetConnector::widget(['formKey' => $field->key, 'data' => $this->model{$field->key}]);
+						echo plugins\assetconnector\AssetConnector::widget(['formKey' => $field->key, 'data' => $this->model{$field->key},'field'=>$field]);
 					} elseif ($field->type == 'dataList') {
 						echo DataList::widget(['formKey' => $field->key, 'data' => $this->model{$field->key}]);
 					} elseif ($field->type == 'submitButton') {

@@ -9,7 +9,7 @@ namespace giantbits\crelish;
 
 use Yii;
 use yii\base\BootstrapInterface;
-
+use giantbits\crelish\components\CrelishI18nEventHandler;
 /**
  * The Yii Debug Module provides the debug toolbar and debugger
  *
@@ -42,7 +42,8 @@ class Module extends \yii\base\Module implements BootstrapInterface {
    */
   public $entryPoint = [
     'ctype' => 'page',
-    'path' => 'home'
+    'path' => 'home',
+    'slug'=>'home'
   ];
 
   /**
@@ -102,7 +103,7 @@ class Module extends \yii\base\Module implements BootstrapInterface {
                 'app' => 'app.php',
                 'app/error' => 'error.php',
               ],
-              'on missingTranslation' => ['@crelish\components\CrelishI18nEventHandler', 'handleMissingTranslation']
+              'on missingTranslation' => [CrelishI18nEventHandler::class, 'handleMissingTranslation']
             ],
           ],
         ]

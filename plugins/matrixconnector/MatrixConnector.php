@@ -13,6 +13,7 @@ class MatrixConnector extends Widget
 {
   public $data;
   public $formKey;
+  public $field;
 
   public function init()
   {
@@ -37,7 +38,7 @@ class MatrixConnector extends Widget
         $itemData = $dataItem->one();
 
         foreach ($dataItem->definitions->fields as $field ) {
-          if($field->visibleInGrid) {
+          if(isset($field->visibleInGrid) && $field->visibleInGrid) {
             if(!empty($field->label) && !empty($itemData[$field->key])) {
               $info[] = ['label'=>$field->label, 'value'=> $itemData[$field->key]];
             }
@@ -60,10 +61,11 @@ class MatrixConnector extends Widget
     $elementType = !empty($_GET['cet']) ? $_GET['cet'] : 'page';
     $modelProvider = new CrelishJsonDataProvider($elementType, [], null);
     $filterModel = new CrelishDynamicJsonModel(['ctype' => $elementType]);
+    $label = $this->field->label;
 
     $out = <<<EOT
     <div class="form-group field-crelishdynamicmodel-body required">
-      <label class="control-label" for="crelishdynamicmodel-body">Matrix</label>
+      <label class="control-label" for="crelishdynamicmodel-body">$label</label>
       <div class="">
         <matrix></matrix>
         <div class="help-block help-block-error "></div>
