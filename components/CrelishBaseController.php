@@ -146,4 +146,13 @@ class CrelishBaseController extends Controller {
 
 		return ob_get_clean();
 	}
+
+	public static function addError($error) {
+		$err = '';
+		if (\Yii::$app->session->hasFlash('globalError')) {
+			$err .= \Yii::$app->session->getFlash('globalError') . "\n";
+		}
+		$err .= $error;
+		\Yii::$app->session->setFlash('globalError',$err);
+	}
 }

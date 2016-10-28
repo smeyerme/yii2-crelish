@@ -186,6 +186,11 @@ class CrelishJsonDataProvider extends Component
       $finalArr = [];
       $content = file_get_contents($file);
       $modelArr = json_decode($content, true);
+      if (is_null($modelArr)) {
+        $segments = explode(DIRECTORY_SEPARATOR,$file);
+        CrelishBaseController::addError("Invalid JSON in " . array_pop($segments));
+        continue;
+    }
       $modelArr['id'] = $file;
       $modelArr['ctype'] = $this->ctype;
 

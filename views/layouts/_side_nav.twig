@@ -29,8 +29,8 @@
       <span class="c-badge pull-right">21</span>
     </a>
   </li>
-  <li>
-    <a href="#fakelink">
+  <li class="{{ app.controller.id == 'settings' ? 'active' : '' }}">
+    <a href="{{ url('crelish/settings/index') }}">
       <span class="fui-gear"></span> Settings
       <span class="c-badge pull-right">40</span>
     </a>
