@@ -39,7 +39,7 @@ class UserController extends CrelishBaseController
       }
       $modelJson = realpath($elementsPath.'/'.$this->ctype.'.json');
       if ($modelJson === false) {
-          file_put_contents($elementsPath.'/'.$this->ctype.'.json', '{"key":"user","label":"User","tabs":[{"label":"Login","key":"login","visible":false,"groups":[{"label":"Login","key":"login","fields":["email","password","login"]}]},{"label":"User","key":"user","groups":[{"label":"User","key":"user","fields":["email","password","state"]}]}],"fields":[{"label":"Email address","key":"email","type":"textInput","visibleInGrid":true,"rules":[["required"],["email"],["string",{"max":128}]]},{"label":"Password","key":"password","type":"passwordInput","visibleInGrid":false,"rules":[["required"],["string",{"max":128}]],"transform":"md5"},{"label":"Login","key":"login","type":"submitButton","visibleInGrid":false}]}');
+          file_put_contents($elementsPath.'/'.$this->ctype.'.json', '{"key":"user","label":"User","tabs":[{"label":"Login","key":"login","visible":false,"groups":[{"label":"Login","key":"login","fields":["email","password","login"]}]},{"label":"User","key":"user","groups":[{"label":"User","key":"user","fields":["email","password","state"]}]}],"fields":[{"label":"Email address","key":"email","type":"textInput","visibleInGrid":true,"rules":[["required"],["email"],["string",{"max":128}]]},{"label":"Password","key":"password","type":"passwordInput","visibleInGrid":false,"rules":[["required"],["string",{"max":128}]],"transform":"md5"},{"label":"Login","key":"login","type":"submitButton","visibleInGrid":false}]}, {"label":"Auth-Key","key":"authKEy","type":"text","visibleInGrid":false}]}');
       }
 
       // Generate default admin.
