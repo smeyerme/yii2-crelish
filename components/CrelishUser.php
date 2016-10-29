@@ -1,6 +1,7 @@
 <?php
 
 namespace giantbits\crelish\components;
+use yii\base\NotSupportedException;
 
 class CrelishUser extends \yii\web\User implements \yii\web\IdentityInterface
 {
@@ -77,17 +78,15 @@ class CrelishUser extends \yii\web\User implements \yii\web\IdentityInterface
      */
     public static function crelishLogin($data)
     {
-        // transform
-        transformer\CrelishFieldTransformerMd5::beforeFind($data['password']);
-
         // Fetch the single wanted user only.
-        $userProvider = new CrelishJsonDataProvider('user', ['filter'=>['email' => $data['email'], 'password'=>$data['password']]]);
+        $userProvider = new CrelishJsonDataProvider('user', ['filter'=>['email' => $data['email']]]);
         $user = $userProvider->one();
 
-        // User found
         if(!empty($user)) {
-          self::prepareUserdata($user);
-          return \Yii::$app->user->login(new static($user), 0);
+          if(\Yii::$app->getSecurity()->validatePassword($data['password'], $user['password'])) {
+            self::prepareUserdata($user);
+            return \Yii::$app->user->login(new static($user), 0);
+          }
         }
 
         return false;
@@ -133,15 +132,13 @@ class CrelishUser extends \yii\web\User implements \yii\web\IdentityInterface
      */
     public static function findIdentity($id)
     {
-        $file = realpath(\Yii::getAlias('@app/workspace/data/user')).'/'.$id.'.json';
-        if (file_exists($file)) {
-            $userData = \yii\helpers\Json::decode(file_get_contents($file));
-            self::prepareUserdata($userData, $file);
 
-            return new static($userData);
-        }
+      $userProvider = new CrelishJsonDataProvider('user', null, $id);
+      $userData = $userProvider->one();
+      self::prepareUserdata($userData);
 
-        return null;
+      var_dump($userData);
+      return new static($userData);
     }
 
     /**
@@ -154,7 +151,7 @@ class CrelishUser extends \yii\web\User implements \yii\web\IdentityInterface
      */
     public static function findIdentityByAccessToken($token, $type = null)
     {
-        return null; //static::findOne(['access_token' => $token]);
+        throw new NotSupportedException('"findIdentityByAccessToken" is not implemented.');
     }
 
     /**
@@ -188,6 +185,6 @@ class CrelishUser extends \yii\web\User implements \yii\web\IdentityInterface
      */
     public function validatePassword($password)
     {
-        return $this->password === $password;
+      return true; //$this->getPassword() === $password;
     }
 }

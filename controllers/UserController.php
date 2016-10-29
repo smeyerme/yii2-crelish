@@ -4,8 +4,8 @@ namespace giantbits\crelish\controllers;
 
 use giantbits\crelish\components\CrelishBaseController;
 use giantbits\crelish\components\CrelishUser;
+use giantbits\crelish\components\CrelishJsonDataProvider;
 use giantbits\crelish\components\CrelishDynamicJsonModel;
-use yii\di\Instance;
 use yii\helpers\Url;
 
 class UserController extends CrelishBaseController
@@ -42,14 +42,21 @@ class UserController extends CrelishBaseController
           file_put_contents($elementsPath.'/'.$this->ctype.'.json', '{"key":"user","label":"User","tabs":[{"label":"Login","key":"login","visible":false,"groups":[{"label":"Login","key":"login","fields":["email","password","login"]}]},{"label":"User","key":"user","groups":[{"label":"User","key":"user","fields":["email","password","state"]}]}],"fields":[{"label":"Email address","key":"email","type":"textInput","visibleInGrid":true,"rules":[["required"],["email"],["string",{"max":128}]]},{"label":"Password","key":"password","type":"passwordInput","visibleInGrid":false,"rules":[["required"],["string",{"max":128}]],"transform":"md5"},{"label":"Login","key":"login","type":"submitButton","visibleInGrid":false}]}, {"label":"Auth-Key","key":"authKEy","type":"text","visibleInGrid":false}]}');
       }
 
-      // Generate default admin.
-      $adminUser = new CrelishDynamicJsonModel(['email', 'password', 'login', 'state'], ['ctype' => 'user']);
-      $adminUser->email = 'myr.steffen@gmail.com';
-      $adminUser->login = 'smyr';
-      $adminUser->password = 'basta!';
-      $adminUser->state = 1;
-      $adminUser->authKey = \Yii::$app->security->generateRandomString();
-      //$adminUser->save();
+      //\Yii::$app->cache->flush();
+
+      $usersProvider = new CrelishJsonDataProvider('user');
+      $users = $usersProvider->rawAll();
+
+      if(sizeof($users) == 0) {
+        // Generate default admin.
+        $adminUser = new CrelishDynamicJsonModel(['email', 'password', 'login', 'state'], ['ctype' => 'user']);
+        $adminUser->email = 'admin@local.host';
+        $adminUser->login = 'admin@local.host';
+        $adminUser->password = 'basta!';
+        $adminUser->state = 1;
+        $adminUser->authKey = \Yii::$app->security->generateRandomString();
+        $adminUser->save();
+      }
   }
 
   /**
@@ -59,25 +66,27 @@ class UserController extends CrelishBaseController
    */
   public function actionLogin()
   {
-      if (!\Yii::$app->user->isGuest) {
-          return $this->goHome();
+    // Turn away if logged in.
+    if (!\Yii::$app->user->isGuest) {
+      return $this->redirect( Url::to(['/crelish/content/index']) );
+    }
+
+    // Validate data and login the user in case of post request.
+    if (\Yii::$app->request->post()) {
+      if (CrelishUser::crelishLogin(\Yii::$app->request->post('CrelishDynamicJsonModel'))) {
+        return $this->redirect( Url::to(['/crelish/content/index']) );
       }
+    }
 
-      if (\Yii::$app->request->post()) {
-          //find user
-          $res = CrelishUser::crelishLogin(\Yii::$app->request->post('CrelishDynamicJsonModel'));
-          if ($res) {
-              return $this->redirect( Url::to(['/crelish/content/index']) );
-          }
-      }
+    // Prepare rendered form.
+    $content = $this->buildForm('login', ['id' => 'login-form', 'outerClass' => '', 'groupClass' => 'c-card gc-bc--palette-clouds gc-bs--soft', 'tabs' => ['login' => ['visible' => true], 'user' => ['visible' => false]]]);
 
-      $content = $this->buildForm('login', ['id' => 'login-form', 'outerClass' => '', 'groupClass' => 'c-card gc-bc--palette-clouds gc-bs--soft', 'tabs' => ['login' => ['visible' => true], 'user' => ['visible' => false]]]);
-
-      return $this->render('login.twig', [
-        'content' => $content,
-        'ctype' => $this->ctype,
-        'uuid' => $this->uuid,
-      ]);
+    // Render it all with twig.
+    return $this->render('login.twig', [
+      'content' => $content,
+      'ctype' => $this->ctype,
+      'uuid' => $this->uuid,
+    ]);
   }
 
   /**
