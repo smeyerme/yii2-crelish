@@ -53,6 +53,13 @@ Edit your web.php config file
   'useFileTransport' => TRUE
 ]
 
+// Use crelish user class
+'user' => [
+  'class'=>'giantbits\crelish\components\CrelishUser',
+  'identityClass' => 'giantbits\crelish\components\CrelishUser',
+  'enableAutoLogin' => true,
+],
+
 // Enable basic URL Manager.
 'urlManager' => [
   'enablePrettyUrl' => TRUE,

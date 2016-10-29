@@ -37,6 +37,15 @@ class Module extends \yii\base\Module implements BootstrapInterface {
   public $theme = 'default';
 
   /**
+   * [$entryPoint description]
+   * @var string
+   */
+  public $entryPoint = [
+    'ctype' => 'page',
+    'path' => 'home'
+  ];
+
+  /**
    * Returns Yii logo ready to use in `<img src="`
    *
    * @return string base64 representation of the image
@@ -93,7 +102,7 @@ class Module extends \yii\base\Module implements BootstrapInterface {
                 'app' => 'app.php',
                 'app/error' => 'error.php',
               ],
-              'on missingTranslation' => ['@crelish\components\CrelishI18nEventHandler', 'handleMissingTranslation']
+              'on missingTranslation' => ['\giantbits\crelish\components\CrelishI18nEventHandler', 'handleMissingTranslation']
             ],
           ],
         ]
