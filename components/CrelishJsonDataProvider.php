@@ -98,10 +98,6 @@ class CrelishJsonDataProvider extends Component
     $finalArr = [];
     $modelArr = (array)$data;
 
-    //if($modelArr['type'] == null) var_dump($modelArr); die();
-    //$modelArr['id'] = $data->uuid;
-    //$modelArr['ctype'] = $data->type;
-
     // todo: Handle special fields... uncertain about this.
     foreach ($modelArr as $attr => $value) {
 
@@ -183,7 +179,7 @@ class CrelishJsonDataProvider extends Component
 
     $fullFolder = \Yii::getAlias($this->pathAlias) . DIRECTORY_SEPARATOR . $folder;
 
-    $files = FileHelper::findFiles($fullFolder);
+    $files = FileHelper::findFiles($fullFolder, ['recursive'=>false]);
     if (isset($files[0])) {
       foreach ($files as $file) {
         $filesArr[] = $file;

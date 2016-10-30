@@ -27,16 +27,32 @@ class ContentController extends CrelishBaseController
       ];
     }
 
+    /**
+     * [init description]
+     * @return [type] [description]
+     */
     public function init()
     {
       parent::init();
+
+      $clearCache =  \Yii::$app->request->get('clearDataCache', false);
+
+      if($clearCache) {
+        \Yii::$app->cache->flush();
+        \Yii::$app->session->setFlash('success', 'Data caches cleared.');
+      }
 
       $this->ctype = (!empty(\Yii::$app->getRequest()->getQueryParam('ctype'))) ? \Yii::$app->getRequest()->getQueryParam('ctype') : 'page';
       $this->uuid = (!empty(\Yii::$app->getRequest()->getQueryParam('uuid'))) ? \Yii::$app->getRequest()->getQueryParam('uuid') : null;
     }
 
+    /**
+     * [actionIndex description]
+     * @return [type] [description]
+     */
     public function actionIndex()
     {
+
       $modelProvider = new CrelishJsonDataProvider($this->ctype, [], null);
 
       return $this->render('content.twig', [
@@ -46,6 +62,10 @@ class ContentController extends CrelishBaseController
       ]);
     }
 
+    /**
+     * [actionCreate description]
+     * @return [type] [description]
+     */
     public function actionCreate()
     {
       $content = $this->buildForm();
@@ -57,6 +77,10 @@ class ContentController extends CrelishBaseController
       ]);
     }
 
+    /**
+     * [actionUpdate description]
+     * @return [type] [description]
+     */
     public function actionUpdate()
     {
       $content = $this->buildForm();
@@ -68,6 +92,10 @@ class ContentController extends CrelishBaseController
       ]);
     }
 
+    /**
+     * [actionDelete description]
+     * @return [type] [description]
+     */
     public function actionDelete()
     {
       $ctype = \Yii::$app->request->post('ctype');
