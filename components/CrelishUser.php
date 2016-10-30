@@ -137,7 +137,6 @@ class CrelishUser extends \yii\web\User implements \yii\web\IdentityInterface
       $userData = $userProvider->one();
       self::prepareUserdata($userData);
 
-      var_dump($userData);
       return new static($userData);
     }
 

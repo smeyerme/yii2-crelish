@@ -71,6 +71,8 @@ class UserController extends CrelishBaseController
       return $this->redirect( Url::to(['/crelish/content/index']) );
     }
 
+    $model = new CrelishDynamicJsonModel(['email', 'password'], ['ctype' => 'user']);
+
     // Validate data and login the user in case of post request.
     if (\Yii::$app->request->post()) {
       if (CrelishUser::crelishLogin(\Yii::$app->request->post('CrelishDynamicJsonModel'))) {
@@ -79,11 +81,21 @@ class UserController extends CrelishBaseController
     }
 
     // Prepare rendered form.
-    $content = $this->buildForm('login', ['id' => 'login-form', 'outerClass' => '', 'groupClass' => 'c-card gc-bc--palette-clouds gc-bs--soft', 'tabs' => ['login' => ['visible' => true], 'user' => ['visible' => false]]]);
+    /*
+    $content = $this->buildForm('login', [
+      'id' => 'login-form',
+      'outerClass' => '',
+      'groupClass' => 'gc-fc--palette-asbestos',
+      'tabs' => [
+        'login' => ['visible' => true],
+        'user' => ['visible' => false]
+      ]
+    ]);
+    */
 
     // Render it all with twig.
     return $this->render('login.twig', [
-      'content' => $content,
+      'model' => $model,
       'ctype' => $this->ctype,
       'uuid' => $this->uuid,
     ]);

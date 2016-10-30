@@ -1,3 +1,4 @@
+{{ use('giantbits/crelish/widgets/FlashMessages') }}
 {{ register_asset_bundle('giantbits/crelish/CrelishAsset') }}  {# asset root for yii advanced template #}
 {{ void(this.beginPage()) }}
 <!DOCTYPE html>
@@ -12,10 +13,12 @@
 <body class="crelish c-text gc-bc--palette-wetasphalt">
 {{ void(this.beginBody()) }}
 
+{{ flash_messages_widget() }}
+
 <div class="o-grid o-grid--no-gutter o-panel gc-bc--palette-wetasphalt">
   <div class="o-grid__cell--width-20 o-panel-container">
     <nav class="c-nav c-nav--inline gc-bc--palette-dark-blue">
-      <span class="c-nav__item">crelish</span>
+      <span class="c-nav__item gc-bfont crelish-brand">crelish</span>
     </nav>
     <div class="o-panel o-panel--nav-top gc-nav__sidebar gc-bc--palette-midnightblue">
       {% include "_side_nav.twig" %}

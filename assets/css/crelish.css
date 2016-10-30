@@ -1,5 +1,22 @@
+.crelish-brand {
+  font-size: 1.5em;
+  line-height: 2.25em;
+}
+
+.gc-bfont {
+  font-family: 'Lobster', cursive;
+}
+
+.gc-fs--2 {
+  font-size: 2em;
+}
+
 .gc-lp--1 {
   padding-left: 1em;
+}
+
+.gc-pt--0 {
+  padding-top: 0;
 }
 
 .gc-pt--1 {
@@ -13,6 +30,10 @@
 .gc-ptb--2 {
   padding-top: 2em;
   padding-bottom: 2em;
+}
+
+.gc-mt--0 {
+  margin-top: 0;
 }
 
 .gc-mt--1 {
@@ -57,6 +78,10 @@
   background-color: #263544;
 }
 
+.gc-fc--palette-clouds {
+  color: #ecf0f1;
+}
+
 .gc-bc--palette-clouds {
   background-color: #ecf0f1;
 }
@@ -67,6 +92,10 @@
 
 .gc-bc--palette-green-sea {
   background-color: #16a085;
+}
+
+.gc-fc--palette-asbestos {
+  color: #7f8c8d;
 }
 
 .gc-bc--palette-asbestos {
@@ -117,6 +146,11 @@
   -webkit-box-shadow: 0px 33px 76px -18px rgba(0, 0, 0, 0.22);
   -moz-box-shadow: 0px 33px 76px -18px rgba(0, 0, 0, 0.22);
   box-shadow: 0px 33px 76px -18px rgba(0, 0, 0, 0.22);
+
+  position: absolute;
+  right: 0;
+  left: auto;
+  top: 80%;
 }
 
 .gc-bs--soft {
@@ -234,7 +268,7 @@ ul.gc-nav__content-filter li > a:active {
 .crelish input,
 .crelish select,
 .crelish textarea {
-  /*border-radius: 0;*/
+  border-radius: 0;
 }
 
 .crelish input,
@@ -347,4 +381,8 @@ div.help-block.help-block-error {
   right: 100%;
   width: 100%;
   height: 2px;
+}
+
+.o-drawer {
+  z-index: 999;
 }
