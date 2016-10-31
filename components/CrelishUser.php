@@ -1,90 +1,162 @@
 <?php
+
 namespace giantbits\crelish\components;
-use yii\web\User;
+use yii\base\NotSupportedException;
 
-
-class CrelishUser extends \yii\web\User implements \yii\web\IdentityInterface {
+class CrelishUser extends \yii\web\User implements \yii\web\IdentityInterface
+{
     public $loginUrl = ['crelish/user/login'];
 
+    /**
+     * [$id description].
+     *
+     * @var [type]
+     */
     public $id;
+
+    /**
+     * [$authKey description].
+     *
+     * @var [type]
+     */
     public $authKey;
+
+    /**
+     * [$accessToken description].
+     *
+     * @var [type]
+     */
     public $accessToken;
 
+    /**
+     * [$uuid description].
+     *
+     * @var [type]
+     */
     public $uuid;
+
+    /**
+     * [$email description].
+     *
+     * @var [type]
+     */
     public $email;
+
+    /**
+     * [$username description].
+     *
+     * @var [type]
+     */
     public $username;
+
+    /**
+     * [$identityClass description].
+     *
+     * @var string
+     */
     public $identityClass = 'CrelishUser';
+
+    /**
+     * [$rememberMe description].
+     *
+     * @var bool
+     */
     public $rememberMe = false;
 
-    public static function crelishLogin($data) {
-    	//get all users
+    /**
+     * [$ctype description]
+     * @var string
+     */
+    public $ctype = 'user';
 
-		$userPath = realpath(\Yii::getAlias('@app/workspace/data/user'));
-		transformer\CrelishFieldTransformerMd5::transform($data['password']);
-		if ($userPath !== false) {
-	    	foreach (glob($userPath . "/*-*-*-*-*.json") as $file) {
-	    		$userData = \yii\helpers\Json::decode(file_get_contents($file));
-	    		if ($userData['email'] == $data['email'] && $userData['password'] == $data['password']) {
-	    			CrelishUser::prepareUserdata($userData,$file);
-	    			return \Yii::$app->user->login(new static($userData), 0);
-	    		}
-			}
-		}
-		return false;
-    }
+    /**
+     * [crelishLogin description].
+     *
+     * @param [type] $data [description]
+     *
+     * @return [type] [description]
+     */
+    public static function crelishLogin($data)
+    {
+        // Fetch the single wanted user only.
+        $userProvider = new CrelishJsonDataProvider('user', ['filter'=>['email' => $data['email']]]);
+        $user = $userProvider->one();
 
-    public function getId() {
-    	return $this->id;
-    }
+        if(!empty($user)) {
+          if(\Yii::$app->getSecurity()->validatePassword($data['password'], $user['password'])) {
+            self::prepareUserdata($user);
+            return \Yii::$app->user->login(new static($user), 0);
+          }
+        }
 
-    private static function prepareUserdata(&$userData,$file) {
-		unset($userData['password']);
-		unset($userData['login']);
-		unset($userData['path']);
-		unset($userData['slug']);
-		unset($userData['state']);
-		unset($userData['created']);
-		unset($userData['updated']);
-		unset($userData['from']);
-		unset($userData['to']);
-		$userData['id'] = substr($file,-41,36);
-		$userData['username'] = $userData['email'];
+        return false;
     }
 
     /**
-     * @inheritdoc
+     * [getId description].
+     *
+     * @return [type] [description]
+     */
+    public function getId()
+    {
+        return $this->uuid;
+    }
+
+    /**
+     * [prepareUserdata description].
+     *
+     * @param [type] $userData [description]
+     * @param [type] $file     [description]
+     *
+     * @return [type] [description]
+     */
+    private static function prepareUserdata(&$userData) {
+        unset($userData['password']);
+        unset($userData['login']);
+        unset($userData['path']);
+        unset($userData['slug']);
+        unset($userData['state']);
+        unset($userData['created']);
+        unset($userData['updated']);
+        unset($userData['from']);
+        unset($userData['to']);
+        $userData['username'] = $userData['email'];
+    }
+
+    /**
+     * [findIdentity description].
+     *
+     * @param [type] $id [description]
+     *
+     * @return [type] [description]
      */
     public static function findIdentity($id)
     {
-		$file = realpath(\Yii::getAlias('@app/workspace/data/user')) . '/' . $id . '.json';
-    	if (file_exists($file)) {
-    		$userData = \yii\helpers\Json::decode(file_get_contents($file));
-    		CrelishUser::prepareUserdata($userData,$file);
-    		return new static($userData);
-    	}
-        return null;
+
+      $userProvider = new CrelishJsonDataProvider('user', null, $id);
+      $userData = $userProvider->one();
+      self::prepareUserdata($userData);
+
+      return new static($userData);
     }
 
     /**
-     * @inheritdoc
+     * [findIdentityByAccessToken description].
+     *
+     * @param [type] $token [description]
+     * @param [type] $type  [description]
+     *
+     * @return [type] [description]
      */
     public static function findIdentityByAccessToken($token, $type = null)
     {
-    	echo "1";
-    	die();
-/*
-        foreach (self::$users as $user) {
-            if ($user['accessToken'] === $token) {
-                return new static($user);
-            }
-        }
-
-*/
-        return null;
+        throw new NotSupportedException('"findIdentityByAccessToken" is not implemented.');
     }
 
     /**
-     * @inheritdoc
+     * [getAuthKey description].
+     *
+     * @return [type] [description]
      */
     public function getAuthKey()
     {
@@ -92,27 +164,26 @@ class CrelishUser extends \yii\web\User implements \yii\web\IdentityInterface {
     }
 
     /**
-     * @inheritdoc
+     * [validateAuthKey description].
+     *
+     * @param [type] $authKey [description]
+     *
+     * @return [type] [description]
      */
     public function validateAuthKey($authKey)
     {
-    	echo "4";
-    	die();
-//        return $this->authKey === $authKey;
-        return null;
+        return $this->getAuthKey() === $authKey;
     }
 
     /**
-     * Validates password
+     * Validates password.
      *
      * @param string $password password to validate
+     *
      * @return bool if password provided is valid for current user
      */
     public function validatePassword($password)
     {
-    	echo "5";
-    	die();
-        return $this->password === $password;
+      return true; //$this->getPassword() === $password;
     }
-
 }

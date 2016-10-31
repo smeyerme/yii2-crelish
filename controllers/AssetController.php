@@ -87,7 +87,7 @@ class AssetController extends Controller
         header("Location: " . Url::to(['asset/update', 'uuid' => $model->uuid]));
         exit(0);
       } else {
-        var_dump($model->errors);
+        //var_dump($model->errors);
         \Yii::$app->session->setFlash('error', 'Asset save failed...');
       }
     }

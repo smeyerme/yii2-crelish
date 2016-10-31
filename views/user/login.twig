@@ -1,1 +1,24 @@
-{{ content | raw }}
+{{ use('yii/widgets/ActiveForm') }}
+
+<h2 class="c-heading gc-fc--palette-asbestos gc-pt--0"><span class="gc-bfont gc-fc--palette-clouds gc-fs--2">crelish</span></h2>
+{% set form = active_form_begin({
+  'id': 'login',
+  'options' : {'class' : ''},
+  'errorSummaryCssClass': 'gc-fc--palette-clouds'
+}) %}
+  <div class="o-form-element">
+      {{ form.errorSummary(model) | raw}}
+
+      <div class="c-input-group c-input-group--stacked">
+          <div class="o-field">
+            {{ form.field(model, 'email', {'errorOptions':{'class':'help hidden'}, 'options':{'class':''}, 'inputOptions':{'class':'c-field', 'placeholder':'Email'}}).label(false) | raw }}
+          </div>
+          <div class="o-field">
+            {{ form.field(model, 'password', {'errorOptions':{'class':'help hidden'}, 'options':{'class':''}, 'inputOptions':{'class':'c-field', 'placeholder':'Pasword'}}).passwordInput().label(false) | raw }}
+          </div>
+      </div>
+  </div>
+  <div class="o-form-element">
+    <button class="c-button c-button--info c-button--block" type="submit">Login</button>
+  </div>
+{{ active_form_end() }}

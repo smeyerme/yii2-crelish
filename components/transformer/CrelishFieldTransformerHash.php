@@ -1,11 +1,12 @@
 <?php
 namespace giantbits\crelish\components\transformer;
+
 use giantbits\crelish\components\transformer\CrelishFieldBaseTransformer;
 
 /**
  *
  */
-class CrelishFieldTransformerMd5 extends CrelishFieldBaseTransformer {
+class CrelishFieldTransformerHash extends CrelishFieldBaseTransformer {
 
 	/**
 	 * [transform description]
@@ -13,10 +14,6 @@ class CrelishFieldTransformerMd5 extends CrelishFieldBaseTransformer {
 	 * @return [type]        [description]
 	 */
 	 public static function beforeSave(&$value) {
- 		$value = md5($value);
+ 		$value = \Yii::$app->getSecurity()->generatePasswordHash($value);
  	}
-
-	public static function beforeFind(&$value) {
-		$value = md5($value);
-	}
 }

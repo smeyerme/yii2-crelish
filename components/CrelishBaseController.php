@@ -1,11 +1,8 @@
 <?php
 namespace giantbits\crelish\components;
 
-use giantbits\crelish\widgets\MatrixConnector;
-use giantbits\crelish\widgets\AssetConnector;
-use giantbits\crelish\widgets\DataList;
-use giantbits\crelish\plugins;
 use yii\bootstrap\ActiveForm;
+use yii\helpers\Json;
 use yii\web\Controller;
 use yii\helpers\Json;
 use yii\helpers\Html;
@@ -101,10 +98,13 @@ class CrelishBaseController extends Controller {
 			foreach($tab->groups as $group) {
 				// Loop through groups.
 				$widthClass = (!empty($group->settings->width)) ? 'o-grid__cell--width-' . $group->settings->width : '';
+				$groupSettings = (property_exists($group, 'settings')) ? $group->settings : null;
 
 				echo Html::beginTag('div', ['class'=>'o-grid__cell ' . $widthClass]);
 				echo Html::beginTag('div', ['class'=>$settings['groupClass']]);
-				echo Html::tag('div', $group->label , ['class'=>'c-card__item c-card__item--divider']);
+				if(property_exists($groupSettings, 'showLabel') && $group->settings->showLabel !== false) {
+					echo Html::tag('div', $group->label , ['class'=>'c-card__item c-card__item--divider']);
+				}
 				echo Html::beginTag('div', ['class'=>'c-card__item']);
 
 				foreach ($this->model->fieldDefinitions->fields as $field) {
@@ -121,16 +121,16 @@ class CrelishBaseController extends Controller {
 						echo $form->field($this->model, $field->key)->widget($widget::className())->label($field->label);
 					} elseif ($field->type == 'dropDownList') {
 						echo $form->field($this->model, $field->key)->{$field->type}((array) $field->items, (array) $fieldOptions)->label($field->label);
-					} elseif ($field->type == 'matrixConnector') {
-						echo plugins\matrixconnector\MatrixConnector::widget(['formKey' => $field->key, 'data' => $this->model{$field->key},'field'=>$field]);
-					} elseif ($field->type == 'assetConnector') {
-						echo plugins\assetconnector\AssetConnector::widget(['formKey' => $field->key, 'data' => $this->model{$field->key},'field'=>$field]);
-					} elseif ($field->type == 'dataList') {
-						echo DataList::widget(['formKey' => $field->key, 'data' => $this->model{$field->key}]);
 					} elseif ($field->type == 'submitButton') {
 						echo Html::submitButton($field->label,array('class'=>'c-button c-button--brand c-button--block'));
 					} else {
-						echo $form->field($this->model, $field->key)->{$field->type}((array) $fieldOptions)->label($field->label);
+						$class = 'giantbits\crelish\plugins\\' . strtolower($field->type) . '\\' . ucfirst($field->type);
+						// Check for crelish special fields.
+						if(class_exists($class)) {
+							echo $class::widget(['formKey' => $field->key, 'data' => $this->model{$field->key}, 'field'=>$field]);
+						} else {
+							echo $form->field($this->model, $field->key)->{$field->type}((array) $fieldOptions)->label($field->label);
+						}
 					}
 				}
 				echo Html::endTag('div');

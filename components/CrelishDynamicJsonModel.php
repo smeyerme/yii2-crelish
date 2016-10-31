@@ -2,14 +2,39 @@
 
 namespace giantbits\crelish\components;
 
+use Underscore\Types\Arrays;
 use yii\helpers\Json;
 
 class CrelishDynamicJsonModel extends \yii\base\DynamicModel
 {
+  /**
+   * [$_attributeLabels description]
+   * @var [type]
+   */
   private $_attributeLabels;
+
+  /**
+   * [$identifier description]
+   * @var [type]
+   */
   public $identifier;
+
+  /**
+   * [$uuid description]
+   * @var [type]
+   */
   public $uuid;
+
+  /**
+   * [$ctype description]
+   * @var [type]
+   */
   public $ctype;
+
+  /**
+   * [$fieldDefinitions description]
+   * @var [type]
+   */
   public $fieldDefinitions;
 
   public function init()
@@ -74,21 +99,39 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
     }
   }
 
+  /**
+   * [getFields description]
+   * @return [type] [description]
+   */
   public function getFields()
   {
     return $this->fields;
   }
 
+  /**
+   * [defineLabel description]
+   * @param  [type] $name  [description]
+   * @param  [type] $label [description]
+   * @return [type]        [description]
+   */
   public function defineLabel($name, $label)
   {
     $this->_attributeLabels[$name] = $label;
   }
 
+  /**
+   * [attributeLabels description]
+   * @return [type] [description]
+   */
   public function attributeLabels()
   {
     return $this->_attributeLabels;
   }
 
+  /**
+   * [save description]
+   * @return [type] [description]
+   */
   public function save()
   {
     $modelArray = [];
@@ -98,15 +141,25 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
 
     $modelArray['uuid'] = $this->uuid;
 
-    // Set data, detect json.
+    // Transform and set data, detect json.
     foreach ($this->attributes() as $attribute) {
 
-      $jsonCheck = @json_decode($this->{$attribute});
-      if (json_last_error() == JSON_ERROR_NONE) {
-        // Is JSON.
-        $modelArray[$attribute] = Json::decode($this->{$attribute});
-      } else {
-        $modelArray[$attribute] = $this->{$attribute};
+        $jsonCheck = @json_decode($this->{$attribute});
+        if (json_last_error() == JSON_ERROR_NONE) {
+          // Is JSON.
+          $modelArray[$attribute] = Json::decode($this->{$attribute});
+        } else {
+          $modelArray[$attribute] = $this->{$attribute};
+        }
+
+        // Check for transformer.
+        $fieldDefinition = Arrays::filter($this->fieldDefinitions->fields, function ($value) use ($attribute) {
+          return $value->key == $attribute;
+        });
+
+        if(!empty($fieldDefinition[1]->transform)) {
+          $transformer = 'giantbits\crelish\components\transformer\CrelishFieldTransformer' . ucfirst($fieldDefinition[1]->transform);
+          $transformer::beforeSave($modelArray[$attribute]);
       }
     }
 
@@ -117,11 +170,17 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
 
     \Yii::$app->cache->flush();
 
+    // @Todo: Add afterSAve transformer.
+
+
     return true;
   }
 
-  function GUIDv4($trim = true)
-  {
+  /**
+   * [GUIDv4 description]
+   * @param bool $trim [description]
+   */
+  private function GUIDv4($trim = true) {
     // Windows
     if (function_exists('com_create_guid') === true) {
       if ($trim === true)
