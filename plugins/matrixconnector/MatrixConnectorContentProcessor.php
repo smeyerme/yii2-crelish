@@ -27,6 +27,7 @@ class MatrixConnectorContentProcessor extends Component
 
           // @todo: nesting again.
           $sourceDataOut = $caller->processContent($subContentdata['ctype'], $sourceData->one());
+          $sourceDataOut['parentUuid'] = $processedData['uuid'];
 
           $processedData[$key][$section] .= $caller->renderPartial($subContentdata['ctype'] . '.twig', ['data' => $sourceDataOut]);
         }

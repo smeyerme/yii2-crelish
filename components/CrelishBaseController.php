@@ -70,7 +70,7 @@ class CrelishBaseController extends Controller {
 
 		// Display messages.
 		foreach (\Yii::$app->session->getAllFlashes() as $key => $message) {
-			echo '<div class="c-alerts__alert c-alerts__alert--'.$key.'">'.$message.'</div>';
+			//echo '<div class="c-alerts__alert c-alerts__alert--'.$key.'">'.$message.'</div>';
 		}
 
 		echo Html::beginTag("div", ['class'=>'o-grid']);
@@ -101,7 +101,7 @@ class CrelishBaseController extends Controller {
 
 				echo Html::beginTag('div', ['class'=>'o-grid__cell ' . $widthClass]);
 				echo Html::beginTag('div', ['class'=>$settings['groupClass']]);
-				if(property_exists($groupSettings, 'showLabel') && $group->settings->showLabel !== false) {
+				if(!empty($groupSettings) && property_exists($groupSettings, 'showLabel') && $group->settings->showLabel !== false) {
 					echo Html::tag('div', $group->label , ['class'=>'c-card__item c-card__item--divider']);
 				}
 				echo Html::beginTag('div', ['class'=>'c-card__item']);

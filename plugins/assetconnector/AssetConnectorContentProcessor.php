@@ -10,8 +10,9 @@ class AssetConnectorContentProcessor extends Component
 
   public static function processData($caller, $key, $data, &$processedData)
   {
-
-    $include = new CrelishJsonDataProvider('asset', [], $data['uuid']);
-    $processedData[$key] = $include->one();
+    if (is_array($data) && sizeOf($data) > 0) {
+	    $include = new CrelishJsonDataProvider('asset', [], $data['uuid']);
+	    $processedData[$key] = $include->one();
+  	}
   }
 }

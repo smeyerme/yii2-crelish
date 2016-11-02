@@ -22,7 +22,7 @@ class MatrixConnector extends Widget
     if(!empty($this->data)) {
       $this->data = $this->processData($this->data);
     } else {
-      $this->data = Json::encode(['main' => []]);
+      $this->data = Json::encode( ['main' => []] );
     }
   }
 
@@ -31,6 +31,9 @@ class MatrixConnector extends Widget
     $processedData = [];
 
     foreach ($data as $key => $item){
+
+      $processedData[$key] = [];
+
       foreach ($item as $reference) {
 
         $info = [];
@@ -51,6 +54,7 @@ class MatrixConnector extends Widget
           'info' => $info
         ];
       }
+
     }
 
     return Json::encode($processedData);
@@ -120,12 +124,12 @@ EOT;
 
               <div class="c-card" each={ i }>
 
-                <div class="c-card__content c-card__content--divider c-heading">
+                <div class="c-card__item c-card__item--divider">
                   <span class="glyphicon glyphicon-move" aria-hidden="true"></span>
                   { ctype }
                   <span class="c-input-group pull-right">
-                    <button class="c-button gc-bc--palette-wetasphalt c-button--xsmall"><i class="glyphicon glyphicon-pencil"></i></button>
-                    <button class="c-button gc-bc--palette-pomgranate c-button--xsmall"><i class="glyphicon glyphicon-trash"></i></button>
+                    <button class="c-button gc-bc--palette-wetasphalt u-xsmall"><i class="glyphicon glyphicon-pencil"></i></button>
+                    <button class="c-button gc-bc--palette-pomgranate u-xsmall"><i class="glyphicon glyphicon-trash"></i></button>
                   </span>
                 </div>
                 <div class="c-card__content">

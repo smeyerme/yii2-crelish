@@ -58,7 +58,7 @@ class AssetController extends Controller
 
     $alerts = '';
     foreach (\Yii::$app->session->getAllFlashes() as $key => $message) {
-      $alerts .= '<div class="c-alerts__alert c-alerts__alert--' . $key . '">' . $message . '</div>';
+      //$alerts .= '<div class="c-alerts__alert c-alerts__alert--' . $key . '">' . $message . '</div>';
     }
 
     return $this->render('index.twig', [
