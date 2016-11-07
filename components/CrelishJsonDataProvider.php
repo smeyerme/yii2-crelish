@@ -105,11 +105,7 @@ class CrelishJsonDataProvider extends Component
                 // Include data.
                 $include = new CrelishJsonDataProvider($value['ctype'], [], $value['uuid']);
                 $finalArr[str_replace('__cr_include', '', $attr)] = $include->one();
-            } /* else if (strpos($attr, 'asset') !== false) {
-        // Include asset data.
-        $include = new CrelishJsonDataProvider('asset', [], $value['uuid']);
-        $finalArr[$attr] = $include->one();
-      }*/ else {
+            } else {
                 $finalArr[$attr] = $value;
             }
         }
