@@ -3,6 +3,7 @@
 namespace giantbits\crelish\components;
 
 use Underscore\Types\Arrays;
+use yii\helpers\FileHelper;
 use yii\helpers\Json;
 
 class CrelishDynamicJsonModel extends \yii\base\DynamicModel
@@ -165,7 +166,14 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
     }
 
     $outModel = Json::encode($modelArray);
-    $path = \Yii::getAlias('@app') . DIRECTORY_SEPARATOR . 'workspace' . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . $this->identifier . DIRECTORY_SEPARATOR . $this->uuid . '.json';
+    $path = \Yii::getAlias('@app') . DIRECTORY_SEPARATOR . 'workspace' . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . $this->identifier;
+    // Create folder if not present.
+    FileHelper::createDirectory($path, 0775, true);
+
+    // Set full filename.
+    $path .= DIRECTORY_SEPARATOR . $this->uuid . '.json';
+
+    // Save the file.
     file_put_contents($path, $outModel);
     @chmod($path, 0777);
 
