@@ -113,8 +113,8 @@ class Module extends \yii\base\Module implements BootstrapInterface {
         ['class' => 'yii\web\UrlRule', 'pattern' => 'crelish/<controller:[\w\-]+>/<action:[\w\-]+>', 'route' => 'crelish/<controller>/<action>'],
         ['class' => 'yii\web\UrlRule', 'pattern' => 'crelish/<id:\w+>', 'route' => 'crelish/default/view'],
         ['class' => 'yii\web\UrlRule', 'pattern' =>  'crelish', 'route' => 'crelish/default/index'],
-        ['class' => 'giantbits\crelish\components\CrelishBaseUrlRule'],
-        ['class' => 'yii\web\UrlRule', 'pattern' => '<controller:[\w\-]+>/<action:[\w\-]+>', 'route' => '/<controller>/<action>']
+        ['class' => 'yii\web\UrlRule', 'pattern' => '<controller:[\w\-]+>/<action:[\w\-]+>', 'route' => '/<controller>/<action>'],
+        ['class' => 'giantbits\crelish\components\CrelishBaseUrlRule']
         //['class' => 'yii\web\UrlRule', 'pattern' => '<lang:[\w\-]+]>/<controller:[\w\-]+>/<action:[\w\-]+>', 'route' => '/<controller>/<action>']
       ], TRUE);
     } elseif ($app instanceof \yii\console\Application) {
