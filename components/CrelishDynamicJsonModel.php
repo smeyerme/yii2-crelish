@@ -3,6 +3,7 @@
 namespace giantbits\crelish\components;
 
 use Underscore\Types\Arrays;
+use yii\helpers\FileHelper;
 use yii\helpers\Json;
 
 class CrelishDynamicJsonModel extends \yii\base\DynamicModel
@@ -44,18 +45,7 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
     // Build definitions.
     if(!empty($this->ctype)) {
       $filePath = \Yii::getAlias('@app/workspace/elements') . DIRECTORY_SEPARATOR . $this->ctype . '.json';
-      $elementDefinition = Json::decode(file_get_contents($filePath), false);
-
-      // Add core fields.
-      $elementDefinition->fields[] = Json::decode('{ "label": "UUID", "key": "uuid", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]], "options": {"disabled":true}}', false);
-      $elementDefinition->fields[] = Json::decode('{ "label": "Path", "key": "path", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
-      $elementDefinition->fields[] = Json::decode('{ "label": "Slug", "key": "slug", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
-      $elementDefinition->fields[] = Json::decode('{ "label": "State", "key": "state", "type": "dropDownList", "visibleInGrid": true, "rules": [["required"], ["integer"]], "options": {"prompt":"Please set state"}, "items": {"0":"Offline", "1":"Draft", "2":"Online", "3":"Archived"}}', false);
-
-      $elementDefinition->fields[] = Json::decode('{ "label": "Created", "key": "created", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
-      $elementDefinition->fields[] = Json::decode('{ "label": "Updated", "key": "updated", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
-      $elementDefinition->fields[] = Json::decode('{ "label": "Publish from", "key": "from", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
-      $elementDefinition->fields[] = Json::decode('{ "label": "Publish to", "key": "to", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
+      $elementDefinition = CrelishDynamicJsonModel::loadElementDefinition($filePath);
 
       $this->fieldDefinitions = $elementDefinition;
       $fields = [];
@@ -99,10 +89,22 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
     }
   }
 
-  /**
-   * [getFields description]
-   * @return [type] [description]
-   */
+  public static function loadElementDefinition($filePath) {
+      $elementDefinition = Json::decode(file_get_contents($filePath), false);
+
+      // Add core fields.
+      $elementDefinition->fields[] = Json::decode('{ "label": "UUID", "key": "uuid", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]], "options": {"disabled":true}}', false);
+      $elementDefinition->fields[] = Json::decode('{ "label": "Path", "key": "path", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
+      $elementDefinition->fields[] = Json::decode('{ "label": "Slug", "key": "slug", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
+      $elementDefinition->fields[] = Json::decode('{ "label": "State", "key": "state", "type": "dropDownList", "visibleInGrid": true, "rules": [["required"], ["integer"]], "options": {"prompt":"Please set state"}, "items": {"0":"Offline", "1":"Draft", "2":"Online", "3":"Archived"}}', false);
+
+      $elementDefinition->fields[] = Json::decode('{ "label": "Created", "key": "created", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
+      $elementDefinition->fields[] = Json::decode('{ "label": "Updated", "key": "updated", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
+      $elementDefinition->fields[] = Json::decode('{ "label": "Publish from", "key": "from", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
+      $elementDefinition->fields[] = Json::decode('{ "label": "Publish to", "key": "to", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
+      return $elementDefinition;
+  }
+
   public function getFields()
   {
     return $this->fields;
@@ -164,14 +166,18 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
     }
 
     $outModel = Json::encode($modelArray);
-    $path = \Yii::getAlias('@app') . DIRECTORY_SEPARATOR . 'workspace' . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . $this->identifier . DIRECTORY_SEPARATOR . $this->uuid . '.json';
+    $path = \Yii::getAlias('@app') . DIRECTORY_SEPARATOR . 'workspace' . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . $this->identifier;
+    // Create folder if not present.
+    FileHelper::createDirectory($path, 0775, true);
+
+    // Set full filename.
+    $path .= DIRECTORY_SEPARATOR . $this->uuid . '.json';
+
+    // Save the file.
     file_put_contents($path, $outModel);
     @chmod($path, 0777);
 
     \Yii::$app->cache->flush();
-
-    // @Todo: Add afterSAve transformer.
-
 
     return true;
   }
@@ -180,7 +186,8 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
    * [GUIDv4 description]
    * @param bool $trim [description]
    */
-  private function GUIDv4($trim = true) {
+  function GUIDv4($trim = true)
+  {
     // Windows
     if (function_exists('com_create_guid') === true) {
       if ($trim === true)

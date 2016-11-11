@@ -10,6 +10,7 @@ class AssetConnector extends Widget
 {
   public $data;
   public $formKey;
+  public $field;
 
   public function init()
   {
@@ -30,7 +31,7 @@ class AssetConnector extends Widget
       $asset = (object) $asset->one();
 
       $imgWrapper = <<<EOT
-      <div style="width: 200px;">
+      <div style="width: 400px;">
           <div class="c-card c-card--high gc-m--lbr-1 gc-bc--palette-white">
             <div class="c-card__content c-heading dz-filename gc-bc--palette-silver gc-to--ellipsis" id="asset-title">
               $asset->title
@@ -51,7 +52,7 @@ EOT;
       $data = new \stdClass();
 
       $imgWrapper = <<<EOT
-      <div style="width: 200px;">
+      <div style="width: 400px;">
           <div class="c-card c-card--high gc-m--lbr-1 gc-bc--palette-white">
             <div class="c-card__content c-heading dz-filename gc-bc--palette-silver gc-to--ellipsis" id="asset-title">
 
@@ -74,16 +75,16 @@ EOT;
     $modelProvider = new CrelishJsonDataProvider('asset', [
       'sort' => ['by' => 'systitle', 'dir' => 'desc']
     ], null);
-
+    $label = $this->field->label;
     $out = <<<EOT
     <div class="form-group field-crelishdynamicmodel-body required">
-      <label class="control-label col-sm-3" for="crelishdynamicmodel-body">Asset</label>
-      <div class="col-sm-6">
+      <label class="control-label col-sm-3" for="crelishdynamicmodel-body">$label</label>
+      <div class="">
 
         $imgWrapper
 
         <input type="hidden" name="CrelishDynamicJsonModel[$formKey]" id="CrelishDynamicJsonModel_$formKey" value='$stringValue' />
-        <button type="button" class="btn btn-primary" data-toggle="modal" data-target=".bs-example-modal-lg">Select asset</button>
+        <button type="button" class="btn btn-primary" data-toggle="modal" data-target=".bs-example-modal-lg" style="margin-left: 146px;">Select asset</button>
         <div class="help-block help-block-error "></div>
       </div>
     </div>

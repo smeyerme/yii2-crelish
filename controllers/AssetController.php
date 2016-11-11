@@ -15,6 +15,7 @@ use yii\web\UploadedFile;
 use yii\helpers\Json;
 use yii\helpers\Url;
 use giantbits\crelish\components\CrelishJsonDataProvider;
+use yii\filters\AccessControl;
 
 class AssetController extends Controller
 {
@@ -22,6 +23,27 @@ class AssetController extends Controller
   public $layout = 'crelish.twig';
   private $ctype;
   private $uuid;
+
+  public function behaviors()
+  {
+      return [
+          'access' => [
+              'class' => AccessControl::className(),
+              'rules' => [
+                  [
+                      'allow' => true,
+                      'actions' => ['login'],
+                      'roles' => ['?'],
+                  ],
+                  [
+                      'allow' => true,
+                      'actions' => [],
+                      'roles' => ['@'],
+                  ],
+              ],
+          ],
+      ];
+  }
 
   public function init()
   {
@@ -36,7 +58,7 @@ class AssetController extends Controller
 
     $alerts = '';
     foreach (\Yii::$app->session->getAllFlashes() as $key => $message) {
-      $alerts .= '<div class="c-alerts__alert c-alerts__alert--' . $key . '">' . $message . '</div>';
+      //$alerts .= '<div class="c-alerts__alert c-alerts__alert--' . $key . '">' . $message . '</div>';
     }
 
     return $this->render('index.twig', [

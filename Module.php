@@ -9,7 +9,7 @@ namespace giantbits\crelish;
 
 use Yii;
 use yii\base\BootstrapInterface;
-
+use giantbits\crelish\components\CrelishI18nEventHandler;
 /**
  * The Yii Debug Module provides the debug toolbar and debugger
  *
@@ -42,7 +42,8 @@ class Module extends \yii\base\Module implements BootstrapInterface {
    */
   public $entryPoint = [
     'ctype' => 'page',
-    'path' => 'home'
+    'path' => 'home',
+    'slug'=>'home'
   ];
 
   /**
@@ -102,7 +103,7 @@ class Module extends \yii\base\Module implements BootstrapInterface {
                 'app' => 'app.php',
                 'app/error' => 'error.php',
               ],
-              'on missingTranslation' => ['\giantbits\crelish\components\CrelishI18nEventHandler', 'handleMissingTranslation']
+              'on missingTranslation' => [CrelishI18nEventHandler::class, 'handleMissingTranslation']
             ],
           ],
         ]
@@ -112,8 +113,8 @@ class Module extends \yii\base\Module implements BootstrapInterface {
         ['class' => 'yii\web\UrlRule', 'pattern' => 'crelish/<controller:[\w\-]+>/<action:[\w\-]+>', 'route' => 'crelish/<controller>/<action>'],
         ['class' => 'yii\web\UrlRule', 'pattern' => 'crelish/<id:\w+>', 'route' => 'crelish/default/view'],
         ['class' => 'yii\web\UrlRule', 'pattern' =>  'crelish', 'route' => 'crelish/default/index'],
-        ['class' => 'giantbits\crelish\components\CrelishBaseUrlRule'],
-        ['class' => 'yii\web\UrlRule', 'pattern' => '<controller:[\w\-]+>/<action:[\w\-]+>', 'route' => '/<controller>/<action>']
+        ['class' => 'yii\web\UrlRule', 'pattern' => '<controller:[\w\-]+>/<action:[\w\-]+>', 'route' => '/<controller>/<action>'],
+        ['class' => 'giantbits\crelish\components\CrelishBaseUrlRule']
         //['class' => 'yii\web\UrlRule', 'pattern' => '<lang:[\w\-]+]>/<controller:[\w\-]+>/<action:[\w\-]+>', 'route' => '/<controller>/<action>']
       ], TRUE);
     } elseif ($app instanceof \yii\console\Application) {

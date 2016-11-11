@@ -13,6 +13,7 @@ class MatrixConnector extends Widget
 {
   public $data;
   public $formKey;
+  public $field;
 
   public function init()
   {
@@ -21,7 +22,7 @@ class MatrixConnector extends Widget
     if(!empty($this->data)) {
       $this->data = $this->processData($this->data);
     } else {
-      $this->data = Json::encode(['main' => []]);
+      $this->data = Json::encode( ['main' => []] );
     }
   }
 
@@ -30,6 +31,9 @@ class MatrixConnector extends Widget
     $processedData = [];
 
     foreach ($data as $key => $item){
+
+      $processedData[$key] = [];
+
       foreach ($item as $reference) {
 
         $info = [];
@@ -37,7 +41,7 @@ class MatrixConnector extends Widget
         $itemData = $dataItem->one();
 
         foreach ($dataItem->definitions->fields as $field ) {
-          if($field->visibleInGrid) {
+          if(isset($field->visibleInGrid) && $field->visibleInGrid) {
             if(!empty($field->label) && !empty($itemData[$field->key])) {
               $info[] = ['label'=>$field->label, 'value'=> $itemData[$field->key]];
             }
@@ -50,6 +54,7 @@ class MatrixConnector extends Widget
           'info' => $info
         ];
       }
+
     }
 
     return Json::encode($processedData);
@@ -60,10 +65,11 @@ class MatrixConnector extends Widget
     $elementType = !empty($_GET['cet']) ? $_GET['cet'] : 'page';
     $modelProvider = new CrelishJsonDataProvider($elementType, [], null);
     $filterModel = new CrelishDynamicJsonModel(['ctype' => $elementType]);
+    $label = $this->field->label;
 
     $out = <<<EOT
     <div class="form-group field-crelishdynamicmodel-body required">
-      <label class="control-label" for="crelishdynamicmodel-body">Matrix</label>
+      <label class="control-label" for="crelishdynamicmodel-body">$label</label>
       <div class="">
         <matrix></matrix>
         <div class="help-block help-block-error "></div>
@@ -118,12 +124,12 @@ EOT;
 
               <div class="c-card" each={ i }>
 
-                <div class="c-card__content c-card__content--divider c-heading">
+                <div class="c-card__item c-card__item--divider">
                   <span class="glyphicon glyphicon-move" aria-hidden="true"></span>
                   { ctype }
                   <span class="c-input-group pull-right">
-                    <button class="c-button gc-bc--palette-wetasphalt c-button--xsmall"><i class="glyphicon glyphicon-pencil"></i></button>
-                    <button class="c-button gc-bc--palette-pomgranate c-button--xsmall"><i class="glyphicon glyphicon-trash"></i></button>
+                    <button class="c-button gc-bc--palette-wetasphalt u-xsmall"><i class="glyphicon glyphicon-pencil"></i></button>
+                    <button class="c-button gc-bc--palette-pomgranate u-xsmall"><i class="glyphicon glyphicon-trash"></i></button>
                   </span>
                 </div>
                 <div class="c-card__content">

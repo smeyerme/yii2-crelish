@@ -112,7 +112,7 @@ class CrelishFrontendController extends Controller
     $filePath = \Yii::getAlias('@app/workspace/elements') . DIRECTORY_SEPARATOR . $this->entryPoint['ctype'] . '.json';
     $definitionPath = \Yii::getAlias('@app/workspace/elements') . DIRECTORY_SEPARATOR . $ctype . '.json';
 
-    $elementDefinition = \yii\helpers\Json::decode(file_get_contents($definitionPath), false);
+    $elementDefinition = CrelishDynamicJsonModel::loadElementDefinition($definitionPath);
 
     if ($data) {
 
@@ -127,7 +127,6 @@ class CrelishFrontendController extends Controller
         }
 
         if(!empty($fieldType)) {
-
           // Get processor class.
           $processorClass = 'giantbits\crelish\plugins\\' . strtolower($fieldType) . '\\' . ucfirst($fieldType) . 'ContentProcessor';
 

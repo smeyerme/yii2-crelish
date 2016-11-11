@@ -8,8 +8,7 @@ use giantbits\crelish\components\CrelishJsonDataProvider;
 use giantbits\crelish\components\CrelishDynamicJsonModel;
 use yii\helpers\Url;
 
-class UserController extends CrelishBaseController
-{
+class UserController extends CrelishBaseController {
     /**
    * [$layout description].
    *
@@ -22,8 +21,8 @@ class UserController extends CrelishBaseController
    *
    * @return [type] [description]
    */
-  public function init()
-  {
+  public function init() {
+
       parent::init();
       $this->ctype = 'user';
       $this->uuid = (!empty(\Yii::$app->getRequest()->getQueryParam('uuid'))) ? \Yii::$app->getRequest()->getQueryParam('uuid') : null;
@@ -38,11 +37,12 @@ class UserController extends CrelishBaseController
           throw new \yii\web\ServerErrorHttpException('The *elements* folder could not be found - please create it in your workspace folder');
       }
       $modelJson = realpath($elementsPath.'/'.$this->ctype.'.json');
+
       if ($modelJson === false) {
-          file_put_contents($elementsPath.'/'.$this->ctype.'.json', '{"key":"user","label":"User","tabs":[{"label":"Login","key":"login","visible":false,"groups":[{"label":"Login","key":"login","fields":["email","password","login"]}]},{"label":"User","key":"user","groups":[{"label":"User","key":"user","fields":["email","password","state"]}]}],"fields":[{"label":"Email address","key":"email","type":"textInput","visibleInGrid":true,"rules":[["required"],["email"],["string",{"max":128}]]},{"label":"Password","key":"password","type":"passwordInput","visibleInGrid":false,"rules":[["required"],["string",{"max":128}]],"transform":"md5"},{"label":"Login","key":"login","type":"submitButton","visibleInGrid":false}]}, {"label":"Auth-Key","key":"authKEy","type":"text","visibleInGrid":false}]}');
+          file_put_contents($elementsPath.'/'.$this->ctype.'.json', '{"key":"user","label":"User","tabs":[{"label":"Login","key":"login","visible":false,"groups":[{"label":"Login","key":"login","fields":["email","password","login"]}]},{"label":"User","key":"user","groups":[{"label":"User","key":"user","fields":["email","password","state"]}]}],"fields":[{"label":"Email address","key":"email","type":"textInput","visibleInGrid":true,"rules":[["required"],["email"],["string",{"max":128}]]},{"label":"Password","key":"password","type":"passwordInput","visibleInGrid":false,"rules":[["required"],["string",{"max":128}]],"transform":"hash"},{"label":"Login","key":"login","type":"submitButton","visibleInGrid":false}, {"label":"Auth-Key","key":"authKey","type":"text","visibleInGrid":false}]}');
       }
 
-      //\Yii::$app->cache->flush();
+      \Yii::$app->cache->flush();
 
       $usersProvider = new CrelishJsonDataProvider('user');
       $users = $usersProvider->rawAll();
@@ -64,8 +64,7 @@ class UserController extends CrelishBaseController
    *
    * @return [type] [description]
    */
-  public function actionLogin()
-  {
+   public function actionLogin() {
     // Turn away if logged in.
     if (!\Yii::$app->user->isGuest) {
       return $this->redirect( Url::to(['/crelish/content/index']) );
@@ -106,8 +105,7 @@ class UserController extends CrelishBaseController
    *
    * @return [type] [description]
    */
-  public function actionLogout()
-  {
+  public function actionLogout() {
       \Yii::$app->user->logout();
 
       return $this->goHome();

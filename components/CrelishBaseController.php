@@ -2,8 +2,8 @@
 namespace giantbits\crelish\components;
 
 use yii\bootstrap\ActiveForm;
-use yii\helpers\Json;
 use yii\web\Controller;
+use yii\helpers\Json;
 use yii\helpers\Html;
 use yii\helpers\Url;
 
@@ -70,7 +70,7 @@ class CrelishBaseController extends Controller {
 
 		// Display messages.
 		foreach (\Yii::$app->session->getAllFlashes() as $key => $message) {
-			echo '<div class="c-alerts__alert c-alerts__alert--'.$key.'">'.$message.'</div>';
+			//echo '<div class="c-alerts__alert c-alerts__alert--'.$key.'">'.$message.'</div>';
 		}
 
 		echo Html::beginTag("div", ['class'=>'o-grid']);
@@ -101,7 +101,7 @@ class CrelishBaseController extends Controller {
 
 				echo Html::beginTag('div', ['class'=>'o-grid__cell ' . $widthClass]);
 				echo Html::beginTag('div', ['class'=>$settings['groupClass']]);
-				if(property_exists($groupSettings, 'showLabel') && $group->settings->showLabel !== false) {
+				if(!empty($groupSettings) && property_exists($groupSettings, 'showLabel') && $group->settings->showLabel !== false) {
 					echo Html::tag('div', $group->label , ['class'=>'c-card__item c-card__item--divider']);
 				}
 				echo Html::beginTag('div', ['class'=>'c-card__item']);
@@ -126,7 +126,7 @@ class CrelishBaseController extends Controller {
 						$class = 'giantbits\crelish\plugins\\' . strtolower($field->type) . '\\' . ucfirst($field->type);
 						// Check for crelish special fields.
 						if(class_exists($class)) {
-							echo $class::widget(['formKey' => $field->key, 'data' => $this->model{$field->key}]);
+							echo $class::widget(['formKey' => $field->key, 'data' => $this->model{$field->key}, 'field'=>$field]);
 						} else {
 							echo $form->field($this->model, $field->key)->{$field->type}((array) $fieldOptions)->label($field->label);
 						}
@@ -144,5 +144,14 @@ class CrelishBaseController extends Controller {
 		ActiveForm::end();
 
 		return ob_get_clean();
+	}
+
+	public static function addError($error) {
+		$err = '';
+		if (\Yii::$app->session->hasFlash('globalError')) {
+			$err .= \Yii::$app->session->getFlash('globalError') . "\n";
+		}
+		$err .= $error;
+		\Yii::$app->session->setFlash('globalError',$err);
 	}
 }

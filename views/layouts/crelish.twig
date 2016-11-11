@@ -28,6 +28,12 @@
     <nav class="c-nav c-nav--inline gc-bc--palette-green-sea">
       {% include '@crelish/views/' ~ app.controller.id ~ '/' ~ app.controller.action.id ~ "_header_bar.twig" %}
     </nav>
+{% if app.session.hasFlash("globalError") %}
+    <div class="c-alerts__alert c-alerts__alert--error" style="z-index:1000">
+      <button class="c-button c-button--close">×</button>
+      {{ app.session.getflash("globalError") }}
+    </div>
+{% endif %}
     <section class="o-panel o-panel--nav-top gc-p--2">
       {{ content | raw }}
     </section>
