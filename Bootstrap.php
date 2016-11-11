@@ -29,6 +29,34 @@ class Bootstrap implements BootstrapInterface
               'on missingTranslation' => [CrelishI18nEventHandler::class, 'handleMissingTranslation']
             ],
           ],
+        ],
+        'user' => [
+          'class'=>'giantbits\crelish\components\CrelishUser',
+          'identityClass' => 'giantbits\crelish\components\CrelishUser',
+          'enableAutoLogin' => true,
+        ],
+        'defaultRoute' => 'frontend/index',
+        'view' => [
+          'class' => 'yii\web\View',
+          'renderers' => [
+            'twig' => [
+              'class' => 'yii\twig\ViewRenderer',
+              'cachePath' => '@runtime/Twig/cache',
+              // Array of twig options:
+              'options' => [
+                'auto_reload' => true,
+              ],
+              'globals' => ['html' => '\yii\helpers\Html']
+            ]
+          ]
+        ],
+        'urlManager' => [
+          'class'=> 'yii\web\UrlManager',
+          'enablePrettyUrl' => TRUE,
+          'showScriptName' => FALSE,
+          'enableStrictParsing' => TRUE,
+          'suffix' => '.html',
+          'rules' => [],
         ]
       ]);
 
@@ -40,46 +68,15 @@ class Bootstrap implements BootstrapInterface
         ['class' => 'giantbits\crelish\components\CrelishBaseUrlRule']
         //['class' => 'yii\web\UrlRule', 'pattern' => '<lang:[\w\-]+]>/<controller:[\w\-]+>/<action:[\w\-]+>', 'route' => '/<controller>/<action>']
       ], TRUE);
+
+      // Register crelish.
+      \Yii::$app->setModules([
+        'crelish' => [
+          'class' => 'giantbits\crelish\Module',
+          'theme' => \Yii::$app->params['crelish']['theme'],
+        ],
+        'redactor' => 'yii\redactor\RedactorModule'
+      ]);
     }
-
-    // Set user component.
-    \Yii::$app->setComponents([
-      'user' => [
-        'class'=>'giantbits\crelish\components\CrelishUser',
-        'identityClass' => 'giantbits\crelish\components\CrelishUser',
-        'enableAutoLogin' => true,
-      ],
-      'defaultRoute' => 'frontend/index',
-      'view' => [
-        'class' => 'yii\web\View',
-        'renderers' => [
-          'twig' => [
-            'class' => 'yii\twig\ViewRenderer',
-            'cachePath' => '@runtime/Twig/cache',
-            // Array of twig options:
-            'options' => [
-              'auto_reload' => true,
-            ],
-            'globals' => ['html' => '\yii\helpers\Html']
-          ]
-        ]
-      ],
-      'urlManager' => [
-        'enablePrettyUrl' => TRUE,
-        'showScriptName' => FALSE,
-        'enableStrictParsing' => TRUE,
-        'suffix' => '.html',
-        'rules' => [],
-      ]
-    ]);
-
-    // Register crelish.
-    \Yii::$app->setModules(['crelish' => [
-      'class' => 'giantbits\crelish\Module',
-      'theme' => 'meteortimer',
-    ]]);
-
-    // Register redactor.
-    \Yii::$app->setModules(['redactor' => 'yii\redactor\RedactorModule']);
   }
 }

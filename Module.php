@@ -16,7 +16,7 @@ use giantbits\crelish\components\CrelishI18nEventHandler;
  * @author Qiang Xue <qiang.xue@gmail.com>
  * @since 2.0
  */
-class Module extends \yii\base\Module implements BootstrapInterface {
+class Module extends \yii\base\Module {
 
   /**
    * [$dataPath description]
