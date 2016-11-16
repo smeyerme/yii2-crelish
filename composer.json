@@ -1,0 +1,44 @@
+{
+  "name": "giantbits/yii2-crelish",
+  "description": "Content management for the Yii2 framework",
+  "keywords": [
+    "yii2",
+    "crelish",
+    "cmp"
+  ],
+  "type": "yii2-extension",
+  "license": "BSD-3-Clause",
+  "version": "0.0.39",
+  "support": {
+    "issues": "https://github.com/giantbits/yii2-crelish/issues",
+    "forum": "http://www.crelish.io/forum/",
+    "wiki": "http://www.crelish.io/wiki/",
+    "source": "https://github.com/giantbits/yii2-crelish"
+  },
+  "authors": [
+    {
+      "name": "Steffen Gudis",
+      "email": "steffen.gudis@gmail.com"
+    },
+    {
+      "name": "Stefan Bächler",
+      "email": "ste@ste.li"
+    }
+  ],
+  "require": {
+    "yiisoft/yii2": ">=2.0.4",
+    "symfony/yaml": "*",
+    "anahkiasen/underscore-php" : "*",
+    "ksubileau/color-thief-php": "^1.3",
+    "yiisoft/yii2-twig": "~2.0.0",
+    "yiidoc/yii2-redactor": "*"
+  },
+  "autoload": {
+    "psr-4": {
+      "giantbits\\crelish\\": ""
+    }
+  },
+  "extra": {
+    "bootstrap": "giantbits\\crelish\\Bootstrap"
+  }
+}
