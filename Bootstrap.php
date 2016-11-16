@@ -3,7 +3,6 @@ namespace giantbits\crelish;
 
 use giantbits\crelish\components\CrelishI18nEventHandler;
 use \yii\base\BootstrapInterface;
-use yii\web\UrlManager;
 
 class Bootstrap implements BootstrapInterface
 {
@@ -15,7 +14,7 @@ class Bootstrap implements BootstrapInterface
 
       \Yii::$app->setComponents([
         'user' => [
-          'class'=>'giantbits\crelish\components\CrelishUser',
+          'class' => 'giantbits\crelish\components\CrelishUser',
           'identityClass' => 'giantbits\crelish\components\CrelishUser',
           'enableAutoLogin' => true,
         ],
@@ -72,8 +71,8 @@ class Bootstrap implements BootstrapInterface
     // Register crelish.
     \Yii::$app->setModules([
       'crelish' => [
-      'class' => 'giantbits\crelish\Module',
-      'theme' => \Yii::$app->params['crelish']['theme']
+        'class' => 'giantbits\crelish\Module',
+        'theme' => \Yii::$app->params['crelish']['theme']
       ],
       'redactor' => 'yii\redactor\RedactorModule'
     ]);
