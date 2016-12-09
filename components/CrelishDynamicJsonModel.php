@@ -179,6 +179,27 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
 
     \Yii::$app->cache->flush();
 
+    // Todo: Create entry in slug storage.
+    if(!empty($this->slug)) {
+      $ds = DIRECTORY_SEPARATOR;
+      $slugStore = [];
+      $slugStoreFolder = \Yii::getAlias('@runtime') . $ds . 'slugstore';
+      $slugStoreFile = 'slugs.json';
+
+      if(!is_dir($slugStoreFolder)) {
+        FileHelper::createDirectory($slugStoreFolder);
+      }
+
+      if(file_exists($slugStoreFolder . $ds . $slugStoreFile)) {
+        $slugStore = Json::decode(file_get_contents($slugStoreFolder . $ds . $slugStoreFile), true);
+      }
+
+      // Update store.
+      $slugStore[$this->slug] = ['ctype'=>$this->ctype, 'uuid'=>$this->uuid];
+
+      file_put_contents($slugStoreFolder . $ds . $slugStoreFile, Json::encode($slugStore));
+    }
+
     return true;
   }
 

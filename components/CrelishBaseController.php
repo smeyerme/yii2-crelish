@@ -8,7 +8,15 @@ use yii\helpers\Html;
 use yii\helpers\Url;
 
 class CrelishBaseController extends Controller {
-	protected $ctype, $uuid, $filePath, $elementDefinition, $model;
+
+  protected $ctype, $uuid, $filePath, $elementDefinition, $model;
+
+  public function init()
+  {
+    \Yii::$app->view->title = ucfirst($this->id);
+
+    parent::init();
+  }
 
 	protected function buildForm($action = 'update', $settings=array())
 	{
@@ -56,6 +64,7 @@ class CrelishBaseController extends Controller {
 				exit(0);
 			} else {
 				$errors = $this->model->errors;
+				var_dump($errors); die();
 			}
 		}
 

@@ -157,8 +157,9 @@ class CrelishFrontendController extends Controller
     $ctype = \giantbits\crelish\Module::getInstance()->entryPoint['ctype'];
     $this->requestUrl = \Yii::$app->request->getPathInfo();
 
-    if (!empty($this->requestUrl)) {
 
+    if (!empty($this->requestUrl)) {
+      // Todo: Language handling.
       $keys = explode('/', $this->requestUrl);
       if (count($keys) > 1) {
         $path = $keys[0];

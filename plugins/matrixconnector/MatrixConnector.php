@@ -71,7 +71,7 @@ class MatrixConnector extends Widget
     <div class="form-group field-crelishdynamicmodel-body required">
       <label class="control-label" for="crelishdynamicmodel-body">$label</label>
       <div class="">
-        <matrix></matrix>
+        <matrix_$this->formKey></matrix_$this->formKey>
         <div class="help-block help-block-error "></div>
       </div>
     </div>
@@ -115,7 +115,7 @@ EOT;
     </div>
 
     <script type="riot/tag">
-      <matrix>
+      <matrix_$this->formKey>
         <div class="o-grid">
           <div class="o-grid__cell" each={ item, i in data }>
             <span class="c-badge">{ item }</span>
@@ -201,7 +201,7 @@ EOT;
             });
           }
         });
-      </matrix>
+      </matrix_$this->formKey>
     </script>
 
     <script>
@@ -246,7 +246,7 @@ EOT;
         activateContentMatrix();
       });
 
-      var tags = riot.mount('*', {
+      var tags_$this->formKey = riot.mount('matrix_$this->formKey', {
         data: $this->data
       });
     </script>

@@ -1,11 +1,10 @@
 <?php
-namespace giantbits\crelish\plugins\datalist;
+namespace giantbits\crelish\plugins\datainclude;
 
 use giantbits\crelish\components\CrelishJsonDataProvider;
-use Underscore\Types\Arrays;
 use yii\base\Component;
 
-class DataListContentProcessor extends Component
+class DataIncludeContentProcessor extends Component
 {
   public $data;
 
@@ -36,7 +35,7 @@ class DataListContentProcessor extends Component
         $sort['dir'] = (!empty($data['sort']['dir'])) ? $data['sort']['dir'] : null;
       }
 
-      if (Arrays::has($data, 'limit')) {
+      if (!empty($data['limit'])) {
         if ($data['limit'] === false) {
           $limit = 99999;
         } else {
@@ -48,6 +47,20 @@ class DataListContentProcessor extends Component
 
       $processedData[$key] = $sourceData->raw();
 
+    }
+  }
+
+  public static function processJson($caller, $key, $data, &$processedData)
+  {
+
+    if (empty($processedData[$key])) {
+      $processedData[$key] = [];
+    }
+
+    if ($data && !empty($data['ctype'])) {
+      $sourceData = new CrelishJsonDataProvider($data['ctype'], [], $data['uuid']);
+
+      $processedData[$key] = $sourceData->one();
     }
   }
 }

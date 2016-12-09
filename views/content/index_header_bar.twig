@@ -1,8 +1,11 @@
 {{ use('/giantbits/crelish/widgets') }}
-<span class="gc-p--1">
-  Content
-</span>
-<span class="dropdown c-nav__item c-nav__item--right">
+<div class="o-grid o-grid--no-gutter">
+  <div class="o-grid__cell">
+
+  </div>
+  <div class="o-grid__cell gc-ta--center"><span class="c-nav__content"><h3 class="c-heading">Content</h3></span></div>
+  <div class="o-grid__cell">
+    <span class="dropdown c-nav__item c-nav__item--right">
   <span class="dropdown-toggle" data-toggle="dropdown">
       <span class="fui-plus"></span> Add content <span class="caret"></span>
   </span>
@@ -10,3 +13,5 @@
     {{ element_nav_widget({"action":"create"}) }}
   </ul>
 </span>
+  </div>
+</div>
