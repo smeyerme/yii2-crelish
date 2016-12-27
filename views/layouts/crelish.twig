@@ -10,12 +10,12 @@
   {{ html.csrfMetaTags | raw }}
   {{ void(this.head) }}
 </head>
-<body class="crelish c-text gc-bc--palette-wetasphalt">
+<body class="crelish c-text gc-bc--palette-clouds">
 {{ void(this.beginBody()) }}
 
 {{ flash_messages_widget() }}
 
-<div class="o-grid o-grid--no-gutter o-panel gc-bc--palette-wetasphalt">
+<div class="o-grid o-grid--no-gutter o-panel gc-bc--palette-clouds">
   <div class="o-grid__cell--width-20 o-panel-container">
     <nav class="c-nav c-nav--inline gc-bc--palette-dark-blue">
       <span class="c-nav__item gc-bfont crelish-brand">crelish</span>
@@ -34,7 +34,7 @@
       {{ app.session.getflash("globalError") }}
     </div>
 {% endif %}
-    <section class="o-panel o-panel--nav-top gc-p--2">
+    <section class="o-panel o-panel--nav-top">
       {{ content | raw }}
     </section>
   </div>
@@ -43,7 +43,7 @@
 <!-- Modal definitions -->
 <div class="modal fade" id="confirm-delete" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
   <div class="modal-dialog gc-no-border-radius">
-    <div class="modal-content gc-no-border-radius">
+    <div class="modal-content gc-no-border-radius gc-bc--palette-clouds">
       <div class="modal-header gc-no-border">
         <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
         <h4 class="modal-title" id="myModalLabel">Confirm Delete</h4>
@@ -62,7 +62,7 @@
 
 <div class="modal fade" id="confirm-cancel" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
   <div class="modal-dialog gc-no-border-radius">
-    <div class="modal-content gc-no-border-radius">
+    <div class="modal-content gc-no-border-radius gc-bc--palette-clouds">
       <div class="modal-header gc-no-border">
         <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
         <h4 class="modal-title" id="myModalLabel">Confirm cancel</h4>

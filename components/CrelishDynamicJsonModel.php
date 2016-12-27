@@ -43,7 +43,7 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
     parent::init();
 
     // Build definitions.
-    if(!empty($this->ctype)) {
+    if (!empty($this->ctype)) {
       $filePath = \Yii::getAlias('@app/workspace/elements') . DIRECTORY_SEPARATOR . $this->ctype . '.json';
       $elementDefinition = CrelishDynamicJsonModel::loadElementDefinition($filePath);
 
@@ -82,27 +82,28 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
       }
 
       // Load model from file.
-      if(!empty($this->uuid)) {
+      if (!empty($this->uuid)) {
         $data['CrelishDynamicJsonModel'] = Json::decode(file_get_contents(\Yii::getAlias('@app/workspace/data/') . DIRECTORY_SEPARATOR . $this->ctype . DIRECTORY_SEPARATOR . $this->uuid . '.json'));
         $this->load($data);
       }
     }
   }
 
-  public static function loadElementDefinition($filePath) {
-      $elementDefinition = Json::decode(file_get_contents($filePath), false);
+  public static function loadElementDefinition($filePath)
+  {
+    $elementDefinition = Json::decode(file_get_contents($filePath), false);
 
-      // Add core fields.
-      $elementDefinition->fields[] = Json::decode('{ "label": "UUID", "key": "uuid", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]], "options": {"disabled":true}}', false);
-      $elementDefinition->fields[] = Json::decode('{ "label": "Path", "key": "path", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
-      $elementDefinition->fields[] = Json::decode('{ "label": "Slug", "key": "slug", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
-      $elementDefinition->fields[] = Json::decode('{ "label": "State", "key": "state", "type": "dropDownList", "visibleInGrid": true, "rules": [["required"], ["integer"]], "options": {"prompt":"Please set state"}, "items": {"0":"Offline", "1":"Draft", "2":"Online", "3":"Archived"}}', false);
+    // Add core fields.
+    $elementDefinition->fields[] = Json::decode('{ "label": "UUID", "key": "uuid", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]], "options": {"disabled":true}}', false);
+    $elementDefinition->fields[] = Json::decode('{ "label": "Path", "key": "path", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
+    $elementDefinition->fields[] = Json::decode('{ "label": "Slug", "key": "slug", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
+    $elementDefinition->fields[] = Json::decode('{ "label": "State", "key": "state", "type": "dropDownList", "visibleInGrid": true, "rules": [["required"], ["integer"]], "options": {"prompt":"Please set state"}, "items": {"0":"Offline", "1":"Draft", "2":"Online", "3":"Archived"}}', false);
 
-      $elementDefinition->fields[] = Json::decode('{ "label": "Created", "key": "created", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
-      $elementDefinition->fields[] = Json::decode('{ "label": "Updated", "key": "updated", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
-      $elementDefinition->fields[] = Json::decode('{ "label": "Publish from", "key": "from", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
-      $elementDefinition->fields[] = Json::decode('{ "label": "Publish to", "key": "to", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
-      return $elementDefinition;
+    $elementDefinition->fields[] = Json::decode('{ "label": "Created", "key": "created", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
+    $elementDefinition->fields[] = Json::decode('{ "label": "Updated", "key": "updated", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
+    $elementDefinition->fields[] = Json::decode('{ "label": "Publish from", "key": "from", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
+    $elementDefinition->fields[] = Json::decode('{ "label": "Publish to", "key": "to", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
+    return $elementDefinition;
   }
 
   public function getFields()
@@ -146,22 +147,22 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
     // Transform and set data, detect json.
     foreach ($this->attributes() as $attribute) {
 
-        $jsonCheck = @json_decode($this->{$attribute});
-        if (json_last_error() == JSON_ERROR_NONE) {
-          // Is JSON.
-          $modelArray[$attribute] = Json::decode($this->{$attribute});
-        } else {
-          $modelArray[$attribute] = $this->{$attribute};
-        }
+      $jsonCheck = @json_decode($this->{$attribute});
+      if (json_last_error() == JSON_ERROR_NONE) {
+        // Is JSON.
+        $modelArray[$attribute] = Json::decode($this->{$attribute});
+      } else {
+        $modelArray[$attribute] = $this->{$attribute};
+      }
 
-        // Check for transformer.
-        $fieldDefinition = Arrays::filter($this->fieldDefinitions->fields, function ($value) use ($attribute) {
-          return $value->key == $attribute;
-        });
+      // Check for transformer.
+      $fieldDefinition = Arrays::filter($this->fieldDefinitions->fields, function ($value) use ($attribute) {
+        return $value->key == $attribute;
+      });
 
-        if(!empty($fieldDefinition[1]->transform)) {
-          $transformer = 'giantbits\crelish\components\transformer\CrelishFieldTransformer' . ucfirst($fieldDefinition[1]->transform);
-          $transformer::beforeSave($modelArray[$attribute]);
+      if (!empty($fieldDefinition[1]->transform)) {
+        $transformer = 'giantbits\crelish\components\transformer\CrelishFieldTransformer' . ucfirst($fieldDefinition[1]->transform);
+        $transformer::beforeSave($modelArray[$attribute]);
       }
     }
 
