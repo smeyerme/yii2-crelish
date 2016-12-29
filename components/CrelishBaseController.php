@@ -223,7 +223,12 @@ class CrelishBaseController extends Controller
         header('Location: ' . Url::to(['content/update', 'ctype' => $this->ctype, 'uuid' => $this->model->uuid]));
         exit(0);
       } else {
+        $message = '';
         $errors = $this->model->errors;
+        foreach($errors as $error) {
+          $message .= $error[0];
+        }
+        \Yii::$app->session->setFlash('error', 'Error saving item: ' . $message);
       }
     }
 

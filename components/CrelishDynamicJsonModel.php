@@ -156,12 +156,14 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
       }
 
       // Check for transformer.
-      $fieldDefinition = Arrays::filter($this->fieldDefinitions->fields, function ($value) use ($attribute) {
+      $fieldDefinitionLook = Arrays::filter($this->fieldDefinitions->fields, function ($value) use ($attribute) {
         return $value->key == $attribute;
       });
 
-      if (!empty($fieldDefinition[1]->transform)) {
-        $transformer = 'giantbits\crelish\components\transformer\CrelishFieldTransformer' . ucfirst($fieldDefinition[1]->transform);
+      $fieldDefinition = array_shift($fieldDefinitionLook);
+
+      if (property_exists($fieldDefinition, 'transform')) {
+        $transformer = 'giantbits\crelish\components\transformer\CrelishFieldTransformer' . ucfirst($fieldDefinition->transform);
         $transformer::beforeSave($modelArray[$attribute]);
       }
     }
@@ -178,7 +180,7 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
     file_put_contents($path, $outModel);
     @chmod($path, 0777);
 
-    \Yii::$app->cache->flush();
+    \Yii::$app->cache->flush('crc_' . $this->ctype);
 
     // Todo: Create entry in slug storage.
     if(!empty($this->slug)) {
@@ -202,6 +204,23 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
     }
 
     return true;
+  }
+
+  public function setAttributes($values, $safeOnly = true)
+  {
+    if (is_array($values)) {
+      if(!empty($values['CrelishDynamicJsonModel'])) {
+        $values = $values['CrelishDynamicJsonModel'];
+      }
+      $attributes = array_flip($safeOnly ? $this->safeAttributes() : $this->attributes());
+      foreach ($values as $name => $value) {
+        if (isset($attributes[$name])) {
+          $this->$name = $value;
+        } elseif ($safeOnly) {
+          $this->onUnsafeAttribute($name, $value);
+        }
+      }
+    }
   }
 
   /**

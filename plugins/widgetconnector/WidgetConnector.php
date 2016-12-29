@@ -13,6 +13,7 @@ class WidgetConnector extends Widget
   public $attribute;
   public $data;
   public $formKey;
+  public $field;
 
   public function init()
   {
@@ -25,16 +26,13 @@ class WidgetConnector extends Widget
 
     $fieldName = $modelType . "[" . $this->attribute . "]";
     $fieldId = $modelType . "_" . $this->attribute;
-    $value = $this->model->{$this->attribute};
+    $value = (!empty($this->data)) ? $this->data : '';
 
     $out = <<<EOT
     <div class="form-group field-crelishdynamicmodel-body required">
-      <label class="control-label col-sm-3" for="crelishdynamicmodel-body">Widget</label>
-      <div class="col-sm-6">
-
-        <input type="hidden" name="$fieldName" id="$fieldId" value='$value' />
-        <button type="button" class="btn btn-primary" data-toggle="modal" data-target=".bs-example-modal-lg">Select Widget</button>
-        <div class="help-block help-block-error "></div>
+      <label class="control-label" for="crelishdynamicmodel-body">Widget</label>
+      <div>
+        <input type="text" class="form-control" name="CrelishDynamicJsonModel[$this->formKey]" id="CrelishDynamicJsonModel_$this->formKey" value="$value" />
       </div>
     </div>
 EOT;

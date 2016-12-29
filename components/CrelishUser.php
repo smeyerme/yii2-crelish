@@ -71,6 +71,12 @@ class CrelishUser extends \yii\web\User implements \yii\web\IdentityInterface
      */
     public $ctype = 'user';
 
+    public $salutation;
+    public $nameLast;
+    public $nameFirst;
+    public $company;
+    public $user;
+
     /**
      * [crelishLogin description].
      *
@@ -120,6 +126,9 @@ class CrelishUser extends \yii\web\User implements \yii\web\IdentityInterface
         unset($userData['updated']);
         unset($userData['from']);
         unset($userData['to']);
+        //unset($userData['salutation']);
+        //unset($userData['nameFirst']);
+        //unset($userData['nameLast']);
         $userData['username'] = $userData['email'];
     }
 
