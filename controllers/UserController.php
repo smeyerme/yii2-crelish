@@ -47,7 +47,7 @@ class UserController extends CrelishBaseController {
       $usersProvider = new CrelishJsonDataProvider('user');
       $users = $usersProvider->rawAll();
 
-      if(sizeof($users) == 0) {
+      if(sizeof($users) == 1) {
         // Generate default admin.
         $adminUser = new CrelishDynamicJsonModel(['email', 'password', 'login', 'state'], ['ctype' => 'user']);
         $adminUser->email = 'admin@local.host';

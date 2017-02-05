@@ -162,7 +162,7 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
 
       $fieldDefinition = array_shift($fieldDefinitionLook);
 
-      if (property_exists($fieldDefinition, 'transform')) {
+      if ($fieldDefinition && property_exists($fieldDefinition, 'transform')) {
         $transformer = 'giantbits\crelish\components\transformer\CrelishFieldTransformer' . ucfirst($fieldDefinition->transform);
         $transformer::beforeSave($modelArray[$attribute]);
       }

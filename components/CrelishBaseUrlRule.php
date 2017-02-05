@@ -93,9 +93,18 @@ class CrelishBaseUrlRule implements UrlRuleInterface
     $langFreePath = $pathInfo;
     $langCode = '';
 
+    if( strpos($langFreePath, '/') > 0 ) {
+      $segments = explode('/', $langFreePath);
+      $langFreePath = array_shift($segments);
+      $additional = $segments;
+    } else {
+      $additional = [];
+    }
+
     $params = array_merge($request->queryParams, [
       'pathRequested' => $langFreePath,
-      'language' => $langCode
+      'language' => $langCode,
+      'params' => $additional
     ]);
 
     if (!empty($langCode)) {

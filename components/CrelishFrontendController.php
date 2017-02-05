@@ -34,6 +34,8 @@ class CrelishFrontendController extends Controller
    */
   private $viewTemplate;
 
+  private $data;
+
   /**
    * [init description]
    * @return [type] [description]
@@ -79,10 +81,15 @@ class CrelishFrontendController extends Controller
    */
   public function actionRun()
   {
+
     $ds = DIRECTORY_SEPARATOR;
     // 1. Determine entry point.
     // 2. Load entry point content.
     // 3. Assemble sub content from parent entry point content.
+
+    // Add content aka. do the magic.
+    $langDataFolder = (Yii::$app->params['defaultLanguage'] != Yii::$app->language) ? $ds . Yii::$app->language : '';
+    $this->data = \yii\helpers\Json::decode(file_get_contents(\Yii::getAlias('@app/workspace/data') . $ds . $this->entryPoint['ctype'] . $langDataFolder . $ds . $this->entryPoint['uuid'] . '.json'));
 
     // Set layout.
     $this->setLayout();
@@ -90,15 +97,10 @@ class CrelishFrontendController extends Controller
     // Set view template.
     $this->setViewTemplate();
 
-    // Add content aka. do the magic.
-    $langDataFolder = (Yii::$app->params['defaultLanguage'] != Yii::$app->language) ? $ds . Yii::$app->language : '';
-    $data = \yii\helpers\Json::decode(file_get_contents(\Yii::getAlias('@app/workspace/data') . $ds . $this->entryPoint['ctype'] . $langDataFolder . $ds . $this->entryPoint['uuid'] . '.json'));
-
     // Process data and render.
-    $data = $this->processContent($this->entryPoint['ctype'], $data);
+    $data = $this->processContent($this->entryPoint['ctype'], $this->data);
 
     return $this->render($this->viewTemplate, ['data' => $data]);
-
   }
 
   /**
@@ -157,8 +159,11 @@ class CrelishFrontendController extends Controller
     $ctype = \giantbits\crelish\Module::getInstance()->entryPoint['ctype'];
     $this->requestUrl = \Yii::$app->request->getPathInfo();
 
+    if(!empty($params = \Yii::$app->request->getQueryParams())) {
+      $slug = $params['pathRequested'];
+    }
 
-    if (!empty($this->requestUrl)) {
+    /*if (!empty($this->requestUrl)) {
       // Todo: Language handling.
       $keys = explode('/', $this->requestUrl);
       if (count($keys) > 1) {
@@ -167,7 +172,7 @@ class CrelishFrontendController extends Controller
       } else {
         $slug = str_replace(".html", "", $keys[0]);
       }
-    }
+    }*/
 
     $entryDataJoint = new CrelishJsonDataProvider($ctype, ['filter' => ['slug' => $slug]]);
     $entryModel = $entryDataJoint->one();
@@ -199,11 +204,14 @@ class CrelishFrontendController extends Controller
     $ds = DIRECTORY_SEPARATOR;
     $path = \Yii::$app->view->theme->basePath . $ds . \Yii::$app->controller->id . $ds . $this->entryPoint['slug'] . '.twig';
     $pathByType = \Yii::$app->view->theme->basePath . $ds . \Yii::$app->controller->id . $ds . $this->entryPoint['ctype'] . '.twig';
+    $pathByConfig = \Yii::$app->view->theme->basePath . $ds . \Yii::$app->controller->id . $ds .  $this->data['template'];
 
     if (file_exists($path)) {
       $this->viewTemplate = $this->entryPoint['slug'] . '.twig';
     } elseif (file_exists($pathByType)) {
       $this->viewTemplate = $this->entryPoint['ctype'] . '.twig';
+    } elseif (file_exists($pathByConfig)) {
+      $this->viewTemplate = $this->data['template'];
     } else {
       $this->viewTemplate = 'main.twig';
     }
