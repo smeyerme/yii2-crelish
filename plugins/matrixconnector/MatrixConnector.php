@@ -71,14 +71,14 @@ class MatrixConnector extends Widget
     <div class="form-group field-crelishdynamicmodel-body required">
       <label class="control-label" for="crelishdynamicmodel-body">$label</label>
       <div class="">
-        <matrix></matrix>
+        <matrix_$this->formKey></matrix_$this->formKey>
         <div class="help-block help-block-error "></div>
       </div>
     </div>
 
     <div class="modal fade matrix-modal-$this->formKey" tabindex="-1" role="dialog" aria-labelledby="matrix-modal-$this->formKey" id="matrix-modal-$this->formKey">
       <div class="modal-dialog modal-lg">
-        <div class="modal-content">
+        <div class="modal-content gc-bc--palette-clouds">
           <div class="modal-header">
             <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
             <h4 class="modal-title" id="myModalLabel">Content selection</h4>
@@ -115,8 +115,8 @@ EOT;
     </div>
 
     <script type="riot/tag">
-      <matrix>
-        <div class="o-grid">
+      <matrix_$this->formKey>
+        <div class="o-grid o-grid--no-gutter">
           <div class="o-grid__cell" each={ item, i in data }>
             <span class="c-badge">{ item }</span>
 
@@ -201,7 +201,7 @@ EOT;
             });
           }
         });
-      </matrix>
+      </matrix_$this->formKey>
     </script>
 
     <script>
@@ -246,7 +246,7 @@ EOT;
         activateContentMatrix();
       });
 
-      var tags = riot.mount('*', {
+      var tags_$this->formKey = riot.mount('matrix_$this->formKey', {
         data: $this->data
       });
     </script>

@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css?family=Didact+Gothic');
+
 .gc-login--background {
   background: url(../img/login-bg-002.jpg) no-repeat center center fixed;
   -webkit-background-size: cover;
@@ -6,13 +8,31 @@
   background-size: cover;
 }
 
+.redactor-toolbar {
+  z-index: 3;
+  box-shadow: none;
+}
+
+.c-card {
+  box-shadow: 0 0 1px hsla(0,0%,0%,0.1);
+}
+
+h6 {
+  text-transform: uppercase;
+  font-size: 0.75em;
+  font-weight: 600;
+  border-bottom: 1px solid #7f8c8d;
+  padding-bottom: 0.5em;
+  color: #7f8c8d;
+}
+
 .crelish-brand {
   font-size: 1.5em;
   line-height: 2.25em;
 }
 
 .gc-bfont {
-  font-family: 'Lobster', cursive;
+  font-family: 'Didact Gothic', sans-serif;
 }
 
 .gc-fs--2 {
@@ -79,7 +99,7 @@
 }
 
 .gc-bc--palette-dark-blue {
-  background-color: #263544;
+  background-color: #22313F;
 }
 
 .gc-fc--palette-clouds {
@@ -131,7 +151,12 @@
   background-color: transparent;
   border-left: 3px solid #34495e;
   border-radius: 0;
-  color: #ffffff;
+  color: #27ae60;
+}
+
+.gc-nav__sidebar .nav > li > a:hover > span[class^="fui-"],
+.gc-nav__sidebar .nav > li > a:focus > span[class^="fui-"] {
+  color: #27ae60;
 }
 
 .gc-nav__sidebar .nav-list > li.active > a,
@@ -139,11 +164,15 @@
 .gc-nav__sidebar .nav-list > li.active > a:focus {
   background-color: #34495e;
   border-radius: 0;
-  color: #ffffff;
+  color: #27ae60;
 }
 
 .gc-nav__sidebar .nav-list > li.active > a {
   border-left: 3px solid #27ae60;
+}
+
+.gc-nav__sidebar .nav-list > li.active > a > span[class^="fui-"] {
+  color: #27ae60;
 }
 
 .crelish .dropdown-menu {
@@ -225,32 +254,16 @@ ul.gc-nav__content-filter {
   list-style: none;
   margin: 0;
   padding: 0;
-  margin-left: -1em;
-  margin-right: -1em;
 }
 
 ul.gc-nav__content-filter a {
   color: #34495e;
   display: block;
   padding: .25em;
-  padding-left: 1em;
-  border-left: 3px solid transparent;
 }
 
 ul.gc-nav__content-filter .gc-active-filter > a {
-  background-color: rgba(189, 195, 199, 0.45);
-  -webkit-box-shadow: inset 0px 8px 28px -12px rgba(0, 0, 0, 0.2);
-  -moz-box-shadow: inset 0px 8px 28px -12px rgba(0, 0, 0, 0.2);
-  box-shadow: inset 0px 8px 28px -12px rgba(0, 0, 0, 0.2);
-  border-left: 3px solid #27ae60;
   font-weight: 600;
-}
-
-ul.gc-nav__content-filter li > a:hover,
-ul.gc-nav__content-filter li > a:focus,
-ul.gc-nav__content-filter li > a:active {
-  background-color: rgba(189, 195, 199, 0.45);
-  border-left: 3px solid #95a5a6;
 }
 
 .gc-section-top-bar {
@@ -279,7 +292,7 @@ ul.gc-nav__content-filter li > a:active {
 .crelish select,
 .crelish .redactor-editor,
 .crelish textarea {
-  border: 1px solid #bdc3c7;
+  border: none;
   background-color: #f6f6f6;
 }
 
@@ -389,4 +402,16 @@ div.help-block.help-block-error {
 
 .o-drawer {
   z-index: 999;
+}
+
+
+.gc-nav--logout {
+  position: absolute !important;
+  bottom: 0;
+  width: 100%;
+  margin-left: -3px !important;
+  padding-right: 3px;
+  -webkit-box-shadow: inset 10px 10px 300px -21px rgba(0,0,0,0.75);
+  -moz-box-shadow: inset 10px 10px 300px -21px rgba(0,0,0,0.75);
+  box-shadow: inset 10px 10px 300px -21px rgba(0,0,0,0.75);
 }

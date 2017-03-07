@@ -39,7 +39,7 @@ class ElementNav extends Widget
   public function run()
   {
     $nav = '';
-    $elements = new CrelishJsonDataProvider('elements', ['key' => 'key', 'sort'=> ['by'=>'label', 'dir'=>'ASC']]);
+    $elements = new CrelishJsonDataProvider('elements', ['key' => 'key', 'sort'=> ['by'=>'label', 'dir'=>'ASC'], 'limit'=>99]);
 
     $params[0] = $this->action;
 

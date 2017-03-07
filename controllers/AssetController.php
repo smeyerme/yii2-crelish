@@ -9,6 +9,7 @@
 namespace giantbits\crelish\controllers;
 
 use ColorThief\ColorThief;
+use giantbits\crelish\components\CrelishBaseController;
 use giantbits\crelish\components\CrelishDynamicJsonModel;
 use yii\base\Controller;
 use yii\web\UploadedFile;
@@ -17,32 +18,30 @@ use yii\helpers\Url;
 use giantbits\crelish\components\CrelishJsonDataProvider;
 use yii\filters\AccessControl;
 
-class AssetController extends Controller
+class AssetController extends CrelishBaseController
 {
 
   public $layout = 'crelish.twig';
-  private $ctype;
-  private $uuid;
 
   public function behaviors()
   {
-      return [
-          'access' => [
-              'class' => AccessControl::className(),
-              'rules' => [
-                  [
-                      'allow' => true,
-                      'actions' => ['login'],
-                      'roles' => ['?'],
-                  ],
-                  [
-                      'allow' => true,
-                      'actions' => [],
-                      'roles' => ['@'],
-                  ],
-              ],
+    return [
+      'access' => [
+        'class' => AccessControl::className(),
+        'rules' => [
+          [
+            'allow' => true,
+            'actions' => ['login'],
+            'roles' => ['?'],
           ],
-      ];
+          [
+            'allow' => true,
+            'actions' => [],
+            'roles' => ['@'],
+          ],
+        ],
+      ],
+    ];
   }
 
   public function init()
@@ -69,14 +68,14 @@ class AssetController extends Controller
 
   public function actionUpdate()
   {
-    $uuid = !empty( \Yii::$app->getRequest()->getQueryParam('uuid') ) ?  \Yii::$app->getRequest()->getQueryParam('uuid') : null;
+    $uuid = !empty(\Yii::$app->getRequest()->getQueryParam('uuid')) ? \Yii::$app->getRequest()->getQueryParam('uuid') : null;
     $model = new CrelishDynamicJsonModel([], ['uuid' => $uuid, 'ctype' => 'asset']);
 
     // Save content if post request.
     if (!empty(\Yii::$app->request->post()) && !\Yii::$app->request->isAjax) {
       $oldData = [];
       // Load old data.
-      if(!empty($model->uuid)) {
+      if (!empty($model->uuid)) {
         $oldData = Json::decode(file_get_contents(\Yii::getAlias('@app/workspace/data/') . DIRECTORY_SEPARATOR . 'asset' . DIRECTORY_SEPARATOR . $model->uuid . '.json'));
       }
       $model->attributes = $_POST['CrelishDynamicJsonModel'] + $oldData;
@@ -113,22 +112,22 @@ class AssetController extends Controller
       $targetFile = \Yii::getAlias('@webroot') . DIRECTORY_SEPARATOR . '_lib' . DIRECTORY_SEPARATOR . $destName;
       $file->saveAs($targetFile);
 
-      $filePath = \Yii::getAlias('@app/workspace/elements') . DIRECTORY_SEPARATOR . 'asset' . '.json';
-      $elementDefinition = Json::decode(file_get_contents($filePath), false);
+      //$filePath = \Yii::getAlias('@app/workspace/elements') . DIRECTORY_SEPARATOR . 'asset' . '.json';
+      //$elementDefinition = Json::decode(file_get_contents($filePath), false);
 
       // Add core fields.
-      $elementDefinition->fields[] = Json::decode('{ "label": "UUID", "key": "uuid", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]], "options": {"disabled":true}}', false);
-      $elementDefinition->fields[] = Json::decode('{ "label": "Path", "key": "path", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
-      $elementDefinition->fields[] = Json::decode('{ "label": "Slug", "key": "slug", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
-      $elementDefinition->fields[] = Json::decode('{ "label": "State", "key": "state", "type": "dropDownList", "visibleInGrid": true, "rules": [["required"], ["string", {"max": 128}]], "options": {"prompt":"Please set state"}, "items": {"0":"Offline", "1":"Draft", "2":"Online", "3":"Archived"}}', false);
+      //$elementDefinition->fields[] = Json::decode('{ "label": "UUID", "key": "uuid", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]], "options": {"disabled":true}}', false);
+      //$elementDefinition->fields[] = Json::decode('{ "label": "Path", "key": "path", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
+      //$elementDefinition->fields[] = Json::decode('{ "label": "Slug", "key": "slug", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
+      //$elementDefinition->fields[] = Json::decode('{ "label": "State", "key": "state", "type": "dropDownList", "visibleInGrid": true, "rules": [["required"], ["string", {"max": 128}]], "options": {"prompt":"Please set state"}, "items": {"0":"Offline", "1":"Draft", "2":"Online", "3":"Archived"}}', false);
 
-      $fields = [];
+      ///$fields = [];
 
-      foreach ($elementDefinition->fields as $field) {
-        array_push($fields, $field->key);
-      }
+      //foreach ($elementDefinition->fields as $field) {
+      //  array_push($fields, $field->key);
+      //}
 
-      $model = new CrelishDynamicJsonModel($fields);
+      $model = new CrelishDynamicJsonModel([], ['ctype' => 'asset']);
       $model->identifier = 'asset';
       $model->systitle = $destName;
       $model->title = $destName;
@@ -142,9 +141,9 @@ class AssetController extends Controller
         $domColor = ColorThief::getColor($targetFile, 20);
         $palColor = ColorThief::getPalette(\Yii::getAlias('@webroot') . DIRECTORY_SEPARATOR . '_lib' . DIRECTORY_SEPARATOR . $destName);
         $model->colormain_rgb = Json::encode($domColor);
-        $model->colormain_hex =  '#' . sprintf('%02x', $domColor[0]) . sprintf('%02x', $domColor[1]) . sprintf('%02x', $domColor[2]);
+        $model->colormain_hex = '#' . sprintf('%02x', $domColor[0]) . sprintf('%02x', $domColor[1]) . sprintf('%02x', $domColor[2]);
         $model->save();
-        $model->colorpalette =  Json::encode($palColor);
+        $model->colorpalette = Json::encode($palColor);
         $model->save();
       } catch (Exception $e) {
         \Yii::$app->session->setFlash('secondary', 'Color theft could not be completed. (Image too large?)');
@@ -153,12 +152,12 @@ class AssetController extends Controller
     return false;
   }
 
-  public function actionDelete(  )
+  public function actionDelete()
   {
-    $id = !empty( \Yii::$app->getRequest()->getQueryParam('uuid') ) ?  \Yii::$app->getRequest()->getQueryParam('uuid') : null;
+    $id = !empty(\Yii::$app->getRequest()->getQueryParam('uuid')) ? \Yii::$app->getRequest()->getQueryParam('uuid') : null;
     $modelProvider = new CrelishJsonDataProvider('asset', [], $id);
     $model = $modelProvider->one();
-    if(@unlink(\Yii::getAlias('@webroot') . $model['src']) || !file_exists(\Yii::getAlias('@webroot') . $model['src'])){
+    if (@unlink(\Yii::getAlias('@webroot') . $model['src']) || !file_exists(\Yii::getAlias('@webroot') . $model['src'])) {
       $modelProvider->delete();
       \Yii::$app->session->setFlash('success', 'Asset deleted successfully...');
       header("Location: " . Url::to(['asset/index']));
@@ -166,7 +165,7 @@ class AssetController extends Controller
     };
 
     \Yii::$app->session->setFlash('danger', 'Asset could not be deleted...');
-    header("Location: " . Url::to(['asset/index', ['uuid'=>$model['uuid']]]));
+    header("Location: " . Url::to(['asset/index', ['uuid' => $model['uuid']]]));
     exit(0);
   }
 }

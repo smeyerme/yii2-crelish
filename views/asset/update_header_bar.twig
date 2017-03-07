@@ -1,23 +1,16 @@
-{{ use('/giantbits/crelish/widgets') }}
-<div class="o-grid">
-  <div class="o-grid__cell o-grid__cell--width-40">
-    Assets
-  </div>
+<div class="o-grid o-grid--no-gutter">
   <div class="o-grid__cell">
-    <div class="btn-group pull-right">
-      <button data-toggle="modal" onclick="window.location = '{{ url('crelish/asset/index') }}';" class="btn btn-inverse btn-sm" type="button">
-        <span class="fui-exit"></span> Back</span>
-      </button>
-      <span class="btn-separator"></span>
-      <button class="btn btn-primary btn-sm btn-save" type="button" onclick="$('#asset-form').submit();">
-        <span class="fui-check"></span> Save asset</span>
-      </button>
-      <!--<button class="btn btn-danger btn-sm" data-record-id="54" data-record-title="Something cool" data-toggle="modal" data-target="#confirm-delete">
-        <span class="fui-trash"></span></span>
-      </button>-->
-      <button class="btn btn-danger btn-sm" onclick="window.location = '{{ url('asset/delete', { uuid: app.getRequest.getQueryParam('uuid') }) }}';">
-        <span class="fui-trash"></span></span>
-      </button>
-    </div>
+    <button data-toggle="modal" onclick="window.location = '{{ url('crelish/asset/index') }}';" class="btn btn-inverse btn-sm" type="button">
+      <span class="fui-exit"></span> Back</span>
+    </button>
+  </div>
+  <div class="o-grid__cell gc-ta--center"><span class="c-nav__content"><h3 class="c-heading">Assets</h3></span></div>
+  <div class="o-grid__cell">
+    <button class="btn btn-primary btn-sm btn-save" type="button" onclick="$('#asset-form').submit();">
+      <span class="fui-check"></span> Save asset</span>
+    </button>
+    <button class="btn btn-danger btn-sm" onclick="window.location = '{{ url('asset/delete', { uuid: app.getRequest.getQueryParam('uuid') }) }}';">
+      <span class="fui-trash"></span></span>
+    </button>
   </div>
 </div>

@@ -2,14 +2,14 @@
 {{ use('/giantbits/crelish/widgets') }}
 {{ use('/yii/widgets/Pjax') }}
 {{ pjax_begin({'id':'contentList', 'enablePushState': true}) }}
-<div class="o-grid gc-bc--palette-clouds">
+<div class="o-grid">
     <div class="o-grid__cell o-grid__cell--width-20">
         <h6>Type filter</h6>
         <ul role="menu" class="gc-nav__content-filter">
             {{ element_nav_widget({'ctype':ctype, 'action':"index"}) }}
         </ul>
     </div>
-    <div class="o-grid__cell gc-bs--soft">
+    <div class="o-grid__cell">
         <h6>Content</h6>
         {{ grid_view_widget({'dataProvider': dataProvider, 'columns': columns, 'tableOptions': {'class':'table table-striped'}}) |raw }}
     </div>

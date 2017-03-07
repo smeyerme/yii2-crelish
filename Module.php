@@ -8,6 +8,12 @@
 namespace giantbits\crelish;
 
 use Yii;
+<<<<<<< HEAD
+=======
+use yii\base\BootstrapInterface;
+use giantbits\crelish\components\CrelishI18nEventHandler;
+use yii\di\Container;
+>>>>>>> release/0.0.40
 
 /**
  * The Yii Debug Module provides the debug toolbar and debugger
@@ -17,6 +23,15 @@ use Yii;
  */
 class Module extends \yii\base\Module
 {
+<<<<<<< HEAD
+=======
+
+  /**
+   * [$dataPath description]
+   * @var [type]
+   */
+  private $dataPath;
+>>>>>>> release/0.0.40
 
   /**
    * [$defaultLanguage description]
@@ -62,8 +77,26 @@ class Module extends \yii\base\Module
 
     // Detect language.
     $this->processLanguage();
+    $this->buildControllerMap();
+    $this->setDependencies();
+
 
     //$this->dataPath = Yii::getAlias($this->dataPath);
+  }
+
+  private function setDependencies()
+  {
+    /*\Yii::$container->set('yii\bootstrap\ActiveField', [
+      'options' => ['class' => 'o-form-element'],
+      'hintOptions' => ['class' => 'c-hint'],
+      'inputOptions' => ['class' => 'c-field'],
+      'labelOptions' => ['class' => 'c-label']
+    ]);*/
+  }
+
+  private function buildControllerMap()
+  {
+    $this->controllerMap = [];
   }
 
   /**

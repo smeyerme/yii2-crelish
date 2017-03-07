@@ -27,7 +27,7 @@ class CrelishBaseUrlRule implements UrlRuleInterface
 
     $url = '';
 
-    if($route != 'crelish/frontend/run') {
+    if ($route != 'crelish/frontend/run') {
       return false;
     }
 
@@ -36,7 +36,7 @@ class CrelishBaseUrlRule implements UrlRuleInterface
     }
 
     if (array_key_exists('pathRequested', $params) && !empty($params['pathRequested'])) {
-      if($url != '') {
+      if ($url != '') {
         $url .= '/';
       }
 
@@ -47,12 +47,12 @@ class CrelishBaseUrlRule implements UrlRuleInterface
     $paramsClean = Arrays::remove($paramsClean, 'pathRequested');
 
     $paramsExposed = '?';
-    foreach($paramsClean as $key => $value) {
+    foreach ($paramsClean as $key => $value) {
       $paramsExposed .= $key . '=' . $value . '&';
     }
     $paramsExposed = rtrim($paramsExposed, '&');
 
-    if(strpos($params['pathRequested'], ".html") === false){
+    if (strpos($params['pathRequested'], ".html") === false) {
       return $params['pathRequested'] . '.html' . $paramsExposed;
     } else {
       return $params['pathRequested'] . $paramsExposed;
@@ -81,20 +81,33 @@ class CrelishBaseUrlRule implements UrlRuleInterface
       $pathInfo = str_replace('.html', '', $pathInfo);
     }
 
+    // Todo: Language handling.
+    /*
     if (substr_count($pathInfo, '/') === 0) {
       $langFreePath = $pathInfo;
       $langCode = '';
     } else {
       $langCode = substr($pathInfo, 0, strpos($pathInfo, '/'));
       $langFreePath = str_replace($langCode . "/", '', $pathInfo);
+    }*/
+    $langFreePath = $pathInfo;
+    $langCode = '';
+
+    if( strpos($langFreePath, '/') > 0 ) {
+      $segments = explode('/', $langFreePath);
+      $langFreePath = array_shift($segments);
+      $additional = $segments;
+    } else {
+      $additional = [];
     }
 
-    $params = array_merge($request->queryParams , [
+    $params = array_merge($request->queryParams, [
       'pathRequested' => $langFreePath,
-      'language' => $langCode
+      'language' => $langCode,
+      'params' => $additional
     ]);
 
-    if(!empty($langCode)) {
+    if (!empty($langCode)) {
       \Yii::$app->language = $langCode;
     }
 
