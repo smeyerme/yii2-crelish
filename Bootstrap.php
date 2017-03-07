@@ -11,27 +11,10 @@ class Bootstrap implements BootstrapInterface
   {
 
     if ($app instanceof \yii\web\Application) {
-      /**
-       * Adding i18n component here.
-       */
+
       \Yii::$app->setComponents([
-        'i18n' => [
-          'class' => 'yii\i18n\I18N',
-          'translations' => [
-            'app*' => [
-              'class' => 'yii\i18n\PhpMessageSource',
-              'basePath' => '@app/messages',
-              'sourceLanguage' => 'en-US',
-              'fileMap' => [
-                'app' => 'app.php',
-                'app/error' => 'error.php',
-              ],
-              'on missingTranslation' => [CrelishI18nEventHandler::class, 'handleMissingTranslation']
-            ],
-          ],
-        ],
         'user' => [
-          'class'=>'giantbits\crelish\components\CrelishUser',
+          'class' => 'giantbits\crelish\components\CrelishUser',
           'identityClass' => 'giantbits\crelish\components\CrelishUser',
           'enableAutoLogin' => true,
         ],
@@ -51,12 +34,27 @@ class Bootstrap implements BootstrapInterface
           ]
         ],
         'urlManager' => [
-          'class'=> 'yii\web\UrlManager',
+          'class' => 'yii\web\UrlManager',
           'enablePrettyUrl' => TRUE,
           'showScriptName' => FALSE,
           'enableStrictParsing' => TRUE,
           'suffix' => '.html',
           'rules' => [],
+        ],
+        'i18n' => [
+          'class' => 'yii\i18n\I18N',
+          'translations' => [
+            'app*' => [
+              'class' => 'yii\i18n\PhpMessageSource',
+              'basePath' => '@app/messages',
+              'sourceLanguage' => 'en-US',
+              'fileMap' => [
+                'app' => 'app.php',
+                'app/error' => 'error.php',
+              ],
+              'on missingTranslation' => [CrelishI18nEventHandler::class, 'handleMissingTranslation']
+            ],
+          ],
         ]
       ]);
 
@@ -70,15 +68,15 @@ class Bootstrap implements BootstrapInterface
         ['class' => 'yii\web\UrlRule', 'pattern' => '<controller:[\w\-]+>/<action:[\w\-]+>', 'route' => '/<controller>/<action>'],
         //['class' => 'yii\web\UrlRule', 'pattern' => '<lang:[\w\-]+]>/<controller:[\w\-]+>/<action:[\w\-]+>', 'route' => '/<controller>/<action>']
       ], TRUE);
-
-      // Register crelish.
-      \Yii::$app->setModules([
-        'crelish' => [
-          'class' => 'giantbits\crelish\Module',
-          'theme' => \Yii::$app->params['crelish']['theme'],
-        ],
-        'redactor' => 'yii\redactor\RedactorModule'
-      ]);
     }
+
+    // Register crelish.
+    \Yii::$app->setModules([
+      'crelish' => [
+        'class' => 'giantbits\crelish\Module',
+        'theme' => \Yii::$app->params['crelish']['theme']
+      ],
+      'redactor' => 'yii\redactor\RedactorModule'
+    ]);
   }
 }

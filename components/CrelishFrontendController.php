@@ -16,8 +16,6 @@ use Underscore\Types\Arrays;
 class CrelishFrontendController extends Controller
 {
 
-  public $layout = "main.twig";
-
   /**
    * [$entryPoint description]
    * @var [type]
@@ -190,9 +188,9 @@ class CrelishFrontendController extends Controller
     $path = \Yii::$app->view->theme->basePath . $ds . 'layouts' . $ds . $this->entryPoint['slug'] . '.twig';
 
     if (file_exists($path)) {
-      $this->layout = "@app/views/layouts/" . $this->entryPoint['slug'] . ".twig";
+      $this->layout = "@app/views/layouts/" . $this->entryPoint['slug'];
     } else {
-      $this->layout = "@app/views/layouts/main.twig";
+      $this->layout = "@app/views/layouts/main";
     }
   }
 

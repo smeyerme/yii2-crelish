@@ -8,9 +8,12 @@
 namespace giantbits\crelish;
 
 use Yii;
+<<<<<<< HEAD
+=======
 use yii\base\BootstrapInterface;
 use giantbits\crelish\components\CrelishI18nEventHandler;
 use yii\di\Container;
+>>>>>>> release/0.0.40
 
 /**
  * The Yii Debug Module provides the debug toolbar and debugger
@@ -20,12 +23,15 @@ use yii\di\Container;
  */
 class Module extends \yii\base\Module
 {
+<<<<<<< HEAD
+=======
 
   /**
    * [$dataPath description]
    * @var [type]
    */
   private $dataPath;
+>>>>>>> release/0.0.40
 
   /**
    * [$defaultLanguage description]
