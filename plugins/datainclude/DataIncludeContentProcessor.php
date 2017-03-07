@@ -44,7 +44,6 @@ class DataIncludeContentProcessor extends Component
       }
 
       $sourceData = new CrelishJsonDataProvider($data['source'], ['filter' => $filters, 'sort' => $sort, 'limit' => $limit]);
-
       $processedData[$key] = $sourceData->raw();
 
     }

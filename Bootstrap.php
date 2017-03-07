@@ -61,6 +61,8 @@ class Bootstrap implements BootstrapInterface
       ]);
 
       $app->getUrlManager()->addRules([
+        ['class' => 'yii\web\UrlRule', 'pattern' => 'site/<action:[\w\-]+>', 'route' => 'site/<action>'],
+        ['class' => 'yii\web\UrlRule', 'pattern' => 'data/<action:[\w\-]+>', 'route' => 'data/<action>'],
         ['class' => 'yii\web\UrlRule', 'pattern' => 'crelish/<controller:[\w\-]+>/<action:[\w\-]+>', 'route' => 'crelish/<controller>/<action>'],
         ['class' => 'yii\web\UrlRule', 'pattern' => 'crelish/<id:\w+>', 'route' => 'crelish/default/view'],
         ['class' => 'yii\web\UrlRule', 'pattern' => 'crelish', 'route' => 'crelish/default/index'],
