@@ -15,30 +15,34 @@
 
 {{ flash_messages_widget() }}
 
-<div class="o-grid o-grid--no-gutter o-panel gc-bc--palette-clouds">
-  <div class="o-grid__cell--width-20 o-panel-container">
-    <nav class="c-nav c-nav--inline gc-bc--palette-dark-blue">
-      <span class="c-nav__item gc-bfont crelish-brand">crelish</span>
-    </nav>
-    <div class="o-panel o-panel--nav-top gc-nav__sidebar gc-bc--palette-midnightblue">
-      {% include "_side_nav.twig" %}
-    </div>
-  </div>
-  <div class="o-grid__cell--width-80 o-panel-container">
-    <nav class="c-nav c-nav--inline gc-bc--palette-green-sea">
-      {% include '@crelish/views/' ~ app.controller.id ~ '/' ~ app.controller.action.id ~ "_header_bar.twig" %}
-    </nav>
-{% if app.session.hasFlash("globalError") %}
-    <div class="c-alerts__alert c-alerts__alert--error" style="z-index:1000">
-      <button class="c-button c-button--close">×</button>
-      {{ app.session.getflash("globalError") }}
-    </div>
-{% endif %}
-    <section class="o-panel o-panel--nav-top">
-      {{ content | raw }}
-    </section>
-  </div>
+<div class="o-panel">
+  <nav class="c-nav c-nav--inline gc-bc--palette-dark-blue">
+    <span class="c-nav__content gc-bfont crelish-brand ">crelish</span>
+    {% include '_side_nav.twig' %}
+  </nav>
+  {% include '@crelish/views/' ~ app.controller.id ~ '/' ~ app.controller.action.id ~ "_header_bar.twig" %}
+
+  <section class="o-panel o-panel--nav-top o-panel--nav-top-super">
+    {{ content | raw }}
+  </section>
 </div>
+
+<!--
+ <div class="gc-bc--palette-dark-blue">
+
+    <div class="o-grid__cell--width-20">
+      <nav class="c-nav c-nav--inline ">
+        <span class="c-nav__item gc-bfont crelish-brand">crelish</span>
+      </nav>
+    </div>
+    <div class="o-grid__cell--width-80">
+      <nav class="c-nav c-nav--inline gc-bc--palette-green-sea">
+
+      </nav>
+    </div>
+  </div>
+-->
+
 
 <!-- Modal definitions -->
 <div class="modal fade" id="confirm-delete" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">

@@ -11,7 +11,7 @@
     </div>
     <div class="o-grid__cell">
         <h6>Content</h6>
-        {{ grid_view_widget({'dataProvider': dataProvider, 'columns': columns, 'tableOptions': {'class':'table table-striped'}}) |raw }}
+        {{ grid_view_widget({'dataProvider': dataProvider, 'filterModel': filterProvider, 'columns': columns, 'tableOptions': {'class':'table table-striped'}}) | raw }}
     </div>
 </div>
 {{ pjax_end() }}

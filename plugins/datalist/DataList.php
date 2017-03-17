@@ -13,6 +13,7 @@ class DataList extends Widget
 {
   public $data;
   public $formKey;
+  public $field;
 
   public function init()
   {
@@ -30,6 +31,10 @@ class DataList extends Widget
     $processedData = [];
 
     foreach ($data as $key => $item){
+
+      var_dump($item);
+      die();
+
       foreach ($item as $reference) {
 
         $info = [];

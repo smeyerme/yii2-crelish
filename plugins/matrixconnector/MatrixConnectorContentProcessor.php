@@ -4,12 +4,10 @@ namespace giantbits\crelish\plugins\matrixconnector;
 use giantbits\crelish\components\CrelishJsonDataProvider;
 use yii\base\Component;
 
-class MatrixConnectorContentProcessor extends Component
-{
+class MatrixConnectorContentProcessor extends Component {
   public $data;
 
-  public static function processData($caller, $key, $data, &$processedData)
-  {
+  public static function processData($caller, $key, $data, &$processedData) {
 
     if (empty($processedData[$key])) {
       $processedData[$key] = [];
@@ -32,8 +30,6 @@ class MatrixConnectorContentProcessor extends Component
           $processedData[$key][$section] .= $caller->renderPartial($subContentdata['ctype'] . '.twig', ['data' => $sourceDataOut]);
         }
       }
-
     }
-
   }
 }

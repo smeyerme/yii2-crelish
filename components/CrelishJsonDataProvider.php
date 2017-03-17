@@ -137,7 +137,7 @@ class CrelishJsonDataProvider extends Component
         return $finalArr;
     }
 
-    private function filterModels($filter)
+    public function filterModels($filter)
     {
         if (is_array($filter)) {
             foreach ($filter as $key => $keyValue) {
@@ -189,7 +189,7 @@ class CrelishJsonDataProvider extends Component
      * @param  [type] $sort [description]
      * @return [type]       [description]
      */
-    private function sortModels($sort)
+    public function sortModels($sort)
     {
         $sortparams[] = $this->allModels;
 
