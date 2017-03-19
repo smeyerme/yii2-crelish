@@ -33,7 +33,7 @@ h6 {
 .crelish-brand {
   font-size: 2em;
   line-height: 1.5em;
-  max-height: 1.75em;
+  max-height: 1.77em;
   padding-left: 0.45em;
 }
 
@@ -150,6 +150,10 @@ h6 {
 
 .gc-bc--palette-orange {
   background-color: #f39c12;
+}
+
+.gc-bc--palette-belize {
+  background-color: #2980b9;
 }
 
 .gc-gutter--revert {
@@ -337,6 +341,27 @@ div.help-block {
 div.help-block.help-block-error {
   background-color: #c0392b;
   color: #ffffff;
+}
+
+.cr-modal--full {
+  padding-left: 0 !important;
+  width: 100vw;
+  height: 100vh;
+  overflow-y: hidden !important;
+}
+
+.cr-modal--full .modal-content {
+  padding-left: 0 !important;
+  width: 100vw;
+  height: 100vh;
+}
+
+.cr-modal--full .modal-header {
+  height: 56px;
+}
+
+.cr-modal--full .modal-body {
+  height: calc(100vh - 56px);
 }
 
 .crelish .modal-dialog {

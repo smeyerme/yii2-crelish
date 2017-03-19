@@ -9,248 +9,30 @@ use yii\helpers\Json;
 use yii\helpers\Url;
 use yii\grid\ActionColumn;
 
-class DataList extends Widget
-{
-  public $data;
-  public $formKey;
-  public $field;
+class DataList extends Widget {
+    public $data;
+    public $formKey;
+    public $field;
 
-  public function init()
-  {
-    parent::init();
+    public function init() {
+        parent::init();
 
-    if(!empty($this->data)) {
-      $this->data = $this->processData($this->data);
-    } else {
-      $this->data = Json::encode(['main' => []]);
-    }
-  }
-
-  private function processData($data)
-  {
-    $processedData = [];
-
-    foreach ($data as $key => $item){
-
-      var_dump($item);
-      die();
-
-      foreach ($item as $reference) {
-
-        $info = [];
-        $dataItem = new CrelishJsonDataProvider($reference['ctype'], [], $reference['uuid']);
-        $itemData = $dataItem->one();
-
-        foreach ($dataItem->definitions->fields as $field ) {
-          if($field->visibleInGrid) {
-            if(!empty($field->label) && !empty($itemData[$field->key])) {
-              $info[] = ['label'=>$field->label, 'value'=> $itemData[$field->key]];
-            }
-          }
+        if (!empty($this->data)) {
+            $this->data = $this->processData($this->data);
         }
-
-        $processedData[$key][] = [
-          'uuid' => $reference['uuid'],
-          'ctype' => $reference['ctype'],
-          'info' => $info
-        ];
-      }
+        else {
+            $this->data = Json::encode(['main' => []]);
+        }
     }
 
-    return Json::encode($processedData);
-  }
+    private function processData($data) {
+        return Json::encode($data);
+    }
 
-  public function run()
-  {
-    $elementType = !empty($_GET['cet']) ? $_GET['cet'] : 'page';
-    $modelProvider = new CrelishJsonDataProvider($elementType, [], null);
-    $filterModel = new CrelishDynamicJsonModel(['ctype' => $elementType]);
+    public function run() {
 
-    $out = <<<EOT
-    <div class="form-group field-crelishdynamicmodel-body required">
-      <label class="control-label" for="crelishdynamicmodel-body">Matrix</label>
-      <div class="">
-        <matrix></matrix>
-        <div class="help-block help-block-error "></div>
-      </div>
-    </div>
+        $out = Html::textarea('test', $this->data);
 
-    <div class="modal fade matrix-modal-$this->formKey" tabindex="-1" role="dialog" aria-labelledby="matrix-modal-$this->formKey" id="matrix-modal-$this->formKey">
-      <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-          <div class="modal-header">
-            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-            <h4 class="modal-title" id="myModalLabel">Content selection</h4>
-          </div>
-          <div class="modal-body">
-EOT;
-
-      $out .= $this->render('matrix.twig', [
-              'dataProvider' => $modelProvider->raw(),
-              'filterModel ' => $filterModel ,
-              'columns' => [
-                'systitle',[
-                  'class' => ActionColumn::className(),
-                  'template' => '{update}',
-                  'buttons' => [
-                    'update' => function ($url, $model) {
-                      return Html::a('<span class="glyphicon glyphicon-plus"></span>', $url, [
-                        'title' => \Yii::t('app', 'Add'),
-                        'data-pjax' => '0',
-                        'data-content' => Json::encode(['uuid' => $model['uuid'], 'ctype' => $model['ctype'] ])
-                      ]);
-                    }
-                  ]
-                ]
-              ],
-              'ctype' => $elementType,
-              'formKey' => $this->formKey
-            ]);
-
-      $out .= <<<EOT
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <script type="riot/tag">
-      <matrix>
-        <div class="o-grid">
-          <div class="o-grid__cell" each={ item, i in data }>
-            <span class="c-badge">{ item }</span>
-
-            <div id="sortable">
-
-              <div class="c-card" each={ i }>
-
-                <div class="c-card__content c-card__content--divider c-heading">
-                  <span class="glyphicon glyphicon-move" aria-hidden="true"></span>
-                  { ctype }
-                  <span class="c-input-group pull-right">
-                    <button class="c-button gc-bc--palette-wetasphalt c-button--xsmall"><i class="glyphicon glyphicon-pencil"></i></button>
-                    <button class="c-button gc-bc--palette-pomgranate c-button--xsmall"><i class="glyphicon glyphicon-trash"></i></button>
-                  </span>
-                </div>
-                <div class="c-card__content">
-                  <dl>
-                    <span each={ info }>
-                      <dt>{ label }</dt>
-                      <dd>{ value }</dd>
-                    </span>
-                  </dl>
-                </div>
-              </div>
-
-            </div>
-            <button type="button" class="c-button c-button--ghost-primary c-button--block gc-mt--1" data-target=".matrix-modal-$this->formKey" onclick="openMatrixModal('{ item }')">Add content</button>
-          </div>
-        </div>
-        <input type="hidden" name="CrelishDynamicJsonModel[$this->formKey]" id="CrelishDynamicJsonModel_$this->formKey" value="{ JSON.stringify(data) }" />
-
-        // Logic goes here.
-        var app = this
-        this.data = opts.data
-
-        edit(e) {
-          this.text = e.target.value
-        }
-
-        add(e) {
-          if (this.text) {
-            this.items.push({ title: this.text })
-            this.text = this.input.value = ''
-          }
-        }
-
-        removeAllDone(e) {
-          this.items = this.items.filter(function(item) {
-            return !item.done
-          })
-        }
-
-        // an two example how to filter items on the list
-        whatShow(item) {
-          return !item.hidden
-        }
-
-        onlyDone(item) {
-          return item.done
-        }
-
-        toggle(e) {
-          var item = e.item
-          item.done = !item.done
-          return true
-        }
-
-        this.on("mount", function() {
-          var that = this;
-          var matrixData = this.data;
-          var el = document.getElementById('sortable');
-          if(el) {
-            var sortable = Sortable.create(el, {
-              handle: '.glyphicon-move',
-              animation: 150,
-              onSort: function (evt) {
-                // same properties as onUpdate
-                matrixData.main.move(evt.oldIndex, evt.newIndex)
-                app.data = matrixData;
-                app.update();
-              }
-            });
-          }
-        });
-      </matrix>
-    </script>
-
-    <script>
-      var targetArea = 'main';
-
-      var openMatrixModal = function( area ) {
-        targetArea = area;
-        $('.matrix-modal-$this->formKey').modal('show');
-      };
-
-      var activateContentMatrix = function() {
-        $("#matrix-modal-$this->formKey a").each(function() {
-          $(this).on('click', function(e) {
-            e.preventDefault();
-            var content = $(this).data("content");
-            var origData = JSON.parse($("#CrelishDynamicJsonModel_$this->formKey").val());
-            console.log($("#CrelishDynamicJsonModel_$this->formKey").val(), origData, targetArea);
-            origData[targetArea].push( content );
-            $("#CrelishDynamicJsonModel_$this->formKey").val(JSON.stringify(origData));
-
-            $("#content-form").submit();
-          });
-        });
-      };
-
-      Array.prototype.move = function (old_index, new_index) {
-        if (new_index >= this.length) {
-          var k = new_index - this.length;
-          while ((k--) + 1) {
-            this.push(undefined);
-          }
-        }
-        this.splice(new_index, 0, this.splice(old_index, 1)[0]);
-        return this; // for testing purposes
-      };
-
-      $("#matrix-modal-$this->formKey").on("pjax:end", function() {
-        activateContentMatrix();
-      });
-
-      $('#asset-modal').on('shown.bs.modal', function (e) {
-        activateContentMatrix();
-      });
-
-      var tags = riot.mount('*', {
-        data: $this->data
-      });
-    </script>
-EOT;
-
-    return $out;
-  }
+        return $out;
+    }
 }

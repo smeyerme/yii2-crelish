@@ -4,83 +4,74 @@
 <!DOCTYPE html>
 <html lang="{{ app.language }}">
 <head>
-  <meta charset="{{ app.charset }}">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Crelish | {{ html.encode(this.title) }}</title>
-  {{ html.csrfMetaTags | raw }}
-  {{ void(this.head) }}
+    <meta charset="{{ app.charset }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Crelish | {{ html.encode(this.title) }}</title>
+    {{ html.csrfMetaTags | raw }}
+    {{ void(this.head) }}
 </head>
 <body class="crelish c-text gc-bc--palette-clouds">
 {{ void(this.beginBody()) }}
 
-{{ flash_messages_widget() }}
 
 <div class="o-panel">
-  <nav class="c-nav c-nav--inline gc-bc--palette-dark-blue">
-    <span class="c-nav__content gc-bfont crelish-brand ">crelish</span>
-    {% include '_side_nav.twig' %}
-  </nav>
-  {% include '@crelish/views/' ~ app.controller.id ~ '/' ~ app.controller.action.id ~ "_header_bar.twig" %}
+    <nav class="c-nav c-nav--inline gc-bc--palette-dark-blue">
+        <span class="c-nav__content gc-bfont crelish-brand ">crelish</span>
+        {% include '_side_nav.twig' %}
+    </nav>
+    {% include '@crelish/views/' ~ app.controller.id ~ '/' ~ app.controller.action.id ~ "_header_bar.twig" %}
 
-  <section class="o-panel o-panel--nav-top o-panel--nav-top-super">
-    {{ content | raw }}
-  </section>
+    {{ flash_messages_widget() }}
+
+    <section class="o-panel o-panel--nav-top o-panel--nav-top-super">
+        {{ content | raw }}
+    </section>
 </div>
-
-<!--
- <div class="gc-bc--palette-dark-blue">
-
-    <div class="o-grid__cell--width-20">
-      <nav class="c-nav c-nav--inline ">
-        <span class="c-nav__item gc-bfont crelish-brand">crelish</span>
-      </nav>
-    </div>
-    <div class="o-grid__cell--width-80">
-      <nav class="c-nav c-nav--inline gc-bc--palette-green-sea">
-
-      </nav>
-    </div>
-  </div>
--->
-
 
 <!-- Modal definitions -->
-<div class="modal fade" id="confirm-delete" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-  <div class="modal-dialog gc-no-border-radius">
-    <div class="modal-content gc-no-border-radius gc-bc--palette-clouds">
-      <div class="modal-header gc-no-border">
-        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
-        <h4 class="modal-title" id="myModalLabel">Confirm Delete</h4>
-      </div>
-      <div class="modal-body">
-        <p>You are about to delete <b><i class="title"></i></b> record, this procedure is irreversible.</p>
-        <p>Do you want to proceed?</p>
-      </div>
-      <div class="modal-footer gc-no-border">
-        <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-danger btn-ok" data-url="{{ url('crelish/content/delete.html') }}" data-uuid="{{ app.getRequest.getQueryParam('uuid') }}" data-model="{{ app.getRequest.getQueryParam('type') }}">Delete</button>
-      </div>
+<div class="modal fade" id="confirm-delete" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+     aria-hidden="true">
+    <div class="modal-dialog gc-no-border-radius">
+        <div class="modal-content gc-no-border-radius gc-bc--palette-clouds">
+            <div class="modal-header gc-no-border">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                <h4 class="modal-title" id="myModalLabel">Confirm Delete</h4>
+            </div>
+            <div class="modal-body">
+                <p>You are about to delete <b><i class="title"></i></b> record, this procedure is irreversible.</p>
+                <p>Do you want to proceed?</p>
+            </div>
+            <div class="modal-footer gc-no-border">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger btn-ok" data-url="{{ url('crelish/content/delete.html') }}"
+                        data-uuid="{{ app.getRequest.getQueryParam('uuid') }}"
+                        data-model="{{ app.getRequest.getQueryParam('type') }}">Delete
+                </button>
+            </div>
+        </div>
     </div>
-  </div>
 </div>
 
-<div class="modal fade" id="confirm-cancel" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-  <div class="modal-dialog gc-no-border-radius">
-    <div class="modal-content gc-no-border-radius gc-bc--palette-clouds">
-      <div class="modal-header gc-no-border">
-        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
-        <h4 class="modal-title" id="myModalLabel">Confirm cancel</h4>
-      </div>
-      <div class="modal-body">
-        <p>You are about to cancel your current action.</p>
-        <p>Do you want to proceed?</p>
-      </div>
-      <div class="modal-footer gc-no-border">
-        <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-danger btn-cancel-ok" data-href="{{ url('crelish/content/index.html') }}">Proceed</button>
-      </div>
+<div class="modal fade" id="confirm-cancel" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+     aria-hidden="true">
+    <div class="modal-dialog gc-no-border-radius">
+        <div class="modal-content gc-no-border-radius gc-bc--palette-clouds">
+            <div class="modal-header gc-no-border">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                <h4 class="modal-title" id="myModalLabel">Confirm cancel</h4>
+            </div>
+            <div class="modal-body">
+                <p>You are about to cancel your current action.</p>
+                <p>Do you want to proceed?</p>
+            </div>
+            <div class="modal-footer gc-no-border">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger btn-cancel-ok"
+                        data-href="{{ url('crelish/content/index.html') }}">Proceed
+                </button>
+            </div>
+        </div>
     </div>
-  </div>
 </div>
 
 {{ void(this.endBody()) }}

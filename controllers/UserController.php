@@ -67,7 +67,7 @@ class UserController extends CrelishBaseController {
    public function actionLogin() {
     // Turn away if logged in.
     if (!\Yii::$app->user->isGuest) {
-      return $this->redirect( Url::to(['/crelish/content/index']) );
+      return $this->redirect( Url::to(['/crelish/dashboard/index']) );
     }
 
     $model = new CrelishDynamicJsonModel(['email', 'password'], ['ctype' => 'user']);
@@ -75,7 +75,7 @@ class UserController extends CrelishBaseController {
     // Validate data and login the user in case of post request.
     if (\Yii::$app->request->post()) {
       if (CrelishUser::crelishLogin(\Yii::$app->request->post('CrelishDynamicJsonModel'))) {
-        return $this->redirect( Url::to(['/crelish/content/index']) );
+        return $this->redirect( Url::to(['/crelish/dashboard/index']) );
       }
     }
 
