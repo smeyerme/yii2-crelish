@@ -48,14 +48,17 @@ class ContentController extends CrelishBaseController {
     public function actionIndex() {
 
         $filter = null;
-        if (!empty($_GET['CrelishDynamicJsonModel'])) {
-            $filter = $_GET['CrelishDynamicJsonModel'];
+        if (!empty($_GET['cr-content-filter'])) {
+            $filter = ['freesearch' => $_GET['cr-content-filter']];
         }
 
-        var_dump($filter);
-
         $modelProvider = new CrelishJsonDataProvider($this->ctype, ['filter' => $filter], NULL);
-        $columns = $modelProvider->columns;
+        $checkCol = [
+          [
+            'class' => 'yii\grid\CheckboxColumn'
+          ]
+        ];
+        $columns = array_merge($checkCol, $modelProvider->columns);
 
         return $this->render('content.twig', [
             'dataProvider' => $modelProvider->raw(),

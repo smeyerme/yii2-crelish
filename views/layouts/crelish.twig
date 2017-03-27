@@ -13,10 +13,11 @@
 <body class="crelish c-text gc-bc--palette-clouds">
 {{ void(this.beginBody()) }}
 
-
 <div class="o-panel">
     <nav class="c-nav c-nav--inline gc-bc--palette-dark-blue">
-        <span class="c-nav__content gc-bfont crelish-brand ">crelish</span>
+        <a href="{{ url('crelish/dashboard/index') }}" class="active">
+            <span class="c-nav__content gc-bfont crelish-brand ">crelish</span>
+        </a>
         {% include '_side_nav.twig' %}
     </nav>
     {% include '@crelish/views/' ~ app.controller.id ~ '/' ~ app.controller.action.id ~ "_header_bar.twig" %}
