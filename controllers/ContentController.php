@@ -46,7 +46,6 @@ class ContentController extends CrelishBaseController {
      * @return [type] [description]
      */
     public function actionIndex() {
-
         $filter = null;
         if (!empty($_GET['cr-content-filter'])) {
             $filter = ['freesearch' => $_GET['cr-content-filter']];
@@ -60,11 +59,17 @@ class ContentController extends CrelishBaseController {
         ];
         $columns = array_merge($checkCol, $modelProvider->columns);
 
+        $rowOptions = function ($model, $key, $index, $grid) {
+            // update.html?ctype=page&uuid=21709e32-8b59-4ee5-91b5-974bcea0e354
+            return ['onclick' => 'location.href="update.html?ctype=' . $model['ctype'] . '&uuid=' . $model['uuid'] .'";'];
+        };
+
         return $this->render('content.twig', [
             'dataProvider' => $modelProvider->raw(),
             'filterProvider' => $modelProvider->getFilters(),
             'columns' => $columns,
             'ctype' => $this->ctype,
+            'rowOptions' => $rowOptions
         ]);
     }
 

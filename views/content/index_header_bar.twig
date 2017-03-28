@@ -8,17 +8,17 @@
         <div class="o-grid__cell--width-50 gc-fc--palette-dark-blue">
 
                 <div class="c-input-group c-input-group--rounded" style="margin-top: .5em;">
-                    <span class="c-button c-button--brand dropdown" style="overflow: visible;">
+                    <!--<span class="c-button c-button--brand dropdown" style="overflow: visible;">
                         <span class="dropdown-toggle" data-toggle="dropdown">
                             Alles <span class="caret"></span>
                         </span>
                         <ul role="menu" class="dropdown-menu" style="margin-left: -4em;">
                             {{ element_nav_widget({"action":"create"}) }}
                         </ul>
-                    </span>
+                    </span>-->
 
                     <div class="o-field">
-                        <input class="c-field" name="cr-content-search" id="cr-content-search" placeholder="Type your search phrase here...">
+                        <input class="c-field" name="cr-content-search" id="cr-content-search" placeholder="{{ t('app.crelish', 'Type your search phrase here...') }}">
                     </div>
                     <button class="c-button c-button--brand"><i class="fa fa-search"></i></button>
                 </div>
@@ -28,7 +28,7 @@
             <span class="c-nav__content c-nav__item--right"  style="overflow: visible;">
                 <div class="c-button c-button--success dropdown">
                     <span class="dropdown-toggle" data-toggle="dropdown">
-                        <span class="fa fa-plus-circle"></span> Add content <span class="caret"></span>
+                        <span class="fa fa-plus-circle"></span> {{ t('app.crelish', 'Add content') }} <span class="caret"></span>
                     </span>
                     <ul role="menu" class="dropdown-menu" style="margin-left: -4em;">
                         {{ element_nav_widget({"action":"create"}) }}

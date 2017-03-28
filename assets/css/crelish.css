@@ -25,9 +25,9 @@ h6 {
     text-transform: uppercase;
     font-size: 0.75em;
     font-weight: 600;
-    border-bottom: 1px solid #7f8c8d;
+    border-bottom: 1px solid lightgrey;
     padding-bottom: 0.5em;
-    color: #7f8c8d;
+    color: lightgrey;
 }
 
 .crelish-brand {
@@ -464,4 +464,9 @@ div.help-block.help-block-error {
 
 .table > thead > tr > th, .table > tbody > tr > th, .table > tfoot > tr > th, .table > thead > tr > td, .table > tbody > tr > td, .table > tfoot > tr > td {
     line-height: 2em;
+}
+
+tr:hover td {
+    background-color: #ddd !important;
+    cursor: pointer;
 }
