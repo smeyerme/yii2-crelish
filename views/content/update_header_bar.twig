@@ -3,16 +3,16 @@
         <div class="o-grid__cell">
             <span class="c-nav__item gc-bc--palette-asbestos" data-toggle="modal" data-target="#confirm-cancel"
                   data-href="{{ url('crelish/content/index.html') }}">
-                <span class="fui-arrow-left"></span> Back</span>
+                <span class="fui-arrow-left"></span> {{ t('app.crelish', 'Back') }}</span>
             </span>
         </div>
         <div class="o-grid__cell gc-ta--center">
-            <span class="c-nav__content"><h3 class="c-heading">Content</h3></span>
+            <span class="c-nav__content"><h3 class="c-heading">{{ t('app.crelish', 'Modify content') }}</h3></span>
         </div>
         <div class="o-grid__cell">
             <span class="c-nav__item c-nav__item--right gc-bc--palette-nephritis btn-save" type="button"
                   onclick="$('#content-form').submit();">
-                <span class="fui-check"></span> Save content</span>
+                <span class="fui-check"></span> {{ t('app.crelish', 'Save') }}</span>
             </span>
             <span class="c-nav__item c-nav__item--right gc-bc--palette-pomgranate" data-toggle="modal"
                   data-target="#confirm-delete">
