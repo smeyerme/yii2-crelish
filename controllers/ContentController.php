@@ -67,6 +67,7 @@ class ContentController extends CrelishBaseController {
         return $this->render('content.twig', [
             'dataProvider' => $modelProvider->raw(),
             'filterProvider' => $modelProvider->getFilters(),
+            'freesearch' => (!empty($_GET['cr-content-filter'])) ? $_GET['cr-content-filter'] : null,
             'columns' => $columns,
             'ctype' => $this->ctype,
             'rowOptions' => $rowOptions
