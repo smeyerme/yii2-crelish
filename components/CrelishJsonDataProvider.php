@@ -171,22 +171,18 @@ class CrelishJsonDataProvider extends Component {
                         }
                         elseif ($key === 'freesearch') {
                             $this->allModels = Arrays::filter($this->allModels, function ($value) use ($keyValue) {
-                                $isMatch = FALSE;
-                                $matches = 0;
+                                $isMatch = TRUE;
 
                                 $itemString = strtolower(implode("#", Arrays::flatten($value)));
                                 $searchFragments = explode(" ", trim($keyValue));
 
                                 foreach ($searchFragments as $fragment) {
-                                    if (strpos($itemString, strtolower($fragment)) > 0) {
-                                        $matches++;
-                                    }
-                                    else {
-                                        $matches--;
+                                    if (strpos($itemString, strtolower($fragment)) === FALSE) {
+                                        $isMatch = FALSE;
                                     }
                                 }
 
-                                return ($matches > 0);
+                                return $isMatch;
                             });
 
                         }
@@ -383,7 +379,9 @@ class CrelishJsonDataProvider extends Component {
                 'totalCount' => count($this->allModels),
                 'pageSize' => $this->pageSize,
                 'forcePageParam' => TRUE,
-                'route' => (!empty(\Yii::$app->getRequest()->getQueryParam('pathRequested'))) ? '/' . \Yii::$app->getRequest()->getQueryParam('pathRequested') : NULL,
+                'route' => (!empty(\Yii::$app->getRequest()
+                    ->getQueryParam('pathRequested'))) ? '/' . \Yii::$app->getRequest()
+                        ->getQueryParam('pathRequested') : NULL,
                 'params' => array_merge([
                     'page' => !empty($_GET['page']) ? $_GET['page'] : '',
                     'category' => !empty($_GET['category']) ? $_GET['category'] : '',
@@ -497,7 +495,10 @@ class CrelishJsonDataProvider extends Component {
 
         foreach ($this->getDefinitions()->fields as $field) {
             if (!empty($field->visibleInGrid) && $field->visibleInGrid) {
-                $columns[] = (property_exists($field, 'gridField') && !empty($field->gridField)) ? $field->gridField : $field->key;
+                $label = (property_exists($field, 'label') && !empty($field->label)) ? $field->label : null;
+                $format = (property_exists($field, 'format') && !empty($field->label)) ? $field->format : 'text';
+
+                $columns[] = (property_exists($field, 'gridField') && !empty($field->gridField)) ? [ 'attribute' => $field->gridField, 'label' => $label, 'format' => $format ] : [ 'attribute' => $field->key, 'label' => $label, 'format' => $format ];
             }
         }
 
