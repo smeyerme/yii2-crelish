@@ -419,6 +419,17 @@ div.help-block.help-block-error {
     border-radius: 0;
 }
 
+.pagination li>a, .pagination li>span {
+    display: inline-block;
+    padding: 5px 14px;
+    background: #fafafa;
+    color: #666;
+    border-radius: inherit;
+    -webkit-box-shadow: inset 0px -2px 0px 0px rgba(0, 0, 0, 0.09);
+    -moz-box-shadow: inset 0px -2px 0px 0px rgba(0, 0, 0, 0.09);
+    box-shadow: inset 0px -1px 0px 0px rgba(0, 0, 0, 0.09);
+}
+
 /* DROPZONE */
 .dz-filename span {
     white-space: nowrap;

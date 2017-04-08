@@ -47,8 +47,8 @@ class ContentController extends CrelishBaseController {
      */
     public function actionIndex() {
         $filter = null;
-        if (!empty($_GET['cr-content-filter'])) {
-            $filter = ['freesearch' => $_GET['cr-content-filter']];
+        if (!empty($_GET['cr_content_filter'])) {
+            $filter = ['freesearch' => $_GET['cr_content_filter']];
         }
 
         $modelProvider = new CrelishJsonDataProvider($this->ctype, ['filter' => $filter], NULL);
@@ -67,7 +67,6 @@ class ContentController extends CrelishBaseController {
         return $this->render('content.twig', [
             'dataProvider' => $modelProvider->raw(),
             'filterProvider' => $modelProvider->getFilters(),
-            'freesearch' => (!empty($_GET['cr-content-filter'])) ? $_GET['cr-content-filter'] : null,
             'columns' => $columns,
             'ctype' => $this->ctype,
             'rowOptions' => $rowOptions

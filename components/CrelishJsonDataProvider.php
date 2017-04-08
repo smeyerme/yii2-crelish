@@ -110,28 +110,7 @@ class CrelishJsonDataProvider extends Component {
 
         // todo: Handle special fields... uncertain about this.
         foreach ($modelArr as $attr => $value) {
-            // Get type of field.
-            $fieldType = Arrays::find($elementDefinition->fields, function ($value) use ($attr) {
-                return $value->key == $attr;
-            });
-
-            if (!empty($fieldType) && is_object($fieldType)) {
-                $fieldType = $fieldType->type;
-            }
-
-            // Get processor class.
-            $processorClass = 'giantbits\crelish\plugins\\' . strtolower($fieldType) . '\\' . ucfirst($fieldType) . 'ContentProcessor';
-
-            if (strpos($fieldType, "widget_") !== FALSE) {
-                $processorClass = str_replace("widget_", "", $fieldType) . 'ContentProcessor';
-            }
-
-            if (class_exists($processorClass) && method_exists($processorClass, 'processJson')) {
-                $processorClass::processJson($this, $attr, $value, $finalArr);
-            }
-            else {
-                $finalArr[$attr] = $value;
-            }
+            $this->processFieldData($elementDefinition, $attr, $value, $finalArr);
         }
 
         return $finalArr;
@@ -293,43 +272,47 @@ class CrelishJsonDataProvider extends Component {
             $elementDefinition = $this->getDefinitions();
 
             foreach ($modelArr as $attr => $value) {
-                // Get type of field.
-                $fieldType = Arrays::find($elementDefinition->fields, function ($value) use ($attr) {
-                    return $value->key == $attr;
-                });
-
-                $transform = NULL;
-                if (!empty($fieldType) && is_object($fieldType)) {
-                    $fieldType = $fieldType->type;
-                    if (property_exists($fieldType, 'transform')) {
-                        $transform = $fieldType->transform;
-                    }
-                }
-
-                // Get processor class.
-                $processorClass = 'giantbits\crelish\plugins\\' . strtolower($fieldType) . '\\' . ucfirst($fieldType) . 'ContentProcessor';
-                $transformClass = 'giantbits\crelish\components\transformer\CrelishFieldTransformer\\' . ucfirst($transform);
-
-                if (strpos($fieldType, "widget_") !== FALSE) {
-                    $processorClass = str_replace("widget_", "", $fieldType) . 'ContentProcessor';
-                }
-
-                if (class_exists($processorClass) && method_exists($processorClass, 'processJson')) {
-                    $processorClass::processJson($this, $attr, $value, $finalArr);
-                }
-                else {
-                    $finalArr[$attr] = $value;
-                }
-
-                if (!empty($transform) && class_exists($transformClass)) {
-                    $transformClass::afterFind($finalArr[$attr]);
-                }
+                $this->processFieldData($elementDefinition, $attr, $value, $finalArr);
             }
 
             $allModels[] = $finalArr;
         }
 
         return $allModels;
+    }
+
+    private function processFieldData($elementDefinition, $attr, $value, &$finalArr) {
+        // Get type of field.
+        $fieldType = Arrays::find($elementDefinition->fields, function ($value) use ($attr) {
+            return $value->key == $attr;
+        });
+
+        $transform = NULL;
+        if (!empty($fieldType) && is_object($fieldType)) {
+            $fieldType = $fieldType->type;
+            if (property_exists($fieldType, 'transform')) {
+                $transform = $fieldType->transform;
+            }
+        }
+
+        // Get processor class.
+        $processorClass = 'giantbits\crelish\plugins\\' . strtolower($fieldType) . '\\' . ucfirst($fieldType) . 'ContentProcessor';
+        $transformClass = 'giantbits\crelish\components\transformer\CrelishFieldTransformer\\' . ucfirst($transform);
+
+        if (strpos($fieldType, "widget_") !== FALSE) {
+            $processorClass = str_replace("widget_", "", $fieldType) . 'ContentProcessor';
+        }
+
+        if (class_exists($processorClass) && method_exists($processorClass, 'processJson')) {
+            $processorClass::processJson($this, $attr, $value, $finalArr);
+        }
+        else {
+            $finalArr[$attr] = $value;
+        }
+
+        if (!empty($transform) && class_exists($transformClass)) {
+            $transformClass::afterFind($finalArr[$attr]);
+        }
     }
 
     public function all() {
