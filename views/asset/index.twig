@@ -10,7 +10,7 @@
     </div>
 {% endif %}
 
-<div class="o-grid gc-bc--palette-asbestos">
+<div class="o-grid gc-bc--palette-nephritis">
     <div class="o-grid__cell gc-ta--center gc-p--1" id="dropZone">
         <form action="{{ url('crelish/asset/upload.html') }}"
               class="dropzone"
@@ -39,7 +39,7 @@
     Dropzone.options.crelishDropZone = {
         paramName: "file", // The name that will be used to transfer the file
         maxFilesize: 250, // MB
-        dictDefaultMessage: "<span class=\"c-button c-button--success\">{{ t('app.crelish', 'Click or drag files here to upload.') }}</span>",
+        dictDefaultMessage: "<span class=\"c-button c-button--ghost\" style=\"border-color: #fff; color: #fff; border-radius: .5rem;\">{{ t('app.crelish', 'Click or drag files here to upload.') }}</span>",
         init: function () {
             var myDropzone = this;
 
