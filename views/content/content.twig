@@ -4,14 +4,14 @@
 {{ pjax_begin({'id':'contentList', 'enablePushState': true}) }}
 <div class="o-grid">
     <div class="o-grid__cell o-grid__cell--width-20">
-        <h6>Type filter</h6>
+        <h6>{{ t('app.crelish', 'Type filter') }}</h6>
         <ul role="menu" class="gc-nav__content-filter">
             {{ element_nav_widget({'ctype':ctype, 'action':"index"}) }}
         </ul>
     </div>
     <div class="o-grid__cell">
-        <h6>Content</h6>
-        {{ grid_view_widget({'dataProvider': dataProvider, 'columns': columns, 'tableOptions': {'class':'table table-striped'}}) |raw }}
+        <h6>{{ t('app.crelish', 'Content') }}</h6>
+        {{ grid_view_widget({'dataProvider': dataProvider, 'columns': columns, 'filterSelector': '.cr-content-search' , 'tableOptions': {'class':'table table-striped'}, 'rowOptions': rowOptions , 'formatter': {'class': 'yii\\i18n\\Formatter', 'nullDisplay': ''}}) | raw }}
     </div>
 </div>
 {{ pjax_end() }}

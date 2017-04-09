@@ -76,14 +76,15 @@ class MatrixConnector extends Widget
       </div>
     </div>
 
-    <div class="modal fade matrix-modal-$this->formKey" tabindex="-1" role="dialog" aria-labelledby="matrix-modal-$this->formKey" id="matrix-modal-$this->formKey">
-      <div class="modal-dialog modal-lg">
+    <div class="modal fade cr-modal--full matrix-modal-$this->formKey" tabindex="-1" role="dialog" aria-labelledby="matrix-modal-$this->formKey" id="matrix-modal-$this->formKey">
+      <div class="modal-dialog" style="width: 100vw; height: 100vh; top: 0; left: 0; margin: 0; padding: 0;">
         <div class="modal-content gc-bc--palette-clouds">
-          <div class="modal-header">
-            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+          <div class="modal-header gc-bc--palette-green-sea gc-fc--palette-clouds">
+            <button type="button" class="close" style="color: white;" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
             <h4 class="modal-title" id="myModalLabel">Content selection</h4>
           </div>
-          <div class="modal-body">
+          <div class="modal-body o-panel-container ">
+            <div class="o-panel">
 EOT;
 
       $out .= $this->render('matrix.twig', [
@@ -109,6 +110,7 @@ EOT;
             ]);
 
       $out .= <<<EOT
+            </div>
           </div>
         </div>
       </div>

@@ -188,9 +188,9 @@ class CrelishFrontendController extends Controller
     $path = \Yii::$app->view->theme->basePath . $ds . 'layouts' . $ds . $this->entryPoint['slug'] . '.twig';
 
     if (file_exists($path)) {
-      $this->layout = "@app/views/layouts/" . $this->entryPoint['slug'];
+      $this->layout = '@app/themes/' . \giantbits\crelish\Module::getInstance()->theme. "/layouts/" . $this->entryPoint['slug'] . '.twig';
     } else {
-      $this->layout = "@app/views/layouts/main";
+      $this->layout = '@app/themes/' . \giantbits\crelish\Module::getInstance()->theme. "/layouts/main.twig";
     }
   }
 

@@ -5,7 +5,7 @@ use giantbits\crelish\components\transformer\CrelishFieldBaseTransformer;
 /**
  *
  */
-class CrelishFieldTransformerMd5 extends CrelishFieldBaseTransformer {
+class CrelishFieldTransformerDatetime extends CrelishFieldBaseTransformer {
 
 	/**
 	 * [transform description]
@@ -13,10 +13,11 @@ class CrelishFieldTransformerMd5 extends CrelishFieldBaseTransformer {
 	 * @return [type]        [description]
 	 */
 	 public static function beforeSave(&$value) {
- 		$value = md5($value);
+ 		$value = strtotime($value);
  	}
 
-	public static function beforeFind(&$value) {
-		$value = md5($value);
-	}
+    
+    public static function afterFind(&$value) {
+        $value = strftime("%d.%m.%Y", $value);
+    }
 }

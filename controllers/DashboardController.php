@@ -9,8 +9,9 @@
 namespace giantbits\crelish\controllers;
 
 use yii\base\Controller;
+use yii\filters\AccessControl;
 
-class DefaultController extends Controller {
+class DashboardController extends Controller {
 
     public $layout = 'crelish.twig';
 
