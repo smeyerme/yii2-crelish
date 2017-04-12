@@ -1,52 +1,61 @@
 {{ use('yii/bootstrap/ActiveForm') }}
 
-{% if alerts %}
-<div class="o-grid" style="margin-bottom: -1em;">
-  <div class="o-grid__cell o-grid__cell--no-gutter">
-    {{ alerts | raw }}
-  </div>
-</div>
-{% endif %}
 {% set form = active_form_begin({
 'id' : 'asset-form',
 'layout' : 'default'
 }) %}
-<div class="o-grid gc-bc--palette-clouds gc-bs--soft">
-  <div class="o-grid__cell o-grid__cell--width-75 o-grid__cell--no-gutter">
-    <div class="c-card c-card--high gc-m--lbr-1 gc-bc--palette-white">
-      <div class="c-card__content c-heading dz-filename gc-bc--palette-silver gc-to--ellipsis">
-        {{ model.systitle }}
-      </div>
-      <div class="c-card__content">
-        <div class="image gc-o--hidden">
-          <img src="{{ model.src }}" class="o-image">
-        </div>
-        <div class="description gc-box--h-60 gc-to--ellipsis">
-          {{ form.field(model, 'description').textarea({'rows':6}).label('') | raw }}
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="o-grid__cell o-grid__cell">
-    {{ form.field(model, 'title') | raw }}
-    {{ form.field(model, 'state').dropdownlist({0:'Offline',1:'Draft',2:'Published',3:'Archived'}) | raw }}
-    {{ form.field(model, 'colormain_hex', { 'inputOptions': { 'class': 'form-control colorspawn' }}) | raw }}
+<div class="o-grid gc-bc--palette-clouds u-window-box--medium">
+    <div class="o-grid__cell o-grid__cell--width-75 o-grid__cell--no-gutter">
+        <div class="c-card c-card--high gc-m--lbr-1 gc-bc--palette-white">
+            <div class="c-card__content c-heading dz-filename gc-bc--palette-silver gc-to--ellipsis u-pillar-box--medium    ">
+                {{ model.systitle }}
+            </div>
+            <div class="c-card__content">
+                <div class="image gc-o--hidden">
 
-    <div class="form-group field-crelishdynamicjsonmodel-state required">
-      <label class="control-label" for="crelishdynamicjsonmodel-state">Color palette</label>
-      <ul class="gc-list--inline">
-        {% for color in model.colorpalette %}
-          <li data-toggle="tooltip" title="" data-original-title="rgb({{ color[0] }}, {{ color[1] }} , {{ color[2] }})<br>{{ model.colormain_hex }}" style="width: 20px; height: 30px; background-color: rgb({{ color[0] }}, {{ color[1] }}, {{ color[2] }});"></li>
-        {% endfor %}
-      </ul>
-    </div>
+                    {% if model.mime =='image/jpeg' %}
+                        <img src="{{ model.src }}" class="o-image">
+                    {% elseif model.mime =='image/jpg' %}
+                        <img src="{{ model.src }}" class="o-image">
+                    {% elseif model.mime =='image/png' %}
+                        <img src="{{ model.src }}" class="o-image">
+                    {% elseif model.mime =='image/gif' %}
+                        <img src="{{ model.src }}" class="o-image">
+                    {% elseif model.mime =='application/pdf' %}
+                        <object type="application/pdf" width="100%" height="800px" data="{{ model.src }}"></object>
+                    {% endif %}
 
-  </div>
+                </div>
+                <div class="description gc-box--h-60 gc-to--ellipsis">
+                    {{ form.field(model, 'description').textarea({'rows':6}).label('') | raw }}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="o-grid__cell o-grid__cell">
+        {{ form.field(model, 'systitle') | raw }}
+        {{ form.field(model, 'state').dropdownlist({0:'Offline',1:'Draft',2:'Published',3:'Archived'}) | raw }}
+        {{ form.field(model, 'colormain_hex', { 'inputOptions': { 'class': 'form-control colorspawn' }}) | raw }}
+
+        <div class="form-group field-crelishdynamicjsonmodel-state required">
+            <label class="control-label" for="crelishdynamicjsonmodel-state">Color palette</label>
+            <ul class="gc-list--inline">
+                {% for color in model.colorpalette %}
+                    <li data-toggle="tooltip" title=""
+                        data-original-title="rgb({{ color[0] }}, {{ color[1] }} , {{ color[2] }})<br>{{ model.colormain_hex }}"
+                        style="width: 20px; height: 30px; background-color: rgb({{ color[0] }}, {{ color[1] }}, {{ color[2] }});"></li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        {{ form.field(model, 'src', { 'inputOptions': { 'class': 'form-control disabled', 'disabled': 'disabled' }}) | raw }}
+
+    </div>
 </div>
 {{ active_form_end() }}
 <script>
 
-  $('.colorspawn').css('border-bottom', '4px solid {{ model.colormain_hex  }}');
+    $('.colorspawn').css('border-bottom', '4px solid {{ model.colormain_hex }}');
 
-  $('[data-toggle="tooltip"]').tooltip({html: true});
+    $('[data-toggle="tooltip"]').tooltip({html: true});
 </script>

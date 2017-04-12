@@ -8,39 +8,13 @@ use yii\helpers\Json;
 
 class CrelishDynamicJsonModel extends \yii\base\DynamicModel
 {
-    /**
-     * [$_attributeLabels description]
-     * @var [type]
-     */
-    private $_attributeLabels;
-
-    /**
-     * [$identifier description]
-     * @var [type]
-     */
     public $identifier;
-
-    /**
-     * [$uuid description]
-     * @var [type]
-     */
     public $uuid;
-
-    /**
-     * [$ctype description]
-     * @var [type]
-     */
     public $ctype;
-
-    private $fileSource;
-
-    private $isNew = true;
-
-    /**
-     * [$fieldDefinitions description]
-     * @var [type]
-     */
     public $fieldDefinitions;
+    private $_attributeLabels;
+    private $fileSource;
+    private $isNew = true;
 
     public function init()
     {
@@ -48,8 +22,7 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
 
         // Build definitions.
         if (!empty($this->ctype)) {
-            $filePath = \Yii::getAlias('@app/workspace/elements') . DIRECTORY_SEPARATOR . $this->ctype . '.json';
-            $elementDefinition = CrelishDynamicJsonModel::loadElementDefinition($filePath);
+            $elementDefinition = CrelishDynamicJsonModel::loadElementDefinition($this->ctype);
 
             $this->fieldDefinitions = $elementDefinition;
             $fields = [];
@@ -85,62 +58,15 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
                 }
             }
 
-            // Load model from file.
+            // Load model from file if uuid is set.
             if (!empty($this->uuid)) {
                 $this->isNew = false;
                 $this->fileSource = \Yii::getAlias('@app/workspace/data/') . DIRECTORY_SEPARATOR . $this->ctype . DIRECTORY_SEPARATOR . $this->uuid . '.json';
-                $data['CrelishDynamicJsonModel'] = Json::decode(file_get_contents($this->fileSource));
-                $this->load($data);
+                $this->attributes = Json::decode(file_get_contents($this->fileSource));
             }
         }
     }
 
-    public static function loadElementDefinition($filePath)
-    {
-        $elementDefinition = Json::decode(file_get_contents($filePath), false);
-
-        // Add core fields.
-        $elementDefinition->fields[] = Json::decode('{ "label": "UUID", "key": "uuid", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]], "options": {"disabled":true}}', false);
-        $elementDefinition->fields[] = Json::decode('{ "label": "Path", "key": "path", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
-        //$elementDefinition->fields[] = Json::decode('{ "label": "Slug", "key": "slug", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
-        $elementDefinition->fields[] = Json::decode('{ "label": "State", "key": "state", "type": "dropDownList", "visibleInGrid": true, "rules": [["required"], ["integer"]], "options": {"prompt":"Please set state"}, "items": {"0":"Offline", "1":"Draft", "2":"Online", "3":"Archived"}}', false);
-
-        $elementDefinition->fields[] = Json::decode('{ "label": "Created", "key": "created", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
-        $elementDefinition->fields[] = Json::decode('{ "label": "Updated", "key": "updated", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
-        $elementDefinition->fields[] = Json::decode('{ "label": "Publish from", "key": "from", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
-        $elementDefinition->fields[] = Json::decode('{ "label": "Publish to", "key": "to", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
-        return $elementDefinition;
-    }
-
-    public function getFields()
-    {
-        return $this->fields;
-    }
-
-    /**
-     * [defineLabel description]
-     * @param  [type] $name  [description]
-     * @param  [type] $label [description]
-     * @return [type]        [description]
-     */
-    public function defineLabel($name, $label)
-    {
-        $this->_attributeLabels[$name] = $label;
-    }
-
-    /**
-     * [attributeLabels description]
-     * @return [type] [description]
-     */
-    public function attributeLabels()
-    {
-        return $this->_attributeLabels;
-    }
-
-    /**
-     * [save description]
-     * @return [type] [description]
-     */
     public function save()
     {
         $modelArray = [];
@@ -189,7 +115,7 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
         @chmod($path, 0777);
 
         // Update cache
-        $this->updateCache('update', $outModel);
+        $this->updateCache('update', $modelArray);
 
         // Todo: Create entry in slug storage.
         if (!empty($this->slug)) {
@@ -220,37 +146,19 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
         $this->updateCache('delete', $this->uuid);
     }
 
-    private function updateCache($action, $data)
+    public function getFields()
     {
-        //\Yii::$app->cache->flush('crc_' . $this->ctype);
-        $cacheStore = \Yii::$app->cache->get('crc_' . $this->ctype);
+        return $this->fields;
+    }
 
-        if(!$cacheStore) {
-            return;
-        }
+    public function defineLabel($name, $label)
+    {
+        $this->_attributeLabels[$name] = $label;
+    }
 
-        switch($action){
-            case 'delete':
-                Arrays::each($cacheStore, function($item, $index) use ($data, $cacheStore) {
-                    if($item['uuid'] == $data){
-                        unset($cacheStore[$index]);
-                        \Yii::$app->cache->set('crc_' . $this->ctype, array_values($cacheStore));
-                    }
-                });
-                break;
-            default:
-                if($this->isNew) {
-                    array_push($cacheStore, $data);
-                } else {
-                    Arrays::each($cacheStore, function($item, $index) use ($data, $cacheStore) {
-                        if($item['uuid'] == $data){
-                            $cacheStore[$index] = $data;
-                            \Yii::$app->cache->set('crc_' . $this->ctype, array_values($cacheStore));
-                        }
-                    });
-                }
-        }
-
+    public function attributeLabels()
+    {
+        return $this->_attributeLabels;
     }
 
     public function setAttributes($values, $safeOnly = true)
@@ -270,11 +178,42 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
         }
     }
 
-    /**
-     * [GUIDv4 description]
-     * @param bool $trim [description]
-     */
-    function GUIDv4($trim = true)
+    private function updateCache($action, $data)
+    {
+        $cacheStore = \Yii::$app->cache->get('crc_' . $this->ctype);
+
+        if(!$cacheStore) {
+            return;
+        }
+
+        switch($action){
+            case 'delete':
+                Arrays::each($cacheStore, function($item, $index) use ($data, $cacheStore) {
+                    if($item['uuid'] == $data['uuid']){
+                        unset($cacheStore[$index]);
+                        \Yii::$app->cache->set('crc_' . $this->ctype, array_values($cacheStore));
+                    }
+                });
+                break;
+            case 'update':
+                if(!$this->isNew) {
+                    Arrays::each($cacheStore, function($item, $index) use ($data, $cacheStore) {
+                        if($item['uuid'] == $data['uuid']){
+                            $cacheStore[$index] = $data;
+                            \Yii::$app->cache->set('crc_' . $this->ctype, array_values($cacheStore));
+                        }
+                    });
+                }
+                break;
+            default:
+                if($this->isNew) {
+                    array_push($cacheStore, $data);
+                }
+        }
+
+    }
+
+    private function GUIDv4($trim = true)
     {
         // Windows
         if (function_exists('com_create_guid') === true) {
@@ -306,5 +245,23 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
             substr($charid, 20, 12) .
             $rbrace;
         return strtolower($guidv4);
+    }
+
+    public static function loadElementDefinition($ctype)
+    {
+        $definitionPath = \Yii::getAlias('@app/workspace/elements') . DIRECTORY_SEPARATOR . $ctype . '.json';
+        $elementDefinition = Json::decode(file_get_contents($definitionPath), false);
+
+        // Add core fields.
+        $elementDefinition->fields[] = Json::decode('{ "label": "UUID", "key": "uuid", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]], "options": {"disabled":true}}', false);
+        $elementDefinition->fields[] = Json::decode('{ "label": "Path", "key": "path", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
+        //$elementDefinition->fields[] = Json::decode('{ "label": "Slug", "key": "slug", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
+        $elementDefinition->fields[] = Json::decode('{ "label": "State", "key": "state", "type": "dropDownList", "visibleInGrid": true, "rules": [["required"], ["integer"]], "options": {"prompt":"Please set state"}, "items": {"0":"Offline", "1":"Draft", "2":"Online", "3":"Archived"}}', false);
+
+        $elementDefinition->fields[] = Json::decode('{ "label": "Created", "key": "created", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
+        $elementDefinition->fields[] = Json::decode('{ "label": "Updated", "key": "updated", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
+        $elementDefinition->fields[] = Json::decode('{ "label": "Publish from", "key": "from", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
+        $elementDefinition->fields[] = Json::decode('{ "label": "Publish to", "key": "to", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
+        return $elementDefinition;
     }
 }

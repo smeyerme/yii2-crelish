@@ -6,7 +6,7 @@
         <ul role="menu" class="dropdown-menu" style="margin-left: -4em;">
             <li>
                   <a href="{{ url('crelish/user/logout') }}">
-                    <span class="fa fa-sign-out"></span> {{ t('app.crelish', 'Logout') }}
+                    <span class="fa fa-sign-out"></span> {{ t('crelish', 'Logout') }}
                   </a>
             </li>
 
@@ -15,7 +15,7 @@
 </span>
 <span class="c-nav__item c-nav__item--right {{ app.controller.id == 'settings' ? 'active' : '' }}">
   <a href="{{ url('crelish/settings/index') }}">
-    <span class="fa fa-cogs"></span> {{ t('app.crelish', 'Settings') }}
+    <span class="fa fa-cogs"></span> {{ t('crelish', 'Settings') }}
   </a>
 </span>
 <!--
@@ -27,16 +27,16 @@
 -->
 <span class="c-nav__item c-nav__item--right">
   <a href="#fakelink">
-    <span class="fa fa-users"></span> {{ t('app.crelish', 'User') }}
+    <span class="fa fa-users"></span> {{ t('crelish', 'User') }}
   </a>
 </span>
 <span class="c-nav__item c-nav__item--right {{ app.controller.id == 'asset' ? 'active' : '' }}">
   <a href="{{ url('crelish/asset/index') }}">
-    <span class="fa fa-file-image-o"></span> {{ t('app.crelish', 'Assets') }}
+    <span class="fa fa-file-image-o"></span> {{ t('crelish', 'Assets') }}
   </a>
 </span>
 <span class="c-nav__item c-nav__item--right {{ app.controller.id == 'content' ? 'active' : '' }}">
   <a href="{{ url('crelish/content/index') }}">
-    <span class="fa fa-pencil-square-o"></span> {{ t('app.crelish', 'Content') }}
+    <span class="fa fa-pencil-square-o"></span> {{ t('crelish', 'Content') }}
   </a>
 </span>

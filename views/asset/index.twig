@@ -21,7 +21,7 @@
     <div class="o-grid__cell">
         {{ pjax_begin({'id':'assetList', 'enablePushState': false}) }}
 
-        <h6>{{ t('app.crelish', 'Asset list') }}</h6>
+        <h6>{{ t('crelish', 'Asset list') }}</h6>
 
         {{ grid_view_widget({
             'dataProvider': dataProvider,
@@ -39,7 +39,7 @@
     Dropzone.options.crelishDropZone = {
         paramName: "file", // The name that will be used to transfer the file
         maxFilesize: 250, // MB
-        dictDefaultMessage: "<span class=\"c-button c-button--ghost\" style=\"border-color: #fff; color: #fff; border-radius: .5rem;\">{{ t('app.crelish', 'Click or drag files here to upload.') }}</span>",
+        dictDefaultMessage: "<span class=\"c-button c-button--ghost\" style=\"border-color: #fff; color: #fff; border-radius: .5rem;\">{{ t('crelish', 'Click or drag files here to upload.') }}</span>",
         init: function () {
             var myDropzone = this;
 

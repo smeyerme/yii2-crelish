@@ -16,202 +16,144 @@ use Underscore\Types\Arrays;
 class CrelishFrontendController extends Controller
 {
 
-  /**
-   * [$entryPoint description]
-   * @var [type]
-   */
-  public $entryPoint;
-  /**
-   * [$requestUrl description]
-   * @var [type]
-   */
-  private $requestUrl;
-  /**
-   * [$viewTemplate description]
-   * @var [type]
-   */
-  private $viewTemplate;
+    /**
+     * [$entryPoint description]
+     * @var [type]
+     */
+    public $entryPoint;
+    /**
+     * [$requestUrl description]
+     * @var [type]
+     */
+    private $requestUrl;
+    /**
+     * [$viewTemplate description]
+     * @var [type]
+     */
+    private $viewTemplate;
 
-  private $data;
+    private $data;
 
-  /**
-   * [init description]
-   * @return [type] [description]
-   */
-  public function init()
-  {
-    parent::init();
+    /**
+     * [init description]
+     * @return [type] [description]
+     */
+    public function init()
+    {
+        parent::init();
 
-    // Set theme.
-    // @todo: Move to config.
-    $this->view->theme = new \yii\base\Theme([
-      'pathMap' => ['@app/views' => '@app/themes/' . \giantbits\crelish\Module::getInstance()->theme],
-      'basePath' => '@app/themes/' . \giantbits\crelish\Module::getInstance()->theme,
-      'baseUrl' => '@web/themes/' . \giantbits\crelish\Module::getInstance()->theme,
-    ]);
+        // Set theme.
+        // @todo: Move to config.
+        $this->view->theme = new \yii\base\Theme([
+            'pathMap' => ['@app/views' => '@app/themes/' . \giantbits\crelish\Module::getInstance()->theme],
+            'basePath' => '@app/themes/' . \giantbits\crelish\Module::getInstance()->theme,
+            'baseUrl' => '@web/themes/' . \giantbits\crelish\Module::getInstance()->theme,
+        ]);
 
-    // Force theming.
-    $this->setViewPath('@app/themes/' . \giantbits\crelish\Module::getInstance()->theme . '/' . $this->id);
+        // Force theming.
+        $this->setViewPath('@app/themes/' . \giantbits\crelish\Module::getInstance()->theme . '/' . $this->id);
 
-    // Define entry point.
-    $this->resolvePathRequested();
-  }
-
-  /**
-   * [actionError description]
-   * @return [type] [description]
-   */
-  public function actionError()
-  {
-    $this->title = 'Error';
-    \Yii::$app->name = $this->title;
-
-    $exception = \Yii::$app->errorHandler->exception;
-
-    if ($exception !== null) {
-      return $this->render('error.twig', ['message' => $exception->getMessage()]);
+        // Define entry point.
+        $this->resolvePathRequested();
     }
-  }
 
-  /**
-   * [actionRun description]
-   * @return [type] [description]
-   */
-  public function actionRun()
-  {
+    /**
+     * [actionError description]
+     * @return [type] [description]
+     */
+    public function actionError()
+    {
+        $this->title = 'Error';
+        \Yii::$app->name = $this->title;
 
-    $ds = DIRECTORY_SEPARATOR;
-    // 1. Determine entry point.
-    // 2. Load entry point content.
-    // 3. Assemble sub content from parent entry point content.
+        $exception = \Yii::$app->errorHandler->exception;
 
-    // Add content aka. do the magic.
-    $langDataFolder = (Yii::$app->params['defaultLanguage'] != Yii::$app->language) ? $ds . Yii::$app->language : '';
-    $this->data = \yii\helpers\Json::decode(file_get_contents(\Yii::getAlias('@app/workspace/data') . $ds . $this->entryPoint['ctype'] . $langDataFolder . $ds . $this->entryPoint['uuid'] . '.json'));
+        if ($exception !== null) {
+            return $this->render('error.twig', ['message' => $exception->getMessage()]);
+        }
+    }
 
-    // Set layout.
-    $this->setLayout();
+    /**
+     * [actionRun description]
+     * @return [type] [description]
+     */
+    public function actionRun()
+    {
 
-    // Set view template.
-    $this->setViewTemplate();
+        $ds = DIRECTORY_SEPARATOR;
+        // 1. Determine entry point.
+        // 2. Load entry point content.
+        // 3. Assemble sub content from parent entry point content.
 
-    // Process data and render.
-    $data = $this->processContent($this->entryPoint['ctype'], $this->data);
+        // Add content aka. do the magic.
+        $this->data = new CrelishDynamicJsonModel([], ['ctype' => $this->entryPoint['ctype'], 'uuid' => $this->entryPoint['uuid']]);
 
-    return $this->render($this->viewTemplate, ['data' => $data]);
-  }
+        // Set layout.
+        $this->setLayout();
 
-  /**
-   * [processContent description]
-   * @param  [type] $ctype [description]
-   * @param  [type] $data  [description]
-   * @return [type]        [description]
-   */
-  public function processContent($ctype, $data)
-  {
-    $processedData = [];
+        // Set view template.
+        $this->setViewTemplate();
 
-    $filePath = \Yii::getAlias('@app/workspace/elements') . DIRECTORY_SEPARATOR . $this->entryPoint['ctype'] . '.json';
-    $definitionPath = \Yii::getAlias('@app/workspace/elements') . DIRECTORY_SEPARATOR . $ctype . '.json';
+        // Process data and render.
+        $data = CrelishBaseContentProcessor::processContent($this->entryPoint['ctype'], $this->data);
 
-    $elementDefinition = CrelishDynamicJsonModel::loadElementDefinition($definitionPath);
+        return $this->render($this->viewTemplate, ['data' => $data]);
+    }
 
-    if ($data) {
+    /**
+     * [resolvePathRequested description]
+     * @return [type] [description]
+     */
+    private function resolvePathRequested()
+    {
+        $slug = $path = \giantbits\crelish\Module::getInstance()->entryPoint['slug'];
+        $ctype = \giantbits\crelish\Module::getInstance()->entryPoint['ctype'];
+        $this->requestUrl = \Yii::$app->request->getPathInfo();
 
-      foreach ($data as $key => $content) {
-
-        $fieldType = Arrays::find($elementDefinition->fields, function ($value) use ($key) {
-          return $value->key == $key;
-        });
-
-        if (!empty($fieldType) && is_object($fieldType)) {
-          $fieldType = $fieldType->type;
+        if (!empty($params = \Yii::$app->request->getQueryParams())) {
+            $slug = $params['pathRequested'];
         }
 
-        if(!empty($fieldType)) {
-          // Get processor class.
-          $processorClass = 'giantbits\crelish\plugins\\' . strtolower($fieldType) . '\\' . ucfirst($fieldType) . 'ContentProcessor';
+        $entryDataJoint = new CrelishJsonDataProvider($ctype, ['filter' => ['slug' => $slug]]);
+        $entryModel = $entryDataJoint->one();
 
-          if(strpos($fieldType, "widget_") !== false) {
-            $processorClass = str_replace("widget_", "", $fieldType) . 'ContentProcessor';
-          }
+        $this->entryPoint = ['ctype' => $ctype, 'slug' => $slug, 'path' => $path, 'uuid' => $entryModel['uuid']];
+    }
 
-          if (class_exists($processorClass)) {
-            $processorClass::processData($this, $key, $content, $processedData);
-          } else {
-            $processedData[$key] = $content;
-          }
+    /**
+     * [setLayout description]
+     */
+    private function setLayout()
+    {
+
+        $ds = DIRECTORY_SEPARATOR;
+        $path = \Yii::$app->view->theme->basePath . $ds . 'layouts' . $ds . $this->entryPoint['slug'] . '.twig';
+
+        if (file_exists($path)) {
+            $this->layout = '@app/themes/' . \giantbits\crelish\Module::getInstance()->theme . "/layouts/" . $this->entryPoint['slug'] . '.twig';
+        } else {
+            $this->layout = '@app/themes/' . \giantbits\crelish\Module::getInstance()->theme . "/layouts/main.twig";
         }
-      }
-    }
-    return $processedData;
-  }
-
-  /**
-   * [resolvePathRequested description]
-   * @return [type] [description]
-   */
-  private function resolvePathRequested()
-  {
-    $slug = $path =  \giantbits\crelish\Module::getInstance()->entryPoint['slug'];
-    $ctype = \giantbits\crelish\Module::getInstance()->entryPoint['ctype'];
-    $this->requestUrl = \Yii::$app->request->getPathInfo();
-
-    if(!empty($params = \Yii::$app->request->getQueryParams())) {
-      $slug = $params['pathRequested'];
     }
 
-    /*if (!empty($this->requestUrl)) {
-      // Todo: Language handling.
-      $keys = explode('/', $this->requestUrl);
-      if (count($keys) > 1) {
-        $path = $keys[0];
-        $slug = str_replace(".html", "", $keys[1]);
-      } else {
-        $slug = str_replace(".html", "", $keys[0]);
-      }
-    }*/
+    /**
+     * [setViewTemplate description]
+     */
+    private function setViewTemplate()
+    {
+        $ds = DIRECTORY_SEPARATOR;
+        $path = \Yii::$app->view->theme->basePath . $ds . \Yii::$app->controller->id . $ds . $this->entryPoint['slug'] . '.twig';
+        $pathByType = \Yii::$app->view->theme->basePath . $ds . \Yii::$app->controller->id . $ds . $this->entryPoint['ctype'] . '.twig';
+        $pathByConfig = (!empty($this->data['template'])) ? \Yii::$app->view->theme->basePath . $ds . \Yii::$app->controller->id . $ds . $this->data['template'] : '';
 
-    $entryDataJoint = new CrelishJsonDataProvider($ctype, ['filter' => ['slug' => $slug]]);
-    $entryModel = $entryDataJoint->one();
-
-    $this->entryPoint = ['ctype' => $ctype, 'slug' => $slug, 'path' => $path, 'uuid' => $entryModel['uuid']];
-  }
-
-  /**
-   * [setLayout description]
-   */
-  private function setLayout()
-  {
-
-    $ds = DIRECTORY_SEPARATOR;
-    $path = \Yii::$app->view->theme->basePath . $ds . 'layouts' . $ds . $this->entryPoint['slug'] . '.twig';
-
-    if (file_exists($path)) {
-      $this->layout = '@app/themes/' . \giantbits\crelish\Module::getInstance()->theme. "/layouts/" . $this->entryPoint['slug'] . '.twig';
-    } else {
-      $this->layout = '@app/themes/' . \giantbits\crelish\Module::getInstance()->theme. "/layouts/main.twig";
+        if (file_exists($path)) {
+            $this->viewTemplate = $this->entryPoint['slug'] . '.twig';
+        } elseif (file_exists($pathByType)) {
+            $this->viewTemplate = $this->entryPoint['ctype'] . '.twig';
+        } elseif (file_exists($pathByConfig)) {
+            $this->viewTemplate = $this->data['template'];
+        } else {
+            $this->viewTemplate = 'main.twig';
+        }
     }
-  }
-
-  /**
-   * [setViewTemplate description]
-   */
-  private function setViewTemplate()
-  {
-    $ds = DIRECTORY_SEPARATOR;
-    $path = \Yii::$app->view->theme->basePath . $ds . \Yii::$app->controller->id . $ds . $this->entryPoint['slug'] . '.twig';
-    $pathByType = \Yii::$app->view->theme->basePath . $ds . \Yii::$app->controller->id . $ds . $this->entryPoint['ctype'] . '.twig';
-    $pathByConfig = (!empty($this->data['template'])) ? \Yii::$app->view->theme->basePath . $ds . \Yii::$app->controller->id . $ds .  $this->data['template'] : '';
-
-    if (file_exists($path)) {
-      $this->viewTemplate = $this->entryPoint['slug'] . '.twig';
-    } elseif (file_exists($pathByType)) {
-      $this->viewTemplate = $this->entryPoint['ctype'] . '.twig';
-    } elseif (file_exists($pathByConfig)) {
-      $this->viewTemplate = $this->data['template'];
-    } else {
-      $this->viewTemplate = 'main.twig';
-    }
-  }
 }
