@@ -33,27 +33,6 @@ class CrelishJsonDataProvider extends Component {
     private $pathAlias;
     private $pageSize = 20;
 
-    /**
-     * Resolve language specific data source folder / file.
-     * If no folder for the current language is found take the default language
-     * source.
-     * @param  string $uuid [description]
-     * @return [type]       [description]
-     */
-    private function resolveDataSource($uuid = '') {
-        $ds = DIRECTORY_SEPARATOR;
-        $fileDataSource = '';
-
-        $langDataFolder = (\Yii::$app->params['defaultLanguage'] != \Yii::$app->language) ? $ds . \Yii::$app->language : '';
-        $fileDataSource = \Yii::getAlias($this->pathAlias) . $ds . $this->ctype . $langDataFolder . $ds . $uuid . '.json';
-
-        if (!file_exists(\Yii::getAlias($this->pathAlias) . $ds . $this->ctype . $langDataFolder . $ds . $uuid . '.json')) {
-            $fileDataSource = \Yii::getAlias($this->pathAlias) . $ds . $this->ctype . $ds . $uuid . '.json';
-        }
-
-        return $fileDataSource;
-    }
-
     public function __construct($ctype, $settings = [], $uuid = NULL) {
         $this->ctype = $ctype;
         $this->pathAlias = ($this->ctype == 'elements') ? '@app/workspace' : '@app/workspace/data';
@@ -99,6 +78,49 @@ class CrelishJsonDataProvider extends Component {
         }
 
         parent::__construct();
+    }
+
+    public function parseFolderContent($folder) {
+        $filesArr = [];
+        $allModels = [];
+
+        $fullFolder = \Yii::getAlias($this->pathAlias) . DIRECTORY_SEPARATOR . $folder;
+
+        if (!file_exists($fullFolder)) {
+            FileHelper::createDirectory($fullFolder);
+        }
+
+        $files = FileHelper::findFiles($fullFolder, ['recursive' => FALSE]);
+
+        if (isset($files[0])) {
+            foreach ($files as $file) {
+                $filesArr[] = $file;
+            }
+        }
+
+        foreach ($filesArr as $file) {
+            $finalArr = [];
+            $content = file_get_contents($file);
+            $modelArr = json_decode($content, TRUE);
+            if (is_null($modelArr)) {
+                $segments = explode(DIRECTORY_SEPARATOR, $file);
+                CrelishBaseController::addError("Invalid JSON in " . array_pop($segments));
+                continue;
+            }
+            $modelArr['id'] = $file;
+            $modelArr['ctype'] = $this->ctype;
+
+            // Handle specials like in frontend.
+            $elementDefinition = $this->getDefinitions();
+
+            foreach ($modelArr as $attr => $value) {
+                $this->processFieldData($elementDefinition, $attr, $value, $finalArr);
+            }
+
+            $allModels[] = $finalArr;
+        }
+
+        return $allModels;
     }
 
     private function processSingle($data) {
@@ -185,11 +207,6 @@ class CrelishJsonDataProvider extends Component {
         }
     }
 
-    /**
-     * [sortModels description]
-     * @param  [type] $sort [description]
-     * @return [type]       [description]
-     */
     public function sortModels($sort) {
         $sortparams[] = $this->allModels;
 
@@ -214,107 +231,6 @@ class CrelishJsonDataProvider extends Component {
         ], $sortparams);
     }
 
-    private function array_orderby() {
-        $args = func_get_args();
-        $data = array_shift($args);
-
-        foreach ($args as $n => $field) {
-            if (is_string($field)) {
-                $tmp = array();
-                foreach ($data as $key => $row) {
-                    $tmp[$key] = $row[$field];
-                }
-                $args[$n] = $tmp;
-            }
-        }
-        $args[] = &$data;
-
-        @call_user_func_array('array_multisort', $args);
-        return array_pop($args);
-    }
-
-    /**
-     * [parseFolderContent description]
-     * @param  [type] $folder [description]
-     * @return [type]         [description]
-     */
-    public function parseFolderContent($folder) {
-        $filesArr = [];
-        $allModels = [];
-
-        $fullFolder = \Yii::getAlias($this->pathAlias) . DIRECTORY_SEPARATOR . $folder;
-
-        if (!file_exists($fullFolder)) {
-            FileHelper::createDirectory($fullFolder);
-        }
-
-        $files = FileHelper::findFiles($fullFolder, ['recursive' => FALSE]);
-
-        if (isset($files[0])) {
-            foreach ($files as $file) {
-                $filesArr[] = $file;
-            }
-        }
-
-        foreach ($filesArr as $file) {
-            $finalArr = [];
-            $content = file_get_contents($file);
-            $modelArr = json_decode($content, TRUE);
-            if (is_null($modelArr)) {
-                $segments = explode(DIRECTORY_SEPARATOR, $file);
-                CrelishBaseController::addError("Invalid JSON in " . array_pop($segments));
-                continue;
-            }
-            $modelArr['id'] = $file;
-            $modelArr['ctype'] = $this->ctype;
-
-            // Handle specials like in frontend.
-            $elementDefinition = $this->getDefinitions();
-
-            foreach ($modelArr as $attr => $value) {
-                $this->processFieldData($elementDefinition, $attr, $value, $finalArr);
-            }
-
-            $allModels[] = $finalArr;
-        }
-
-        return $allModels;
-    }
-
-    private function processFieldData($elementDefinition, $attr, $value, &$finalArr) {
-        // Get type of field.
-        $fieldType = Arrays::find($elementDefinition->fields, function ($value) use ($attr) {
-            return $value->key == $attr;
-        });
-
-        $transform = NULL;
-        if (!empty($fieldType) && is_object($fieldType)) {
-            $fieldType = $fieldType->type;
-            if (property_exists($fieldType, 'transform')) {
-                $transform = $fieldType->transform;
-            }
-        }
-
-        // Get processor class.
-        $processorClass = 'giantbits\crelish\plugins\\' . strtolower($fieldType) . '\\' . ucfirst($fieldType) . 'ContentProcessor';
-        $transformClass = 'giantbits\crelish\components\transformer\CrelishFieldTransformer\\' . ucfirst($transform);
-
-        if (strpos($fieldType, "widget_") !== FALSE) {
-            $processorClass = str_replace("widget_", "", $fieldType) . 'ContentProcessor';
-        }
-
-        if (class_exists($processorClass) && method_exists($processorClass, 'processJson')) {
-            $processorClass::processJson($this, $attr, $value, $finalArr);
-        }
-        else {
-            $finalArr[$attr] = $value;
-        }
-
-        if (!empty($transform) && class_exists($transformClass)) {
-            $transformClass::afterFind($finalArr[$attr]);
-        }
-    }
-
     public function all() {
         $provider = new ArrayDataProvider([
             'key' => 'id',
@@ -336,10 +252,6 @@ class CrelishJsonDataProvider extends Component {
         $result = ['models' => array_values($models), 'pager' => $pager];
 
         return $result;
-    }
-
-    public function rawAll() {
-        return $this->allModels;
     }
 
     public function one() {
@@ -379,6 +291,10 @@ class CrelishJsonDataProvider extends Component {
         ]);
 
         return $provider;
+    }
+
+    public function rawAll() {
+        return $this->allModels;
     }
 
     public function delete() {
@@ -509,5 +425,72 @@ class CrelishJsonDataProvider extends Component {
         ];*/
 
         return array_values($columns);
+    }
+
+    private function resolveDataSource($uuid = '') {
+        $ds = DIRECTORY_SEPARATOR;
+        $fileDataSource = '';
+
+        $langDataFolder = (\Yii::$app->params['defaultLanguage'] != \Yii::$app->language) ? $ds . \Yii::$app->language : '';
+        $fileDataSource = \Yii::getAlias($this->pathAlias) . $ds . $this->ctype . $langDataFolder . $ds . $uuid . '.json';
+
+        if (!file_exists(\Yii::getAlias($this->pathAlias) . $ds . $this->ctype . $langDataFolder . $ds . $uuid . '.json')) {
+            $fileDataSource = \Yii::getAlias($this->pathAlias) . $ds . $this->ctype . $ds . $uuid . '.json';
+        }
+
+        return $fileDataSource;
+    }
+
+    private function processFieldData($elementDefinition, $attr, $value, &$finalArr) {
+        // Get type of field.
+        $fieldType = Arrays::find($elementDefinition->fields, function ($value) use ($attr) {
+            return $value->key == $attr;
+        });
+
+        $transform = NULL;
+        if (!empty($fieldType) && is_object($fieldType)) {
+            $fieldType = $fieldType->type;
+            if (property_exists($fieldType, 'transform')) {
+                $transform = $fieldType->transform;
+            }
+        }
+
+        // Get processor class.
+        $processorClass = 'giantbits\crelish\plugins\\' . strtolower($fieldType) . '\\' . ucfirst($fieldType) . 'ContentProcessor';
+        $transformClass = 'giantbits\crelish\components\transformer\CrelishFieldTransformer\\' . ucfirst($transform);
+
+        if (strpos($fieldType, "widget_") !== FALSE) {
+            $processorClass = str_replace("widget_", "", $fieldType) . 'ContentProcessor';
+        }
+
+        if (class_exists($processorClass) && method_exists($processorClass, 'processJson')) {
+            $processorClass::processJson($attr, $value, $finalArr);
+        }
+        else {
+            $finalArr[$attr] = $value;
+        }
+
+        if (!empty($transform) && class_exists($transformClass)) {
+            $transformClass::afterFind($finalArr[$attr]);
+        }
+    }
+
+    private function array_orderby() {
+        $args = func_get_args();
+        $data = array_shift($args);
+
+        foreach ($args as $n => $field) {
+            if (is_string($field)) {
+                $tmp = array();
+                foreach ($data as $key => $row) {
+                    $tmp[$key] = $row[$field];
+                }
+                $args[$n] = $tmp;
+            }
+        }
+        $args[] = &$data;
+
+        @call_user_func_array('array_multisort', $args);
+        return array_pop($args);
     }
 }

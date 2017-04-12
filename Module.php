@@ -73,7 +73,7 @@ class Module extends \yii\base\Module
         $this->processLanguage();
         $this->buildControllerMap();
         $this->setDependencies();
-
+        $this->registerTranslations();
 
         //$this->dataPath = Yii::getAlias($this->dataPath);
     }
@@ -148,5 +148,19 @@ class Module extends \yii\base\Module
         }
         Yii::warning('Access to debugger is denied due to IP address restriction. The requesting IP address is ' . $ip, __METHOD__);
         return FALSE;
+    }
+
+    public function registerTranslations()
+    {
+        Yii::$app->i18n->translations['modules/crelish/*'] = [
+            'class' => 'yii\i18n\PhpMessageSource',
+            'sourceLanguage' => 'en-US',
+            'basePath' => '@app/modules/crelish/messages',
+
+            //'fileMap' => [
+            //    'modules/foo/validation' => 'validation.php',
+            //    'modules/foo/form' => 'form.php'
+            //],
+        ];
     }
 }

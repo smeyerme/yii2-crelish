@@ -1,35 +1,43 @@
 <?php
+
 namespace giantbits\crelish\plugins\matrixconnector;
 
+use giantbits\crelish\components\CrelishBaseContentProcessor;
 use giantbits\crelish\components\CrelishJsonDataProvider;
 use yii\base\Component;
+use yii\web\View;
 
-class MatrixConnectorContentProcessor extends Component {
-  public $data;
+class MatrixConnectorContentProcessor extends Component
+{
+    public $data;
 
-  public static function processData($caller, $key, $data, &$processedData) {
+    public static function processData($key, $data, &$processedData)
+    {
 
-    if (empty($processedData[$key])) {
-      $processedData[$key] = [];
-    }
-
-    if ($data) {
-      foreach ($data as $section => $subContent) {
-
-        if (empty($processedData[$key][$section])) {
-          $processedData[$key][$section] = '';
+        if (empty($processedData[$key])) {
+            $processedData[$key] = [];
         }
 
-        foreach ($subContent as $subContentdata) {
-          $sourceData = new CrelishJsonDataProvider($subContentdata['ctype'], [], $subContentdata['uuid']);
+        if ($data) {
+            foreach ($data as $section => $subContent) {
 
-          // @todo: nesting again.
-          $sourceDataOut = $caller->processContent($subContentdata['ctype'], $sourceData->one());
-          $sourceDataOut['parentUuid'] = $processedData['uuid'];
+                if (empty($processedData[$key][$section])) {
+                    $processedData[$key][$section] = '';
+                }
 
-          $processedData[$key][$section] .= $caller->renderPartial($subContentdata['ctype'] . '.twig', ['data' => $sourceDataOut]);
+                foreach ($subContent as $subContentdata) {
+                    // @todo: nesting again.
+                    if ($data && !empty($subContentdata['ctype']) && !empty($subContentdata['uuid'])) {
+                        $fileSource = \Yii::getAlias('@app/workspace/data') . DIRECTORY_SEPARATOR . $subContentdata['ctype'] . DIRECTORY_SEPARATOR . $subContentdata['uuid'] . '.json';
+                        $sourceData = Json::decode(file_get_contents($fileSource));
+                    }
+
+                    $sourceDataOut = CrelishBaseContentProcessor::processContent($subContentdata['ctype'], $sourceData);
+                    $sourceDataOut['parentUuid'] = $processedData['uuid'];
+
+                    $processedData[$key][$section] .= \Yii::$app->controller->renderPartial($subContentdata['ctype'] . '.twig', ['data' => $sourceDataOut]);
+                }
+            }
         }
-      }
     }
-  }
 }

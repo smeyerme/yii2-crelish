@@ -46,14 +46,14 @@ class Bootstrap implements BootstrapInterface {
                 'i18n' => [
                     'class' => 'yii\i18n\I18N',
                     'translations' => [
-                        'app*' => [
+                        'crelish*' => [
                             'class' => 'yii\i18n\PhpMessageSource',
                             'basePath' => '@app/messages',
                             'sourceLanguage' => 'en-US',
                             'fileMap' => [
                                 'app' => 'app.php',
                                 'app.error' => 'error.php',
-                                'app.crelish' => 'crelish.php'
+                                'crelish' => 'crelish.php'
                             ],
                             'on missingTranslation' => [
                                 CrelishI18nEventHandler::class,

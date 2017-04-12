@@ -63,10 +63,10 @@ class AssetController extends CrelishBaseController
                 'class' => 'yii\grid\CheckboxColumn'
             ],
             [
-                'label' => \Yii::t('app.crelish', 'Preview'),
+                'label' => \Yii::t('crelish', 'Preview'),
                 'format' => 'raw',
                 'value' => function ($model) {
-                    $preview = \Yii::t('app.crelish', 'n/a');
+                    $preview = \Yii::t('crelish', 'n/a');
 
                     switch ($model['mime']){
                         case 'image/jpeg':

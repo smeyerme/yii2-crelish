@@ -6,7 +6,7 @@ $(document).ready(function () {
         $(this).closest('.c-alerts__alert').hide();
     });
 
-    $('.btn-cancel-ok').on('click', function (e) {
+    $('.btn-cancel-proceed').on('click', function (e) {
         e.preventDefault();
         window.location.href = $(this).data('href');
     });
@@ -14,5 +14,10 @@ $(document).ready(function () {
     $('td input[type="checkbox"]').on("click", function (e) {
         e.stopPropagation();
         return true;
-    })
+    });
+
+    $(document).on("click", ".open-back-modal", function () {
+        var targetUrl = $(this).data('href');
+        $(".btn-cancel-proceed").attr("data-href", targetUrl);
+    });
 });

@@ -1,36 +1,36 @@
 <?php
+
 namespace giantbits\crelish\plugins\assetconnector;
 
-use giantbits\crelish\components\CrelishJsonDataProvider;
 use yii\base\Component;
+use yii\helpers\Json;
 
 class AssetConnectorContentProcessor extends Component
 {
-  public $data;
+    public $data;
 
-  public static function processData($caller, $key, $data, &$processedData)
-  {
-    if (empty($processedData[$key])) {
-      $processedData[$key] = [];
+    public static function processData($key, $data, &$processedData)
+    {
+        if (empty($processedData[$key])) {
+            $processedData[$key] = [];
+        }
+
+        if (is_array($data) && sizeOf($data) > 0) {
+            $fileSource = \Yii::getAlias('@app/workspace/data') . DIRECTORY_SEPARATOR . 'asset' . DIRECTORY_SEPARATOR . $data['uuid'] . '.json';
+            $processedData[$key] = Json::decode(file_get_contents($fileSource));
+        }
     }
 
-    if (is_array($data) && sizeOf($data) > 0) {
-	    $include = new CrelishJsonDataProvider('asset', [], $data['uuid']);
-	    $processedData[$key] = $include->one();
-  	}
-  }
+    public static function processJson($key, $data, &$processedData)
+    {
 
-  public static function processJson($caller, $key, $data, &$processedData)
-  {
+        if (empty($processedData[$key])) {
+            $processedData[$key] = [];
+        }
 
-    if (empty($processedData[$key])) {
-      $processedData[$key] = [];
+        if ($data && !empty($data['uuid'])) {
+            $fileSource = \Yii::getAlias('@app/workspace/data') . DIRECTORY_SEPARATOR . 'asset' . DIRECTORY_SEPARATOR . $data['uuid'] . '.json';
+            $processedData[$key] = Json::decode(file_get_contents($fileSource));
+        }
     }
-
-    if ($data && !empty($data['ctype'])) {
-      $sourceData = new CrelishJsonDataProvider($data['ctype'], [], $data['uuid']);
-
-      $processedData[$key] = $sourceData->one();
-    }
-  }
 }
