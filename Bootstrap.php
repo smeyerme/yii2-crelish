@@ -5,9 +5,11 @@ namespace giantbits\crelish;
 use giantbits\crelish\components\CrelishI18nEventHandler;
 use \yii\base\BootstrapInterface;
 
-class Bootstrap implements BootstrapInterface {
+class Bootstrap implements BootstrapInterface
+{
     /** @param \yii\web\Application $app */
-    public function bootstrap($app) {
+    public function bootstrap($app)
+    {
 
         if ($app instanceof \yii\web\Application) {
 
@@ -28,7 +30,9 @@ class Bootstrap implements BootstrapInterface {
                             'options' => [
                                 'auto_reload' => TRUE,
                             ],
-                            'globals' => ['html' => '\yii\helpers\Html'],
+                            'globals' => [
+                                'html' => '\yii\helpers\Html'
+                            ],
                             'functions' => array(
                                 't' => 'Yii::t',
                             )

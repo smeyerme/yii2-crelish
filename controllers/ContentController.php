@@ -31,7 +31,6 @@ class ContentController extends CrelishBaseController {
      * @return [type] [description]
      */
     public function init() {
-        parent::init();
 
         $this->ctype = (!empty(\Yii::$app->getRequest()
             ->getQueryParam('ctype'))) ? \Yii::$app->getRequest()
@@ -39,6 +38,9 @@ class ContentController extends CrelishBaseController {
         $this->uuid = (!empty(\Yii::$app->getRequest()
             ->getQueryParam('uuid'))) ? \Yii::$app->getRequest()
             ->getQueryParam('uuid') : NULL;
+
+
+        return parent::init();
     }
 
     /**

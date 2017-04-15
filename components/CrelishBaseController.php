@@ -42,23 +42,10 @@ class CrelishBaseController extends Controller {
             $oldData = [];
             // Load old data.
             if (!empty($this->model->uuid)) {
-                $oldData = Json::decode(file_get_contents(\Yii::getAlias('@app/workspace/data/') . DIRECTORY_SEPARATOR . $this->ctype . DIRECTORY_SEPARATOR . $this->model->uuid . '.json'));
+                $oldData = $this->model->attributes();
             }
+
             $attributes = $_POST['CrelishDynamicJsonModel'] + $oldData;
-            foreach ($attributes as $key => $val) {
-                foreach ($this->model->fieldDefinitions->fields as $field) {
-                    if ($field->key == $key) {
-                        if (isset($field->transform)) {
-                            if (!isset($oldData[$key]) || $oldData[$key] != $attributes[$key]) {
-                                //we need to transform!
-                                $transformer = 'giantbits\\crelish\\components\\transformer\\CrelishFieldTransformer' . ucfirst(strtolower($field->transform));
-                                $transformer::transform($attributes[$key]);
-                            }
-                        }
-                        break;
-                    }
-                }
-            }
             $this->model->attributes = $attributes;
 
             if ($this->model->validate()) {
@@ -84,26 +71,16 @@ class CrelishBaseController extends Controller {
         ob_start();
         $form = ActiveForm::begin([
             'id' => $settings['id'],
-            //'layout' => 'horizontal',
         ]);
 
-        // Start output.
         echo Html::beginTag("div", ['class' => $settings['outerClass']]);
-
-        // Display messages.
-        foreach (\Yii::$app->session->getAllFlashes() as $key => $message) {
-            //echo '<div class="c-alerts__alert c-alerts__alert--'.$key.'">'.$message.'</div>';
-        }
-
         echo Html::beginTag("div", ['class' => 'o-grid']);
 
         // TODO: This has to be dynamicaly handled like it's done in frontend.
-        //  Also the tabs and grouping mechanics have to be implemented.
 
         // Get the tabs (there has to be at least one).
         $tabs = $this->model->fieldDefinitions->tabs;
 
-        //var_dump($tabs);
         foreach ($tabs as $tab) {
             // Loop through tabs.
             //check tab overrides

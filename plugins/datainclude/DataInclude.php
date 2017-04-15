@@ -1,157 +1,97 @@
 <?php
+
 namespace giantbits\crelish\plugins\datainclude;
 
 use giantbits\crelish\components\CrelishDynamicJsonModel;
 use giantbits\crelish\components\CrelishJsonDataProvider;
 use Underscore\Types\Arrays;
 use yii\base\Widget;
-use yii\helpers\Html;
 use yii\helpers\Json;
-use yii\helpers\Url;
-use yii\grid\ActionColumn;
 
 class DataInclude extends Widget
 {
-  public $data;
-  public $formKey;
-  public $field;
+    public $data;
+    public $rawData;
+    public $formKey;
+    public $field;
+    public $value;
+    private $info;
+    private $selectData = [];
+    private $includeDataType;
 
-  public function init()
-  {
-    parent::init();
+    public function init()
+    {
+        parent::init();
 
-    if (!empty($this->data)) {
-      $this->data = $this->processData($this->data);
-    } else {
-      $this->data = Json::encode([]);
-    }
-  }
-
-  private function processData($data)
-  {
-    $processedData = [];
-    $info = [];
-
-    if(Arrays::has($data, 'ctype')) {
-      $dataItem = new CrelishJsonDataProvider($data['ctype'], [], $data['uuid']);
-      $itemData = $dataItem->one();
-
-      foreach ($dataItem->definitions->fields as $field) {
-        if ($field->visibleInGrid) {
-          if (!empty($field->label) && !empty($itemData[$field->key])) {
-            $info[] = ['label' => $field->label, 'value' => $itemData[$field->key]];
-          }
+        if (!empty($this->data)) {
+            $this->rawData = $this->data;
+            $this->data = $this->processData($this->data);
+        } else {
+            $this->data = Json::encode([]);
+            $this->rawData = [];
         }
-      }
-
-      if (!empty($itemData['uuid']) && !empty($itemData['ctype'])) {
-        $processedData = [
-          'uuid' => $data['uuid'],
-          'ctype' => $data['ctype'],
-          'info' => $info
-        ];
-      }
     }
 
-    return Json::encode($processedData);
-  }
+    private function processData($data)
+    {
+        $processedData = [];
 
-  public function run()
-  {
-    $elementType = !empty($_GET['cet']) ? $_GET['cet'] : 'page';
-    $modelProvider = new CrelishJsonDataProvider($elementType, [], null);
-    $filterModel = new CrelishDynamicJsonModel(['ctype' => $elementType]);
+        if (Arrays::has($data, 'ctype')) {
 
-    $label = $this->field->label;
+            $typeDefinitions = CrelishDynamicJsonModel::loadElementDefinition($data['ctype']);
 
-    $out = <<<EOT
-    <div class="form-group field-crelishdynamicmodel-body required">
-      <label class="control-label" for="crelishdynamicmodel-body">$label</label>
-      <div class="">
-        <datainclude_$this->formKey></datainclude_$this->formKey>
-        <div class="help-block help-block-error "></div>
-      </div>
-    </div>
+            $dataSource = \Yii::getAlias('@app/workspace/data/') . DIRECTORY_SEPARATOR . $data['ctype'] . DIRECTORY_SEPARATOR . $data['uuid'] . '.json';
+            $itemData = Json::decode(file_get_contents($dataSource));
 
-    <div class="modal fade matrix-modal-$this->formKey" tabindex="-1" role="dialog" aria-labelledby="matrix-modal-$this->formKey" id="matrix-modal-$this->formKey">
-      <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-          <div class="modal-header">
-            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-            <h4 class="modal-title" id="myModalLabel">Content selection</h4>
-          </div>
-          <div class="modal-body">
-EOT;
+            // Load datasource.
+            $this->includeDataType = $this->field->config->ctype;
+            $dataSource = new CrelishJsonDataProvider($this->field->config->ctype, ['sort'=>['by'=>['systitle','asc']]]);
+            $dataSource = $dataSource->rawAll();
 
-
-    $out .= $this->render('matrix.twig', [
-      'dataProvider' => $modelProvider->raw(),
-      'filterModel ' => $filterModel,
-      'columns' => [
-        'systitle', [
-          'class' => ActionColumn::className(),
-          'template' => '{update}',
-          'buttons' => [
-            'update' => function ($url, $model) {
-              return Html::a('<span class="glyphicon glyphicon-plus"></span>', $url, [
-                'title' => \Yii::t('app', 'Add'),
-                'data-pjax' => '0',
-                'data-content' => Json::encode(['uuid' => $model['uuid'], 'ctype' => $model['ctype']])
-              ]);
+            foreach ($dataSource as $entry) {
+                $this->selectData[$entry['uuid']] = $entry['systitle'];
             }
-          ]
-        ]
-      ],
-      'ctype' => $elementType,
-      'formKey' => $this->formKey
-    ]);
 
-    $out .= <<<EOT
-          </div>
-        </div>
-      </div>
-    </div>
+            foreach ($typeDefinitions->fields as $field) {
+                if ($field->visibleInGrid) {
+                    if (!empty($field->label) && !empty($itemData[$field->key])) {
+                        $this->info[$field->key] = $itemData[$field->key];
+                    }
+                }
+            }
 
-    <script type="riot/tag">
-      <datainclude_$this->formKey>
-        <div class="o-grid">
-          <div class="o-grid__cell">
-            { valueLabel }
-            <div class="c-card__content c-card__content--divider c-heading">
-              <span class="c-input-group pull-right">
-                <button class="c-button gc-bc--palette-wetasphalt c-button--xsmall"><i class="glyphicon glyphicon-pencil"></i></button>
-                <button class="c-button gc-bc--palette-pomgranate c-button--xsmall"><i class="glyphicon glyphicon-trash"></i></button>
-              </span>
-            </div>
-            <div class="c-card__content">
-              <dl>
-                <span >
-                  <dd>{ value }</dd>
-                </span>
-              </dl>
-            </div>
+            if (!empty($itemData['uuid'])) {
+                $processedData = [
+                    'uuid' => $data['uuid'],
+                    'ctype' => $data['ctype'],
+                ];
+            }
+        }
 
-            <button type="button" class="c-button c-button--ghost-primary c-button--block gc-mt--1" data-target=".matrix-modal-$this->formKey" onclick="openMatrixModal('{ item }')">Select content</button>
-          </div>
-        </div>
-        <input type="hidden" name="CrelishDynamicJsonModel[$this->formKey]" id="CrelishDynamicJsonModel_$this->formKey" value="{ JSON.stringify(data) }" />
+        return Json::encode($processedData);
+    }
 
-        // Logic goes here.
-        var app = this
-        app.data = opts.data
-        if( app.data.info )
-          app.valueLabel = app.data.info[0].value;
-          
-      </datainclude_$this->formKey>
-    </script>
+    public function run()
+    {
 
-    <script>
-      riot.mount('datainclude_$this->formKey', {
-        data: $this->data
-      });
-    </script>
-EOT;
+        $isRequired = Arrays::find($this->field->rules, function($rule){
+            foreach($rule as $set){
+                if($set == 'required') {
+                    return true;
+                }
+            }
+            return false;
+        });
 
-    return $out;
-  }
+        return $this->render('datainclude.twig', [
+            'formKey' => $this->formKey,
+            'field' => $this->field,
+            'required' => ($isRequired) ? 'required' : '',
+            'rawData' => Json::encode($this->rawData),
+            'selectData' => $this->selectData,
+            'selectValue' => (!empty($this->rawData['uuid'])) ? $this->rawData['uuid'] : '',
+            'info' => $this->info,
+            'includeDataType' => $this->includeDataType
+        ]);
+    }
 }
