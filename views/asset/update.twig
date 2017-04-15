@@ -27,7 +27,7 @@
 
                 </div>
                 <div class="description gc-box--h-60 gc-to--ellipsis">
-                    {{ form.field(model, 'description').textarea({'rows':6}).label('') | raw }}
+                    {{ form.field(model, 'description', {'options': {'style': 'margin-bottom: 0px;' }}).textarea({'rows':6 }).label('') | raw }}
                 </div>
             </div>
         </div>
@@ -48,7 +48,7 @@
             </ul>
         </div>
 
-        {{ form.field(model, 'src', { 'inputOptions': { 'class': 'form-control disabled', 'disabled': 'disabled' }}) | raw }}
+        {{ form.field(model, 'src', { 'inputOptions': { 'class': 'form-control disabled', 'disabled': 'disabled'}}) | raw }}
 
     </div>
 </div>

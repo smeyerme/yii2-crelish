@@ -1,6 +1,5 @@
 <?php
 namespace giantbits\crelish\components\transformer;
-use giantbits\crelish\components\transformer\CrelishFieldBaseTransformer;
 
 /**
  *
@@ -13,11 +12,11 @@ class CrelishFieldTransformerDatetime extends CrelishFieldBaseTransformer {
 	 * @return [type]        [description]
 	 */
 	 public static function beforeSave(&$value) {
- 		$value = strtotime($value);
+ 		$value = (string) strtotime($value);
  	}
 
     
     public static function afterFind(&$value) {
-        $value = strftime("%d.%m.%Y", $value);
+        $value = strftime("%d.%m.%Y", (int) $value);
     }
 }
