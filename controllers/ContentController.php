@@ -59,10 +59,10 @@ class ContentController extends CrelishBaseController {
             'class' => 'yii\grid\CheckboxColumn'
           ]
         ];
+
         $columns = array_merge($checkCol, $modelProvider->columns);
 
         $rowOptions = function ($model, $key, $index, $grid) {
-            // update.html?ctype=page&uuid=21709e32-8b59-4ee5-91b5-974bcea0e354
             return ['onclick' => 'location.href="update.html?ctype=' . $model['ctype'] . '&uuid=' . $model['uuid'] .'";'];
         };
 

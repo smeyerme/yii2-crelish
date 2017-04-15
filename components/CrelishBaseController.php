@@ -108,6 +108,10 @@ class CrelishBaseController extends Controller {
 
                 foreach ($this->model->fieldDefinitions->fields as $field) {
 
+                    if(!property_exists($field, 'type')) {
+                        $field->type = "textInput";
+                    }
+
                     if (!in_array($field->key, $group->fields)) {
                         continue;
                     }

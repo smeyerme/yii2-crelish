@@ -267,16 +267,7 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
             $attributes[$field->key] = $rawData[$field->key];
         }
 
-
-
         $this->attributes = $attributes;
-
-        // Process data.
-
-
-
-
-
     }
 
     public static function loadElementDefinition($ctype)
@@ -294,6 +285,7 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
         $elementDefinition->fields[] = Json::decode('{ "label": "Updated", "key": "updated", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
         $elementDefinition->fields[] = Json::decode('{ "label": "Publish from", "key": "from", "type": "textInput", "visibleInGrid": true, "transform": "datetime", "rules": [["string", {"max": 128}]]}', false);
         $elementDefinition->fields[] = Json::decode('{ "label": "Publish to", "key": "to", "type": "textInput", "visibleInGrid": true, "transform": "datetime", "rules": [["string", {"max": 128}]]}', false);
+
         return $elementDefinition;
     }
 }
