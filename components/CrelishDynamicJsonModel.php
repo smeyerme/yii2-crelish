@@ -264,7 +264,9 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
                 }
             }
 
-            $attributes[$field->key] = $rawData[$field->key];
+            if(!empty( $rawData[$field->key] )){
+                $attributes[$field->key] = $rawData[$field->key];
+            }
         }
 
         $this->attributes = $attributes;

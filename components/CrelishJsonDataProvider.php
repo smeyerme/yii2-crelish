@@ -319,7 +319,7 @@ class CrelishJsonDataProvider extends Component {
             $this->definitions->fields[] = Json::decode('{ "label": "UUID", "key": "uuid", "type": "textInput", "visibleInGrid": false, "rules": [["string", {"max": 128}]], "options": {"disabled":true}}', FALSE);
             $this->definitions->fields[] = Json::decode('{ "label": "ctype", "key": "ctype", "type": "textInput", "visibleInGrid": false, "rules": [["string", {"max": 128}]], "options": {"disabled":true}}', FALSE);
             $this->definitions->fields = array_merge($this->definitions->fields, $elementStructure->fields);
-            $this->definitions->fields[] = Json::decode('{ "label": "State", "key": "state", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]], "options": {"disabled":true}}', FALSE);
+            $this->definitions->fields[] = Json::decode('{ "label": "State", "key": "state", "type": "textInput", "visibleInGrid": true, "transform": "state", "rules": [["string", {"max": 128}]], "options": {"disabled":true}}', FALSE);
 
             if (property_exists($elementStructure, 'sortDefault')) {
                 $this->definitions->sortDefault = $elementStructure->sortDefault;
