@@ -20,7 +20,6 @@
 <script>
 
     $(document).ready(function () {
-        var preFix = (window.location.href.indexOf("?") === -1) ? '?' : '&';
 
         $('#cr_content_filter').on("blur", function (e) {
             if (window.location.href.indexOf('cr_content_filter') >= 0) {
@@ -29,6 +28,7 @@
                     container: '#contentList'
                 });
             } else {
+                var preFix = (window.location.href.indexOf("?") === -1) ? '?' : '&';
                 $.pjax({
                     url: window.location.href + preFix + "cr_content_filter=" + $(this).val(),
                     container: '#contentList'
@@ -44,6 +44,7 @@
                         container: '#contentList'
                     });
                 } else {
+                    var preFix = (window.location.href.indexOf("?") === -1) ? '?' : '&';
                     $.pjax({
                         url: window.location.href + preFix + "cr_content_filter=" + $(this).val(),
                         container: '#contentList'
