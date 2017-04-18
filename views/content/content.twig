@@ -1,6 +1,7 @@
 {{ use('/yii/grid/GridView') }}
 {{ use('/giantbits/crelish/widgets') }}
 {{ use('/yii/widgets/Pjax') }}
+
 {{ pjax_begin({'id':'contentList', 'enablePushState': true}) }}
 <div class="o-grid">
     <div class="o-grid__cell o-grid__cell--width-20">
@@ -11,7 +12,68 @@
     </div>
     <div class="o-grid__cell">
         <h6>{{ t('crelish', 'Content') }}</h6>
-        {{ grid_view_widget({'dataProvider': dataProvider, 'columns': columns, 'filterSelector': '.cr-content-search' , 'tableOptions': {'class':'table table-striped'}, 'rowOptions': rowOptions , 'formatter': {'class': 'yii\\i18n\\Formatter', 'nullDisplay': ''}}) | raw }}
+        {{ html.beginForm('', 'POST', {'id': 'grid-form'}) | raw }}
+        {{ grid_view_widget({'dataProvider': dataProvider, 'columns': columns, 'filterSelector': '.cr-content-search' , 'tableOptions': {'class':'table table-striped'}, 'rowOptions': rowOptions , 'formatter': {'class': 'yii\\i18n\\Formatter', 'nullDisplay': false, 'dateFormat': 'dd.MM.yyyy'}}) | raw }}
+        {{ html.endForm() | raw }}
     </div>
 </div>
+<script>
+
+    $(document).ready(function () {
+
+        $('#cr_content_filter').on("blur", function (e) {
+            if (window.location.href.indexOf('cr_content_filter') >= 0) {
+                $.pjax({
+                    url: window.location.href.replace(/(cr_content_filter=).*?(&|$)/, '$1' + $(this).val() + '$2'),
+                    container: '#contentList'
+                });
+            } else {
+                var preFix = (window.location.href.indexOf("?") === -1) ? '?' : '&';
+                $.pjax({
+                    url: window.location.href + preFix + "cr_content_filter=" + $(this).val(),
+                    container: '#contentList'
+                });
+            }
+        });
+
+        $('#cr_content_filter').on("keypress", function (e) {
+            if (e.which == 10 || e.which == 13) {
+                if (window.location.href.indexOf('cr_content_filter') >= 0) {
+                    $.pjax({
+                        url: window.location.href.replace(/(cr_content_filter=).*?(&|$)/, '$1' + $(this).val() + '$2'),
+                        container: '#contentList'
+                    });
+                } else {
+                    var preFix = (window.location.href.indexOf("?") === -1) ? '?' : '&';
+                    $.pjax({
+                        url: window.location.href + preFix + "cr_content_filter=" + $(this).val(),
+                        container: '#contentList'
+                    });
+                }
+            }
+        });
+
+        $("input[name='selection[]'], .select-on-check-all").on("change", function(){
+            if($("#grid-form").serializeArray().length > 1){
+                $('.btn-delete-grid').removeClass("hidden");
+            } else {
+                $('.btn-delete-grid').addClass("hidden");
+            }
+        });
+
+        $(".btn-delete-grid").on("click", function() {
+            $('#grid-form').submit();
+        });
+
+        $('td input[type="checkbox"]').parent().on("click", function (e) {
+            e.stopPropagation();
+            return true;
+        });
+
+        $('td input[type="checkbox"]').on("click", function (e) {
+            e.stopPropagation();
+            return true;
+        });
+    });
+</script>
 {{ pjax_end() }}

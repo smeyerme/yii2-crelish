@@ -14,7 +14,8 @@
     <div class="o-grid__cell gc-ta--center gc-p--1" id="dropZone">
         <form action="{{ url('crelish/asset/upload.html') }}"
               class="dropzone"
-              id="crelish-drop-zone"></form>
+              id="crelish-drop-zone">
+        </form>
     </div>
 </div>
 <div class="o-grid gc-bc--palette-clouds">
@@ -52,33 +53,20 @@
 
         },
         accept: function (file, done) {
+            console.log(file.name);
+            /*
             if (file.name == "justinbieber.jpg") {
                 done("Naha, you don't.");
             }
             else {
                 done();
-            }
+            }*/
+            done();
         }
     };
 
     $("#assetList").on("pjax:end", function () {
-        $("img.lazy").lazyload({
-            placeholder: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEUAAACnej3aAAAAAXRSTlMAQObYZgAAAApJREFUCNdjYAAAAAIAAeIhvDMAAAAASUVORK5CYII=',
-            event: "doIt"
-        });
-    });
 
-    $("img.lazy").lazyload({
-        placeholder: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEUAAACnej3aAAAAAXRSTlMAQObYZgAAAApJREFUCNdjYAAAAAIAAeIhvDMAAAAASUVORK5CYII=',
-        event: "doIt"
-    });
-
-    $(document).on('ps-scroll-x', function () {
-        clearTimeout($.data(this, 'scrollTimer'));
-        $.data(this, 'scrollTimer', setTimeout(function () {
-            // do something
-            $("img.lazy").trigger("doIt");
-        }, 250));
     });
 
 </script>

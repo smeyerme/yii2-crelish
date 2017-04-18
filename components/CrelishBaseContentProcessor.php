@@ -18,12 +18,12 @@ class CrelishBaseContentProcessor extends Component
 
     public static function processData($key, $data, &$processedData)
     {
-
+        $processedData = $processedData;
     }
 
     public static function processJson($key, $data, &$processedData)
     {
-
+        $processedData = $processedData;
     }
 
     public static function processContent($ctype, $data)

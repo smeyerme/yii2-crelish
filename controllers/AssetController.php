@@ -47,11 +47,13 @@ class AssetController extends CrelishBaseController
 
     public function init()
     {
+        $this->enableCsrfValidation = false;
         parent::init();
     }
 
     public function actionIndex()
     {
+        $this->enableCsrfValidation = false;
         $filter = null;
         if (!empty($_GET['cr_content_filter'])) {
             $filter = ['freesearch' => $_GET['cr_content_filter']];
@@ -132,39 +134,24 @@ class AssetController extends CrelishBaseController
 
     public function actionUpload()
     {
-
         $file = UploadedFile::getInstanceByName('file');
+
 
         if ($file) {
             $destName = time() . '_' . $file->name;
-            $targetFile = \Yii::getAlias('@webroot') . DIRECTORY_SEPARATOR . '_lib' . DIRECTORY_SEPARATOR . $destName;
+            $targetFile = \Yii::getAlias('@webroot') . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . $destName;
             $file->saveAs($targetFile);
 
-            //$filePath = \Yii::getAlias('@app/workspace/elements') . DIRECTORY_SEPARATOR . 'asset' . '.json';
-            //$elementDefinition = Json::decode(file_get_contents($filePath), false);
-
-            // Add core fields.
-            //$elementDefinition->fields[] = Json::decode('{ "label": "UUID", "key": "uuid", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]], "options": {"disabled":true}}', false);
-            //$elementDefinition->fields[] = Json::decode('{ "label": "Path", "key": "path", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
-            //$elementDefinition->fields[] = Json::decode('{ "label": "Slug", "key": "slug", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
-            //$elementDefinition->fields[] = Json::decode('{ "label": "State", "key": "state", "type": "dropDownList", "visibleInGrid": true, "rules": [["required"], ["string", {"max": 128}]], "options": {"prompt":"Please set state"}, "items": {"0":"Offline", "1":"Draft", "2":"Online", "3":"Archived"}}', false);
-
-            ///$fields = [];
-
-            //foreach ($elementDefinition->fields as $field) {
-            //  array_push($fields, $field->key);
-            //}
-
             $model = new CrelishDynamicJsonModel([], ['ctype' => 'asset']);
-            $model->identifier = 'asset';
             $model->systitle = $destName;
             $model->title = $destName;
-            $model->src = \Yii::getAlias('@web') . '/' . '_lib' . '/' . $destName;
-            $model->mime = $file->type;
+            $model->src = \Yii::getAlias('@web') . '/' . 'uploads' . '/' . $destName;
+            $model->mime = mime_content_type($targetFile);
             $model->size = $file->size;
             $model->state = 2;
             $model->save();
 
+            /*
             try {
                 $domColor = ColorThief::getColor($targetFile, 20);
                 $palColor = ColorThief::getPalette(\Yii::getAlias('@webroot') . DIRECTORY_SEPARATOR . '_lib' . DIRECTORY_SEPARATOR . $destName);
@@ -176,16 +163,16 @@ class AssetController extends CrelishBaseController
             } catch (Exception $e) {
                 \Yii::$app->session->setFlash('secondary', 'Color theft could not be completed. (Image too large?)');
             }
+            */
         }
         return false;
     }
 
     public function actionDelete()
     {
-        $id = !empty(\Yii::$app->getRequest()->getQueryParam('uuid')) ? \Yii::$app->getRequest()->getQueryParam('uuid') : null;
-        $modelProvider = new CrelishJsonDataProvider('asset', [], $id);
-        $model = $modelProvider->one();
-        if (@unlink(\Yii::getAlias('@webroot') . $model['src']) || !file_exists(\Yii::getAlias('@webroot') . $model['src'])) {
+        $uuid = !empty(\Yii::$app->getRequest()->getQueryParam('uuid')) ? \Yii::$app->getRequest()->getQueryParam('uuid') : null;
+        $modelProvider = new CrelishDynamicJsonModel([], ['ctype'=>'asset', 'uuid' => $uuid]);
+        if (@unlink(\Yii::getAlias('@webroot') . $modelProvider->src) || !file_exists(\Yii::getAlias('@webroot') . $modelProvider->src)) {
             $modelProvider->delete();
             \Yii::$app->session->setFlash('success', 'Asset deleted successfully...');
             header("Location: " . Url::to(['asset/index']));
@@ -193,7 +180,7 @@ class AssetController extends CrelishBaseController
         };
 
         \Yii::$app->session->setFlash('danger', 'Asset could not be deleted...');
-        header("Location: " . Url::to(['asset/index', ['uuid' => $model['uuid']]]));
+        header("Location: " . Url::to(['asset/index', ['uuid' => $modelProvider->uuid]]));
         exit(0);
     }
 }

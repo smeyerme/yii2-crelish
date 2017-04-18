@@ -2,6 +2,7 @@
 namespace giantbits\crelish\components;
 
 use yii\bootstrap\ActiveForm;
+use yii\i18n\Formatter;
 use yii\web\Controller;
 use yii\helpers\Json;
 use yii\helpers\Html;
@@ -17,6 +18,10 @@ class CrelishBaseController extends Controller {
     }
 
     protected function buildForm($action = 'update', $settings = array()) {
+        $formatter = new Formatter();
+        $formatter->dateFormat ="dd.MM.yyyy";
+        $formatter->nullDisplay = "";
+
         //default settings
         $defaults = array(
             'id' => 'content-form',
@@ -68,6 +73,16 @@ class CrelishBaseController extends Controller {
             }
         }
 
+        // Last changes to model before form render. (Format date etc.)
+        foreach ($this->model->fieldDefinitions->fields as $field) {
+            if(!empty($field->format)){
+
+                if($field->format == 'date'){
+                    $this->model->{$field->key} = $formatter->asDate($this->model->{$field->key});
+                }
+            }
+        }
+
         ob_start();
         $form = ActiveForm::begin([
             'id' => $settings['id'],
@@ -77,7 +92,6 @@ class CrelishBaseController extends Controller {
         echo Html::beginTag("div", ['class' => 'o-grid']);
 
         // TODO: This has to be dynamicaly handled like it's done in frontend.
-
         // Get the tabs (there has to be at least one).
         $tabs = $this->model->fieldDefinitions->tabs;
 
@@ -107,6 +121,10 @@ class CrelishBaseController extends Controller {
                 echo Html::beginTag('div', ['class' => 'c-card__item']);
 
                 foreach ($this->model->fieldDefinitions->fields as $field) {
+
+                    if(!property_exists($field, 'type')) {
+                        $field->type = "textInput";
+                    }
 
                     if (!in_array($field->key, $group->fields)) {
                         continue;

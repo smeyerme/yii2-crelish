@@ -31,7 +31,7 @@ class Bootstrap implements BootstrapInterface
                                 'auto_reload' => TRUE,
                             ],
                             'globals' => [
-                                'html' => '\yii\helpers\Html'
+                                'html' => ['class' => '\yii\helpers\Html']
                             ],
                             'functions' => array(
                                 't' => 'Yii::t',

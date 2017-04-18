@@ -44,9 +44,8 @@
             </div>
             <div class="modal-footer gc-no-border gc-bc--palette-silver-light">
                 <button type="button" class="btn btn-default" data-dismiss="modal">{{ t('crelish', 'Cancel') }}</button>
-                <button type="button" class="btn btn-danger btn-ok" data-url="{{ url('crelish/content/delete.html') }}"
-                        data-uuid="{{ app.getRequest.getQueryParam('uuid') }}"
-                        data-model="{{ app.getRequest.getQueryParam('type') }}">{{ t('crelish', 'Delete') }}
+                <button type="button" class="btn btn-danger btn-ok" data-url="/crelish/{{ app.controller.id }}/delete.html" data-uuid="{{ app.getRequest.getQueryParam('uuid') }}"
+                        data-model="{{ app.getRequest.getQueryParam('ctype') }}" onclick="window.location.href=$(this).data('url') +'?uuid=' + $(this).data('uuid') + '&ctype=' + $(this).data('model')">{{ t('crelish', 'Delete') }}
                 </button>
             </div>
         </div>

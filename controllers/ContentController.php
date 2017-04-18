@@ -49,6 +49,14 @@ class ContentController extends CrelishBaseController {
      */
     public function actionIndex() {
         $filter = null;
+
+        if(!empty($_POST['selection'])) {
+            foreach ($_POST['selection'] as $selection){
+                $delModel = new CrelishDynamicJsonModel([], ['ctype'=>$this->ctype, 'uuid'=>$selection]);
+                $delModel->delete();
+            }
+        }
+
         if (!empty($_GET['cr_content_filter'])) {
             $filter = ['freesearch' => $_GET['cr_content_filter']];
         }
@@ -59,10 +67,10 @@ class ContentController extends CrelishBaseController {
             'class' => 'yii\grid\CheckboxColumn'
           ]
         ];
+
         $columns = array_merge($checkCol, $modelProvider->columns);
 
         $rowOptions = function ($model, $key, $index, $grid) {
-            // update.html?ctype=page&uuid=21709e32-8b59-4ee5-91b5-974bcea0e354
             return ['onclick' => 'location.href="update.html?ctype=' . $model['ctype'] . '&uuid=' . $model['uuid'] .'";'];
         };
 
@@ -108,23 +116,11 @@ class ContentController extends CrelishBaseController {
      * @return [type] [description]
      */
     public function actionDelete() {
-        $ctype = \Yii::$app->request->post('ctype');
-        $uuid = \Yii::$app->request->post('uuid');
+        $ctype = \Yii::$app->request->get('ctype');
+        $uuid = \Yii::$app->request->get('uuid');
 
-        // Build form for type.
-        $filePath = \Yii::getAlias('@app/workspace/data/' . $ctype) . DIRECTORY_SEPARATOR . $uuid . '.json';
-
-        $result = unlink($filePath); // or you can set for test -> false;
-        $return_json = ['status' => 'error'];
-        if ($result == TRUE) {
-            $return_json = [
-                'status' => 'success',
-                'message' => 'successfully deleted',
-                'redirect' => Url::toRoute(['content/index'])
-            ];
-        }
-        \Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
-
-        return $return_json;
+        $model = new CrelishDynamicJsonModel([], ['ctype'=>$ctype, 'uuid'=>$uuid]);
+        $model->delete();
+        $this->redirect('/crelish/content/index.html');
     }
 }

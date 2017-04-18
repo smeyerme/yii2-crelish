@@ -3,6 +3,7 @@
 namespace giantbits\crelish\controllers;
 
 use giantbits\crelish\components\CrelishBaseController;
+use giantbits\crelish\components\CrelishJsonDataProvider;
 use yii\filters\AccessControl;
 use yii\helpers\FileHelper;
 
@@ -47,6 +48,28 @@ class SettingsController extends CrelishBaseController
   {
     \Yii::$app->cache->flush();
     return $this->redirect('/crelish/settings/index', 302);
+  }
+
+  public function actionRebuildcache() {
+      \Yii::$app->cache->flush();
+
+      // Fetch data types.
+      $elements = new CrelishJsonDataProvider('elements', [
+          'key' => 'key',
+          'sort' => ['by' => ['label', 'asc']],
+          'limit' => 99
+      ]);
+
+      $importItems = $elements->all()['models'];
+
+      foreach ($importItems as $item) {
+          // Build cache for each.
+          $dataCache = new CrelishJsonDataProvider($item['key']);
+          $tmp = $dataCache->rawAll();
+      }
+
+      \Yii::$app->session->setFlash('success', 'Caches rebuild successfully...');
+      return $this->redirect('/crelish/settings/index', 302);
   }
 
   public function actionClearwebassets()

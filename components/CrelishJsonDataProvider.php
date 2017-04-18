@@ -319,12 +319,7 @@ class CrelishJsonDataProvider extends Component {
             $this->definitions->fields[] = Json::decode('{ "label": "UUID", "key": "uuid", "type": "textInput", "visibleInGrid": false, "rules": [["string", {"max": 128}]], "options": {"disabled":true}}', FALSE);
             $this->definitions->fields[] = Json::decode('{ "label": "ctype", "key": "ctype", "type": "textInput", "visibleInGrid": false, "rules": [["string", {"max": 128}]], "options": {"disabled":true}}', FALSE);
             $this->definitions->fields = array_merge($this->definitions->fields, $elementStructure->fields);
-            $this->definitions->fields[] = Json::decode('{ "label": "State", "key": "state", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]], "options": {"disabled":true}}', FALSE);
-            //$this->definitions->fields[] = Json::decode('{ "label": "Created", "key": "created", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
-            //$this->definitions->fields[] = Json::decode('{ "label": "Updated", "key": "updated", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
-            //$this->definitions->fields[] = Json::decode('{ "label": "Publish from", "key": "from", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
-            //$this->definitions->fields[] = Json::decode('{ "label": "Publish to", "key": "to", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
-            //$this->definitions->fields[] = Json::decode('{ "label": "Element", "key": "elementType", "type": "textInput", "visibleInGrid": false, "rules": [["string", {"max": 128}]]}', false);
+            $this->definitions->fields[] = Json::decode('{ "label": "State", "key": "state", "type": "textInput", "visibleInGrid": true, "transform": "state", "rules": [["string", {"max": 128}]], "options": {"disabled":true}}', FALSE);
 
             if (property_exists($elementStructure, 'sortDefault')) {
                 $this->definitions->sortDefault = $elementStructure->sortDefault;
@@ -395,7 +390,7 @@ class CrelishJsonDataProvider extends Component {
         foreach ($this->getDefinitions()->fields as $field) {
             if (!empty($field->visibleInGrid) && $field->visibleInGrid) {
                 $label = (property_exists($field, 'label') && !empty($field->label)) ? $field->label : null;
-                $format = (property_exists($field, 'format') && !empty($field->label)) ? $field->format : 'text';
+                $format = (property_exists($field, 'format') && !empty($field->format)) ? $field->format : 'text';
 
                 $columns[] = (property_exists($field, 'gridField') && !empty($field->gridField)) ? [ 'attribute' => $field->gridField, 'label' => $label, 'format' => $format ] : [ 'attribute' => $field->key, 'label' => $label, 'format' => $format ];
             }
@@ -442,22 +437,22 @@ class CrelishJsonDataProvider extends Component {
     }
 
     private function processFieldData($elementDefinition, $attr, $value, &$finalArr) {
+        $fieldType = 'textInput';
+
         // Get type of field.
-        $fieldType = Arrays::find($elementDefinition->fields, function ($value) use ($attr) {
+        $field = Arrays::find($elementDefinition->fields, function ($value) use ($attr) {
             return $value->key == $attr;
         });
 
         $transform = NULL;
-        if (!empty($fieldType) && is_object($fieldType)) {
-            $fieldType = $fieldType->type;
-            if (property_exists($fieldType, 'transform')) {
-                $transform = $fieldType->transform;
-            }
+        if (!empty($field) && is_object($field)) {
+            $fieldType = (property_exists($field, 'type')) ? $field->type : 'textInput';
+            $transform = (property_exists($field, 'transform')) ? $field->transform : null;
         }
 
         // Get processor class.
         $processorClass = 'giantbits\crelish\plugins\\' . strtolower($fieldType) . '\\' . ucfirst($fieldType) . 'ContentProcessor';
-        $transformClass = 'giantbits\crelish\components\transformer\CrelishFieldTransformer\\' . ucfirst($transform);
+        $transformClass = 'giantbits\crelish\components\transformer\CrelishFieldTransformer' . ucfirst($transform);
 
         if (strpos($fieldType, "widget_") !== FALSE) {
             $processorClass = str_replace("widget_", "", $fieldType) . 'ContentProcessor';

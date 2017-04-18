@@ -23,11 +23,14 @@ class DataInclude extends Widget
     {
         parent::init();
 
+
+        $this->includeDataType = $this->field->config->ctype;
+
         if (!empty($this->data)) {
             $this->rawData = $this->data;
             $this->data = $this->processData($this->data);
         } else {
-            $this->data = Json::encode([]);
+            $this->data = $this->processData("");
             $this->rawData = [];
         }
     }
@@ -36,35 +39,34 @@ class DataInclude extends Widget
     {
         $processedData = [];
 
-        if (Arrays::has($data, 'ctype')) {
+        $typeDefinitions = CrelishDynamicJsonModel::loadElementDefinition($this->includeDataType);
 
-            $typeDefinitions = CrelishDynamicJsonModel::loadElementDefinition($data['ctype']);
+        if (Arrays::has($data, 'uuid')) {
 
-            $dataSource = \Yii::getAlias('@app/workspace/data/') . DIRECTORY_SEPARATOR . $data['ctype'] . DIRECTORY_SEPARATOR . $data['uuid'] . '.json';
+            $dataSource = \Yii::getAlias('@app/workspace/data/') . DIRECTORY_SEPARATOR . $this->includeDataType . DIRECTORY_SEPARATOR . $data['uuid'] . '.json';
             $itemData = Json::decode(file_get_contents($dataSource));
-
-            // Load datasource.
-            $this->includeDataType = $this->field->config->ctype;
-            $dataSource = new CrelishJsonDataProvider($this->field->config->ctype, ['sort'=>['by'=>['systitle','asc']]]);
-            $dataSource = $dataSource->rawAll();
-
-            foreach ($dataSource as $entry) {
-                $this->selectData[$entry['uuid']] = $entry['systitle'];
-            }
-
-            foreach ($typeDefinitions->fields as $field) {
-                if ($field->visibleInGrid) {
-                    if (!empty($field->label) && !empty($itemData[$field->key])) {
-                        $this->info[$field->key] = $itemData[$field->key];
-                    }
-                }
-            }
 
             if (!empty($itemData['uuid'])) {
                 $processedData = [
                     'uuid' => $data['uuid'],
-                    'ctype' => $data['ctype'],
+                    'ctype' => $this->includeDataType,
                 ];
+            }
+        }
+
+        // Load datasource.
+        $dataSource = new CrelishJsonDataProvider($this->includeDataType, ['sort'=>['by'=>['systitle','asc']]]);
+        $dataSource = $dataSource->rawAll();
+
+        foreach ($dataSource as $entry) {
+            $this->selectData[$entry['uuid']] = $entry['systitle'];
+        }
+
+        foreach ($typeDefinitions->fields as $field) {
+            if ($field->visibleInGrid) {
+                if (!empty($field->label) && !empty($itemData[$field->key])) {
+                    $this->info[$field->key] = $itemData[$field->key];
+                }
             }
         }
 

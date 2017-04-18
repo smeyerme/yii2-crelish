@@ -20,12 +20,11 @@
 </nav>
 <script>
     $(document).ready(function () {
-        var preFix = (window.location.href.indexOf("?") >= 0) ? '&' : '?';
-
         $('#cr_content_filter').on("blur", function (e) {
             if(window.location.href.indexOf('cr_content_filter') >= 0) {
                 $.pjax({url: window.location.href.replace(/(cr_content_filter=).*?(&|$)/,'$1' + $(this).val() + '$2'), container: '#assetList'});
             } else {
+                var preFix = (window.location.href.indexOf("?") >= 0) ? '&' : '?';
                 $.pjax({url: window.location.href + preFix + "cr_content_filter=" + $(this).val(), container: '#assetList'});
             }
         });
@@ -35,6 +34,7 @@
                 if(window.location.href.indexOf('cr_content_filter') >= 0) {
                     $.pjax({url: window.location.href.replace(/(cr_content_filter=).*?(&|$)/,'$1' + $(this).val() + '$2'), container: '#assetList'});
                 } else {
+                    var preFix = (window.location.href.indexOf("?") >= 0) ? '&' : '?';
                     $.pjax({url: window.location.href + preFix + "cr_content_filter=" + $(this).val(), container: '#assetList'});
                 }
             }
