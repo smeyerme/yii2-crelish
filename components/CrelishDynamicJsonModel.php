@@ -114,7 +114,7 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
         @chmod($path, 0777);
 
         // Update cache
-        $this->updateCache(($this->isNew) ? 'create' : 'update', $modelArray);
+        $this->updateCache(($this->isNew) ? 'create' : 'update');
 
         // Todo: Create entry in slug storage.
         if (!empty($this->slug)) {
@@ -142,8 +142,8 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
 
     public function delete()
     {
-        unlink($this->fileSource);
         $this->updateCache('delete', $this->uuid);
+        unlink($this->fileSource);
     }
 
     public function getFields()
@@ -178,7 +178,7 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
         }
     }
 
-    private function updateCache($action, $data)
+    private function updateCache($action)
     {
         $cacheStore = \Yii::$app->cache->get('crc_' . $this->ctype);
 
@@ -186,8 +186,12 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
             return;
         }
 
+        $modelSource = new CrelishJsonDataProvider($this->ctype, [], $this->uuid);
+        $data = $modelSource->one();
+
         switch($action){
             case 'delete':
+                $data = $this->uuid;
                 Arrays::each($cacheStore, function($item, $index) use ($data, $cacheStore) {
                     if(!empty($item['uuid']) && $item['uuid'] == $data){
                         unset($cacheStore[$index]);
@@ -199,6 +203,7 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
                 if(!$this->isNew) {
                     Arrays::each($cacheStore, function($item, $index) use ($data, $cacheStore) {
                         if($item['uuid'] == $data['uuid']){
+                            $data['ctype'] = $this->ctype;
                             $cacheStore[$index] = $data;
                             \Yii::$app->cache->set('crc_' . $this->ctype, array_values($cacheStore));
                         }
@@ -206,6 +211,7 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
                 }
                 break;
             default:
+                $data['ctype'] = $this->ctype;
                 array_push($cacheStore, $data);
                 \Yii::$app->cache->set('crc_' . $this->ctype, array_values($cacheStore));
         }

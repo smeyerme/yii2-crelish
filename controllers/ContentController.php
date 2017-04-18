@@ -116,23 +116,11 @@ class ContentController extends CrelishBaseController {
      * @return [type] [description]
      */
     public function actionDelete() {
-        $ctype = \Yii::$app->request->post('ctype');
-        $uuid = \Yii::$app->request->post('uuid');
+        $ctype = \Yii::$app->request->get('ctype');
+        $uuid = \Yii::$app->request->get('uuid');
 
-        // Build form for type.
-        $filePath = \Yii::getAlias('@app/workspace/data/' . $ctype) . DIRECTORY_SEPARATOR . $uuid . '.json';
-
-        $result = unlink($filePath); // or you can set for test -> false;
-        $return_json = ['status' => 'error'];
-        if ($result == TRUE) {
-            $return_json = [
-                'status' => 'success',
-                'message' => 'successfully deleted',
-                'redirect' => Url::toRoute(['content/index'])
-            ];
-        }
-        \Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
-
-        return $return_json;
+        $model = new CrelishDynamicJsonModel([], ['ctype'=>$ctype, 'uuid'=>$uuid]);
+        $model->delete();
+        $this->redirect('/crelish/content/index.html');
     }
 }
