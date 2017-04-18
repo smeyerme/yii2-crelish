@@ -8,8 +8,8 @@
         'value': selectValue,
         'data': selectData,
         'options': {'placeholder': t('crelish', 'Select...')},
-        'pluginOptions': { 'tags': true },
+        'pluginOptions': { 'tags': true, 'allowClear': true },
         'pluginEvents': {
-            "select2:select": "function() { var select = JSON.stringify({'ctype': '#{includeDataType}', 'uuid': $(this).val()}); $('#select_#{field.key}').val(select); }"}
+            "select2:select": "function() { var select = $(this).val(); $('#select_#{field.key}').val(select); }"}
     }) }}
 </div>

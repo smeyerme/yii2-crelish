@@ -15,7 +15,6 @@ class SelfSelect extends Widget
     public $formKey;
     public $field;
     public $value;
-    private $info;
     private $selectData = [];
     private $includeDataType;
 
@@ -29,27 +28,27 @@ class SelfSelect extends Widget
             $this->rawData = $this->data;
             $this->data = $this->processData($this->data);
         } else {
-            $this->data = Json::encode([]);
-            $this->rawData = [];
+            $this->data = $this->processData();
+            $this->rawData = "";
         }
     }
 
-    private function processData($data)
+    private function processData($data = null)
     {
         // Load datasource.
         $dataSource = new CrelishJsonDataProvider($this->includeDataType, ['sort'=>['by'=>['systitle','asc']]]);
         $dataSource = $dataSource->rawAll();
 
-        $unique_select = array_unique(array_map(function ($elem) {
-            if (!empty($elem[$this->formKey]))
-                return $elem[$this->formKey];
-        }, $dataSource));
+        foreach ($dataSource as $item) {
 
-        asort($unique_select);
+            if(!empty($item[$this->formKey])){
+                $this->selectData[$item[$this->formKey]] = $item[$this->formKey];
+            } else {
 
-        foreach ($unique_select as $entry) {
-            $this->selectData[$entry] = $entry;
+            }
         }
+
+        asort($this->selectData);
 
         return $data;
     }
@@ -65,6 +64,7 @@ class SelfSelect extends Widget
             }
             return false;
         });
+
 
         return $this->render('selfselect.twig', [
             'formKey' => $this->formKey,

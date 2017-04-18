@@ -49,6 +49,14 @@ class ContentController extends CrelishBaseController {
      */
     public function actionIndex() {
         $filter = null;
+
+        if(!empty($_POST['selection'])) {
+            foreach ($_POST['selection'] as $selection){
+                $delModel = new CrelishDynamicJsonModel([], ['ctype'=>$this->ctype, 'uuid'=>$selection]);
+                $delModel->delete();
+            }
+        }
+
         if (!empty($_GET['cr_content_filter'])) {
             $filter = ['freesearch' => $_GET['cr_content_filter']];
         }

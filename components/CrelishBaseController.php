@@ -20,7 +20,7 @@ class CrelishBaseController extends Controller {
     protected function buildForm($action = 'update', $settings = array()) {
         $formatter = new Formatter();
         $formatter->dateFormat ="dd.MM.yyyy";
-        $formatter->nullDisplay = false;
+        $formatter->nullDisplay = "";
 
         //default settings
         $defaults = array(

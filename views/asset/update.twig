@@ -23,6 +23,8 @@
                         <img src="{{ model.src }}" class="o-image">
                     {% elseif model.mime =='application/pdf' %}
                         <object type="application/pdf" width="100%" height="800px" data="{{ model.src }}"></object>
+                    {% elseif model.mime == 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' %}
+                        <iframe src="http://view.officeapps.live.com/op/view.aspx?src=={{ model.src }}&name={{ model.systitle }}" width="100%" height="800px" "></iframe>
                     {% endif %}
 
                 </div>
