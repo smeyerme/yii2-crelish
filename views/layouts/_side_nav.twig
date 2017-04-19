@@ -25,8 +25,8 @@
   </a>
 </span>
 -->
-<span class="c-nav__item c-nav__item--right">
-  <a href="#fakelink">
+<span class="c-nav__item c-nav__item--right {{ app.controller.id == 'asset' ? 'active' : '' }}">
+  <a href="{{ url('crelish/user/index') }}">
     <span class="fa fa-users"></span> {{ t('crelish', 'User') }}
   </a>
 </span>

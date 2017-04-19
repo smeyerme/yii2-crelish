@@ -9,7 +9,7 @@ class WidgetConnectorContentProcessor extends Component
 {
   public $data;
 
-  public static function processData($caller, $key, $data, &$processedData)
+  public static function processData($key, $data, &$processedData)
   {
     $html = '';
     $sourceData = new CrelishJsonDataProvider('widget', [], $processedData['uuid']);
