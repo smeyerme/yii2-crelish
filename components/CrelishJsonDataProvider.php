@@ -37,26 +37,19 @@ class CrelishJsonDataProvider extends Component {
         $this->ctype = $ctype;
         $this->pathAlias = ($this->ctype == 'elements') ? '@app/workspace' : '@app/workspace/data';
 
-        if (!empty($uuid)) {
-            $this->uuid = $uuid;
-            if ($theFile = @file_get_contents($this->resolveDataSource($uuid))) {
-                $this->allModels[] = $this->processSingle(\yii\helpers\Json::decode($theFile), TRUE);
-            }
-            else {
-                $this->allModels[] = [];
-            }
+        $dataModels = \Yii::$app->cache->get('crc_' . $ctype);
+
+        if ($dataModels === FALSE) {
+            // $data is not found in cache, calculate it from scratch
+            $dataModels = $this->parseFolderContent($this->ctype);
+            // store $data in cache so that it can be retrieved next time
+            \Yii::$app->cache->set('crc_' . $ctype, $dataModels);
         }
-        else {
-            $dataModels = \Yii::$app->cache->get('crc_' . $ctype);
 
-            if ($dataModels === FALSE) {
-                // $data is not found in cache, calculate it from scratch
-                $dataModels = $this->parseFolderContent($this->ctype);
-                // store $data in cache so that it can be retrieved next time
-                \Yii::$app->cache->set('crc_' . $ctype, $dataModels);
-            }
+        $this->allModels = $dataModels;
 
-            $this->allModels = $dataModels;
+        if (!empty($uuid)) {
+            $this->allModels[] = Arrays::findBy($this->allModels, 'uuid', $uuid);
         }
 
         if (Arrays::has($settings, 'filter')) {
@@ -276,7 +269,7 @@ class CrelishJsonDataProvider extends Component {
                 'forcePageParam' => TRUE,
                 'route' => (!empty(\Yii::$app->getRequest()
                     ->getQueryParam('pathRequested'))) ? '/' . \Yii::$app->getRequest()
-                        ->getQueryParam('pathRequested') : NULL,
+                    ->getQueryParam('pathRequested') : NULL,
                 'params' => array_merge([
                     'page' => !empty($_GET['page']) ? $_GET['page'] : '',
                     'category' => !empty($_GET['category']) ? $_GET['category'] : '',

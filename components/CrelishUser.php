@@ -76,6 +76,7 @@ class CrelishUser extends \yii\web\User implements \yii\web\IdentityInterface
     public $nameFirst;
     public $company;
     public $user;
+    public $role;
 
     /**
      * [crelishLogin description].

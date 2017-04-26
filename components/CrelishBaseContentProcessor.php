@@ -60,7 +60,6 @@ class CrelishBaseContentProcessor extends Component
                 }
             }
         }
-
         return $processedData;
     }
 }
