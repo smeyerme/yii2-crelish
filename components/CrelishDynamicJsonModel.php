@@ -81,10 +81,14 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
         foreach ($this->attributes() as $attribute) {
 
             $jsonCheck = @json_decode($this->{$attribute});
-            if (json_last_error() == JSON_ERROR_NONE) {
-                // Is JSON.
-                $modelArray[$attribute] = Json::decode($this->{$attribute});
-            } else {
+            try {
+                if (json_last_error() == JSON_ERROR_NONE) {
+                    // Is JSON.
+                    $modelArray[$attribute] = Json::decode($this->{$attribute});
+                } else {
+                    $modelArray[$attribute] = $this->{$attribute};
+                }
+            } catch (\yii\base\InvalidParamException $err) {
                 $modelArray[$attribute] = $this->{$attribute};
             }
 
