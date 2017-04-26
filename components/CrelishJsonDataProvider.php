@@ -26,7 +26,6 @@ class CrelishJsonDataProvider extends Component {
 
     private $ctype;
     private $allModels;
-    private $rawModels;
     private $definitions;
     private $key = 'uuid';
     private $uuid;
@@ -40,33 +39,34 @@ class CrelishJsonDataProvider extends Component {
         $dataModels = \Yii::$app->cache->get('crc_' . $ctype);
 
         if ($dataModels === FALSE) {
-            // $data is not found in cache, calculate it from scratch
             $dataModels = $this->parseFolderContent($this->ctype);
-            // store $data in cache so that it can be retrieved next time
             \Yii::$app->cache->set('crc_' . $ctype, $dataModels);
         }
 
-        $this->allModels = $dataModels;
-
         if (!empty($uuid)) {
-            $this->allModels[] = Arrays::findBy($this->allModels, 'uuid', $uuid);
-        }
+            $this->allModels[] = Arrays::find($dataModels, function($item) use ($uuid) {
+                return $item['uuid'] == $uuid;
+            });
+        } else {
 
-        if (Arrays::has($settings, 'filter')) {
-            if (!empty($settings['filter'])) {
-                $this->filterModels($settings['filter']);
+            $this->allModels = $dataModels;
+
+            if (Arrays::has($settings, 'filter')) {
+                if (!empty($settings['filter'])) {
+                    $this->filterModels($settings['filter']);
+                }
             }
-        }
 
-        if (Arrays::has($settings, 'sort')) {
-            if (!empty($settings['sort'])) {
-                $this->sortModels($settings['sort']);
+            if (Arrays::has($settings, 'sort')) {
+                if (!empty($settings['sort'])) {
+                    $this->sortModels($settings['sort']);
+                }
             }
-        }
 
-        if (Arrays::has($settings, 'limit')) {
-            if (!empty($settings['limit'])) {
-                $this->pageSize = $settings['limit'];
+            if (Arrays::has($settings, 'limit')) {
+                if (!empty($settings['limit'])) {
+                    $this->pageSize = $settings['limit'];
+                }
             }
         }
 

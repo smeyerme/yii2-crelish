@@ -20,7 +20,6 @@ class DataIncludeContentProcessor extends CrelishBaseContentProcessor
         if ($data && !empty($data['ctype']) && !empty($data['uuid'])) {
             $dataProvider = new CrelishJsonDataProvider($data['ctype'], [], $data['uuid']);
 
-
             //$fileSource = \Yii::getAlias('@app/workspace/data') . DIRECTORY_SEPARATOR . $data['ctype'] . DIRECTORY_SEPARATOR . $data['uuid'] . '.json';
 
             //if (file_exists($fileSource)) {

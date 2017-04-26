@@ -18,10 +18,7 @@ class AssetConnectorContentProcessor extends Component
 
         if (is_array($data) && sizeOf($data) > 0) {
             $provider = new CrelishJsonDataProvider('asset', [], $data['uuid']);
-            $source = $provider->one();
-
-            //$fileSource = \Yii::getAlias('@app/workspace/data') . DIRECTORY_SEPARATOR . 'asset' . DIRECTORY_SEPARATOR . $data['uuid'] . '.json';
-            $processedData[$key] = $source; //Json::decode(file_get_contents($fileSource));
+            $processedData[$key] = $provider->one(); //Json::decode(file_get_contents($fileSource));
         }
     }
 
