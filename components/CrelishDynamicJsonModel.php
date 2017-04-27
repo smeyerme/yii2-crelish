@@ -81,14 +81,10 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
         foreach ($this->attributes() as $attribute) {
 
             $jsonCheck = @json_decode($this->{$attribute});
-            try {
-                if (json_last_error() == JSON_ERROR_NONE) {
-                    // Is JSON.
-                    $modelArray[$attribute] = Json::decode($this->{$attribute});
-                } else {
-                    $modelArray[$attribute] = $this->{$attribute};
-                }
-            } catch (\yii\base\InvalidParamException $err) {
+            if (json_last_error() == JSON_ERROR_NONE) {
+                // Is JSON.
+                $modelArray[$attribute] = Json::decode($this->{$attribute});
+            } else {
                 $modelArray[$attribute] = $this->{$attribute};
             }
 
@@ -118,7 +114,7 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
         @chmod($path, 0777);
 
         // Update cache
-        $this->updateCache(($this->isNew) ? 'create' : 'update');
+        $this->updateCache(($this->isNew) ? 'create' : 'update', CrelishBaseContentProcessor::processElement($this->ctype, $modelArray));
 
         // Todo: Create entry in slug storage.
         if (!empty($this->slug)) {
@@ -182,22 +178,22 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
         }
     }
 
-    private function updateCache($action)
+    private function updateCache($action, $data)
     {
+
+        //var_dump($data); die();
+
         $cacheStore = \Yii::$app->cache->get('crc_' . $this->ctype);
 
         if(!$cacheStore) {
             return;
         }
 
-        $modelSource = new CrelishJsonDataProvider($this->ctype, [], $this->uuid);
-        $data = $modelSource->one();
-
         switch($action){
             case 'delete':
                 $data = $this->uuid;
-                Arrays::each($cacheStore, function($item, $index) use ($data, $cacheStore) {
-                    if(!empty($item['uuid']) && $item['uuid'] == $data){
+                Arrays::each($cacheStore, function($cacheItem, $index) use ($data, $cacheStore) {
+                    if(!empty($cacheItem['uuid']) && $cacheItem['uuid'] == $data){
                         unset($cacheStore[$index]);
                         \Yii::$app->cache->set('crc_' . $this->ctype, array_values($cacheStore));
                     }
@@ -205,8 +201,8 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
                 break;
             case 'update':
                 if(!$this->isNew) {
-                    Arrays::each($cacheStore, function($item, $index) use ($data, $cacheStore) {
-                        if($item['uuid'] == $data['uuid']){
+                    Arrays::each($cacheStore, function($cacheItem, $index) use ($data, $cacheStore) {
+                        if($cacheItem['uuid'] == $data['uuid']){
                             $data['ctype'] = $this->ctype;
                             $cacheStore[$index] = $data;
                             \Yii::$app->cache->set('crc_' . $this->ctype, array_values($cacheStore));
@@ -301,7 +297,7 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
         }
 
         if( empty(Arrays::find($elementDefinition->fields, function($elem) { return $elem->key == "state"; })) ) {
-            $elementDefinition->fields[] = Json::decode('{ "label": "State", "key": "state", "type": "dropDownList", "visibleInGrid": true, "rules": [["required"], ["integer"]], "options": {"prompt":"Please set state"}, "items": {"0":"Offline", "1":"Draft", "2":"Online", "3":"Archived"}}', false);
+            $elementDefinition->fields[] = Json::decode('{ "label": "State", "key": "state",  "type": "dropDownList", "visibleInGrid": true, "rules": [["required"], ["integer"]], "options": {"prompt":"Please set state"}, "items": {"0":"Offline", "1":"Draft", "2":"Online", "3":"Archived"}}', false);
         }
 
         if( empty(Arrays::find($elementDefinition->fields, function($elem) { return $elem->key == "created"; })) ) {

@@ -15,7 +15,14 @@ class CrelishFieldTransformerDate extends CrelishFieldBaseTransformer
      */
     public static function beforeSave(&$value)
     {
-        $value = (string)strtotime($value);
+
+        if(((string) (int) $value === $value)
+            && ($value <= PHP_INT_MAX)
+            && ($value >= ~PHP_INT_MAX)) {
+            $value = (string) $value;
+        } else {
+            $value = (string) strtotime($value);
+        }
     }
 
     public static function afterFind(&$value)

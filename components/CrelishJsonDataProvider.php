@@ -45,7 +45,11 @@ class CrelishJsonDataProvider extends Component {
 
         if (!empty($uuid)) {
             $this->allModels[] = Arrays::find($dataModels, function($item) use ($uuid) {
-                return $item['uuid'] == $uuid;
+                if(!empty($item['uuid'])) {
+                    return $item['uuid'] == $uuid;
+                } else {
+                    return false;
+                }
             });
         } else {
 
