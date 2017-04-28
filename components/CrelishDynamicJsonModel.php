@@ -12,10 +12,10 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
     public $uuid;
     public $ctype;
     public $fieldDefinitions;
+    public $elementDefinition;
     private $_attributeLabels;
     private $fileSource;
     private $isNew = true;
-    public $elementDefinition;
 
     public function init()
     {
@@ -181,13 +181,7 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
     private function updateCache($action, $data)
     {
 
-        //var_dump($data); die();
-
         $cacheStore = \Yii::$app->cache->get('crc_' . $this->ctype);
-
-        if(!$cacheStore) {
-            return;
-        }
 
         switch($action){
             case 'delete':
@@ -212,6 +206,9 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
                 break;
             default:
                 $data['ctype'] = $this->ctype;
+                if(!$cacheStore) {
+                    $cacheStore = [];
+                }
                 array_push($cacheStore, $data);
                 \Yii::$app->cache->set('crc_' . $this->ctype, array_values($cacheStore));
         }
@@ -261,14 +258,14 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
 
         foreach($this->elementDefinition->fields as $field) {
 
-            // Do field transform.
+            /* Do field transform.
             if(property_exists($field, 'transform') && !empty($field->transform)) {
 
                 $transformer = 'giantbits\\crelish\\components\\transformer\\CrelishFieldTransformer' . ucfirst(strtolower($field->transform));
                 if (class_exists($transformer)) {
-                    $transformer::afterFind($rawData[$field->key]);
+                    //$transformer::afterFind($rawData[$field->key]);
                 }
-            }
+            }*/
 
             if(!empty( $rawData[$field->key] )){
                 $attributes[$field->key] = $rawData[$field->key];

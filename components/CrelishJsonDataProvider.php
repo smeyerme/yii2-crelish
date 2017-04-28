@@ -36,22 +36,24 @@ class CrelishJsonDataProvider extends Component {
         $this->ctype = $ctype;
         $this->pathAlias = ($this->ctype == 'elements') ? '@app/workspace' : '@app/workspace/data';
 
-        $dataModels = \Yii::$app->cache->get('crc_' . $ctype);
-
-        if ($dataModels === FALSE) {
-            $dataModels = $this->parseFolderContent($this->ctype);
-            \Yii::$app->cache->set('crc_' . $ctype, $dataModels);
-        }
-
         if (!empty($uuid)) {
-            $this->allModels[] = Arrays::find($dataModels, function($item) use ($uuid) {
-                if(!empty($item['uuid'])) {
-                    return $item['uuid'] == $uuid;
-                } else {
-                    return false;
-                }
-            });
+            $this->uuid = $uuid;
+            if ($theFile = @file_get_contents($this->resolveDataSource($uuid))) {
+                $this->allModels[] = $this->processSingle(\yii\helpers\Json::decode($theFile), TRUE);
+            }
+            else {
+                $this->allModels[] = [];
+            }
         } else {
+
+            $dataModels = \Yii::$app->cache->get('crc_' . $ctype);
+
+            if ($dataModels === FALSE) {
+                // $data is not found in cache, calculate it from scratch
+                $dataModels = $this->parseFolderContent($this->ctype);
+                // store $data in cache so that it can be retrieved next time
+                \Yii::$app->cache->set('crc_' . $ctype, $dataModels);
+            }
 
             $this->allModels = $dataModels;
 
@@ -75,64 +77,6 @@ class CrelishJsonDataProvider extends Component {
         }
 
         parent::__construct();
-    }
-
-    public function parseFolderContent($folder) {
-        $filesArr = [];
-        $allModels = [];
-
-        $fullFolder = \Yii::getAlias($this->pathAlias) . DIRECTORY_SEPARATOR . $folder;
-
-        if (!file_exists($fullFolder)) {
-            FileHelper::createDirectory($fullFolder);
-        }
-
-        $files = FileHelper::findFiles($fullFolder, ['recursive' => FALSE]);
-
-        if (isset($files[0])) {
-            foreach ($files as $file) {
-                $filesArr[] = $file;
-            }
-        }
-
-        foreach ($filesArr as $file) {
-            $finalArr = [];
-            $content = file_get_contents($file);
-            $modelArr = json_decode($content, TRUE);
-            if (is_null($modelArr)) {
-                $segments = explode(DIRECTORY_SEPARATOR, $file);
-                CrelishBaseController::addError("Invalid JSON in " . array_pop($segments));
-                continue;
-            }
-            $modelArr['id'] = $file;
-            $modelArr['ctype'] = $this->ctype;
-
-            // Handle specials like in frontend.
-            $elementDefinition = $this->getDefinitions();
-
-            foreach ($modelArr as $attr => $value) {
-                $this->processFieldData($elementDefinition, $attr, $value, $finalArr);
-            }
-
-            $allModels[] = $finalArr;
-        }
-
-        return $allModels;
-    }
-
-    private function processSingle($data) {
-        $finalArr = [];
-        $modelArr = (array) $data;
-
-        // Handle specials like in frontend.
-        $elementDefinition = $this->getDefinitions();
-
-        // todo: Handle special fields... uncertain about this.
-        foreach ($modelArr as $attr => $value) {
-            $this->processFieldData($elementDefinition, $attr, $value, $finalArr);
-        }
-
-        return $finalArr;
     }
 
     public function filterModels($filter) {
@@ -433,38 +377,62 @@ class CrelishJsonDataProvider extends Component {
         return $fileDataSource;
     }
 
-    private function processFieldData($elementDefinition, $attr, $value, &$finalArr) {
-        $fieldType = 'textInput';
+    private function parseFolderContent($folder) {
+        $filesArr = [];
+        $allModels = [];
 
-        // Get type of field.
-        $field = Arrays::find($elementDefinition->fields, function ($value) use ($attr) {
-            return $value->key == $attr;
-        });
+        $fullFolder = \Yii::getAlias($this->pathAlias) . DIRECTORY_SEPARATOR . $folder;
 
-        $transform = NULL;
-        if (!empty($field) && is_object($field)) {
-            $fieldType = (property_exists($field, 'type')) ? $field->type : 'textInput';
-            $transform = (property_exists($field, 'transform')) ? $field->transform : null;
+        if (!file_exists($fullFolder)) {
+            FileHelper::createDirectory($fullFolder);
         }
 
-        // Get processor class.
-        $processorClass = 'giantbits\crelish\plugins\\' . strtolower($fieldType) . '\\' . ucfirst($fieldType) . 'ContentProcessor';
-        $transformClass = 'giantbits\crelish\components\transformer\CrelishFieldTransformer' . ucfirst($transform);
+        $files = FileHelper::findFiles($fullFolder, ['recursive' => FALSE]);
 
-        if (strpos($fieldType, "widget_") !== FALSE) {
-            $processorClass = str_replace("widget_", "", $fieldType) . 'ContentProcessor';
-        }
-
-        if (class_exists($processorClass) && method_exists($processorClass, 'processJson')) {
-            $processorClass::processJson($attr, $value, $finalArr);
-        }
-        else {
-            $finalArr[$attr] = $value;
+        if (isset($files[0])) {
+            foreach ($files as $file) {
+                $filesArr[] = $file;
+            }
         }
 
-        if (!empty($transform) && class_exists($transformClass)) {
-            $transformClass::afterFind($finalArr[$attr]);
+        foreach ($filesArr as $file) {
+            $finalArr = [];
+            $content = file_get_contents($file);
+            $modelArr = json_decode($content, TRUE);
+            if (is_null($modelArr)) {
+                $segments = explode(DIRECTORY_SEPARATOR, $file);
+                CrelishBaseController::addError("Invalid JSON in " . array_pop($segments));
+                continue;
+            }
+            $modelArr['id'] = $file;
+            $modelArr['ctype'] = $this->ctype;
+
+            // Handle specials like in frontend.
+            $elementDefinition = $this->getDefinitions();
+
+            foreach ($modelArr as $attr => $value) {
+                CrelishBaseContentProcessor::processFieldData($elementDefinition, $attr, $value, $finalArr);
+            }
+
+            $allModels[] = $finalArr;
         }
+
+        return $allModels;
+    }
+
+    private function processSingle($data) {
+        $finalArr = [];
+        $modelArr = (array) $data;
+
+        // Handle specials like in frontend.
+        $elementDefinition = $this->getDefinitions();
+
+        // todo: Handle special fields... uncertain about this.
+        foreach ($modelArr as $attr => $value) {
+            CrelishBaseContentProcessor::processFieldData($elementDefinition, $attr, $value, $finalArr);
+        }
+
+        return $finalArr;
     }
 
     private function array_orderby() {
