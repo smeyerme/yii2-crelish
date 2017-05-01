@@ -3,6 +3,7 @@
 namespace giantbits\crelish\components;
 
 use Underscore\Types\Arrays;
+use yii\base\InvalidParamException;
 use yii\helpers\FileHelper;
 use yii\helpers\Json;
 
@@ -79,11 +80,9 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
 
         // Transform and set data, detect json.
         foreach ($this->attributes() as $attribute) {
-
             $jsonCheck = @json_decode($this->{$attribute});
             if (json_last_error() == JSON_ERROR_NONE) {
-                // Is JSON.
-                $modelArray[$attribute] = Json::decode($this->{$attribute});
+                $modelArray[$attribute] = (is_array($this->{$attribute})) ? $this->{$attribute} : Json::decode($this->{$attribute});
             } else {
                 $modelArray[$attribute] = $this->{$attribute};
             }

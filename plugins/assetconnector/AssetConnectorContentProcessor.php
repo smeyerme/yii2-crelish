@@ -35,7 +35,9 @@ class AssetConnectorContentProcessor extends Component
         if ($data) {
             if(!empty($data['uuid'])){
                 $fileSource = \Yii::getAlias('@app/workspace/data') . DIRECTORY_SEPARATOR . 'asset' . DIRECTORY_SEPARATOR . $data['uuid'] . '.json';
-                $processedData[$key] = Json::decode(file_get_contents($fileSource));
+                if(file_exists($fileSource)){
+                    $processedData[$key] = Json::decode(file_get_contents($fileSource));
+                }
             } elseif (!empty($data['temp'])) {
                 $processedData[$key] = $data;
             }
