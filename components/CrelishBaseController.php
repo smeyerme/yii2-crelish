@@ -55,7 +55,7 @@ class CrelishBaseController extends Controller {
 
             if ($this->model->validate()) {
                 $this->model->save();
-                \Yii::$app->session->setFlash('success', 'Content saved successfully...');
+                \Yii::$app->session->setFlash('success', \Yii::t("crelish",'Content saved successfully...'));
                 header('Location: ' . Url::to([
                         'content/update',
                         'ctype' => $this->ctype,

@@ -69,18 +69,19 @@
            id="asset_{{ field.key }}"/>
     <br>
     <div class="c-card">
-        <div class="c-card__item c-card__item--divider">Media</div>
+        <div class="c-card__item c-card__item--divider">
+            Media
+            <a class="c-button c-button--rounded c-button--success  open-media-modal pull-right" data-toggle="modal"
+               data-target="#media-modal" href style="margin-top: -6px; margin-right: -6px;">
+                <span class="fui-image"></span> {{ t('crelish', 'Select media...') }}</a>
+            </a>
+        </div>
         <div class="c-card__item">
             <div id="asset-info-{{ field.key }}">
                 {{ data.systitle }}
             </div>
         </div>
     </div>
-    <br>
-    <a class="c-button c-button--rounded c-button--success  open-media-modal" data-toggle="modal"
-       data-target="#media-modal" href>
-        <span class="fui-image"></span> {{ t('crelish', 'Select media...') }}</a>
-    </a>
 </div>
 
 <script>

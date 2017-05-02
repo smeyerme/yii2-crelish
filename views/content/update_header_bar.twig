@@ -2,7 +2,7 @@
     <div class="o-grid o-grid--no-gutter">
         <div class="o-grid__cell">
             <span class="c-nav__item gc-bc--palette-asbestos open-back-modal" data-toggle="modal" data-target="#confirm-cancel"
-                  data-href="{{ url('crelish/content/index.html') }}">
+                  data-href="{{ url('crelish/content/index.html?ctype=' ~ app.request.get.ctype) }}">
                 <span class="fui-arrow-left"></span> {{ t('crelish', 'Back') }}</span>
             </span>
         </div>
