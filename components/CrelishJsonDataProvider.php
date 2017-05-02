@@ -32,7 +32,7 @@ class CrelishJsonDataProvider extends Component {
     private $pathAlias;
     private $pageSize = 20;
 
-    public function __construct($ctype, $settings = [], $uuid = NULL) {
+    public function __construct($ctype, $settings = [], $uuid = NULL, $forceFull = false) {
         $this->ctype = $ctype;
         $this->pathAlias = ($this->ctype == 'elements') ? '@app/workspace' : '@app/workspace/data';
 
@@ -48,7 +48,7 @@ class CrelishJsonDataProvider extends Component {
 
             $dataModels = \Yii::$app->cache->get('crc_' . $ctype);
 
-            if ($dataModels === FALSE) {
+            if ($dataModels === FALSE || $forceFull) {
                 // $data is not found in cache, calculate it from scratch
                 $dataModels = $this->parseFolderContent($this->ctype);
                 // store $data in cache so that it can be retrieved next time
@@ -86,9 +86,9 @@ class CrelishJsonDataProvider extends Component {
                 if (!empty($keyValue)) {
                     if (is_array($keyValue)) {
                         if ($keyValue[0] == 'strict') {
-                            $this->allModels = Arrays::filter($this->allModels, function ($value) use ($key, $keyValue) {
+                            $this->allModels = array_values( Arrays::filter($this->allModels, function ($value) use ($key, $keyValue) {
                                 return $value[$key] == $keyValue[1];
-                            });
+                            }) );
                         }
 
                         if ($keyValue[0] == 'lt') {
@@ -102,6 +102,8 @@ class CrelishJsonDataProvider extends Component {
                                 return $value[$key] > $keyValue[1];
                             });
                         }
+
+
                     }
                     elseif (is_bool($keyValue)) {
                         $this->allModels = Arrays::filterBy($this->allModels, $key, $keyValue);
@@ -146,6 +148,7 @@ class CrelishJsonDataProvider extends Component {
                 }
             }
         }
+
     }
 
     public function sortModels($sort) {
@@ -196,6 +199,7 @@ class CrelishJsonDataProvider extends Component {
     }
 
     public function one() {
+
         if (!empty($this->allModels[0])) {
             return $this->allModels[0];
         }

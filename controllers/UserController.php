@@ -111,7 +111,7 @@ class UserController extends CrelishBaseController
             $filter = ['freesearch' => $_GET['cr_content_filter']];
         }
 
-        $modelProvider = new CrelishJsonDataProvider('user', ['filter' => $filter], NULL);
+        $modelProvider = new CrelishJsonDataProvider('user', ['filter' => $filter]);
         $checkCol = [
             [
                 'class' => 'yii\grid\CheckboxColumn'
