@@ -18,6 +18,6 @@ $(document).ready(function () {
 
     $(document).on("click", ".open-back-modal", function () {
         var targetUrl = $(this).data('href');
-        //$(".btn-cancel-proceed").attr("data-href", targetUrl);
+        $(".btn-cancel-proceed").attr("data-href", targetUrl);
     });
 });
