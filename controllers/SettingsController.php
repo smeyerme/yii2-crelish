@@ -3,9 +3,11 @@
 namespace giantbits\crelish\controllers;
 
 use giantbits\crelish\components\CrelishBaseController;
+use giantbits\crelish\components\CrelishDynamicJsonModel;
 use giantbits\crelish\components\CrelishJsonDataProvider;
 use yii\filters\AccessControl;
 use yii\helpers\FileHelper;
+use yii\helpers\Json;
 
 
 class SettingsController extends CrelishBaseController
@@ -82,5 +84,33 @@ class SettingsController extends CrelishBaseController
       }
     }
     return $this->redirect('/crelish/settings/index', 302);
+  }
+
+  public function actionIntellicache() {
+      //2e212e112e-2e12ea-vhrto4
+
+      //Rebuild caches
+      if(\Yii::$app->request->get('auth') != "2e212e112e-2e12ea-vhrto4") {
+          die("NOT ALLOWED");
+      }
+
+      $files = FileHelper::findFiles(\Yii::getAlias('@app/workspace/data'));
+
+      foreach($files as $file) {
+          $contents = file_get_contents($file);
+          if (!strpos($contents, \Yii::$app->request->get('uuid'))) continue;
+
+          $json = Json::decode($contents);
+          if($json['uuid'] == \Yii::$app->request->get('uuid')) continue;
+
+          $ctypeArr = explode(DIRECTORY_SEPARATOR, $file);
+          $ctype = $ctypeArr[count($ctypeArr)-2];
+
+          $item = new CrelishDynamicJsonModel([],['ctype'=>$ctype, 'uuid'=>$json['uuid']]);
+          $item->save();
+
+          var_dump($json);
+      }
+      die();
   }
 }

@@ -1,4 +1,5 @@
 <?php
+
 namespace giantbits\crelish\components;
 
 use yii\bootstrap\ActiveForm;
@@ -8,18 +9,36 @@ use yii\helpers\Json;
 use yii\helpers\Html;
 use yii\helpers\Url;
 
-class CrelishBaseController extends Controller {
+class CrelishBaseController extends Controller
+{
     protected $ctype, $uuid, $filePath, $elementDefinition, $model;
 
-    public function init() {
+    public function init()
+    {
         \Yii::$app->view->title = ucfirst($this->id);
+
+        $intelliCache = \Yii::$app->session->get('intellicache');
+        if (!empty($intelliCache)) {
+
+            $js = "$.ajax({
+                url: '/crelish/settings/intellicache.html',
+                data: {
+                    auth: '2e212e112e-2e12ea-vhrto4',
+                    uuid: '" . $this->uuid . "'
+                },
+                success: function(r){ console.info('Intellicache done'); }
+            });";
+            \Yii::$app->view->registerJs($js);
+            \Yii::$app->session->remove('intellicache');
+        }
 
         parent::init();
     }
 
-    protected function buildForm($action = 'update', $settings = array()) {
+    protected function buildForm($action = 'update', $settings = array())
+    {
         $formatter = new Formatter();
-        $formatter->dateFormat ="dd.MM.yyyy";
+        $formatter->dateFormat = "dd.MM.yyyy";
         $formatter->nullDisplay = "";
 
         //default settings
@@ -55,15 +74,14 @@ class CrelishBaseController extends Controller {
 
             if ($this->model->validate()) {
                 $this->model->save();
-                \Yii::$app->session->setFlash('success', \Yii::t("crelish",'Content saved successfully...'));
+                \Yii::$app->session->setFlash('success', \Yii::t("crelish", 'Content saved successfully...'));
                 header('Location: ' . Url::to([
                         'content/update',
                         'ctype' => $this->ctype,
                         'uuid' => $this->model->uuid
                     ]));
                 exit(0);
-            }
-            else {
+            } else {
                 $message = '';
                 $errors = $this->model->errors;
                 foreach ($errors as $error) {
@@ -75,9 +93,9 @@ class CrelishBaseController extends Controller {
 
         // Last changes to model before form render. (Format date etc.)
         foreach ($this->model->fieldDefinitions->fields as $field) {
-            if(!empty($field->format)){
+            if (!empty($field->format)) {
 
-                if($field->format == 'date'){
+                if ($field->format == 'date') {
                     $this->model->{$field->key} = $formatter->asDate($this->model->{$field->key});
                 }
             }
@@ -122,7 +140,7 @@ class CrelishBaseController extends Controller {
 
                 foreach ($this->model->fieldDefinitions->fields as $field) {
 
-                    if(!property_exists($field, 'type')) {
+                    if (!property_exists($field, 'type')) {
                         $field->type = "textInput";
                     }
 
@@ -138,16 +156,13 @@ class CrelishBaseController extends Controller {
                         echo $form->field($this->model, $field->key)
                             ->widget($widget::className())
                             ->label($field->label);
-                    }
-                    elseif ($field->type == 'dropDownList') {
+                    } elseif ($field->type == 'dropDownList') {
                         echo $form->field($this->model, $field->key)
-                            ->{$field->type}((array) $field->items, (array) $fieldOptions)
+                            ->{$field->type}((array)$field->items, (array)$fieldOptions)
                             ->label($field->label);
-                    }
-                    elseif ($field->type == 'submitButton') {
+                    } elseif ($field->type == 'submitButton') {
                         echo Html::submitButton($field->label, array('class' => 'c-button c-button--brand c-button--block'));
-                    }
-                    else {
+                    } else {
                         $class = 'giantbits\crelish\plugins\\' . strtolower($field->type) . '\\' . ucfirst($field->type);
                         // Check for crelish special fields.
                         if (class_exists($class)) {
@@ -156,10 +171,9 @@ class CrelishBaseController extends Controller {
                                 'data' => $this->model{$field->key},
                                 'field' => $field
                             ]);
-                        }
-                        else {
+                        } else {
                             echo $form->field($this->model, $field->key)
-                                ->{$field->type}((array) $fieldOptions)
+                                ->{$field->type}((array)$fieldOptions)
                                 ->label($field->label);
                         }
                     }
@@ -178,7 +192,8 @@ class CrelishBaseController extends Controller {
         return ob_get_clean();
     }
 
-    public static function addError($error) {
+    public static function addError($error)
+    {
         $err = '';
         if (\Yii::$app->session->hasFlash('globalError')) {
             $err .= \Yii::$app->session->getFlash('globalError') . "\n";

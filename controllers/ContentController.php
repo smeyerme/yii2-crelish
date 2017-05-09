@@ -32,13 +32,31 @@ class ContentController extends CrelishBaseController {
      */
     public function init() {
 
-        $this->ctype = (!empty(\Yii::$app->getRequest()
+        /*$this->ctype = (!empty(\Yii::$app->getRequest()
             ->getQueryParam('ctype'))) ? \Yii::$app->getRequest()
-            ->getQueryParam('ctype') : 'page';
+            ->getQueryParam('ctype') : 'page';*/
         $this->uuid = (!empty(\Yii::$app->getRequest()
             ->getQueryParam('uuid'))) ? \Yii::$app->getRequest()
             ->getQueryParam('uuid') : NULL;
 
+
+        if(key_exists('cr_content_filter', $_GET)) {
+            \Yii::$app->session->set('cr_content_filter',$_GET['cr_content_filter']);
+        } else {
+            if(!empty(\Yii::$app->session->get('cr_content_filter'))){
+                \Yii::$app->request->setQueryParams(['cr_content_filter' => \Yii::$app->session->get('cr_content_filter')]);
+            }
+        }
+
+        if(key_exists('ctype', $_GET)) {
+            \Yii::$app->session->set('ctype', $_GET['ctype']);
+        } else {
+            if(!empty(\Yii::$app->session->get('ctype'))){
+                \Yii::$app->request->setQueryParams(['ctype' => \Yii::$app->session->get('ctype')]);
+            }
+        }
+
+        $this->ctype = \Yii::$app->session->get('ctype');
 
         return parent::init();
     }
@@ -57,8 +75,12 @@ class ContentController extends CrelishBaseController {
             }
         }
 
-        if (!empty($_GET['cr_content_filter'])) {
+        if (key_exists('cr_content_filter', $_GET)) {
             $filter = ['freesearch' => $_GET['cr_content_filter']];
+        } else {
+            if(!empty(\Yii::$app->session->get('cr_content_filter'))){
+                $filter = ['freesearch' => \Yii::$app->session->get('cr_content_filter')];
+            }
         }
 
         $modelProvider = new CrelishJsonDataProvider($this->ctype, ['filter' => $filter], NULL);

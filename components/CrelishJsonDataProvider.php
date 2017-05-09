@@ -30,7 +30,7 @@ class CrelishJsonDataProvider extends Component {
     private $key = 'uuid';
     private $uuid;
     private $pathAlias;
-    private $pageSize = 20;
+    private $pageSize = 30;
 
     public function __construct($ctype, $settings = [], $uuid = NULL, $forceFull = false) {
         $this->ctype = $ctype;
@@ -131,7 +131,11 @@ class CrelishJsonDataProvider extends Component {
 
                         }
                         else {
+
+
+
                             $this->allModels = Arrays::filter($this->allModels, function ($value) use ($key, $keyValue) {
+
                                 if (!empty($value[$key]) && is_array($value[$key])) {
                                     $value[$key] = Arrays::implode($value[$key], "||");
                                 }
@@ -141,7 +145,18 @@ class CrelishJsonDataProvider extends Component {
 
                                 $array = new Underscore($value);
 
-                                return (stripos($array->get($key), html_entity_decode($keyValue)) !== FALSE);
+                                $finalFilters = explode(";", $keyValue);
+                                // Multifilter.
+                                $isMatch = false;
+                                foreach ($finalFilters  as $subFilter) {
+
+                                    if((stripos(html_entity_decode($array->get($key)), html_entity_decode($subFilter)) !== FALSE)){
+                                        $isMatch = true;
+                                    }
+                                }
+
+
+                                return $isMatch;
                             });
                         }
                     }
@@ -336,7 +351,6 @@ class CrelishJsonDataProvider extends Component {
             if (!empty($field->visibleInGrid) && $field->visibleInGrid) {
                 $label = (property_exists($field, 'label') && !empty($field->label)) ? $field->label : null;
                 $format = (property_exists($field, 'format') && !empty($field->format)) ? $field->format : 'text';
-
                 $columns[] = (property_exists($field, 'gridField') && !empty($field->gridField)) ? [ 'attribute' => $field->gridField, 'label' => $label, 'format' => $format ] : [ 'attribute' => $field->key, 'label' => $label, 'format' => $format ];
             }
         }
@@ -447,7 +461,11 @@ class CrelishJsonDataProvider extends Component {
             if (is_string($field)) {
                 $tmp = array();
                 foreach ($data as $key => $row) {
-                    $tmp[$key] = $row[$field];
+                    if(strpos($field, ".") !== false) {
+                        $tmp[$key] =  Arrays::get($row, $field);
+                    } else {
+                        $tmp[$key] = $row[$field];
+                    }
                 }
                 $args[$n] = $tmp;
             }
@@ -455,6 +473,9 @@ class CrelishJsonDataProvider extends Component {
         $args[] = &$data;
 
         @call_user_func_array('array_multisort', $args);
+
+
         return array_pop($args);
     }
+
 }

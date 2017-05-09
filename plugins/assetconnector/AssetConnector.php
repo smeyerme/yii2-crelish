@@ -108,7 +108,7 @@ class AssetConnector extends Widget
         $columns = array_merge($checkCol, $modelColumns);
 
         $rowOptions = function ($model, $key, $index, $grid) {
-            return ['onclick' => "$('#asset_" . $this->formKey . "').val(JSON.stringify({ 'ctype': 'asset', 'uuid': '" . $model['uuid'] . "'})); $('#asset-info-" . $this->formKey . "').html('" . $model['systitle'] . "'); $('#media-modal').modal('hide');"];
+            return ['onclick' => "$('#asset_" . $this->formKey . "').val(JSON.stringify({ 'ctype': 'asset', 'uuid': '" . $model['uuid'] . "'})); $('#asset-info-" . $this->formKey . "').html('" . $model['systitle'] . "'); $('#media-modal-".$this->formKey."').modal('hide');"];
         };
 
 
@@ -120,7 +120,8 @@ class AssetConnector extends Widget
             'rowOptions' => $rowOptions,
             'field' => $this->field,
             'rawData' => Json::encode($this->rawData),
-            'data' => $this->data
+            'data' => $this->data,
+            'formKey' => $this->formKey
         ]);
     }
 }
