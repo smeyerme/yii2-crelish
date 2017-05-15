@@ -22,6 +22,9 @@ class DataListContentProcessor extends Component
             $sort = NULL;
             $limit = NULL;
 
+            if(!empty($_GET['freesearch']))
+                $data['filter'][] = 'freesearch';
+
             if (!empty($data['filter'])) {
                 foreach ($data['filter'] as $filter) {
                     if (is_array($filter)) {
