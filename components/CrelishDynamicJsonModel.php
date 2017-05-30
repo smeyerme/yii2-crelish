@@ -223,7 +223,9 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
                 \Yii::$app->cache->set('crc_' . $this->ctype, array_values($cacheStore));
         }
 
-        \Yii::$app->session->set('intellicache', $this->uuid);
+        if(is_a(\Yii::$app,'yii\web\Application')) {
+          \Yii::$app->session->set('intellicache', $this->uuid);
+        }
     }
 
     private function GUIDv4($trim = true)
