@@ -151,7 +151,9 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
     public function delete()
     {
         $this->updateCache('delete', $this->uuid);
-        unlink($this->fileSource);
+        if(file_exists($this->fileSource)){
+          unlink($this->fileSource);
+        }
     }
 
     public function getFields()
@@ -262,7 +264,11 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
     {
         $this->isNew = false;
         $this->fileSource = \Yii::getAlias('@app/workspace/data/') . DIRECTORY_SEPARATOR . $this->ctype . DIRECTORY_SEPARATOR . $this->uuid . '.json';
-        $rawData = Json::decode(file_get_contents($this->fileSource));
+        if(file_exists($this->fileSource)){
+          $rawData = Json::decode(file_get_contents($this->fileSource));
+        } else {
+          $rawData = [];
+        }
         $attributes = [];
 
         foreach ($this->elementDefinition->fields as $field) {
