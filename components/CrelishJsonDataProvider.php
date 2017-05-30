@@ -273,16 +273,18 @@ class CrelishJsonDataProvider extends Component {
 
         if ($this->ctype !== 'elements') {
             $filePath = \Yii::getAlias('@app/workspace/elements') . DIRECTORY_SEPARATOR . $this->ctype . '.json';
-            if(is_file($filePath)){
+            if(file_exists($filePath)) {
               $elementStructure = Json::decode(file_get_contents($filePath), FALSE);
+            }
 
-              // Add core fields.
-              $this->definitions->fields[] = Json::decode('{ "label": "UUID", "key": "uuid", "type": "textInput", "visibleInGrid": false, "rules": [["string", {"max": 128}]], "options": {"disabled":true}}', FALSE);
-              $this->definitions->fields[] = Json::decode('{ "label": "ctype", "key": "ctype", "type": "textInput", "visibleInGrid": false, "rules": [["string", {"max": 128}]], "options": {"disabled":true}}', FALSE);
+            // Add core fields.
+            $this->definitions->fields[] = Json::decode('{ "label": "UUID", "key": "uuid", "type": "textInput", "visibleInGrid": false, "rules": [["string", {"max": 128}]], "options": {"disabled":true}}', FALSE);
+            $this->definitions->fields[] = Json::decode('{ "label": "ctype", "key": "ctype", "type": "textInput", "visibleInGrid": false, "rules": [["string", {"max": 128}]], "options": {"disabled":true}}', FALSE);
+            if(!empty($elementStructure) && property_exists($elementStructure, 'fields')) {
               $this->definitions->fields = array_merge($this->definitions->fields, $elementStructure->fields);
-              $this->definitions->fields[] = Json::decode('{ "label": "State", "key": "state", "type": "textInput", "visibleInGrid": true, "transform": "state", "rules": [["string", {"max": 128}]], "options": {"disabled":true}}', FALSE);
+            $this->definitions->fields[] = Json::decode('{ "label": "State", "key": "state", "type": "textInput", "visibleInGrid": true, "transform": "state", "rules": [["string", {"max": 128}]], "options": {"disabled":true}}', FALSE);
 
-              if (property_exists($elementStructure, 'sortDefault')) {
+            if (!empty($elementStructure) && property_exists($elementStructure, 'sortDefault')) {
                 $this->definitions->sortDefault = $elementStructure->sortDefault;
               }
             }
