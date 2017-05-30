@@ -42,7 +42,7 @@
                     </div>
                     <div class="o-grid gc-bc--palette-clouds">
                         <div class="o-grid__cell">
-                            {{ pjax_begin({'id': formKey, 'enablePushState': false}) }}
+                            {{ pjax_begin({'id': 'assetList-' ~ formKey, 'enablePushState': false}) }}
 
                             <h6>{{ t('crelish', 'Asset list') }}</h6>
 
@@ -137,7 +137,7 @@
 
                 this.on("complete", function (file) {
                     setTimeout(function () {
-                        $.pjax.reload({container: '#assetList'});
+                        $.pjax.reload({container: '#assetList-{{ formKey }}'});
                         myDropzone.removeFile(file);
                     }, 250);
                 });
