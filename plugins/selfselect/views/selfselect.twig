@@ -10,6 +10,8 @@
         'options': {'placeholder': t('crelish', 'Select...')},
         'pluginOptions': { 'tags': true, 'allowClear': true, 'tokenSeparators': [';'], 'multiple': allowMultiple },
         'pluginEvents': {
-            "select2:select": "function() { var select = JSON.stringify($(this).val()); $('#select_#{field.key}').val(select); }"}
+            "select2:select": "function() { var select = JSON.stringify($(this).val()); $('#select_#{field.key}').val(select); }",
+            "select2:unselect": "function() { $('#select_#{field.key}').val(''); }"
+        }
     }) }}
 </div>
