@@ -76,6 +76,7 @@ class CrelishUser extends \yii\web\User implements \yii\web\IdentityInterface
     public $nameFirst;
     public $company;
     public $user;
+    public $role;
 
     /**
      * [crelishLogin description].
@@ -86,7 +87,7 @@ class CrelishUser extends \yii\web\User implements \yii\web\IdentityInterface
      */
     public static function crelishLogin($data) {
         // Fetch the single wanted user only.
-        $userProvider = new CrelishJsonDataProvider('user', ['filter'=>['email' => $data['email']]]);
+        $userProvider = new CrelishJsonDataProvider('user', ['filter'=>['email' => ['strict', $data['email']]]], null, true);
         $user = $userProvider->one();
 
         if(!empty($user)) {

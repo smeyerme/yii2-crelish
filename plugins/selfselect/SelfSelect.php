@@ -17,15 +17,27 @@ class SelfSelect extends Widget
     public $value;
     private $selectData = [];
     private $includeDataType;
+    private $allowMultiple = false;
+    private $hiddenValue = '';
+    private $predefinedOptions;
 
     public function init()
     {
         parent::init();
 
         $this->includeDataType = $this->field->config->ctype;
+        $this->allowMultiple = !empty($this->field->config->multiple) ? $this->field->config->multiple : false;
+        $this->predefinedOptions = !empty($this->field->config->options) ? $this->field->config->options : null;
 
         if (!empty($this->data)) {
-            $this->rawData = $this->data;
+
+            if(strpos($this->data, ";") > 0) {
+              $this->rawData = $this->data;
+            } else {
+              $rawData = $this->data;
+            }
+
+            $this->rawData = $rawData;
             $this->data = $this->processData($this->data);
         } else {
             $this->data = $this->processData();
@@ -36,19 +48,29 @@ class SelfSelect extends Widget
     private function processData($data = null)
     {
         // Load datasource.
-        $dataSource = new CrelishJsonDataProvider($this->includeDataType, ['sort'=>['by'=>['systitle','asc']]]);
-        $dataSource = $dataSource->rawAll();
+        if(is_array($this->predefinedOptions)) {
+
+          foreach ($this->predefinedOptions as $option) {
+            $dataSource[][$this->formKey] = $option;
+          }
+        } else {
+          $dataSource = new CrelishJsonDataProvider($this->includeDataType, ['sort'=>['by'=>['systitle','asc']]]);
+          $dataSource = $dataSource->rawAll();
+        }
 
         foreach ($dataSource as $item) {
 
             if(!empty($item[$this->formKey])){
-                $this->selectData[$item[$this->formKey]] = $item[$this->formKey];
-            } else {
+                if(is_array($item[$this->formKey])) {
 
+                    foreach ($item[$this->formKey] as $entry) {
+                      $this->selectData[$entry] = $entry;
+                    }
+                } else {
+                    $this->selectData[$item[$this->formKey]] = $item[$this->formKey];
+                }
             }
         }
-
-        asort($this->selectData);
 
         return $data;
     }
@@ -65,14 +87,15 @@ class SelfSelect extends Widget
             return false;
         });
 
-
         return $this->render('selfselect.twig', [
             'formKey' => $this->formKey,
             'field' => $this->field,
             'required' => ($isRequired) ? 'required' : '',
             'selectData' => $this->selectData,
             'selectValue' => $this->rawData,
-            'includeDataType' => $this->includeDataType
+            'hiddenValue' => Json::encode($this->rawData),
+            'includeDataType' => $this->includeDataType,
+            'allowMultiple' => $this->allowMultiple
         ]);
     }
 }
