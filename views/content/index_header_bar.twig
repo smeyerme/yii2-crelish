@@ -10,7 +10,7 @@
             <div class="c-input-group c-input-group--rounded" style="margin-top: .5em;">
                 <div class="o-field">
                     <input class="c-field" name="cr_content_filter" id="cr_content_filter"
-                           value="{{ app.request.get.cr_content_filter }}"
+                           value="{{ app.session.get('cr_content_filter') }}"
                            placeholder="{{ t('crelish', 'Type your search phrase here...') }}">
                 </div>
                 <button class="c-button c-button--brand"><i class="fa fa-search"></i></button>

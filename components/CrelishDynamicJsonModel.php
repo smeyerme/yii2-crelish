@@ -3,6 +3,7 @@
 namespace giantbits\crelish\components;
 
 use Underscore\Types\Arrays;
+use yii\base\InvalidParamException;
 use yii\helpers\FileHelper;
 use yii\helpers\Json;
 
@@ -12,10 +13,10 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
     public $uuid;
     public $ctype;
     public $fieldDefinitions;
+    public $elementDefinition;
     private $_attributeLabels;
     private $fileSource;
     private $isNew = true;
-    public $elementDefinition;
 
     public function init()
     {
@@ -79,11 +80,9 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
 
         // Transform and set data, detect json.
         foreach ($this->attributes() as $attribute) {
-
             $jsonCheck = @json_decode($this->{$attribute});
             if (json_last_error() == JSON_ERROR_NONE) {
-                // Is JSON.
-                $modelArray[$attribute] = Json::decode($this->{$attribute});
+                $modelArray[$attribute] = (is_array($this->{$attribute})) ? $this->{$attribute} : Json::decode($this->{$attribute});
             } else {
                 $modelArray[$attribute] = $this->{$attribute};
             }
@@ -98,6 +97,14 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
             if ($fieldDefinition && property_exists($fieldDefinition, 'transform')) {
                 $transformer = 'giantbits\crelish\components\transformer\CrelishFieldTransformer' . ucfirst($fieldDefinition->transform);
                 $transformer::beforeSave($modelArray[$attribute]);
+            }
+
+            if ($attribute == "created" && $this->isNew) {
+                $modelArray[$attribute] = time();
+            }
+
+            if ($attribute == "updated" && !$this->isNew) {
+                $modelArray[$attribute] = time();
             }
         }
 
@@ -114,7 +121,8 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
         @chmod($path, 0777);
 
         // Update cache
-        $this->updateCache(($this->isNew) ? 'create' : 'update');
+        $this->updateCache(($this->isNew) ? 'create' : 'update', CrelishBaseContentProcessor::processElement($this->ctype, $modelArray));
+        //\Yii::$app->cache->flush();
 
         // Todo: Create entry in slug storage.
         if (!empty($this->slug)) {
@@ -143,7 +151,9 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
     public function delete()
     {
         $this->updateCache('delete', $this->uuid);
-        unlink($this->fileSource);
+        if(file_exists($this->fileSource)){
+          unlink($this->fileSource);
+        }
     }
 
     public function getFields()
@@ -178,31 +188,25 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
         }
     }
 
-    private function updateCache($action)
+    private function updateCache($action, $data)
     {
+
         $cacheStore = \Yii::$app->cache->get('crc_' . $this->ctype);
 
-        if(!$cacheStore) {
-            return;
-        }
-
-        $modelSource = new CrelishJsonDataProvider($this->ctype, [], $this->uuid);
-        $data = $modelSource->one();
-
-        switch($action){
+        switch ($action) {
             case 'delete':
                 $data = $this->uuid;
-                Arrays::each($cacheStore, function($item, $index) use ($data, $cacheStore) {
-                    if(!empty($item['uuid']) && $item['uuid'] == $data){
+                Arrays::each($cacheStore, function ($cacheItem, $index) use ($data, $cacheStore) {
+                    if (!empty($cacheItem['uuid']) && $cacheItem['uuid'] == $data) {
                         unset($cacheStore[$index]);
                         \Yii::$app->cache->set('crc_' . $this->ctype, array_values($cacheStore));
                     }
                 });
                 break;
             case 'update':
-                if(!$this->isNew) {
-                    Arrays::each($cacheStore, function($item, $index) use ($data, $cacheStore) {
-                        if($item['uuid'] == $data['uuid']){
+                if (!$this->isNew) {
+                    Arrays::each($cacheStore, function ($cacheItem, $index) use ($data, $cacheStore) {
+                        if ($cacheItem['uuid'] == $data['uuid']) {
                             $data['ctype'] = $this->ctype;
                             $cacheStore[$index] = $data;
                             \Yii::$app->cache->set('crc_' . $this->ctype, array_values($cacheStore));
@@ -212,10 +216,16 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
                 break;
             default:
                 $data['ctype'] = $this->ctype;
+                if (!$cacheStore) {
+                    $cacheStore = [];
+                }
                 array_push($cacheStore, $data);
                 \Yii::$app->cache->set('crc_' . $this->ctype, array_values($cacheStore));
         }
 
+        if(is_a(\Yii::$app,'yii\web\Application')) {
+          \Yii::$app->session->set('intellicache', $this->uuid);
+        }
     }
 
     private function GUIDv4($trim = true)
@@ -256,21 +266,25 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
     {
         $this->isNew = false;
         $this->fileSource = \Yii::getAlias('@app/workspace/data/') . DIRECTORY_SEPARATOR . $this->ctype . DIRECTORY_SEPARATOR . $this->uuid . '.json';
-        $rawData = Json::decode(file_get_contents($this->fileSource));
+        if(file_exists($this->fileSource)){
+          $rawData = Json::decode(file_get_contents($this->fileSource));
+        } else {
+          $rawData = [];
+        }
         $attributes = [];
 
-        foreach($this->elementDefinition->fields as $field) {
+        foreach ($this->elementDefinition->fields as $field) {
 
-            // Do field transform.
+            /* Do field transform.
             if(property_exists($field, 'transform') && !empty($field->transform)) {
 
                 $transformer = 'giantbits\\crelish\\components\\transformer\\CrelishFieldTransformer' . ucfirst(strtolower($field->transform));
                 if (class_exists($transformer)) {
-                    $transformer::afterFind($rawData[$field->key]);
+                    //$transformer::afterFind($rawData[$field->key]);
                 }
-            }
+            }*/
 
-            if(!empty( $rawData[$field->key] )){
+            if (!empty($rawData[$field->key])) {
                 $attributes[$field->key] = $rawData[$field->key];
             }
         }
@@ -284,35 +298,59 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
         $elementDefinition = Json::decode(file_get_contents($definitionPath), false);
 
         // Add core fields.
-        if( empty(Arrays::find($elementDefinition->fields, function($elem) { return $elem->key == "uuid"; })) ) {
+        if (empty(Arrays::find($elementDefinition->fields, function ($elem) {
+            return $elem->key == "uuid";
+        }))
+        ) {
             $elementDefinition->fields[] = Json::decode('{ "label": "UUID", "key": "uuid", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]], "options": {"disabled":true}}', false);
         }
 
-        if( empty(Arrays::find($elementDefinition->fields, function($elem) { return $elem->key == "path"; })) ) {
+        if (empty(Arrays::find($elementDefinition->fields, function ($elem) {
+            return $elem->key == "path";
+        }))
+        ) {
             //$elementDefinition->fields[] = Json::decode('{ "label": "Path", "key": "path", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
         }
 
-        if( empty(Arrays::find($elementDefinition->fields, function($elem) { return $elem->key == "slug"; })) ) {
+        if (empty(Arrays::find($elementDefinition->fields, function ($elem) {
+            return $elem->key == "slug";
+        }))
+        ) {
             //$elementDefinition->fields[] = Json::decode('{ "label": "Slug", "key": "slug", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
         }
 
-        if( empty(Arrays::find($elementDefinition->fields, function($elem) { return $elem->key == "state"; })) ) {
-            $elementDefinition->fields[] = Json::decode('{ "label": "State", "key": "state", "type": "dropDownList", "visibleInGrid": true, "rules": [["required"], ["integer"]], "options": {"prompt":"Please set state"}, "items": {"0":"Offline", "1":"Draft", "2":"Online", "3":"Archived"}}', false);
+        if (empty(Arrays::find($elementDefinition->fields, function ($elem) {
+            return $elem->key == "state";
+        }))
+        ) {
+            $elementDefinition->fields[] = Json::decode('{ "label": "State", "key": "state",  "type": "dropDownList", "transform": "state", "visibleInGrid": true, "rules": [["required"], ["integer"]], "options": {"prompt":"Please set state"}, "items": {"0":"Offline", "1":"Draft", "2":"Online", "3":"Archived"}}', false);
         }
 
-        if( empty(Arrays::find($elementDefinition->fields, function($elem) { return $elem->key == "created"; })) ) {
-            $elementDefinition->fields[] = Json::decode('{ "label": "Created", "key": "created", "type": "textInput", "visibleInGrid": true, "format": "date", "transform": "datetime", "rules": [["string", {"max": 128}]]}', false);
+        if (empty(Arrays::find($elementDefinition->fields, function ($elem) {
+            return $elem->key == "created";
+        }))
+        ) {
+            $elementDefinition->fields[] = Json::decode('{ "label": "Created", "key": "created", "type": "textInput", "visibleInGrid": true, "format": "date", "transform": "datetime", "rules": [["safe"]]}', false);
         }
 
-        if( empty(Arrays::find($elementDefinition->fields, function($elem) { return $elem->key == "updated"; })) ) {
-            $elementDefinition->fields[] = Json::decode('{ "label": "Updated", "key": "updated", "type": "textInput", "visibleInGrid": true, "format": "date", "rules": [["string", {"max": 128}]]}', false);
+        if (empty(Arrays::find($elementDefinition->fields, function ($elem) {
+            return $elem->key == "updated";
+        }))
+        ) {
+            $elementDefinition->fields[] = Json::decode('{ "label": "Updated", "key": "updated", "type": "textInput", "visibleInGrid": true, "format": "date", "rules": [["safe"]]}', false);
         }
 
-        if( empty(Arrays::find($elementDefinition->fields, function($elem) { return $elem->key == "from"; })) ) {
+        if (empty(Arrays::find($elementDefinition->fields, function ($elem) {
+            return $elem->key == "from";
+        }))
+        ) {
             $elementDefinition->fields[] = Json::decode('{ "label": "Publish from", "key": "from", "type": "textInput", "visibleInGrid": true, "format": "date", "transform": "date", "rules": [["string", {"max": 128}]]}', false);
         }
 
-        if( empty(Arrays::find($elementDefinition->fields, function($elem) { return $elem->key == "to"; })) ) {
+        if (empty(Arrays::find($elementDefinition->fields, function ($elem) {
+            return $elem->key == "to";
+        }))
+        ) {
             $elementDefinition->fields[] = Json::decode('{ "label": "Publish to", "key": "to", "type": "textInput", "visibleInGrid": true, "format": "datetime", "transform": "datetime", "rules": [["string", {"max": 128}]]}', false);
         }
 

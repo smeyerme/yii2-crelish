@@ -1,0 +1,46 @@
+<nav class="c-nav c-nav--inline gc-bc--palette-belize">
+    <div class="o-grid">
+        <div class="o-grid__cell--width-25">
+            <span class="c-nav__content"><h3 class="c-heading">{{ t('crelish', 'User') }}</h3></span>
+        </div>
+        <div class="o-grid__cell--width-50 gc-fc--palette-dark-blue">
+
+            <div class="c-input-group c-input-group--rounded" style="margin-top: .5em;">
+                <div class="o-field">
+                    <input class="c-field" name="cr_content_filter" id="cr_content_filter" value="{{ app.request.get.cr_content_filter }}"
+                           placeholder="{{ t('crelish', 'Type your search phrase here...') }}">
+                </div>
+                <button class="c-button c-button--brand"><i class="fa fa-search"></i></button>
+            </div>
+
+        </div>
+        <div class="o-grid__cell--width-25">
+             <a href="/crelish/user/create.html" class="c-nav__item c-nav__item--right c-button c-button--success" type="button" >
+                <i class="fa fa-plus"></i> {{ t('crelish', 'Add new user') }}
+            </a>
+        </div>
+    </div>
+</nav>
+<script>
+    $(document).ready(function () {
+        $('#cr_content_filter').on("blur", function (e) {
+            if(window.location.href.indexOf('cr_content_filter') >= 0) {
+                $.pjax({url: window.location.href.replace(/(cr_content_filter=).*?(&|$)/,'$1' + $(this).val() + '$2'), container: '#assetList'});
+            } else {
+                var preFix = (window.location.href.indexOf("?") >= 0) ? '&' : '?';
+                $.pjax({url: window.location.href + preFix + "cr_content_filter=" + $(this).val(), container: '#assetList'});
+            }
+        });
+
+        $('#cr_content_filter').on("keypress", function (e) {
+            if (e.which == 10 || e.which == 13) {
+                if(window.location.href.indexOf('cr_content_filter') >= 0) {
+                    $.pjax({url: window.location.href.replace(/(cr_content_filter=).*?(&|$)/,'$1' + $(this).val() + '$2'), container: '#assetList'});
+                } else {
+                    var preFix = (window.location.href.indexOf("?") >= 0) ? '&' : '?';
+                    $.pjax({url: window.location.href + preFix + "cr_content_filter=" + $(this).val(), container: '#assetList'});
+                }
+            }
+        });
+    });
+</script>

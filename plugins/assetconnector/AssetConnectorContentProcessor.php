@@ -2,6 +2,8 @@
 
 namespace giantbits\crelish\plugins\assetconnector;
 
+use giantbits\crelish\components\CrelishDynamicJsonModel;
+use giantbits\crelish\components\CrelishJsonDataProvider;
 use yii\base\Component;
 use yii\helpers\Json;
 
@@ -15,9 +17,15 @@ class AssetConnectorContentProcessor extends Component
             $processedData[$key] = [];
         }
 
-        if (is_array($data) && sizeOf($data) > 0) {
+        if(!empty($data['uuid'])){
             $fileSource = \Yii::getAlias('@app/workspace/data') . DIRECTORY_SEPARATOR . 'asset' . DIRECTORY_SEPARATOR . $data['uuid'] . '.json';
-            $processedData[$key] = Json::decode(file_get_contents($fileSource));
+            if(file_exists($fileSource)){
+              $processedData[$key] = Json::decode(file_get_contents($fileSource));
+            } else {
+              $processedData[$key] = [];
+            }
+        } elseif (!empty($data['temp'])) {
+            $processedData[$key] = $data;
         }
     }
 
@@ -28,9 +36,15 @@ class AssetConnectorContentProcessor extends Component
             $processedData[$key] = [];
         }
 
-        if ($data && !empty($data['uuid'])) {
-            $fileSource = \Yii::getAlias('@app/workspace/data') . DIRECTORY_SEPARATOR . 'asset' . DIRECTORY_SEPARATOR . $data['uuid'] . '.json';
-            $processedData[$key] = Json::decode(file_get_contents($fileSource));
+        if ($data) {
+            if(!empty($data['uuid'])){
+                $fileSource = \Yii::getAlias('@app/workspace/data') . DIRECTORY_SEPARATOR . 'asset' . DIRECTORY_SEPARATOR . $data['uuid'] . '.json';
+                if(file_exists($fileSource)){
+                    $processedData[$key] = Json::decode(file_get_contents($fileSource));
+                }
+            } elseif (!empty($data['temp'])) {
+                $processedData[$key] = $data;
+            }
         }
     }
 }

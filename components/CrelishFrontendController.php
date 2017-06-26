@@ -63,6 +63,7 @@ class CrelishFrontendController extends Controller
      */
     public function actionError()
     {
+        $this->layout = 'main.twig';
         $this->title = 'Error';
         \Yii::$app->name = $this->title;
 
