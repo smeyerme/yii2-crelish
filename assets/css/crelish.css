@@ -17,6 +17,10 @@
     box-shadow: none;
 }
 
+.redactor-box textarea {
+    color: #333 !important;
+}
+
 .c-card {
     box-shadow: 0 0 1px hsla(0, 0%, 0%, 0.1);
 }

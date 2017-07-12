@@ -1,0 +1,18 @@
+
+<div class="o-grid">
+    <div class="o-grid__cell">
+        <h6>{{ t('crelish', 'Elements') }}</h6>
+        <table class="table table-striped">
+            <tbody>
+            {% for key,value in data %}
+                <tr>
+                    <td>{{ key }}</td>
+                    <td><a class="c-button" href="{{ url('elements/edit',{'element':value}) }}">Edit {{ key }}</a></td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
