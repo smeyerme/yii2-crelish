@@ -98,6 +98,15 @@ class CrelishFrontendController extends Controller
         // Process data and render.
         $data = CrelishBaseContentProcessor::processContent($this->entryPoint['ctype'], $this->data);
 
+        if (isset(Yii::$app->params['crelish']['pageTitleAttribute']) && isset($data[Yii::$app->params['crelish']['pageTitleAttribute']])) {
+            if (isset(Yii::$app->params['crelish']['pageTitle'])) {
+                $this->view->title = str_replace('{title}',$data[Yii::$app->params['crelish']['pageTitleAttribute']],Yii::$app->params['crelish']['pageTitle']);
+
+            } else {
+                $this->view->title = $data[Yii::$app->params['crelish']['pageTitleAttribute']];
+            }
+        }
+
         return $this->render($this->viewTemplate, ['data' => $data]);
     }
 
@@ -118,6 +127,14 @@ class CrelishFrontendController extends Controller
         $entryDataJoint = new CrelishJsonDataProvider($ctype, ['filter' => ['slug' => $slug]]);
         $entryModel = $entryDataJoint->one();
 
+        if ($entryModel == null && isset(Yii::$app->params['crelish']['404slug'])) {
+            Yii::$app->params['crelish']['404slug'] = 404;
+            $entryDataJoint = new CrelishJsonDataProvider($ctype, ['filter' => ['slug' => Yii::$app->params['crelish']['404slug']]]);
+            $entryModel = $entryDataJoint->one();
+            $slug = $path = Yii::$app->params['crelish']['404slug'];
+            Yii::$app->response->statusCode = 404;
+        }
+
         $this->entryPoint = ['ctype' => $ctype, 'slug' => $slug, 'path' => $path, 'uuid' => $entryModel['uuid']];
     }
 
@@ -129,6 +146,7 @@ class CrelishFrontendController extends Controller
 
         $ds = DIRECTORY_SEPARATOR;
         $path = \Yii::$app->view->theme->basePath . $ds . 'layouts' . $ds . $this->entryPoint['slug'] . '.twig';
+
 
         if (file_exists($path)) {
             $this->layout = '@app/themes/' . \giantbits\crelish\Module::getInstance()->theme . "/layouts/" . $this->entryPoint['slug'] . '.twig';

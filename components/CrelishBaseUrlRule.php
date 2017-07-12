@@ -63,41 +63,38 @@ class CrelishBaseUrlRule implements UrlRuleInterface {
     public function parseRequest($manager, $request) {
         $pathInfo = $request->getPathInfo();
 
-        if (empty($pathInfo)) {
-            header('Location: /home.html');
+        $langFreePath = $pathInfo;
+        $langCode = '';
+
+        if (isset(\Yii::$app->params['crelish']['langprefix']) && \Yii::$app->params['crelish']['langprefix']) {
+            $pathInfoParts = explode("/", $pathInfo, 2);
+            if (strlen($pathInfoParts[0]) == 2) {
+                $langCode = $pathInfoParts[0];
+                $langFreePath = '';
+                if (count($pathInfoParts) > 1) {
+                    $langFreePath = $pathInfoParts[1];
+                }
+            }
+        }
+
+        if (empty($langFreePath )) {
+            header('Location: '.$this->urlForSlug(\Yii::$app->params['crelish']['entryPoint']['slug'],$langCode));
             die();
         }
 
-        if($pathInfo == 'crelish/' || $pathInfo == 'crelish.html' || $pathInfo == 'crelish') {
+        if($langFreePath  == 'crelish/' || $langFreePath  == 'crelish.html' || $langFreePath  == 'crelish') {
             header('Location: /crelish/dashboard/index.html');
             die();
         }
 
-        if (strpos($pathInfo, '.html') === FALSE) {
-            if (substr($pathInfo, -1) !== "/") {
-                header('Location: /' . $pathInfo . '.html');
+        if (strpos($langFreePath, '.html') === FALSE) {
+            if (substr($langFreePath, -1) !== "/") {
+                header('Location: /' . $langFreePath . '.html');
                 die();
             }
-            else {
-                $pathInfo = $pathInfo;
-            }
-        }
-        else {
+        } else {
             $pathInfo = str_replace('.html', '', $pathInfo);
         }
-
-        // Todo: Language handling.
-        /*
-        if (substr_count($pathInfo, '/') === 0) {
-          $langFreePath = $pathInfo;
-          $langCode = '';
-        } else {
-          $langCode = substr($pathInfo, 0, strpos($pathInfo, '/'));
-          $langFreePath = str_replace($langCode . "/", '', $pathInfo);
-        }*/
-        $langFreePath = $pathInfo;
-        $langCode = '';
-
         if (strpos($langFreePath, '/') > 0) {
             $segments = explode('/', $langFreePath);
             $langFreePath = array_shift($segments);
@@ -106,6 +103,7 @@ class CrelishBaseUrlRule implements UrlRuleInterface {
         else {
             $additional = [];
         }
+        $langFreePath = str_replace('.html','',$langFreePath);
 
         $params = array_merge($request->queryParams, [
             'pathRequested' => $langFreePath,
@@ -118,5 +116,19 @@ class CrelishBaseUrlRule implements UrlRuleInterface {
         }
 
         return ['crelish/frontend/run', $params];
+    }
+
+    public function urlForSlug($slug,$langCode=null) {
+        $url = '/' . $slug . '.html';
+        if (isset(\Yii::$app->params['crelish']['langprefix']) && \Yii::$app->params['crelish']['langprefix']) {
+            if (empty($langCode)) {
+                $langCode = \Yii::$app->language;
+                if (preg_match('/([a-z]{2})-[A-Z]{2}/',$langCode,$sub)) {
+                    $langCode = $sub[1];
+                }
+            }
+            $url = '/' . $langCode . $url;
+        }
+        return $url;
     }
 }

@@ -20,7 +20,7 @@
                                        value="{{ app.request.get.cr_content_filter }}"
                                        placeholder="{{ t('crelish', 'Type your search phrase here...') }}">
                             </div>
-                            <button class="c-button c-button--brand"><i class="fa fa-search"></i></button>
+                            <button class="c-button c-button--brand do-search" onclick="return false;"><i class="fa fa-search"></i></button>
                         </div>
 
                     </div>
@@ -87,19 +87,23 @@
 <script>
     $('#media-modal-{{ formKey }}').on('shown.bs.modal', function (e) {
 
+        $('.do-search').on("click", function(e){
+            e.preventDefault();
+        });
+
         console.info( '{{ formKey }}' );
 
         $('#cr_content_filter_{{ formKey }}').on("blur", function (e) {
             if (window.location.href.indexOf('cr_content_filter') >= 0) {
                 $.pjax({
                     url: window.location.href.replace(/(cr_content_filter=).*?(&|$)/, '$1' + $(this).val() + '$2'),
-                    container: '#{{ formKey }}'
+                    container: '#assetList-{{ formKey }}'
                 });
             } else {
                 var preFix = (window.location.href.indexOf("?") >= 0) ? '&' : '?';
                 $.pjax({
                     url: window.location.href + preFix + "cr_content_filter=" + $(this).val(),
-                    container: '#{{ formKey }}'
+                    container: '#assetList-{{ formKey }}'
                 });
             }
         });
@@ -110,13 +114,13 @@
                 if (window.location.href.indexOf('cr_content_filter') >= 0) {
                     $.pjax({
                         url: window.location.href.replace(/(cr_content_filter=).*?(&|$)/, '$1' + $(this).val() + '$2'),
-                        container: '#{{ formKey }}'
+                        container: '#assetList-{{ formKey }}'
                     });
                 } else {
                     var preFix = (window.location.href.indexOf("?") >= 0) ? '&' : '?';
                     $.pjax({
                         url: window.location.href + preFix + "cr_content_filter=" + $(this).val(),
-                        container: '#{{ formKey }}'
+                        container: '#assetList-{{ formKey }}'
                     });
                 }
             }
