@@ -1,0 +1,31 @@
+<div class="o-grid">
+    <div class="o-grid__cell">
+        <h6>Filter</h6>
+        <table class="table table-striped">
+            <tbody>
+            <tr>
+                <td>Woche</td>
+                <td><select name="week" id="weekfilter">
+                        {% for key,option in options %}
+                            <option value="{{ key }}">{{ option }}</option>
+                        {% endfor %}
+                    </select></td>
+            </tr>
+            <tr>
+                <td colspan="2"><a class="c-button" href="#" id="exportbutton">{{ t('crelish', 'Export') }}</a></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+<script>
+
+    $(document).ready(function () {
+
+        $('#exportbutton').on("click", function (e) {
+            e.preventDefault();
+            document.location.href = "{{ url('export/run',{type:type}) }}&week=" + $('#weekfilter').val();
+        });
+
+    });
+</script>

@@ -54,9 +54,9 @@ class DataListContentProcessor extends Component
                 'limit' => $limit
             ]);
 
+            $processedData[$key]['raw'] = $sourceData->rawAll();
             $processedData[$key]['provider'] = $sourceData->raw();
             $processedData[$key]['ctype'] = $data['source'];
-
         }
     }
 }

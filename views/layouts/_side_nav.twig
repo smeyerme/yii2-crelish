@@ -20,6 +20,11 @@
   </a>
 </span>
 -->
+<span class="c-nav__item c-nav__item--right {{ app.controller.id == 'export' ? 'active' : '' }}">
+  <a href="{{ url('crelish/export/index') }}">
+    <span class="fa fa-table"></span> {{ t('crelish', 'Export') }}
+  </a>
+</span>
 <span class="c-nav__item c-nav__item--right {{ app.controller.id == 'settings' ? 'active' : '' }}">
   <a href="{{ url('crelish/settings/index') }}">
     <span class="fa fa-cogs"></span> {{ t('crelish', 'Settings') }}

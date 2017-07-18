@@ -106,6 +106,18 @@ class CrelishFrontendController extends Controller
                 $this->view->title = $data[Yii::$app->params['crelish']['pageTitleAttribute']];
             }
         }
+        if (isset($data['metakeywords'])) {
+            \Yii::$app->view->registerMetaTag([
+                'name' => 'keywords',
+                'content' => $data['metakeywords']
+            ]);
+        }
+        if (isset($data['metadescription'])) {
+            \Yii::$app->view->registerMetaTag([
+                'name' => 'description',
+                'content' => $data['metadescription']
+            ]);
+        }
 
         return $this->render($this->viewTemplate, ['data' => $data]);
     }
