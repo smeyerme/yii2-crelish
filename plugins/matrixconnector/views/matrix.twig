@@ -25,16 +25,20 @@
 
                     {{ pjax_begin({'id':'contentList', 'enablePushState': false}) }}
                     <div class="o-grid gc-bc--palette-clouds">
-    <div class="o-grid__cell o-grid__cell--width-20">
-        <h6>Type filter</h6>
-        <ul role="menu" class="gc-nav__content-filter">
-            {{ element_nav_widget({'ctype':ctype, 'selector':'cet'}) }}
-        </ul>
-    </div>
-    <div class="o-grid__cell">
-        <h6>Content</h6>
-        {{ grid_view_widget({'dataProvider': dataProvider, 'columns': columns, 'tableOptions': {'class':'table table-striped'}}) | raw }}
-    </div>
+                        <div class="o-grid__cell o-grid__cell--width-20">
+                            <h6>Type filter</h6>
+                            <ul role="menu" class="gc-nav__content-filter">
+                                {{ element_nav_widget({'ctype':ctype, 'selector':'cet'}) }}
+                            </ul>
+                        </div>
+                        <div class="o-grid__cell">
+                            <h6>Content</h6>
+                            {{ grid_view_widget({
+                                'dataProvider': dataProvider,
+                                'columns': columns,
+                                'tableOptions': {'class':'table table-striped'}
+                            }) | raw }}
+                        </div>
                     </div>
                     {{ pjax_end() }}
 
@@ -46,7 +50,7 @@
 
 <script type="riot/tag">
     <matrix_{{ formKey }}>
-        <input type="hidden" ref="CrelishDynamicJsonModel_{{ formKey }}" name="CrelishDynamicJsonModel[{{ formKey }}]" id="CrelishDynamicJsonModel_{{ formKey }}" value="{ JSON.stringify(data) }" />
+        <input type="hidden" ref="CrelishDynamicModel_{{ formKey }}" name="CrelishDynamicModel[{{ formKey }}]" id="CrelishDynamicModel_{{ formKey }}" value="{ JSON.stringify(data) }" />
         <div class="o-grid o-grid--no-gutter">
             <div class="o-grid__cell" each="{ value, name in data }">
                 <span class="c-badge">{ name }</span>
@@ -89,7 +93,7 @@
                     if(content) {
                         content.area = targetArea
                         wrap.data[targetArea].push(content)
-                        //app.refs[CrelishDynamicJsonModel_{{ formKey }}].value = JSON.stringify(app.data)
+                        //app.refs[CrelishDynamicModel_{{ formKey }}].value = JSON.stringify(app.data)
                     }
                     console.log(this)
                     $('.matrix-modal-{{ formKey }}').modal('hide')
@@ -134,21 +138,22 @@
             });
         });
     </matrix_{{ formKey }}>
+
 </script>
 
 <script type="text/javascript">
-    Array.prototype.move = function (old_index, new_index) {
-        if (new_index >= this.length) {
-            var k = new_index - this.length;
-            while ((k--) + 1) {
-                this.push(undefined);
-            }
-        }
-        this.splice(new_index, 0, this.splice(old_index, 1)[0]);
-        return this; // for testing purposes
-    };
+  Array.prototype.move = function (old_index, new_index) {
+    if (new_index >= this.length) {
+      var k = new_index - this.length;
+      while ((k--) + 1) {
+        this.push(undefined);
+      }
+    }
+    this.splice(new_index, 0, this.splice(old_index, 1)[0]);
+    return this; // for testing purposes
+  };
 
-    var tags_{{ formKey }} = riot.mount('matrix_{{ formKey }}', {
-        data: {{ processedData | raw }}
-    });
+  var tags_{{ formKey }} = riot.mount('matrix_{{ formKey }}', {
+    data: {{ processedData | raw }}
+  });
 </script>

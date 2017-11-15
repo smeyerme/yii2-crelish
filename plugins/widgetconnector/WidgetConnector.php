@@ -32,7 +32,7 @@ class WidgetConnector extends Widget
     <div class="form-group field-crelishdynamicmodel-body required">
       <label class="control-label" for="crelishdynamicmodel-body">Widget</label>
       <div>
-        <input type="text" class="form-control" name="CrelishDynamicJsonModel[$this->formKey]" id="CrelishDynamicJsonModel_$this->formKey" value="$value" />
+        <input type="text" class="form-control" name="CrelishDynamicModel[$this->formKey]" id="CrelishDynamicModel_$this->formKey" value="$value" />
       </div>
     </div>
 EOT;

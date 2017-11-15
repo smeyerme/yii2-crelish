@@ -2,7 +2,7 @@
 
 namespace giantbits\crelish\plugins\widgetconnector;
 
-use giantbits\crelish\components\CrelishJsonDataProvider;
+use giantbits\crelish\components\CrelishDataProvider;
 use yii\base\Component;
 use yii\helpers\Json;
 
@@ -13,8 +13,8 @@ class WidgetConnectorContentProcessor extends Component
     public static function processData($key, $data, &$processedData)
     {
         $html = '';
-        $sourceData = new CrelishJsonDataProvider('widget', [], $processedData['uuid']);
-        $widgetToLoad = "app\\workspace\\widgets\\" . $sourceData->one()['widget'];
+        //$sourceData = new CrelishDataProvider('widget', [], $processedData['uuid']);
+        $widgetToLoad = "app\\workspace\\widgets\\" . $data;
 
         $processedData[$key] = $widgetToLoad::widget();
     }

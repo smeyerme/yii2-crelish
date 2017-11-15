@@ -2,8 +2,8 @@
 
 namespace giantbits\crelish\plugins\assetconnector;
 
-use giantbits\crelish\components\CrelishDynamicJsonModel;
-use giantbits\crelish\components\CrelishJsonDataProvider;
+use giantbits\crelish\components\CrelishDynamicModel;
+use giantbits\crelish\components\CrelishDataProvider;
 use Underscore\Types\Arrays;
 use yii\base\Widget;
 use yii\helpers\Html;
@@ -25,23 +25,30 @@ class AssetConnector extends Widget
         parent::init();
 
         if (!empty($this->data)) {
+            if(is_string($this->data)){
+                $this->data = Json::decode($this->data);
+            }
             $this->rawData = $this->data;
             $this->data = $this->processData($this->data);
         } else {
-            $this->data = $this->processData("");
+            $this->data = $this->processData(null);
             $this->rawData = [];
         }
     }
 
     private function processData($data)
     {
+        if(is_string($data)) {
+            $data = Json::decode($data);
+        }
+
         $processedData = [];
 
-        $typeDefinitions = CrelishDynamicJsonModel::loadElementDefinition($this->includeDataType);
+        $typeDefinitions = CrelishDynamicModel::loadElementDefinition($this->includeDataType);
 
         if (Arrays::has($data, 'uuid')) {
-            $dataSource = \Yii::getAlias('@app/workspace/data/') . DIRECTORY_SEPARATOR . 'asset' . DIRECTORY_SEPARATOR . $data['uuid'] . '.json';
-            $itemData = Json::decode(file_get_contents($dataSource));
+
+            $itemData =  call_user_func('app\workspace\models\Asset::find')->where(['uuid' => $data['uuid']])->one();
 
             if (!empty($itemData['uuid'])) {
                 $processedData = $itemData;
@@ -49,7 +56,7 @@ class AssetConnector extends Widget
         }
 
         // Load datasource.
-        $dataSource = new CrelishJsonDataProvider($this->includeDataType, ['sort' => ['by' => ['systitle', 'asc']]]);
+        $dataSource = new CrelishDataProvider('asset', ['sort' => ['by' => ['created', 'desc']]]);
         $dataSource = $dataSource->rawAll();
 
         foreach ($dataSource as $entry) {
@@ -84,7 +91,7 @@ class AssetConnector extends Widget
             $filter = ['freesearch' => $_GET['cr_content_filter']];
         }
 
-        $modelProvider = new CrelishJsonDataProvider('asset', ['filter' => $filter], NULL);
+        $modelProvider = new CrelishDataProvider('asset', ['filter' => $filter], NULL);
         $modelColumns = $modelProvider->columns;
 
         $checkCol = [

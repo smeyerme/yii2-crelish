@@ -294,7 +294,7 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
 
     public static function loadElementDefinition($ctype)
     {
-        $definitionPath = \Yii::getAlias('@app/workspace/elements') . DIRECTORY_SEPARATOR . $ctype . '.json';
+        $definitionPath = \Yii::getAlias('@app/workspace/elements') . DIRECTORY_SEPARATOR . str_replace('db:', '', $ctype) . '.json';
         $elementDefinition = Json::decode(file_get_contents($definitionPath), false);
 
         // Add core fields.

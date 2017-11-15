@@ -2,6 +2,8 @@
 
 namespace giantbits\crelish\controllers;
 
+use giantbits\crelish\components\CrelishDataProvider;
+use giantbits\crelish\components\CrelishDataResolver;
 use giantbits\crelish\components\CrelishDynamicJsonModel;
 use giantbits\crelish\components\CrelishJsonDataProvider;
 use giantbits\crelish\components\CrelishBaseController;
@@ -70,7 +72,7 @@ class ContentController extends CrelishBaseController {
 
         if(!empty($_POST['selection'])) {
             foreach ($_POST['selection'] as $selection){
-                $delModel = new CrelishDynamicJsonModel([], ['ctype'=>$this->ctype, 'uuid'=>$selection]);
+                $delModel = new CrelishDynamicModel([], ['ctype'=>$this->ctype, 'uuid'=>$selection]);
                 $delModel->delete();
             }
         }
@@ -83,17 +85,19 @@ class ContentController extends CrelishBaseController {
             }
         }
 
-        $modelProvider = new CrelishJsonDataProvider($this->ctype, ['filter' => $filter], NULL);
+        $modelProvider = new CrelishDataProvider($this->ctype, ['filter' => $filter]);
+
         $checkCol = [
           [
             'class' => 'yii\grid\CheckboxColumn'
           ]
         ];
 
-        $columns = array_merge($checkCol, $modelProvider->columns);
+        //$columns = array_merge($checkCol, $modelProvider->columns);
+        $columns = ['systitle', 'slug', 'path'];
 
         $rowOptions = function ($model, $key, $index, $grid) {
-            return ['onclick' => 'location.href="update.html?ctype=' . $model['ctype'] . '&uuid=' . $model['uuid'] .'";'];
+            return ['onclick' => 'location.href="update.html?ctype=' . $this->ctype . '&uuid=' . $model['uuid'] .'";'];
         };
 
         return $this->render('content.twig', [
@@ -141,7 +145,7 @@ class ContentController extends CrelishBaseController {
         $ctype = \Yii::$app->request->get('ctype');
         $uuid = \Yii::$app->request->get('uuid');
 
-        $model = new CrelishDynamicJsonModel([], ['ctype'=>$ctype, 'uuid'=>$uuid]);
+        $model = new CrelishDynamicModel([], ['ctype'=>$ctype, 'uuid'=>$uuid]);
         $model->delete();
         $this->redirect('/crelish/content/index.html');
     }

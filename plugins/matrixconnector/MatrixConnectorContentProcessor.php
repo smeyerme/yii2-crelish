@@ -3,6 +3,8 @@
 namespace giantbits\crelish\plugins\matrixconnector;
 
 use giantbits\crelish\components\CrelishBaseContentProcessor;
+use giantbits\crelish\components\CrelishDataProvider;
+use giantbits\crelish\components\CrelishDynamicModel;
 use giantbits\crelish\components\CrelishJsonDataProvider;
 use yii\base\Component;
 use yii\helpers\Json;
@@ -14,6 +16,10 @@ class MatrixConnectorContentProcessor extends Component
 
     public static function processData($key, $data, &$processedData)
     {
+
+        if(is_string($data)) {
+            $data = Json::decode($data);
+        }
 
         if (empty($processedData[$key])) {
             $processedData[$key] = [];
@@ -29,9 +35,8 @@ class MatrixConnectorContentProcessor extends Component
                 foreach ($subContent as $subContentdata) {
                     // @todo: nesting again.
                     if ($data && !empty($subContentdata['ctype']) && !empty($subContentdata['uuid'])) {
-                        $fileSource = \Yii::getAlias('@app/workspace/data') . DIRECTORY_SEPARATOR . $subContentdata['ctype'] . DIRECTORY_SEPARATOR . $subContentdata['uuid'] . '.json';
-                        $sourceData = Json::decode(file_get_contents($fileSource));
-
+                        $sourceData = new CrelishDynamicModel([], ['ctype' => $subContentdata['ctype'], 'uuid' => $subContentdata['uuid']]);
+                        //$sourceData =  call_user_func('app\workspace\models\\'. ucfirst($subContentdata['ctype']) . '::find')->where(['uuid' => $subContentdata['uuid']])->one();
                     }
 
                     $sourceDataOut = CrelishBaseContentProcessor::processContent($subContentdata['ctype'], $sourceData);

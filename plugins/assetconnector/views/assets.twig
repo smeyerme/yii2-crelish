@@ -65,7 +65,7 @@
 
 <div class="form-group field-crelishdynamicjsonmodel-{{ formKey }} {{ required }}">
     <label class="control-label" for="crelishdynamicjsonmodel-{{ formKey }}">{{ field.label }}</label>
-    <input type="hidden" name="CrelishDynamicJsonModel[{{ field.key }}]" value="{{ rawData }}"
+    <input type="hidden" name="CrelishDynamicModel[{{ field.key }}]" value="{{ rawData }}"
            id="asset_{{ field.key }}"/>
     <br>
     <div class="c-card">
@@ -77,8 +77,15 @@
             </a>
         </div>
         <div class="c-card__item">
-            <div id="asset-info-{{ field.key }}">
-                {{ data.systitle }}
+            <div class="o-grid o-grid--wrap">
+                <div class="o-gird__cell o-grid__cell--width-25">
+                    {% if "image" in data.mime %}
+                    <img src="{{ data.src }}" class="o-image" />
+                    {% endif %}
+                </div>
+                <div class="o-grid__cell" id="asset-info-{{ field.key }}">
+                    {{ data.systitle }} ({{ data.mime }})
+                </div>
             </div>
         </div>
     </div>

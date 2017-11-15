@@ -2,8 +2,7 @@
 
 namespace giantbits\crelish\plugins\assetconnector;
 
-use giantbits\crelish\components\CrelishDynamicJsonModel;
-use giantbits\crelish\components\CrelishJsonDataProvider;
+use giantbits\crelish\components\CrelishDynamicModel;
 use yii\base\Component;
 use yii\helpers\Json;
 
@@ -13,14 +12,19 @@ class AssetConnectorContentProcessor extends Component
 
     public static function processData($key, $data, &$processedData)
     {
+        if(is_string($data)) {
+            $data = Json::decode($data);
+        }
+
         if (empty($processedData[$key])) {
             $processedData[$key] = [];
         }
 
         if(!empty($data['uuid'])){
-            $fileSource = \Yii::getAlias('@app/workspace/data') . DIRECTORY_SEPARATOR . 'asset' . DIRECTORY_SEPARATOR . $data['uuid'] . '.json';
-            if(file_exists($fileSource)){
-              $processedData[$key] = Json::decode(file_get_contents($fileSource));
+            $sourceData = new CrelishDynamicModel([], ['ctype'=>'asset', 'uuid'=>$data['uuid']]);
+
+            if($sourceData){
+              $processedData[$key] = $sourceData;
             } else {
               $processedData[$key] = [];
             }
@@ -31,6 +35,9 @@ class AssetConnectorContentProcessor extends Component
 
     public static function processJson($key, $data, &$processedData)
     {
+        if(is_string($data)) {
+            $data = Json::decode($data);
+        }
 
         if (empty($processedData[$key])) {
             $processedData[$key] = [];
@@ -38,9 +45,9 @@ class AssetConnectorContentProcessor extends Component
 
         if ($data) {
             if(!empty($data['uuid'])){
-                $fileSource = \Yii::getAlias('@app/workspace/data') . DIRECTORY_SEPARATOR . 'asset' . DIRECTORY_SEPARATOR . $data['uuid'] . '.json';
-                if(file_exists($fileSource)){
-                    $processedData[$key] = Json::decode(file_get_contents($fileSource));
+                $sourceData =  new CrelishDynamicModel([], ['ctype'=>'asset', 'uuid'=>$data['uuid']]); //call_user_func('app\workspace\models\Asset::find')->where(['uuid' => $data['uuid']])->one();
+                if($sourceData){
+                    $processedData[$key] = $sourceData;
                 }
             } elseif (!empty($data['temp'])) {
                 $processedData[$key] = $data;

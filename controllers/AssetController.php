@@ -10,13 +10,13 @@ namespace giantbits\crelish\controllers;
 
 use ColorThief\ColorThief;
 use giantbits\crelish\components\CrelishBaseController;
-use giantbits\crelish\components\CrelishDynamicJsonModel;
+use giantbits\crelish\components\CrelishDynamicModel;
 use yii\base\Controller;
 use yii\helpers\Html;
 use yii\web\UploadedFile;
 use yii\helpers\Json;
 use yii\helpers\Url;
-use giantbits\crelish\components\CrelishJsonDataProvider;
+use giantbits\crelish\components\CrelishDataProvider;
 use yii\filters\AccessControl;
 
 class AssetController extends CrelishBaseController
@@ -59,7 +59,7 @@ class AssetController extends CrelishBaseController
             $filter = ['freesearch' => $_GET['cr_content_filter']];
         }
 
-        $modelProvider = new CrelishJsonDataProvider('asset', ['filter' => $filter], NULL);
+        $modelProvider = new CrelishDataProvider('asset', ['filter' => $filter], NULL);
         $checkCol = [
             [
                 'class' => 'yii\grid\CheckboxColumn'
@@ -99,16 +99,11 @@ class AssetController extends CrelishBaseController
     public function actionUpdate()
     {
         $uuid = !empty(\Yii::$app->getRequest()->getQueryParam('uuid')) ? \Yii::$app->getRequest()->getQueryParam('uuid') : null;
-        $model = new CrelishDynamicJsonModel([], ['uuid' => $uuid, 'ctype' => 'asset']);
+        $model = new CrelishDynamicModel([], ['uuid' => $uuid, 'ctype' => 'asset']);
 
         // Save content if post request.
         if (!empty(\Yii::$app->request->post()) && !\Yii::$app->request->isAjax) {
-            $oldData = [];
-            // Load old data.
-            if (!empty($model->uuid)) {
-                $oldData = Json::decode(file_get_contents(\Yii::getAlias('@app/workspace/data/') . DIRECTORY_SEPARATOR . 'asset' . DIRECTORY_SEPARATOR . $model->uuid . '.json'));
-            }
-            $model->attributes = $_POST['CrelishDynamicJsonModel'] + $oldData;
+            $model->attributes = $_POST['CrelishDynamicJsonModel'];
 
             if ($model->validate()) {
                 $model->save();
@@ -136,13 +131,12 @@ class AssetController extends CrelishBaseController
     {
         $file = UploadedFile::getInstanceByName('file');
 
-
         if ($file) {
             $destName = time() . '_' . $file->name;
             $targetFile = \Yii::getAlias('@webroot') . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . $destName;
             $file->saveAs($targetFile);
 
-            $model = new CrelishDynamicJsonModel([], ['ctype' => 'asset']);
+            $model = new CrelishDynamicModel([], ['ctype' => 'asset']);
             $model->systitle = $destName;
             $model->title = $destName;
             $model->src = \Yii::getAlias('@web') . '/' . 'uploads' . '/' . $destName;
@@ -150,21 +144,8 @@ class AssetController extends CrelishBaseController
             $model->size = $file->size;
             $model->state = 2;
             $model->save();
-
-            /*
-            try {
-                $domColor = ColorThief::getColor($targetFile, 20);
-                $palColor = ColorThief::getPalette(\Yii::getAlias('@webroot') . DIRECTORY_SEPARATOR . '_lib' . DIRECTORY_SEPARATOR . $destName);
-                $model->colormain_rgb = Json::encode($domColor);
-                $model->colormain_hex = '#' . sprintf('%02x', $domColor[0]) . sprintf('%02x', $domColor[1]) . sprintf('%02x', $domColor[2]);
-                $model->save();
-                $model->colorpalette = Json::encode($palColor);
-                $model->save();
-            } catch (Exception $e) {
-                \Yii::$app->session->setFlash('secondary', 'Color theft could not be completed. (Image too large?)');
-            }
-            */
         }
+
         return false;
     }
 

@@ -2,9 +2,10 @@
 
 namespace giantbits\crelish\plugins\datalist;
 
-use giantbits\crelish\components\CrelishJsonDataProvider;
+use giantbits\crelish\components\CrelishDataProvider;
 use Underscore\Types\Arrays;
 use yii\base\Component;
+use yii\helpers\Json;
 
 class DataListContentProcessor extends Component
 {
@@ -12,6 +13,8 @@ class DataListContentProcessor extends Component
 
     public static function processData($key, $data, &$processedData)
     {
+
+        $data = Json::decode($data);
 
         if (empty($processedData[$key])) {
             $processedData[$key] = [];
@@ -48,7 +51,7 @@ class DataListContentProcessor extends Component
                 }
             }
 
-            $sourceData = new CrelishJsonDataProvider($data['source'], [
+            $sourceData = new CrelishDataProvider($data['source'], [
                 'filter' => $filters,
                 'sort' => $sort,
                 'limit' => $limit

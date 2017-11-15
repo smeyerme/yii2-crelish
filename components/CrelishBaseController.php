@@ -52,7 +52,7 @@ class CrelishBaseController extends Controller
         $settings = $settings + $defaults;
 
         // Build form for type.
-        $this->model = new CrelishDynamicJsonModel([], [
+        $this->model = new CrelishDynamicModel([], [
             'ctype' => $this->ctype,
             'uuid' => $this->uuid
         ]);
@@ -69,7 +69,7 @@ class CrelishBaseController extends Controller
                 $oldData = $this->model->attributes();
             }
 
-            $attributes = $_POST['CrelishDynamicJsonModel'] + $oldData;
+            $attributes = $_POST['CrelishDynamicModel'] + $oldData;
             $this->model->attributes = $attributes;
 
             if ($this->model->validate()) {

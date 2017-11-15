@@ -30,7 +30,7 @@ class CrelishBaseContentProcessor extends Component
     {
         $processedData = [];
 
-        $elementDefinition =  CrelishDynamicJsonModel::loadElementDefinition($ctype);
+        $elementDefinition = CrelishDynamicJsonModel::loadElementDefinition($ctype);
 
         if ($data) {
 
@@ -47,6 +47,7 @@ class CrelishBaseContentProcessor extends Component
                 }
 
                 if (!empty($fieldType)) {
+
                     // Get processor class.
                     $processorClass = 'giantbits\crelish\plugins\\' . strtolower($fieldType) . '\\' . ucfirst($fieldType) . 'ContentProcessor';
                     $transformClass = 'giantbits\crelish\components\transformer\CrelishFieldTransformer' . ucfirst($transform);
