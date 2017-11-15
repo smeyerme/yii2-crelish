@@ -48,7 +48,7 @@ class AssetConnector extends Widget
 
         if (Arrays::has($data, 'uuid')) {
 
-            $itemData =  call_user_func('app\workspace\models\Asset::find')->where(['uuid' => $data['uuid']])->one();
+            $itemData = new CrelishDynamicModel([], ['ctype'=>$this->includeDataType, 'uuid'=>$data['uuid']]);
 
             if (!empty($itemData['uuid'])) {
                 $processedData = $itemData;
@@ -76,7 +76,6 @@ class AssetConnector extends Widget
 
     public function run()
     {
-
         $isRequired = Arrays::find($this->field->rules, function ($rule) {
             foreach ($rule as $set) {
                 if ($set == 'required') {
@@ -117,7 +116,6 @@ class AssetConnector extends Widget
         $rowOptions = function ($model, $key, $index, $grid) {
             return ['onclick' => "$('#asset_" . $this->formKey . "').val(JSON.stringify({ 'ctype': 'asset', 'uuid': '" . $model['uuid'] . "'})); $('#asset-info-" . $this->formKey . "').html('" . $model['systitle'] . "'); $('#media-modal-".$this->formKey."').modal('hide');"];
         };
-
 
         return $this->render('assets.twig', [
             'dataProvider' => $modelProvider->raw(),

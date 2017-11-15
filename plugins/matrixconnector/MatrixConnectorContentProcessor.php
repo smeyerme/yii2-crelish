@@ -40,6 +40,7 @@ class MatrixConnectorContentProcessor extends Component
                     }
 
                     $sourceDataOut = CrelishBaseContentProcessor::processContent($subContentdata['ctype'], $sourceData);
+
                     if(!empty($processedData['uuid'])) {
                         $sourceDataOut['parentUuid'] = $processedData['uuid'];
                     }
