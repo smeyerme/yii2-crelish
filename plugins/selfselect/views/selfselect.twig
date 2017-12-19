@@ -2,16 +2,16 @@
 
 <div class="form-group field-crelishdynamicjsonmodel-{{ formKey }} {{ required }}">
     <label class="control-label" for="crelishdynamicjsonmodel-branch">{{ field.label }}</label>
-    <input type="hidden" name="CrelishDynamicModel[{{ field.key }}]" value="{{ hiddenValue }}" id="select_{{ field.key }}" />
+    <input type="hidden" name="CrelishDynamicModel[{{ field.key }}]" value='{{ hiddenValue }}' id="select_{{ field.key }}" />
     {{ Select2_widget({
-        'name': "teamp_select",
+        'name': "temp_select",
         'value': selectValue,
         'data': selectData,
         'options': {'placeholder': t('crelish', 'Select...')},
         'pluginOptions': { 'tags': true, 'allowClear': true, 'tokenSeparators': [';'], 'multiple': allowMultiple },
         'pluginEvents': {
             "select2:select": "function() { var select = JSON.stringify($(this).val()); $('#select_#{field.key}').val(select); }",
-            "select2:unselect": "function() { $('#select_#{field.key}').val(''); }"
+            "select2:unselect": "function() { var select = JSON.stringify($(this).val()); }"
         }
     }) }}
 </div>

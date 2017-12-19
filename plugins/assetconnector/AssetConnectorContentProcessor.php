@@ -45,7 +45,7 @@ class AssetConnectorContentProcessor extends Component
 
         if ($data) {
             if(!empty($data['uuid'])){
-                $sourceData =  new CrelishDynamicModel([], ['ctype'=>'asset', 'uuid'=>$data['uuid']]); //call_user_func('app\workspace\models\Asset::find')->where(['uuid' => $data['uuid']])->one();
+                $sourceData =  new CrelishDynamicModel([], ['ctype'=>'asset', 'uuid'=>$data['uuid']]);
                 if($sourceData){
                     $processedData[$key] = $sourceData;
                 }

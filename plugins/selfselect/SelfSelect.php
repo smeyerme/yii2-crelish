@@ -2,100 +2,96 @@
 
 namespace giantbits\crelish\plugins\selfselect;
 
-use giantbits\crelish\components\CrelishDynamicJsonModel;
-use giantbits\crelish\components\CrelishJsonDataProvider;
+use giantbits\crelish\components\CrelishDataProvider;
 use Underscore\Types\Arrays;
 use yii\base\Widget;
 use yii\helpers\Json;
 
 class SelfSelect extends Widget
 {
-    public $data;
-    public $rawData;
-    public $formKey;
-    public $field;
-    public $value;
-    private $selectData = [];
-    private $includeDataType;
-    private $allowMultiple = false;
-    private $hiddenValue = '';
-    private $predefinedOptions;
+  public $data;
+  public $rawData;
+  public $formKey;
+  public $field;
+  public $value;
+  private $selectData = [];
+  private $includeDataType;
+  private $allowMultiple = false;
+  private $hiddenValue = '';
+  private $predefinedOptions;
 
-    public function init()
-    {
-        parent::init();
+  public function init()
+  {
+    parent::init();
 
-        $this->includeDataType = $this->field->config->ctype;
-        $this->allowMultiple = !empty($this->field->config->multiple) ? $this->field->config->multiple : false;
-        $this->predefinedOptions = !empty($this->field->config->options) ? $this->field->config->options : null;
+    $this->includeDataType = $this->field->config->ctype;
+    $this->allowMultiple = !empty($this->field->config->multiple) ? $this->field->config->multiple : false;
+    $this->predefinedOptions = !empty($this->field->config->options) ? $this->field->config->options : null;
 
-        if (!empty($this->data)) {
+    if (!empty($this->data)) {
+      if (strpos($this->data, ";") > 0) {
+        $this->rawData = $this->data;
+      } else {
+        $rawData = $this->data;
+      }
 
-            if(strpos($this->data, ";") > 0) {
-              $this->rawData = $this->data;
-            } else {
-              $rawData = $this->data;
-            }
+      $this->rawData = $rawData;
+      $this->data = $this->processData($this->data);
+    } else {
+      $this->data = $this->processData();
+      $this->rawData = "";
+    }
+  }
 
-            $this->rawData = $rawData;
-            $this->data = $this->processData($this->data);
-        } else {
-            $this->data = $this->processData();
-            $this->rawData = "";
-        }
+  private function processData($data = null)
+  {
+    // Load datasource.
+    if (is_array($this->predefinedOptions)) {
+      foreach ($this->predefinedOptions as $option) {
+        $dataSource[][$this->formKey] = $option;
+      }
+    } else {
+      $dataSource = new CrelishDataProvider($this->includeDataType, ['sort' => ['by' => ['systitle', 'asc']]]);
+      $dataSource = $dataSource->rawAll();
     }
 
-    private function processData($data = null)
-    {
-        // Load datasource.
-        if(is_array($this->predefinedOptions)) {
+    foreach ($dataSource as $item) {
 
-          foreach ($this->predefinedOptions as $option) {
-            $dataSource[][$this->formKey] = $option;
+      if (!empty($item[$this->formKey])) {
+        if (is_array($item[$this->formKey])) {
+          foreach ($item[$this->formKey] as $entry) {
+            $this->selectData[$entry] = $entry;
           }
         } else {
-          $dataSource = new CrelishJsonDataProvider($this->includeDataType, ['sort'=>['by'=>['systitle','asc']]]);
-          $dataSource = $dataSource->rawAll();
+          $this->selectData[$item[$this->formKey]] = $item[$this->formKey];
         }
-
-        foreach ($dataSource as $item) {
-
-            if(!empty($item[$this->formKey])){
-                if(is_array($item[$this->formKey])) {
-
-                    foreach ($item[$this->formKey] as $entry) {
-                      $this->selectData[$entry] = $entry;
-                    }
-                } else {
-                    $this->selectData[$item[$this->formKey]] = $item[$this->formKey];
-                }
-            }
-        }
-
-        return $data;
+      }
     }
 
-    public function run()
-    {
+    return $data;
+  }
 
-        $isRequired = Arrays::find($this->field->rules, function($rule){
-            foreach($rule as $set){
-                if($set == 'required') {
-                    return true;
-                }
-            }
-            return false;
-        });
+  public function run()
+  {
 
-        return $this->render('selfselect.twig', [
-            'formKey' => $this->formKey,
-            'field' => $this->field,
-            'required' => ($isRequired) ? 'required' : '',
-            'selectData' => $this->selectData,
-            'selectValue' => $this->rawData,
-            'hiddenValue' => Json::encode($this->rawData),
-            'includeDataType' => $this->includeDataType,
-            'allowMultiple' => $this->allowMultiple
-        ]);
-    }
+    $isRequired = Arrays::find($this->field->rules, function ($rule) {
+      foreach ($rule as $set) {
+        if ($set == 'required') {
+          return true;
+        }
+      }
+      return false;
+    });
+
+    return $this->render('selfselect.twig', [
+      'formKey' => $this->formKey,
+      'field' => $this->field,
+      'required' => ($isRequired) ? 'required' : '',
+      'selectData' => $this->selectData,
+      'selectValue' => $this->rawData,
+      'hiddenValue' => Json::encode($this->rawData),
+      'includeDataType' => $this->includeDataType,
+      'allowMultiple' => $this->allowMultiple
+    ]);
+  }
 }
