@@ -3,6 +3,7 @@
 namespace giantbits\crelish\plugins\datainclude;
 
 use giantbits\crelish\components\CrelishBaseContentProcessor;
+use giantbits\crelish\components\CrelishDataProvider;
 use giantbits\crelish\components\CrelishDynamicModel;
 use yii\helpers\Json;
 
@@ -32,13 +33,15 @@ class DataIncludeContentProcessor extends CrelishBaseContentProcessor
       $data = Json::decode($data);
     }
 
-    if (empty($processedData[$key])) {
-      $processedData[$key] = [];
-    }
-
     if ($data) {
+
+      if (empty($processedData[$key])) {
+        $processedData[$key] = [];
+      }
+
       if(!empty($data['uuid'])){
         $sourceData =  new CrelishDynamicModel([], ['ctype'=>$data['ctype'], 'uuid'=>$data['uuid']]);
+
         if($sourceData){
           $processedData[$key] = $sourceData;
         }

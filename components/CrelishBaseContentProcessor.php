@@ -115,5 +115,6 @@ class CrelishBaseContentProcessor extends Component
     if (!empty($transform) && class_exists($transformClass)) {
       $transformClass::afterFind($finalArr[$attr]);
     }
+
   }
 }

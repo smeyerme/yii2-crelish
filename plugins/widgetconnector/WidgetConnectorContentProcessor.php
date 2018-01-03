@@ -14,7 +14,7 @@ class WidgetConnectorContentProcessor extends Component
     {
         $html = '';
         //$sourceData = new CrelishDataProvider('widget', [], $processedData['uuid']);
-        $widgetToLoad = "app\\workspace\\widgets\\" . $data;
+        $widgetToLoad = "app\\workspace\\widgets\\" . $data . "\\" . $data;
 
         $processedData[$key] = $widgetToLoad::widget();
     }
