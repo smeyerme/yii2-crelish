@@ -27,7 +27,7 @@ class DataInclude extends Widget
 
     if (!empty($this->data)) {
 
-      if(strpos($this->data, "{") !== false) {
+      if(is_string($this->data) && strpos($this->data, "{") !== false) {
         $rawData = Json::decode($this->data);
       } else {
         $rawData = $this->data;
@@ -93,7 +93,7 @@ class DataInclude extends Widget
       'formKey' => $this->formKey,
       'field' => $this->field,
       'required' => ($isRequired) ? 'required' : '',
-      'rawData' => Json::encode($this->rawData),
+      'rawData' => $this->data,
       'selectData' => $this->selectData,
       'selectValue' => (!empty($this->rawData['uuid'])) ? $this->rawData['uuid'] : '',
       'info' => $this->info,

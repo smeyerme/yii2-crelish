@@ -176,16 +176,16 @@ class CrelishFrontendController extends Controller
   private function setViewTemplate()
   {
     $ds = DIRECTORY_SEPARATOR;
-    $path = \Yii::$app->view->theme->basePath . $ds . \Yii::$app->controller->id . $ds . $this->entryPoint['slug'] . '.twig';
+    $path = \Yii::$app->view->theme->basePath . $ds . \Yii::$app->controller->id . $ds . 'slug' . $ds . $this->entryPoint['slug'] . '.twig';
     $pathByType = \Yii::$app->view->theme->basePath . $ds . \Yii::$app->controller->id . $ds . $this->entryPoint['ctype'] . '.twig';
     $pathByConfig = (!empty($this->data['template'])) ? \Yii::$app->view->theme->basePath . $ds . \Yii::$app->controller->id . $ds . $this->data['template'] : '';
 
     if (file_exists($path)) {
       $this->viewTemplate = $this->entryPoint['slug'] . '.twig';
-    } elseif (file_exists($pathByType)) {
-      $this->viewTemplate = $this->entryPoint['ctype'] . '.twig';
     } elseif (file_exists($pathByConfig)) {
       $this->viewTemplate = $this->data['template'];
+    } elseif (file_exists($pathByType)) {
+      $this->viewTemplate = $this->entryPoint['ctype'] . '.twig';
     } else {
       $this->viewTemplate = 'main.twig';
     }

@@ -7,6 +7,7 @@ use giantbits\crelish\components\CrelishDataResolver;
 use giantbits\crelish\components\CrelishDynamicJsonModel;
 use giantbits\crelish\components\CrelishJsonDataProvider;
 use giantbits\crelish\components\CrelishBaseController;
+use Underscore\Types\Arrays;
 use yii\helpers\Url;
 use yii\filters\AccessControl;
 
@@ -98,7 +99,33 @@ class ContentController extends CrelishBaseController
     ];
 
     $columns = array_merge($checkCol, $modelProvider->columns);
-    //$columns = ['systitle', 'slug', 'path'];
+
+    $columns = Arrays::invoke($columns, function($item) {
+
+      if (key_exists('attribute', $item) && $item['attribute'] === 'state') {
+        $item['format'] = 'raw';
+        $item['label'] = 'Status';
+        $item['value'] = function ($data) {
+          switch ($data['state']) {
+            case 1:
+              $state = 'Draft';
+              break;
+            case 2:
+              $state = 'Online';
+              break;
+            case 3:
+              $state = 'Archived';
+              break;
+            default:
+              $state = 'Offline';
+          };
+
+          return $state;
+        };
+      }
+
+      return $item;
+    });
 
     $rowOptions = function ($model, $key, $index, $grid) {
       return ['onclick' => 'location.href="update.html?ctype=' . $this->ctype . '&uuid=' . $model['uuid'] . '";'];
