@@ -26,7 +26,7 @@ class Bootstrap implements BootstrapInterface
             'twig' => [
               'class' => 'yii\twig\ViewRenderer',
               'cachePath' => '@runtime/Twig/cache',
-              'extensions' => ['\Twig_Extension_Debug'],
+              //'extensions' => ['\Twig_Extension_Debug'],
               'options' => [
                 'auto_reload' => TRUE,
               ],

@@ -18,6 +18,7 @@ class SelfSelect extends Widget
   private $includeDataType;
   private $allowMultiple = false;
   private $hiddenValue = '';
+  private $selectedValue;
   private $predefinedOptions;
 
   public function init()
@@ -30,12 +31,13 @@ class SelfSelect extends Widget
 
     if (!empty($this->data)) {
       if (strpos($this->data, ";") > 0) {
-        $this->rawData = $this->data;
+        $this->selectedValue = explode("; ", $this->data);
+        $this->hiddenValue = $this->data;
       } else {
-        $rawData = $this->data;
+        $this->rawData = $this->data;
+        $this->selectedValue = $this->data;
+        $this->hiddenValue = $this->data;
       }
-
-      $this->rawData = $rawData;
       $this->data = $this->processData($this->data);
     } else {
       $this->data = $this->processData();
@@ -58,8 +60,8 @@ class SelfSelect extends Widget
     foreach ($dataSource as $item) {
 
       if (!empty($item[$this->formKey])) {
-        if (is_array($item[$this->formKey])) {
-          foreach ($item[$this->formKey] as $entry) {
+        if (strpos($item[$this->formKey], ";") > 0) {
+          foreach (explode("; ", $item[$this->formKey]) as $entry) {
             $this->selectData[$entry] = $entry;
           }
         } else {
@@ -88,8 +90,8 @@ class SelfSelect extends Widget
       'field' => $this->field,
       'required' => ($isRequired) ? 'required' : '',
       'selectData' => $this->selectData,
-      'selectValue' => $this->rawData,
-      'hiddenValue' => Json::encode($this->rawData),
+      'selectValue' => $this->selectedValue,
+      'hiddenValue' => $this->hiddenValue,
       'includeDataType' => $this->includeDataType,
       'allowMultiple' => $this->allowMultiple
     ]);
