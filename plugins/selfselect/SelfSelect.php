@@ -50,22 +50,24 @@ class SelfSelect extends Widget
     // Load datasource.
     if (is_array($this->predefinedOptions)) {
       foreach ($this->predefinedOptions as $option) {
-        $dataSource[][$this->formKey] = $option;
+        $dataItems[][$this->formKey] = $option;
       }
     } else {
       $dataSource = new CrelishDataProvider($this->includeDataType, ['sort' => ['by' => ['systitle', 'asc']]]);
-      $dataSource = $dataSource->rawAll();
+      $dataItems = $dataSource->rawAll();
     }
 
-    foreach ($dataSource as $item) {
+    if(!empty($dataItems)) {
+      foreach ($dataItems as $item) {
 
-      if (!empty($item[$this->formKey])) {
-        if (strpos($item[$this->formKey], ";") > 0) {
-          foreach (explode("; ", $item[$this->formKey]) as $entry) {
-            $this->selectData[$entry] = $entry;
+        if (!empty($item[$this->formKey])) {
+          if (strpos($item[$this->formKey], ";") > 0) {
+            foreach (explode("; ", $item[$this->formKey]) as $entry) {
+              $this->selectData[$entry] = $entry;
+            }
+          } else {
+            $this->selectData[$item[$this->formKey]] = $item[$this->formKey];
           }
-        } else {
-          $this->selectData[$item[$this->formKey]] = $item[$this->formKey];
         }
       }
     }
