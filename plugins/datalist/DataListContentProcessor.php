@@ -21,11 +21,11 @@ class DataListContentProcessor extends Component
         }
 
         if ($data) {
-            $filters = NULL;
-            $sort = NULL;
-            $limit = NULL;
+            $filters = null;
+            $sort = null;
+            $limit = null;
 
-            if(!empty($_GET['freesearch']))
+            if (!empty($_GET['freesearch']))
                 $data['filter'][] = 'freesearch';
 
             if (!empty($data['filter'])) {
@@ -39,12 +39,12 @@ class DataListContentProcessor extends Component
             }
 
             if (!empty($data['sort'])) {
-                $sort['by'] = (!empty($data['sort']['by'])) ? $data['sort']['by'] : NULL;
-                $sort['dir'] = (!empty($data['sort']['dir'])) ? $data['sort']['dir'] : NULL;
+                $sort['by'] = (!empty($data['sort']['by'])) ? $data['sort']['by'] : null;
+                $sort['dir'] = (!empty($data['sort']['dir'])) ? $data['sort']['dir'] : null;
             }
 
             if (Arrays::has($data, 'limit')) {
-                if ($data['limit'] === FALSE) {
+                if ($data['limit'] === false) {
                     $limit = 99999;
                 } else {
                     $limit = $data['limit'];
@@ -60,6 +60,30 @@ class DataListContentProcessor extends Component
             $processedData[$key]['raw'] = $sourceData->rawAll();
             $processedData[$key]['provider'] = $sourceData->raw();
             $processedData[$key]['ctype'] = $data['source'];
+        }
+    }
+
+    public static function processJson($key, $data, &$processedData)
+    {
+        if (is_string($data)) {
+            $data = Json::decode($data);
+        }
+
+        if ($data) {
+
+            if (empty($processedData[$key])) {
+                $processedData[$key] = [];
+            }
+
+            if (!empty($data['source'])) {
+                $sourceData = new CrelishDataProvider($data['source']);
+
+                if ($sourceData) {
+                    $processedData[$key] = $sourceData->rawAll();
+                }
+            } elseif (!empty($data['temp'])) {
+                $processedData[$key] = $data;
+            }
         }
     }
 }

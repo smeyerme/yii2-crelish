@@ -2,10 +2,10 @@
 
 namespace giantbits\crelish\components;
 
-use yii\web\User;
+use yii\base\Object;
 use yii\base\NotSupportedException;
 
-class CrelishUser extends \yii\web\User implements \yii\web\IdentityInterface
+class CrelishUser extends Object implements \yii\web\IdentityInterface
 {
     public $loginUrl = ['crelish/user/login'];
 
@@ -86,6 +86,8 @@ class CrelishUser extends \yii\web\User implements \yii\web\IdentityInterface
      * @return [type] [description]
      */
     public static function crelishLogin($data) {
+
+
         // Fetch the single wanted user only.
         $userProvider = new CrelishJsonDataProvider('user', ['filter'=>['email' => ['strict', $data['email']]]], null, true);
         $user = $userProvider->one();

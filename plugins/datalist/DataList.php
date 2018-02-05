@@ -9,30 +9,35 @@ use yii\helpers\Json;
 use yii\helpers\Url;
 use yii\grid\ActionColumn;
 
-class DataList extends Widget {
+class DataList extends Widget
+{
     public $data;
     public $formKey;
     public $field;
 
-    public function init() {
+    public function init()
+    {
         parent::init();
 
         if (!empty($this->data)) {
             $this->data = $this->processData($this->data);
-        }
-        else {
+        } else {
             $this->data = Json::encode(['main' => []]);
         }
     }
 
-    private function processData($data) {
-        return Json::encode($data);
+    private function processData($data)
+    {
+        return $data;
     }
 
-    public function run() {
+    public function run()
+    {
 
-        $out = Html::textarea('test', $this->data);
-
-        return $out;
+        return $this->render('datalist.twig', [
+            'formKey' => $this->formKey,
+            'field' => $this->field,
+            'rawData' => $this->data
+        ]);
     }
 }

@@ -15,9 +15,10 @@ class Bootstrap implements BootstrapInterface
 
       \Yii::$app->setComponents([
         'user' => [
-          'class' => 'giantbits\crelish\components\CrelishUser',
+          'class' => 'yii\web\User',
           'identityClass' => 'giantbits\crelish\components\CrelishUser',
           'enableAutoLogin' => TRUE,
+          'loginUrl' =>  ['crelish/user/login']
         ],
         'defaultRoute' => 'frontend/index',
         'view' => [
