@@ -23,7 +23,7 @@ class ContentController extends CrelishBaseController
         'only' => ['create', 'index', 'delete'],
         'rules' => [
           [
-            'allow' => TRUE,
+            'allow' => true,
             'roles' => ['@'],
           ],
         ],
@@ -43,7 +43,7 @@ class ContentController extends CrelishBaseController
         ->getQueryParam('ctype') : 'page';*/
     $this->uuid = (!empty(\Yii::$app->getRequest()
       ->getQueryParam('uuid'))) ? \Yii::$app->getRequest()
-      ->getQueryParam('uuid') : NULL;
+      ->getQueryParam('uuid') : null;
 
 
     if (key_exists('cr_content_filter', $_GET)) {
@@ -100,7 +100,7 @@ class ContentController extends CrelishBaseController
 
     $columns = array_merge($checkCol, $modelProvider->columns);
 
-    $columns = Arrays::invoke($columns, function($item) {
+    $columns = Arrays::invoke($columns, function ($item) {
 
       if (key_exists('attribute', $item) && $item['attribute'] === 'state') {
         $item['format'] = 'raw';

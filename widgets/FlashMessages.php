@@ -72,7 +72,7 @@ class FlashMessages extends Widget
     $renderHtml .= '</div>';
     $renderHtml .= '</div>';
     $renderHtml .= '</div>';
-    $renderHtml .= '<div class="c-overlay c-overlay--dismissable"></div>';
+    //$renderHtml .= '<div class="c-overlay c-overlay--dismissable"></div>';
 
     return $renderHtml;
   }
