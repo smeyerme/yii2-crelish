@@ -181,7 +181,7 @@ class CrelishFrontendController extends Controller
     $pathByConfig = (!empty($this->data['template'])) ? \Yii::$app->view->theme->basePath . $ds . \Yii::$app->controller->id . $ds . $this->data['template'] : '';
 
     if (file_exists($path)) {
-      $this->viewTemplate = $this->entryPoint['slug'] . '.twig';
+      $this->viewTemplate = 'slug/' . $this->entryPoint['slug'] . '.twig';
     } elseif (file_exists($pathByConfig)) {
       $this->viewTemplate = $this->data['template'];
     } elseif (file_exists($pathByType)) {

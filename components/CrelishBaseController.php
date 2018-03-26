@@ -35,7 +35,7 @@ class CrelishBaseController extends Controller
     parent::init();
   }
 
-  protected function buildForm($action = 'update', $settings = array())
+  public function buildForm($action = 'update', $settings = [])
   {
     $formatter = new Formatter();
     $formatter->dateFormat = "dd.MM.yyyy";
@@ -53,16 +53,17 @@ class CrelishBaseController extends Controller
 
     // Build form for type.
     $this->model = new CrelishDynamicModel([], [
-      'ctype' => $this->ctype,
-      'uuid' => $this->uuid
+      'ctype' => (!empty($settings['ctype'])) ? $settings['ctype'] : $this->ctype,
+      'uuid' => (!empty($settings['uuid'])) ? $settings['uuid'] : $this->uuid
     ]);
 
     // Save content if post request.
     if (in_array($action, array(
         'update',
         'create'
-      )) && !empty(\Yii::$app->request->post()) && !\Yii::$app->request->isAjax
-    ) {
+      ))
+      && !empty(\Yii::$app->request->post())
+      && !\Yii::$app->request->isAjax) {
       $oldData = [];
       // Load old data.
       if (!empty($this->model->uuid)) {
@@ -76,7 +77,7 @@ class CrelishBaseController extends Controller
         $this->model->save();
         \Yii::$app->session->setFlash('success', \Yii::t("crelish", 'Content saved successfully...'));
 
-        if(!empty($_POST['save_n_return']) && $_POST['save_n_return'] == "1") {
+        if (!empty($_POST['save_n_return']) && $_POST['save_n_return'] == "1") {
           header('Location: ' . Url::to([
               'content/index',
               'ctype' => $this->ctype
@@ -117,9 +118,8 @@ class CrelishBaseController extends Controller
     ]);
 
     echo Html::beginTag("div", ['class' => $settings['outerClass']]);
-    echo Html::beginTag("div", ['class' => 'o-grid']);
+    echo Html::beginTag("div", ['class' => 'o-grid o-grid--wrap']);
 
-    // TODO: This has to be dynamicaly handled like it's done in frontend.
     // Get the tabs (there has to be at least one).
     $tabs = $this->model->fieldDefinitions->tabs;
 
@@ -148,7 +148,11 @@ class CrelishBaseController extends Controller
         }
         echo Html::beginTag('div', ['class' => 'c-card__item']);
 
+        // Loop through model fields / attributes
         foreach ($this->model->fieldDefinitions->fields as $field) {
+
+          // Prepare key for nested models.
+          $keyName = (!empty($settings['prefix'])) ? $field->key : $field->key;
 
           if (!property_exists($field, 'type')) {
             $field->type = "textInput";
@@ -163,11 +167,11 @@ class CrelishBaseController extends Controller
 
           if (strpos($field->type, 'widget_') !== FALSE) {
             $widget = str_replace('widget_', '', $field->type);
-            echo $form->field($this->model, $field->key)
+            echo $form->field($this->model, $keyName)
               ->widget($widget::className())
               ->label($field->label);
           } elseif ($field->type == 'dropDownList') {
-            echo $form->field($this->model, $field->key)
+            echo $form->field($this->model, $keyName)
               ->{$field->type}((array)$field->items, (array)$fieldOptions)
               ->label($field->label);
           } elseif ($field->type == 'submitButton') {
@@ -177,17 +181,18 @@ class CrelishBaseController extends Controller
             // Check for crelish special fields.
             if (class_exists($class)) {
               echo $class::widget([
-                'formKey' => $field->key,
+                'formKey' => $keyName,
                 'data' => $this->model{$field->key},
                 'field' => $field
               ]);
             } else {
-              echo $form->field($this->model, $field->key)
+              echo $form->field($this->model, $keyName)
                 ->{$field->type}((array)$fieldOptions)
                 ->label($field->label);
             }
           }
         }
+
         echo Html::endTag('div');
         echo Html::endTag('div');
         echo Html::endTag('div');
@@ -197,7 +202,8 @@ class CrelishBaseController extends Controller
     echo Html::endTag('div');
     echo Html::endTag('div');
 
-    echo Html::hiddenInput('save_n_return', '0', ['id'=>'save_n_return']);
+    // handle save and save and return
+    echo Html::hiddenInput('save_n_return', '0', ['id' => 'save_n_return']);
 
     ActiveForm::end();
 

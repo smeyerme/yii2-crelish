@@ -38,51 +38,43 @@ class CrelishDataProvider extends Component
         if (!empty($uuid)) {
           $this->uuid = $uuid;
 
-          $model = call_user_func_array('app\workspace\models\\' . ucfirst($this->ctype) . '::find', ['uuid' => $this->uuid])->one();
-
-          if ($model) {
-            $this->allModels[] = $this->processSingle($model);
-          } else {
-            $this->allModels[] = [];
-          }
-
+          $dataModels = call_user_func_array('app\workspace\models\\' . ucfirst($this->ctype) . '::find', ['uuid' => $this->uuid])->all();
         } else {
-          $dataModels = \Yii::$app->cache->get('crc_' . $ctype);
+          $dataModels = false; //\Yii::$app->cache->get('crc_' . $ctype);
 
           if ($dataModels === false || $forceFull) {
             // $data is not found in cache, calculate it from scratch
-            $dataModels = call_user_func('app\workspace\models\\' . ucfirst($this->ctype) . '::find')->asArray()->all();
+            $dataModels = call_user_func('app\workspace\models\\' . ucfirst($this->ctype) . '::find')->all();
             // store $data in cache so that it can be retrieved next time
-            \Yii::$app->cache->set('crc_' . $ctype, $dataModels);
+            //\Yii::$app->cache->set('crc_' . $ctype, $dataModels);
           }
-
-          foreach ($dataModels as $dataModel) {
-            $tmpModel = array_merge(['ctype' => $this->ctype], $dataModel);
-            $this->allModels[] = $this->processSingle($tmpModel);
-          }
-
-          if (!empty($this->allModels)) {
-            if (Arrays::has($settings, 'filter')) {
-              if (!empty($settings['filter'])) {
-                $this->filterModels($settings['filter']);
-              }
-            }
-
-            if (Arrays::has($settings, 'sort')) {
-              if (!empty($settings['sort'])) {
-                $this->sortModels($settings['sort']);
-              }
-            }
-
-            if (Arrays::has($settings, 'limit')) {
-              if (!empty($settings['limit'])) {
-                $this->pageSize = $settings['limit'];
-              }
-            }
-          }
-
-
         }
+
+        foreach ($dataModels as $dataModel) {
+          $tmpModel = array_merge(['ctype' => $this->ctype], $dataModel->attributes);
+          $this->allModels[$dataModel['uuid']] = $this->processSingle($tmpModel);
+        }
+
+        if (!empty($this->allModels)) {
+          if (Arrays::has($settings, 'filter')) {
+            if (!empty($settings['filter'])) {
+              $this->filterModels($settings['filter']);
+            }
+          }
+
+          if (Arrays::has($settings, 'sort')) {
+            if (!empty($settings['sort'])) {
+              $this->sortModels($settings['sort']);
+            }
+          }
+
+          if (Arrays::has($settings, 'limit')) {
+            if (!empty($settings['limit'])) {
+              $this->pageSize = $settings['limit'];
+            }
+          }
+        }
+
         break;
       default:
         if (!empty($uuid)) {
@@ -267,8 +259,8 @@ class CrelishDataProvider extends Component
   public function one()
   {
 
-    if (!empty($this->allModels[0])) {
-      return $this->allModels[0];
+    if (!empty($this->allModels)) {
+      return array_values($this->allModels)[0];
     }
     return null;
   }
@@ -287,7 +279,7 @@ class CrelishDataProvider extends Component
         'forcePageParam' => true,
         'route' => (!empty(\Yii::$app->getRequest()
           ->getQueryParam('pathRequested'))) ? '/' . \Yii::$app->getRequest()
-          ->getQueryParam('pathRequested') : null,
+            ->getQueryParam('pathRequested') : null,
         'params' => array_merge([
           'page' => !empty($_GET['page']) ? $_GET['page'] : '',
           'category' => !empty($_GET['category']) ? $_GET['category'] : '',
@@ -499,7 +491,7 @@ class CrelishDataProvider extends Component
     $elementDefinition = $this->getDefinitions();
 
     foreach ($modelArr as $attr => $value) {
-      CrelishBaseContentProcessor::processFieldData($elementDefinition, $attr, $value, $finalArr);
+      CrelishBaseContentProcessor::processFieldData($this->ctype, $elementDefinition, $attr, $value, $finalArr);
     }
 
     return $finalArr;

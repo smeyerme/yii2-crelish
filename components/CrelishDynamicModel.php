@@ -68,6 +68,46 @@ class CrelishDynamicModel extends \yii\base\DynamicModel
     }
   }
 
+  private function loadModelData()
+  {
+    $this->isNew = false;
+    $attributes = [];
+    $rawData = [];
+    $finalArr = [];
+
+    // Define source.
+    if (!property_exists($this->elementDefinition, 'storage')) {
+      $this->elementDefinition->storage = 'json';
+    }
+
+    // Fetch from source.
+    switch ($this->elementDefinition->storage) {
+      case 'db':
+        $rawData = call_user_func('app\workspace\models\\' . ucfirst($this->ctype) . '::find')->where(['uuid' => $this->uuid])->one();
+        break;
+      default:
+        $this->fileSource = \Yii::getAlias('@app/workspace/data/') . DIRECTORY_SEPARATOR . $this->ctype . DIRECTORY_SEPARATOR . $this->uuid . '.json';
+        if (file_exists($this->fileSource)) {
+          $rawData = Json::decode(file_get_contents($this->fileSource));
+        }
+    }
+
+    // Set data values.
+    foreach ($this->elementDefinition->fields as $field) {
+      if (!empty($rawData[$field->key])) {
+        $attributes[$field->key] = $rawData[$field->key];
+      }
+    }
+
+    // Process data values based on field types.
+    foreach ($attributes as $attr => $value) {
+      CrelishBaseContentProcessor::processFieldData($this->ctype, $this->elementDefinition, $attr, $value, $finalArr);
+    }
+
+    // Set it.
+    $this->attributes = $finalArr;
+  }
+
   public function save()
   {
     $modelArray = [];
@@ -177,6 +217,11 @@ class CrelishDynamicModel extends \yii\base\DynamicModel
     if (file_exists($this->fileSource)) {
       unlink($this->fileSource);
     }
+
+    if($this->elementDefinition->storage == 'db') {
+      $model = call_user_func('app\workspace\models\\' . ucfirst($this->ctype) . '::find')->where(['uuid' => $this->uuid])->one();
+      $model->delete();
+    }
   }
 
   public function getFields()
@@ -213,6 +258,8 @@ class CrelishDynamicModel extends \yii\base\DynamicModel
 
   private function updateCache($action, $data)
   {
+
+    return;
 
     $cacheStore = \Yii::$app->cache->get('crc_' . $this->ctype);
 
@@ -285,42 +332,6 @@ class CrelishDynamicModel extends \yii\base\DynamicModel
     return strtolower($guidv4);
   }
 
-  private function loadModelData()
-  {
-    $this->isNew = false;
-    $attributes = [];
-    $rawData = [];
-    $finalArr = [];
-
-    if (!property_exists($this->elementDefinition, 'storage')) {
-      $this->elementDefinition->storage = 'json';
-    }
-
-    switch ($this->elementDefinition->storage) {
-      case 'db':
-        $rawData = call_user_func('app\workspace\models\\' . ucfirst($this->ctype) . '::find')->where(['uuid' => $this->uuid])->one();
-        break;
-      default:
-        $this->fileSource = \Yii::getAlias('@app/workspace/data/') . DIRECTORY_SEPARATOR . $this->ctype . DIRECTORY_SEPARATOR . $this->uuid . '.json';
-        if (file_exists($this->fileSource)) {
-          $rawData = Json::decode(file_get_contents($this->fileSource));
-        }
-    }
-
-    foreach ($this->elementDefinition->fields as $field) {
-
-      if (!empty($rawData[$field->key])) {
-        $attributes[$field->key] = $rawData[$field->key];
-      }
-    }
-
-    foreach ($attributes as $attr => $value) {
-      CrelishBaseContentProcessor::processFieldData($this->elementDefinition, $attr, $value, $finalArr);
-    }
-
-    $this->attributes = $finalArr;
-  }
-
   public static function loadElementDefinition($ctype)
   {
     $definitionPath = \Yii::getAlias('@app/workspace/elements') . DIRECTORY_SEPARATOR . str_replace('db:', '', $ctype) . '.json';
@@ -332,20 +343,6 @@ class CrelishDynamicModel extends \yii\base\DynamicModel
     }))
     ) {
       $elementDefinition->fields[] = Json::decode('{ "label": "UUID", "key": "uuid", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]], "options": {"disabled":true}}', false);
-    }
-
-    if (empty(Arrays::find($elementDefinition->fields, function ($elem) {
-      return $elem->key == "path";
-    }))
-    ) {
-      //$elementDefinition->fields[] = Json::decode('{ "label": "Path", "key": "path", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
-    }
-
-    if (empty(Arrays::find($elementDefinition->fields, function ($elem) {
-      return $elem->key == "slug";
-    }))
-    ) {
-      //$elementDefinition->fields[] = Json::decode('{ "label": "Slug", "key": "slug", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]]}', false);
     }
 
     if (empty(Arrays::find($elementDefinition->fields, function ($elem) {
@@ -382,6 +379,12 @@ class CrelishDynamicModel extends \yii\base\DynamicModel
     ) {
       $elementDefinition->fields[] = Json::decode('{ "label": "Publish to", "key": "to", "type": "textInput", "visibleInGrid": true, "format": "datetime", "transform": "datetime", "rules": [["string", {"max": 128}]]}', false);
     }
+
+    foreach ($elementDefinition->fields as $def) {
+      $fieldDefinitions[$def->key] = $def;
+    }
+
+    $elementDefinition->fields = $fieldDefinitions;
 
     return $elementDefinition;
   }

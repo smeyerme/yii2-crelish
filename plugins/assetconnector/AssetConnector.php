@@ -114,7 +114,20 @@ class AssetConnector extends Widget
     $columns = array_merge($checkCol, $modelColumns);
 
     $rowOptions = function ($model, $key, $index, $grid) {
-      return ['onclick' => "$('#asset_" . $this->formKey . "').val(JSON.stringify({ 'ctype': 'asset', 'uuid': '" . $model['uuid'] . "'})); $('#asset-info-" . $this->formKey . "').html('" . $model['systitle'] . "'); $('#media-modal-" . $this->formKey . "').modal('hide');"];
+
+      $onclick = "
+      $('#asset_" . $this->formKey . "').val('" . $model['uuid'] . "'); 
+      $('#asset-info-" . $this->formKey . "').html('" . $model['systitle'] . " (" . $model['mime'] . ")'); 
+      $('#media-modal-" . $this->formKey . "').modal('hide');
+      ";
+
+      if(substr($model['mime'], 0, 5) == 'image') {
+        $onclick .= "
+        $('#asset-icon-" . $this->formKey . "').attr('src', '" . $model['src'] . "');  
+        ";
+      }
+
+      return ['onclick' => $onclick];
     };
 
     return $this->render('assets.twig', [

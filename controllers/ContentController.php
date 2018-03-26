@@ -3,12 +3,9 @@
 namespace giantbits\crelish\controllers;
 
 use giantbits\crelish\components\CrelishDataProvider;
-use giantbits\crelish\components\CrelishDataResolver;
-use giantbits\crelish\components\CrelishDynamicJsonModel;
-use giantbits\crelish\components\CrelishJsonDataProvider;
+use giantbits\crelish\components\CrelishDynamicModel;
 use giantbits\crelish\components\CrelishBaseController;
 use Underscore\Types\Arrays;
-use yii\helpers\Url;
 use yii\filters\AccessControl;
 
 class ContentController extends CrelishBaseController
@@ -181,6 +178,8 @@ class ContentController extends CrelishBaseController
 
     $model = new CrelishDynamicModel([], ['ctype' => $ctype, 'uuid' => $uuid]);
     $model->delete();
+
+    die();
     $this->redirect('/crelish/content/index.html');
   }
 }

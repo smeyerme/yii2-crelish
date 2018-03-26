@@ -7,195 +7,191 @@ use yii\base\NotSupportedException;
 
 class CrelishUser extends Object implements \yii\web\IdentityInterface
 {
-    public $loginUrl = ['crelish/user/login'];
+  public $loginUrl = ['crelish/user/login'];
 
-    /**
-     * [$id description].
-     *
-     * @var [type]
-     */
-    public $id;
+  /**
+   * [$id description].
+   *
+   * @var [type]
+   */
+  public $id;
 
-    /**
-     * [$authKey description].
-     *
-     * @var [type]
-     */
-    public $authKey;
+  /**
+   * [$authKey description].
+   *
+   * @var [type]
+   */
+  public $authKey;
 
-    /**
-     * [$accessToken description].
-     *
-     * @var [type]
-     */
-    public $accessToken;
+  /**
+   * [$accessToken description].
+   *
+   * @var [type]
+   */
+  public $accessToken;
 
-    /**
-     * [$uuid description].
-     *
-     * @var [type]
-     */
-    public $uuid;
+  /**
+   * [$uuid description].
+   *
+   * @var [type]
+   */
+  public $uuid;
 
-    /**
-     * [$email description].
-     *
-     * @var [type]
-     */
-    public $email;
+  /**
+   * [$email description].
+   *
+   * @var [type]
+   */
+  public $email;
 
-    /**
-     * [$username description].
-     *
-     * @var [type]
-     */
-    public $username;
+  /**
+   * [$username description].
+   *
+   * @var [type]
+   */
+  public $username;
 
-    /**
-     * [$identityClass description].
-     *
-     * @var string
-     */
-    public $identityClass = 'CrelishUser';
+  /**
+   * [$identityClass description].
+   *
+   * @var string
+   */
+  public $identityClass = 'CrelishUser';
 
-    /**
-     * [$rememberMe description].
-     *
-     * @var bool
-     */
-    public $rememberMe = false;
+  /**
+   * [$rememberMe description].
+   *
+   * @var bool
+   */
+  public $rememberMe = false;
 
-    /**
-     * [$ctype description]
-     * @var string
-     */
-    public $ctype = 'user';
+  /**
+   * [$ctype description]
+   * @var string
+   */
+  public $ctype = 'user';
 
-    public $salutation;
-    public $nameLast;
-    public $nameFirst;
-    public $company;
-    public $user;
-    public $role;
+  public $salutation;
+  public $nameLast;
+  public $nameFirst;
+  public $company;
+  public $user;
+  public $role;
 
-    /**
-     * [crelishLogin description].
-     *
-     * @param [type] $data [description]
-     *
-     * @return [type] [description]
-     */
-    public static function crelishLogin($data) {
+  /**
+   * [crelishLogin description].
+   *
+   * @param [type] $data [description]
+   *
+   * @return [type] [description]
+   */
+  public static function crelishLogin($data)
+  {
+    // Fetch the single wanted user only.
+    $userProvider = new CrelishDataProvider('user', ['filter' => ['email' => ['strict', $data['email']]]], null, true);
+    $user = $userProvider->one();
 
-
-        // Fetch the single wanted user only.
-        $userProvider = new CrelishJsonDataProvider('user', ['filter'=>['email' => ['strict', $data['email']]]], null, true);
-        $user = $userProvider->one();
-
-        if(!empty($user)) {
-          if(\Yii::$app->getSecurity()->validatePassword($data['password'], $user['password'])) {
-            self::prepareUserdata($user);
-            return \Yii::$app->user->login(new static($user), 0);
-          }
-        }
-
-        return false;
+    if (!empty($user)) {
+      if (\Yii::$app->getSecurity()->validatePassword($data['password'], $user['password'])) {
+        self::prepareUserdata($user);
+        return \Yii::$app->user->login(new static($user), 0);
+      }
     }
 
-    /**
-     * [getId description].
-     *
-     * @return [type] [description]
-     */
-    public function getId() {
-        return $this->uuid;
-    }
+    return false;
+  }
 
-    /**
-     * [prepareUserdata description].
-     *
-     * @param [type] $userData [description]
-     * @param [type] $file     [description]
-     *
-     * @return [type] [description]
-     */
-    private static function prepareUserdata(&$userData) {
-        unset($userData['password']);
-        unset($userData['login']);
-        unset($userData['path']);
-        unset($userData['slug']);
-        unset($userData['state']);
-        unset($userData['created']);
-        unset($userData['updated']);
-        unset($userData['from']);
-        unset($userData['to']);
-        //unset($userData['salutation']);
-        //unset($userData['nameFirst']);
-        //unset($userData['nameLast']);
-        $userData['username'] = $userData['email'];
-    }
+  /**
+   * [getId description].
+   *
+   * @return [type] [description]
+   */
+  public function getId()
+  {
+    return $this->uuid;
+  }
 
-    /**
-     * [findIdentity description].
-     *
-     * @param [type] $id [description]
-     *
-     * @return [type] [description]
-     */
-    public static function findIdentity($id)
-    {
+  /**
+   * [prepareUserdata description].
+   *
+   * @param [type] $userData [description]
+   * @param [type] $file     [description]
+   *
+   * @return [type] [description]
+   */
+  private static function prepareUserdata(&$userData)
+  {
+    unset($userData['password']);
+    unset($userData['login']);
+    unset($userData['path']);
+    unset($userData['slug']);
+    unset($userData['state']);
+    unset($userData['created']);
+    unset($userData['updated']);
+    unset($userData['from']);
+    unset($userData['to']);
+    $userData['username'] = !empty($userData['nameFirst']) ? $userData['nameFirst'] . ' ' . (!empty($userData['nameLast']) ? $userData['nameLast'] : '') : 'You';
+  }
 
-      $userProvider = new CrelishJsonDataProvider('user', null, $id);
-      $userData = $userProvider->one();
-      self::prepareUserdata($userData);
+  /**
+   * [findIdentity description].
+   *
+   * @param [type] $id [description]
+   *
+   * @return [type] [description]
+   */
+  public static function findIdentity($id)
+  {
+    $userProvider = new CrelishDataProvider('user', null, $id);
+    $userData = $userProvider->one();
+    self::prepareUserdata($userData);
+    return new static($userData);
+  }
 
-      return new static($userData);
-    }
+  /**
+   * [findIdentityByAccessToken description].
+   *
+   * @param [type] $token [description]
+   * @param [type] $type  [description]
+   *
+   * @return [type] [description]
+   */
+  public static function findIdentityByAccessToken($token, $type = null)
+  {
+    throw new NotSupportedException('"findIdentityByAccessToken" is not implemented.');
+  }
 
-    /**
-     * [findIdentityByAccessToken description].
-     *
-     * @param [type] $token [description]
-     * @param [type] $type  [description]
-     *
-     * @return [type] [description]
-     */
-    public static function findIdentityByAccessToken($token, $type = null)
-    {
-        throw new NotSupportedException('"findIdentityByAccessToken" is not implemented.');
-    }
+  /**
+   * [getAuthKey description].
+   *
+   * @return [type] [description]
+   */
+  public function getAuthKey()
+  {
+    return $this->authKey;
+  }
 
-    /**
-     * [getAuthKey description].
-     *
-     * @return [type] [description]
-     */
-    public function getAuthKey()
-    {
-        return $this->authKey;
-    }
+  /**
+   * [validateAuthKey description].
+   *
+   * @param [type] $authKey [description]
+   *
+   * @return [type] [description]
+   */
+  public function validateAuthKey($authKey)
+  {
+    return $this->getAuthKey() === $authKey;
+  }
 
-    /**
-     * [validateAuthKey description].
-     *
-     * @param [type] $authKey [description]
-     *
-     * @return [type] [description]
-     */
-    public function validateAuthKey($authKey)
-    {
-        return $this->getAuthKey() === $authKey;
-    }
-
-    /**
-     * Validates password.
-     *
-     * @param string $password password to validate
-     *
-     * @return bool if password provided is valid for current user
-     */
-    public function validatePassword($password)
-    {
-      return true; //$this->getPassword() === $password;
-    }
+  /**
+   * Validates password.
+   *
+   * @param string $password password to validate
+   *
+   * @return bool if password provided is valid for current user
+   */
+  public function validatePassword($password)
+  {
+    return true; //$this->getPassword() === $password;
+  }
 }

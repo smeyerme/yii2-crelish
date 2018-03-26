@@ -1,11 +1,4 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: myrst
- * Date: 12.04.2017
- * Time: 21:52
- */
-
 namespace giantbits\crelish\components;
 
 use Underscore\Types\Arrays;
@@ -73,17 +66,17 @@ class CrelishBaseContentProcessor extends Component
   public static function processElement($ctype, $data)
   {
     $processedData = [];
-    $elementDefinition = CrelishDynamicJsonModel::loadElementDefinition($ctype);
+    $elementDefinition = CrelishDynamicModel::loadElementDefinition($ctype);
 
     if ($data) {
       foreach ($data as $attr => $value) {
-        CrelishBaseContentProcessor::processFieldData($elementDefinition, $attr, $value, $processedData);
+        CrelishBaseContentProcessor::processFieldData($ctype, $elementDefinition, $attr, $value, $processedData);
       }
     }
     return $processedData;
   }
 
-  public static function processFieldData($elementDefinition, $attr, $value, &$finalArr)
+  public static function processFieldData($ctype, $elementDefinition, $attr, $value, &$finalArr)
   {
     $fieldType = 'textInput';
 
@@ -107,7 +100,7 @@ class CrelishBaseContentProcessor extends Component
     }
 
     if (class_exists($processorClass) && method_exists($processorClass, 'processJson')) {
-      $processorClass::processJson($attr, $value, $finalArr);
+      $processorClass::processJson($ctype, $attr, $value, $finalArr);
     } else {
       $finalArr[$attr] = $value;
     }
@@ -115,6 +108,5 @@ class CrelishBaseContentProcessor extends Component
     if (!empty($transform) && class_exists($transformClass)) {
       $transformClass::afterFind($finalArr[$attr]);
     }
-
   }
 }

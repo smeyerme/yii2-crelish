@@ -4,8 +4,8 @@ namespace giantbits\crelish\controllers;
 
 use giantbits\crelish\components\CrelishBaseController;
 use giantbits\crelish\components\CrelishUser;
-use giantbits\crelish\components\CrelishJsonDataProvider;
-use giantbits\crelish\components\CrelishDynamicJsonModel;
+use giantbits\crelish\components\CrelishDataProvider;
+use giantbits\crelish\components\CrelishDynamicModel;
 use yii\helpers\Url;
 
 class UserController extends CrelishBaseController
@@ -46,12 +46,12 @@ class UserController extends CrelishBaseController
 
     //\Yii::$app->cache->flush();
 
-    $usersProvider = new CrelishJsonDataProvider('user');
+    $usersProvider = new CrelishDataProvider('user');
     $users = $usersProvider->rawAll();
 
     if (sizeof($users) == 0) {
       // Generate default admin.
-      $adminUser = new CrelishDynamicJsonModel(['email', 'password', 'login', 'state', 'role'], ['ctype' => 'user']);
+      $adminUser = new CrelishDynamicModel(['email', 'password', 'login', 'state', 'role'], ['ctype' => 'user']);
       $adminUser->email = 'admin@local.host';
       $adminUser->password = 'basta!';
       $adminUser->state = 1;
@@ -73,11 +73,11 @@ class UserController extends CrelishBaseController
       return $this->redirect(Url::to(['/crelish/dashboard/index']));
     }
 
-    $model = new CrelishDynamicJsonModel(['email', 'password'], ['ctype' => 'user']);
+    $model = new CrelishDynamicModel(['email', 'password'], ['ctype' => 'user']);
 
     // Validate data and login the user in case of post request.
     if (\Yii::$app->request->post()) {
-      if (CrelishUser::crelishLogin(\Yii::$app->request->post('CrelishDynamicJsonModel'))) {
+      if (CrelishUser::crelishLogin(\Yii::$app->request->post('CrelishDynamicModel'))) {
         return $this->redirect(Url::to(['/crelish/dashboard/index']));
       }
     }
@@ -98,7 +98,7 @@ class UserController extends CrelishBaseController
       $filter = ['freesearch' => $_GET['cr_content_filter']];
     }
 
-    $modelProvider = new CrelishJsonDataProvider('user', ['filter' => $filter]);
+    $modelProvider = new CrelishDataProvider('user', ['filter' => $filter]);
     $checkCol = [
       [
         'class' => 'yii\grid\CheckboxColumn'

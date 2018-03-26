@@ -1,0 +1,26 @@
+{{ use('kartik/widgets/Select2') }}
+
+<div class="form-group field-crelishdynamicjsonmodel-{{ formKey }} {{ required }}">
+  <label class="control-label" for="crelishdynamicjsonmodel-{{ field.key }}">{{ field.label }}</label>
+  <input type="hidden"
+         name="CrelishDynamicModel[{{ field.key }}]"
+         value='{{ hiddenValue }}'
+         id="select_{{ field.key }}"/>
+  {{ Select2_widget({
+    'name': "temp_select",
+    'value': selectValue,
+    'data': selectData,
+    'options': {'placeholder': t('crelish', 'Select...')},
+    'pluginOptions': { 'tags': true },
+    'pluginEvents': {
+      "select2:select": "function() {
+        var select = $(this).val();
+        $('#select_#{field.key}').val(select);
+      }",
+      "select2:unselect": "function() {
+        var select = '';
+        $('#select_#{field.key}').val(select);
+      }"
+    }
+  }) }}
+</div>

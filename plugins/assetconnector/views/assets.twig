@@ -2,164 +2,164 @@
 {{ use('/yii/grid/GridView') }}
 {{ use('/yii/widgets/Pjax') }}
 
-<div class="modal fade cr-modal--full media-modal-{{ formKey }}" id="media-modal-{{ formKey }}" tabindex="-1" role="dialog"
+<div class="modal fade cr-modal--full media-modal-{{ formKey }}" id="media-modal-{{ formKey }}" tabindex="-1"
+     role="dialog"
      aria-labelledby="media-modal-{{ formKey }}" aria-hidden="true">
-    <div class="modal-dialog" style="width: 100vw; height: 100vh; top: 0; left: 0; margin: 0; padding: 0;">
-        <div class="modal-content gc-bc--palette-clouds">
+  <div class="modal-dialog" style="width: 100vw; height: 100vh; top: 0; left: 0; margin: 0; padding: 0;">
+    <div class="modal-content gc-bc--palette-clouds">
 
-            <nav class="modal-header c-nav c-nav--inline gc-bc--palette-belize">
-                <div class="o-grid">
-                    <div class="o-grid__cell--width-25">
-                        <span class="c-nav__content"><h3 class="c-heading">{{ t('crelish', 'Assets') }}</h3></span>
-                    </div>
-                    <div class="o-grid__cell--width-50 gc-fc--palette-dark-blue">
+      <nav class="modal-header c-nav c-nav--inline gc-bc--palette-belize">
+        <div class="o-grid">
+          <div class="o-grid__cell--width-25">
+            <span class="c-nav__content"><h3 class="c-heading">{{ t('crelish', 'Assets') }}</h3></span>
+          </div>
+          <div class="o-grid__cell--width-50 gc-fc--palette-dark-blue">
 
-                        <div class="c-input-group c-input-group--rounded" style="margin-top: .5em;">
-                            <div class="o-field">
-                                <input class="c-field" name="cr_content_filter_{{ formKey }}" id="cr_content_filter_{{ formKey }}"
-                                       value="{{ app.request.get.cr_content_filter }}"
-                                       placeholder="{{ t('crelish', 'Type your search phrase here...') }}">
-                            </div>
-                            <button class="c-button c-button--brand do-search" onclick="return false;"><i class="fa fa-search"></i></button>
-                        </div>
-
-                    </div>
-                    <div class="o-grid__cell--width-25">
-                        <div class="c-nav__content c-nav__content--right">
-                            <button type="button" class="close" style="color: white; margin-top: 14px;" data-dismiss="modal"
-                                    aria-label="Close"><span aria-hidden="true">×</span></button>
-                        </div>
-                    </div>
-                </div>
-            </nav>
-
-            <div class="modal-body o-panel-container">
-                <div class="o-panel">
-                    <div class="o-grid gc-bc--palette-nephritis" style="cursor: pointer;">
-                        <div class="o-grid__cell gc-ta--center gc-p--1" id="dropZone-{{ formKey }}">
-
-                        </div>
-                    </div>
-                    <div class="o-grid gc-bc--palette-clouds">
-                        <div class="o-grid__cell">
-                            {{ pjax_begin({'id': 'assetList-' ~ formKey, 'enablePushState': false}) }}
-
-                            <h6>{{ t('crelish', 'Asset list') }}</h6>
-
-                            {{ grid_view_widget({
-                                'dataProvider': dataProvider,
-                                'columns': columns,
-                                'filterSelector': '.cr-content-search',
-                                'tableOptions': {'class':'table table-striped'},
-                                'rowOptions': rowOptions ,
-                                'formatter': {'class': 'yii\\i18n\\Formatter', 'nullDisplay': ''}}) | raw }}
-
-                            {{ pjax_end() }}
-                        </div>
-                    </div>
-                </div>
+            <div class="c-input-group c-input-group--rounded" style="margin-top: .5em;">
+              <div class="o-field">
+                <input class="c-field" name="cr_content_filter_{{ formKey }}" id="cr_content_filter_{{ formKey }}"
+                       value="{{ app.request.get.cr_content_filter }}"
+                       placeholder="{{ t('crelish', 'Type your search phrase here...') }}">
+              </div>
+              <button class="c-button c-button--brand do-search" onclick="return false;"><i class="fa fa-search"></i>
+              </button>
             </div>
+
+          </div>
+          <div class="o-grid__cell--width-25">
+            <div class="c-nav__content c-nav__content--right">
+              <button type="button" class="close" style="color: white; margin-top: 14px;" data-dismiss="modal"
+                      aria-label="Close"><span aria-hidden="true">×</span></button>
+            </div>
+          </div>
         </div>
+      </nav>
+
+      <div class="modal-body o-panel-container">
+        <div class="o-panel">
+          <div class="o-grid gc-bc--palette-nephritis" style="cursor: pointer;">
+            <div class="o-grid__cell gc-ta--center gc-p--1" id="dropZone-{{ formKey }}">
+
+            </div>
+          </div>
+          <div class="o-grid gc-bc--palette-clouds">
+            <div class="o-grid__cell">
+              {{ pjax_begin({'id': 'assetList-' ~ formKey, 'enablePushState': false}) }}
+
+              <h6>{{ t('crelish', 'Asset list') }}</h6>
+
+              {{ grid_view_widget({
+                'dataProvider': dataProvider,
+                'columns': columns,
+                'filterSelector': '.cr-content-search',
+                'tableOptions': {'class':'table table-striped'},
+                'rowOptions': rowOptions ,
+                'formatter': {'class': 'yii\\i18n\\Formatter', 'nullDisplay': ''}}) | raw }}
+
+              {{ pjax_end() }}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
+  </div>
 </div>
 
 <div class="form-group field-crelishdynamicjsonmodel-{{ formKey }} {{ required }}">
-    <label class="control-label" for="crelishdynamicjsonmodel-{{ formKey }}">{{ field.label }}</label>
-    <input type="hidden" name="CrelishDynamicModel[{{ field.key }}]" value="{{ rawData }}"
-           id="asset_{{ field.key }}"/>
-    <br>
-    <div class="c-card">
-        <div class="c-card__item c-card__item--divider">
-            Media
-            <a class="c-button c-button--rounded c-button--success  open-media-modal pull-right" data-toggle="modal"
-               data-target="#media-modal-{{ formKey }}" href style="margin-top: -6px; margin-right: -6px;">
-                <span class="fui-image"></span> {{ t('crelish', 'Select media...') }}</a>
-            </a>
-        </div>
-        <div class="c-card__item">
-            <div class="o-grid o-grid--wrap">
-                <div class="o-gird__cell o-grid__cell--width-25">
-                    {% if "image" in data.mime %}
-                    <img src="{{ data.src }}" class="o-image" />
-                    {% endif %}
-                </div>
-                <div class="o-grid__cell" id="asset-info-{{ field.key }}">
-                    {{ data.systitle }} ({{ data.mime }})
-                </div>
-            </div>
-        </div>
+  <label class="control-label" for="crelishdynamicjsonmodel-{{ formKey }}">{{ field.label }}</label>
+  <input type="hidden" name="CrelishDynamicModel[{{ field.key }}]" value="{{ rawData }}"
+         id="asset_{{ field.key }}"/>
+  <br>
+  <div class="c-card">
+    <div class="c-card__item c-card__item--divider">
+      Media
+      <a class="c-button c-button--rounded c-button--success  open-media-modal pull-right" data-toggle="modal"
+         data-target="#media-modal-{{ formKey }}" href style="margin-top: -6px; margin-right: -6px;">
+        <span class="fui-image"></span> {{ t('crelish', 'Select media...') }}</a>
+      </a>
     </div>
+    <div class="c-card__item">
+      <div class="o-grid o-grid--wrap">
+        <div class="o-gird__cell o-grid__cell--width-25">
+          {% if "image" in data.mime %}
+            <img src="{{ data.src }}" class="o-image" id="asset-icon-{{ field.key }}"/>
+          {% endif %}
+        </div>
+        <div class="o-grid__cell" id="asset-info-{{ field.key }}">
+          {{ data.systitle }} ({{ data.mime }})
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
-    $('#media-modal-{{ formKey }}').on('shown.bs.modal', function (e) {
+  $('#media-modal-{{ formKey }}').on('shown.bs.modal', function (e) {
 
-        $('.do-search').on("click", function(e){
-            e.preventDefault();
-        });
-
-        console.info( '{{ formKey }}' );
-
-        $('#cr_content_filter_{{ formKey }}').on("blur", function (e) {
-            if (window.location.href.indexOf('cr_content_filter') >= 0) {
-                $.pjax({
-                    url: window.location.href.replace(/(cr_content_filter=).*?(&|$)/, '$1' + $(this).val() + '$2'),
-                    container: '#assetList-{{ formKey }}'
-                });
-            } else {
-                var preFix = (window.location.href.indexOf("?") >= 0) ? '&' : '?';
-                $.pjax({
-                    url: window.location.href + preFix + "cr_content_filter=" + $(this).val(),
-                    container: '#assetList-{{ formKey }}'
-                });
-            }
-        });
-
-        $('#cr_content_filter_{{ formKey }}').on("keypress", function (e) {
-            if (e.which == 10 || e.which == 13) {
-                e.preventDefault();
-                if (window.location.href.indexOf('cr_content_filter') >= 0) {
-                    $.pjax({
-                        url: window.location.href.replace(/(cr_content_filter=).*?(&|$)/, '$1' + $(this).val() + '$2'),
-                        container: '#assetList-{{ formKey }}'
-                    });
-                } else {
-                    var preFix = (window.location.href.indexOf("?") >= 0) ? '&' : '?';
-                    $.pjax({
-                        url: window.location.href + preFix + "cr_content_filter=" + $(this).val(),
-                        container: '#assetList-{{ formKey }}'
-                    });
-                }
-            }
-        });
-
-        Dropzone.autoDiscover = false;
-        var defMessage = "<span class=\"c-button c-button--ghost\" style=\"border-color: #fff; color: #fff; border-radius: .5rem; pointer-events: none;\">{{ t('crelish', 'Click or drag files here to upload.') }}</span>";
-        var dZoneOptions = {
-            url: '/crelish/asset/upload.html',
-            paramName: "file", // The name that will be used to transfer the file
-            maxFilesize: 250, // MB
-            dictDefaultMessage: defMessage,
-            init: function () {
-                var myDropzone = this;
-                $(this.element).addClass("dropzone");
-
-                $(this.element).append(defMessage);
-
-                this.on("complete", function (file) {
-                    setTimeout(function () {
-                        $.pjax.reload({container: '#assetList-{{ formKey }}'});
-                        myDropzone.removeFile(file);
-                    }, 250);
-                });
-
-            },
-            accept: function (file, done) {
-                done();
-            }
-        };
-
-        var newDropzone = new Dropzone("div#dropZone-{{ formKey }}", dZoneOptions);
-
+    $('.do-search').on("click", function (e) {
+      e.preventDefault();
     });
+
+    console.info('{{ formKey }}');
+
+    $('#cr_content_filter_{{ formKey }}').on("blur", function (e) {
+      if (window.location.href.indexOf('cr_content_filter') >= 0) {
+        $.pjax({
+          url: window.location.href.replace(/(cr_content_filter=).*?(&|$)/, '$1' + $(this).val() + '$2'),
+          container: '#assetList-{{ formKey }}'
+        });
+      } else {
+        var preFix = (window.location.href.indexOf("?") >= 0) ? '&' : '?';
+        $.pjax({
+          url: window.location.href + preFix + "cr_content_filter=" + $(this).val(),
+          container: '#assetList-{{ formKey }}'
+        });
+      }
+    });
+
+    $('#cr_content_filter_{{ formKey }}').on("keypress", function (e) {
+      if (e.which == 10 || e.which == 13) {
+        e.preventDefault();
+        if (window.location.href.indexOf('cr_content_filter') >= 0) {
+          $.pjax({
+            url: window.location.href.replace(/(cr_content_filter=).*?(&|$)/, '$1' + $(this).val() + '$2'),
+            container: '#assetList-{{ formKey }}'
+          });
+        } else {
+          var preFix = (window.location.href.indexOf("?") >= 0) ? '&' : '?';
+          $.pjax({
+            url: window.location.href + preFix + "cr_content_filter=" + $(this).val(),
+            container: '#assetList-{{ formKey }}'
+          });
+        }
+      }
+    });
+
+    Dropzone.autoDiscover = false;
+    var defMessage = "<span class=\"c-button c-button--ghost\" style=\"border-color: #fff; color: #fff; border-radius: .5rem; pointer-events: none;\">{{ t('crelish', 'Click or drag files here to upload.') }}</span>";
+    var dZoneOptions = {
+      url: '/crelish/asset/upload.html',
+      paramName: "file", // The name that will be used to transfer the file
+      maxFilesize: 250, // MB
+      dictDefaultMessage: defMessage,
+      init: function () {
+        var myDropzone = this;
+        $(this.element).addClass("dropzone");
+
+        $(this.element).append(defMessage);
+
+        this.on("complete", function (file) {
+          setTimeout(function () {
+            $.pjax.reload({container: '#assetList-{{ formKey }}'});
+            myDropzone.removeFile(file);
+          }, 250);
+        });
+      },
+      accept: function (file, done) {
+        done();
+      }
+    };
+
+    var newDropzone = new Dropzone("div#dropZone-{{ formKey }}", dZoneOptions);
+  });
 </script>

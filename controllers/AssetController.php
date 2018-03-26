@@ -11,10 +11,9 @@ namespace giantbits\crelish\controllers;
 use ColorThief\ColorThief;
 use giantbits\crelish\components\CrelishBaseController;
 use giantbits\crelish\components\CrelishDynamicModel;
-use yii\base\Controller;
 use yii\helpers\Html;
-use yii\web\UploadedFile;
 use yii\helpers\Json;
+use yii\web\UploadedFile;
 use yii\helpers\Url;
 use giantbits\crelish\components\CrelishDataProvider;
 use yii\filters\AccessControl;
@@ -103,7 +102,7 @@ class AssetController extends CrelishBaseController
 
     // Save content if post request.
     if (!empty(\Yii::$app->request->post()) && !\Yii::$app->request->isAjax) {
-      $model->attributes = $_POST['CrelishDynamicJsonModel'];
+      $model->attributes = $_POST['CrelishDynamicModel'];
 
       if ($model->validate()) {
         $model->save();
@@ -143,6 +142,19 @@ class AssetController extends CrelishBaseController
       $model->mime = mime_content_type($targetFile);
       $model->size = $file->size;
       $model->state = 2;
+
+      try {
+        $domColor = ColorThief::getColor($targetFile, 20);
+        $palColor = ColorThief::getPalette(\Yii::getAlias('@webroot') . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . $destName);
+
+        //$model->colormain_rgb = Json::encode($domColor);
+        //$model->colormain_hex = '#' . sprintf('%02x', $domColor[0]) . sprintf('%02x', $domColor[1]) . sprintf('%02x', $domColor[2]);
+        //$model->colorpalette = Json::encode($palColor);
+
+      } catch (Exception $e) {
+        \Yii::$app->session->setFlash('secondary', 'Color theft could not be completed. (Image too large?)');
+      }
+
       $model->save();
     }
 
@@ -152,7 +164,7 @@ class AssetController extends CrelishBaseController
   public function actionDelete()
   {
     $uuid = !empty(\Yii::$app->getRequest()->getQueryParam('uuid')) ? \Yii::$app->getRequest()->getQueryParam('uuid') : null;
-    $modelProvider = new CrelishDynamicJsonModel([], ['ctype' => 'asset', 'uuid' => $uuid]);
+    $modelProvider = new CrelishDynamicModel([], ['ctype' => 'asset', 'uuid' => $uuid]);
     if (@unlink(\Yii::getAlias('@webroot') . $modelProvider->src) || !file_exists(\Yii::getAlias('@webroot') . $modelProvider->src)) {
       $modelProvider->delete();
       \Yii::$app->session->setFlash('success', 'Asset deleted successfully...');
