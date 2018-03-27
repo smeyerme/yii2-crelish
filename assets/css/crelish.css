@@ -490,4 +490,19 @@ tr:hover td {
   cursor: pointer;
 }
 
+.gravatar-icon {
+  border: 1px solid white;
+  border-radius: 2rem;
+  overflow: hidden;
+  display: block;
+  height: 3rem;
+  padding: 0;
+  margin-top: 1rem;
+  width: 3rem;
+  float: left;
+  margin-right: 1rem;
+}
 
+.gravatar-icon img {
+  vertical-align: top;
+}

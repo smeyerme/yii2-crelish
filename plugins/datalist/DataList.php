@@ -2,13 +2,8 @@
 
 namespace giantbits\crelish\plugins\datalist;
 
-use giantbits\crelish\components\CrelishDynamicJsonModel;
-use giantbits\crelish\components\CrelishJsonDataProvider;
 use yii\base\Widget;
-use yii\helpers\Html;
 use yii\helpers\Json;
-use yii\helpers\Url;
-use yii\grid\ActionColumn;
 
 class DataList extends Widget
 {

@@ -1,7 +1,8 @@
+{{ use('giantbits/crelish/widgets/CrelishGravatar') }}
 <span class="c-nav__item c-nav__item--right">
    <span class="dropdown" style="overflow: visible;">
         <span class="dropdown-toggle" data-toggle="dropdown">
-            <span class="fa fa-user-o"></span> {{ app.user.identity.username }} <span class="caret"></span>
+            <span class="gravatar-icon">{{ crelish_gravatar_widget({ 'email': app.user.identity.email , 'options': { 'alt': app.user.identity.username }, 'size': 32 }) }}</span> {{ app.user.identity.username }} <span class="caret"></span>
         </span>
         <ul role="menu" class="dropdown-menu" style="margin-left: -4em;">
             <li>

@@ -85,8 +85,8 @@ class RelationSelect extends Widget
       'field' => $this->field,
       'required' => ($isRequired) ? 'required' : '',
       'selectData' => $this->predefinedOptions,
-      'selectValue' => $this->data->uuid,
-      'hiddenValue' => $this->data->uuid
+      'selectValue' => isset($this->data->uuid) ? $this->data->uuid : '',
+      'hiddenValue' => isset($this->data->uuid) ? $this->data->uuid :''
     ]);
   }
 }

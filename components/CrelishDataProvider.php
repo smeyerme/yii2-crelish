@@ -475,7 +475,7 @@ class CrelishDataProvider extends Component
       $elementDefinition = $this->getDefinitions();
 
       foreach ($modelArr as $attr => $value) {
-        CrelishBaseContentProcessor::processFieldData($elementDefinition, $attr, $value, $finalArr);
+        CrelishBaseContentProcessor::processFieldData($this->ctype, $elementDefinition, $attr, $value, $finalArr);
       }
       $allModels[] = $finalArr;
     }
