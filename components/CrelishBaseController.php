@@ -21,13 +21,13 @@ class CrelishBaseController extends Controller
     if (!empty($intelliCache)) {
 
       $js = "$.ajax({
-                url: '/crelish/settings/intellicache.html',
-                data: {
-                    auth: '2e212e112e-2e12ea-vhrto4',
-                    uuid: '" . $this->uuid . "'
-                },
-                success: function(r){ console.info('Intellicache done'); }
-            });";
+          url: '/crelish/settings/intellicache.html',
+          data: {
+              auth: '2e212e112e-2e12ea-vhrto4',
+              uuid: '" . $this->uuid . "'
+          },
+          success: function(r){ console.info('Intellicache done'); }
+      });";
       \Yii::$app->view->registerJs($js);
       \Yii::$app->session->remove('intellicache');
     }
@@ -65,6 +65,7 @@ class CrelishBaseController extends Controller
       && !empty(\Yii::$app->request->post())
       && !\Yii::$app->request->isAjax) {
       $oldData = [];
+
       // Load old data.
       if (!empty($this->model->uuid)) {
         $oldData = $this->model->attributes();

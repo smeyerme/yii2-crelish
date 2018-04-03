@@ -163,8 +163,32 @@ class CrelishDynamicModel extends \yii\base\DynamicModel
           $model = call_user_func('app\workspace\models\\' . ucfirst($this->ctype) . '::find')->where(['uuid' => $this->uuid])->one();
         }
 
+        // Process data.
         foreach ($this->attributes() as $attribute) {
-          $model->{$attribute} = $modelArray[$attribute];
+
+          $fieldType = Arrays::find($this->elementDefinition->fields, function ($def) use ($attribute) {
+            return $def->key == $attribute;
+          });
+
+          if (!empty($fieldType) && is_object($fieldType)) {
+            $fieldType = (property_exists($fieldType, 'type')) ? $fieldType->type : 'textInput';
+          }
+
+          if (!empty($fieldType)) {
+
+            // Get processor class.
+            $processorClass = 'giantbits\crelish\plugins\\' . strtolower($fieldType) . '\\' . ucfirst($fieldType) . 'ContentProcessor';
+
+            if (strpos($fieldType, "widget_") !== false) {
+              $processorClass = str_replace("widget_", "", $fieldType) . 'ContentProcessor';
+            }
+
+            if (class_exists($processorClass) && method_exists($processorClass, 'processDataPreSave')) {
+              $model->{$attribute} = $processorClass::processDataPreSave($attribute, $modelArray[$attribute], $this->elementDefinition->fields[$attribute]);
+            } else {
+              $model->{$attribute} = $modelArray[$attribute];
+            }
+          }
         }
 
         $model->save();

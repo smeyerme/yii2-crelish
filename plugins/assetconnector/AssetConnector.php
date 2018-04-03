@@ -25,9 +25,6 @@ class AssetConnector extends Widget
     parent::init();
 
     if (!empty($this->data)) {
-      if (is_string($this->data)) {
-        $this->data = Json::decode($this->data);
-      }
       $this->rawData = $this->data;
       $this->data = $this->processData($this->data);
     } else {
@@ -137,7 +134,7 @@ class AssetConnector extends Widget
       'ctype' => 'asset',
       'rowOptions' => $rowOptions,
       'field' => $this->field,
-      'rawData' => Json::encode($this->cleanRefData($this->rawData)),
+      'rawData' => $this->data->uuid,
       'data' => $this->data,
       'formKey' => $this->formKey
     ]);
