@@ -31,7 +31,7 @@ class AssetController extends CrelishBaseController
         'rules' => [
           [
             'allow' => true,
-            'actions' => ['login'],
+            'actions' => ['login', 'glide'],
             'roles' => ['?'],
           ],
           [
@@ -48,6 +48,13 @@ class AssetController extends CrelishBaseController
   {
     $this->enableCsrfValidation = false;
     parent::init();
+  }
+
+  public function actions()
+  {
+    return [
+      'glide' => 'trntv\glide\actions\GlideAction'
+    ];
   }
 
   public function actionIndex()

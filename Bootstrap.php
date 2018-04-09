@@ -18,7 +18,7 @@ class Bootstrap implements BootstrapInterface
           'class' => 'yii\web\User',
           'identityClass' => 'giantbits\crelish\components\CrelishUser',
           'enableAutoLogin' => TRUE,
-          'loginUrl' =>  ['crelish/user/login']
+          'loginUrl' => ['crelish/user/login']
         ],
         'defaultRoute' => 'frontend/index',
         'view' => [
@@ -28,6 +28,9 @@ class Bootstrap implements BootstrapInterface
               'class' => 'yii\twig\ViewRenderer',
               'cachePath' => '@runtime/Twig/cache',
               //'extensions' => ['\Twig_Extension_Debug'],
+              'extensions' => [
+                new \Cocur\Slugify\Bridge\Twig\SlugifyExtension(\Cocur\Slugify\Slugify::create())
+              ],
               'options' => [
                 'auto_reload' => TRUE,
               ],
@@ -66,7 +69,33 @@ class Bootstrap implements BootstrapInterface
               ]
             ],
           ],
-        ]
+        ],
+        'glide' => [
+          'class' => 'trntv\glide\components\Glide',
+          'sourcePath' => '@app/web/uploads',
+          'cachePath' => '@runtime/glide',
+          'signKey' => false, // 'kluhjli7klhhk.j'
+          'presets' => [
+            'tiny' => [
+              'w' => 90,
+              'h' => 90,
+              'fit' => 'crop-center',
+            ],
+            'small' => [
+              'w' => 270,
+              'fit' => 'crop',
+            ],
+            'medium' => [
+              'w' => 640,
+              'h' => 480,
+              'fit' => 'crop',
+            ],
+            'large' => [
+              'w' => 720,
+              'fit' => 'crop',
+            ]
+          ]
+        ],
       ]);
 
       $app->getUrlManager()->addRules([

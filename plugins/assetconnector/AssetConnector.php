@@ -134,7 +134,7 @@ class AssetConnector extends Widget
       'ctype' => 'asset',
       'rowOptions' => $rowOptions,
       'field' => $this->field,
-      'rawData' => $this->data->uuid,
+      'rawData' => !empty($this->data->uuid) ? $this->data->uuid : '',
       'data' => $this->data,
       'formKey' => $this->formKey
     ]);

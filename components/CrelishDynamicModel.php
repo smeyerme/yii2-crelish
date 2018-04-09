@@ -2,9 +2,8 @@
 
 namespace giantbits\crelish\components;
 
-use app\workspace\models\Page;
+use Cocur\Slugify\Slugify;
 use Underscore\Types\Arrays;
-use yii\base\InvalidParamException;
 use yii\helpers\FileHelper;
 use yii\helpers\Json;
 
@@ -188,6 +187,11 @@ class CrelishDynamicModel extends \yii\base\DynamicModel
             } else {
               $model->{$attribute} = $modelArray[$attribute];
             }
+          }
+          
+          if ($attribute == 'slug') {
+            $slugger = new Slugify();
+            $model->{$attribute} = $slugger->slugify($modelArray[$attribute]);
           }
         }
 
