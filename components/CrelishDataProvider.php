@@ -35,25 +35,36 @@ class CrelishDataProvider extends Component
 
     switch ($this->definitions->storage) {
       case 'db':
+        $modelTable = call_user_func('app\workspace\models\\' . ucfirst($this->ctype) . '::tableName');
+
         if (!empty($uuid)) {
           $this->uuid = $uuid;
+          $dataModels = \Yii::$app->db->createCommand('SELECT * FROM ' . $modelTable . ' WHERE uuid = "' . $this->uuid . '"')->queryAll();
 
-          $dataModels = call_user_func_array('app\workspace\models\\' . ucfirst($this->ctype) . '::find', ['uuid' => $this->uuid])->all();
+          // Process data
+          foreach ($dataModels as $dataModel) {
+            $dataModel['ctype'] = $this->ctype;
+            $processedData[$dataModel['uuid']] = $this->processSingle($dataModel);
+          }
         } else {
-          $dataModels = false; //\Yii::$app->cache->get('crc_' . $ctype);
+          $processedData = \Yii::$app->cache->get('crc_' . $ctype);
 
-          if ($dataModels === false || $forceFull) {
+          if ($processedData === false) {
             // $data is not found in cache, calculate it from scratch
-            $dataModels = call_user_func('app\workspace\models\\' . ucfirst($this->ctype) . '::find')->all();
+            $dataModels = \Yii::$app->db->createCommand('SELECT * FROM ' . $modelTable)->queryAll();
+
+            // Process data
+            foreach ($dataModels as $dataModel) {
+              $dataModel['ctype'] = $this->ctype;
+              $processedData[$dataModel['uuid']] = $this->processSingle($dataModel);
+            }
+
             // store $data in cache so that it can be retrieved next time
-            //\Yii::$app->cache->set('crc_' . $ctype, $dataModels);
+            \Yii::$app->cache->set('crc_' . $ctype, $processedData);
           }
         }
 
-        foreach ($dataModels as $dataModel) {
-          $tmpModel = array_merge(['ctype' => $this->ctype], $dataModel->attributes);
-          $this->allModels[$dataModel['uuid']] = $this->processSingle($tmpModel);
-        }
+        $this->allModels = $processedData;
 
         if (!empty($this->allModels)) {
           if (Arrays::has($settings, 'filter')) {
@@ -157,6 +168,22 @@ class CrelishDataProvider extends Component
               });
             }
 
+            if ($keyValue[0] == '*' && !empty($keyValue[1])) {
+              $this->allModels = Arrays::filter($this->allModels, function ($value) use ($key, $keyValue) {
+                $isMatch = true;
+                $itemString = strtolower($value[$key]);
+                $searchFragments = explode(" ", trim($keyValue[1]));
+
+                foreach ($searchFragments as $fragment) {
+                  if (strpos($itemString, strtolower($fragment)) === false) {
+                    $isMatch = false;
+                  }
+                }
+
+                return $isMatch;
+              });
+            }
+
           } elseif (is_bool($keyValue)) {
             $this->allModels = Arrays::filterBy($this->allModels, $key, $keyValue);
           } else {
@@ -168,7 +195,6 @@ class CrelishDataProvider extends Component
             } elseif ($key === 'freesearch') {
               $this->allModels = Arrays::filter($this->allModels, function ($value) use ($keyValue) {
                 $isMatch = true;
-                //$itemString = strtolower(implode("#", Arrays::flatten($value)));
                 $itemString = strtolower(serialize($value));
                 $searchFragments = explode(" ", trim($keyValue));
 

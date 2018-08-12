@@ -74,7 +74,7 @@ class Bootstrap implements BootstrapInterface
           'class' => 'trntv\glide\components\Glide',
           'sourcePath' => '@app/web/uploads',
           'cachePath' => '@runtime/glide',
-          'signKey' => false, // 'kluhjli7klhhk.j'
+          'signKey' => false, //'kluhjli7klhhk',
           'presets' => [
             'tiny' => [
               'w' => 90,

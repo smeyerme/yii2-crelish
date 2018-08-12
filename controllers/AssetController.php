@@ -11,6 +11,7 @@ namespace giantbits\crelish\controllers;
 use ColorThief\ColorThief;
 use giantbits\crelish\components\CrelishBaseController;
 use giantbits\crelish\components\CrelishDynamicModel;
+use League\Glide\ServerFactory;
 use yii\helpers\Html;
 use yii\helpers\Json;
 use yii\web\UploadedFile;
@@ -53,8 +54,26 @@ class AssetController extends CrelishBaseController
   public function actions()
   {
     return [
-      'glide' => 'trntv\glide\actions\GlideAction'
+      //'glide' => 'trntv\glide\actions\GlideAction'
     ];
+  }
+
+  public function actionGlide()
+  {
+    $path = \Yii::$app->request->get('path', null);
+    $params = \Yii::$app->request->getQueryParams();
+
+    unset($params['path']);
+
+    // Todo: Add image manipulation support.
+
+    $server = ServerFactory::create([
+      'source' => \Yii::getAlias('@app/web/uploads'),
+      'cache' => \Yii::getAlias('@runtime/glide'),
+      'presets' => \Yii::$app->params['crelish']['glide_presets']
+    ]);
+
+    $server->outputImage($path, $params);
   }
 
   public function actionIndex()
@@ -145,14 +164,16 @@ class AssetController extends CrelishBaseController
       $model = new CrelishDynamicModel([], ['ctype' => 'asset']);
       $model->systitle = $destName;
       $model->title = $destName;
-      $model->src = \Yii::getAlias('@web') . '/' . 'uploads' . '/' . $destName;
+      $model->src = \Yii::getAlias('@webroot') . '/' . 'uploads' . '/' . $destName;
+      $model->fileName = $destName;
+      $model->pathName = '/' . 'uploads' . '/';
       $model->mime = mime_content_type($targetFile);
       $model->size = $file->size;
       $model->state = 2;
 
       try {
-        $domColor = ColorThief::getColor($targetFile, 20);
-        $palColor = ColorThief::getPalette(\Yii::getAlias('@webroot') . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . $destName);
+        //$domColor = ColorThief::getColor($targetFile, 20);
+        //$palColor = ColorThief::getPalette(\Yii::getAlias('@webroot') . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . $destName);
 
         //$model->colormain_rgb = Json::encode($domColor);
         //$model->colormain_hex = '#' . sprintf('%02x', $domColor[0]) . sprintf('%02x', $domColor[1]) . sprintf('%02x', $domColor[2]);

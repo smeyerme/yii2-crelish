@@ -27,11 +27,11 @@ class CrelishAsset extends AssetBundle
         'css/crelish.css',
     ];
     public $js = [
-        '//cdn.jsdelivr.net/bootstrap/3.3.7/js/bootstrap.min.js',
-        '//cdn.jsdelivr.net/perfect-scrollbar/0.6.11/js/perfect-scrollbar.jquery.min.js',
-        '//cdn.jsdelivr.net/sortable/1.5.1/Sortable.min.js',
-        '//cdn.jsdelivr.net/riot/3.4.4/riot+compiler.min.js',
-        '//cdn.jsdelivr.net/dropzone/4.3.0/dropzone.min.js',
+        'https://cdn.jsdelivr.net/bootstrap/3.3.7/js/bootstrap.min.js',
+        'https://cdn.jsdelivr.net/perfect-scrollbar/0.6.11/js/perfect-scrollbar.jquery.min.js',
+        'https://cdn.jsdelivr.net/npm/@shopify/draggable@1.0.0-beta.7/lib/draggable.bundle.min.js',
+        'https://cdn.jsdelivr.net/riot/3.4.4/riot+compiler.min.js',
+        'https://cdn.jsdelivr.net/dropzone/4.3.0/dropzone.min.js',
         'js/pace.min.js',
         'js/crelish.js'
     ];
