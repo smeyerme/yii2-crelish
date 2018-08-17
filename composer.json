@@ -35,7 +35,8 @@
     "yiidoc/yii2-redactor": "*",
     "cocur/slugify": "*",
     "trntv/yii2-glide": "*",
-    "umneeq/yii2-color-extractor": "*"
+    "umneeq/yii2-color-extractor": "*",
+    "artkost/yii2-trumbowyg": "@stable"
   },
   "autoload": {
     "psr-4": {

@@ -2,10 +2,10 @@
 
 namespace giantbits\crelish\components;
 
-use yii\base\Object;
+use yii\base\BaseObject;
 use yii\base\NotSupportedException;
 
-class CrelishUser extends Object implements \yii\web\IdentityInterface
+class CrelishUser extends BaseObject implements \yii\web\IdentityInterface
 {
   public $loginUrl = ['crelish/user/login'];
 

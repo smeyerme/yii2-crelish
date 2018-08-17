@@ -1,7 +1,7 @@
 @import url('https://fonts.googleapis.com/css?family=Didact+Gothic');
 
 .gc-login--background {
-  background: url(../img/login-bg-002.jpg) no-repeat center center fixed;
+  /*background: url(../img/login-bg-002.jpg) no-repeat center center fixed;*/
   -webkit-background-size: cover;
   -moz-background-size: cover;
   -o-background-size: cover;
@@ -505,4 +505,16 @@ tr:hover td {
 
 .gravatar-icon img {
   vertical-align: top;
+}
+
+.gc-login--wrapper {
+  background-color: #ddd;
+  padding: 0 2rem 1rem 2rem;
+  border-radius: 2rem;
+  display: block;
+  box-shadow: 0px 0px 4rem rgba(0,0,0,.8);
+}
+
+.gc-login--wrapper h2 {
+  color: black;
 }

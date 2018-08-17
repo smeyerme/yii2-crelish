@@ -15,6 +15,7 @@ use yii\base\Component;
 use yii\data\ArrayDataProvider;
 use yii\helpers\FileHelper;
 use yii\helpers\Json;
+use yii\helpers\VarDumper;
 use yii\widgets\LinkPager;
 
 class CrelishDataProvider extends Component
@@ -294,6 +295,11 @@ class CrelishDataProvider extends Component
   public function raw()
   {
     $getParams = $_GET;
+
+    if (!$this->allModels) {
+      return new ArrayDataProvider([
+        'key' => $this->key]);
+    }
 
     $provider = new ArrayDataProvider([
       'key' => $this->key,
