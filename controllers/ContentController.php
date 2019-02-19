@@ -91,7 +91,7 @@ class ContentController extends CrelishBaseController
 
     $checkCol = [
       [
-        'class' => 'yii\grid\CheckboxColumn'
+        'class' => 'giantbits\crelish\components\CrelishCheckboxColumn',
       ]
     ];
 

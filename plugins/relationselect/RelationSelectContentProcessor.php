@@ -4,13 +4,13 @@ namespace giantbits\crelish\plugins\relationselect;
 
 use giantbits\crelish\components\CrelishDynamicModel;
 use yii\base\Component;
-use yii\helpers\Json;
+use yii\helpers\VarDumper;
 
 class RelationSelectContentProcessor extends Component
 {
   public $data;
 
-  public static function processDataPreSave($key, $data, $fieldConfig) {
+  public static function processDataPreSave($key, $data, $fieldConfig, &$parent) {
 
     $UUIDv4 = '/^[0-9A-F]{8}-[0-9A-F]{4}-4[0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}$/i';
 
@@ -21,6 +21,14 @@ class RelationSelectContentProcessor extends Component
       $model->save();
 
       return $model->uuid;
+    }
+
+    if( isset($fieldConfig->config->autocreate) && $fieldConfig->config->autocreate === false) {
+
+      $relatedModel = new CrelishDynamicModel([], ['ctype' => $fieldConfig->config->ctype, 'uuid'=>$data]);
+
+      // Link it.
+      $parent->link('downloads', $relatedModel);
     }
 
     return $data;
@@ -43,7 +51,6 @@ class RelationSelectContentProcessor extends Component
 
   public static function processJson($ctype, $key, $data, &$processedData)
   {
-
     $definition = CrelishDynamicModel::loadElementDefinition($ctype);
     $relatedCtype = $definition->fields[$key]->config->ctype;
 

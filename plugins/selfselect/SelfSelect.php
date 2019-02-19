@@ -3,11 +3,12 @@
 namespace giantbits\crelish\plugins\selfselect;
 
 use giantbits\crelish\components\CrelishDataProvider;
+use giantbits\crelish\components\CrelishFormWidget;
 use Underscore\Types\Arrays;
 use yii\base\Widget;
 use yii\helpers\Json;
 
-class SelfSelect extends Widget
+class SelfSelect extends CrelishFormWidget
 {
   public $data;
   public $rawData;

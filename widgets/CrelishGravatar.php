@@ -80,6 +80,8 @@ class CrelishGravatar extends Widget
     if (!isset($this->options['alt'])) {
       $this->options['alt'] = 'Gravatar image';
     }
+
+    $this->options['class'] = 'c-avatar__img';
     echo Html::img($this->getImageUrl(), $this->options);
   }
 

@@ -1,22 +1,14 @@
-<nav class="c-nav c-nav--inline gc-bc--palette-belize">
-    <div class="o-grid o-grid--no-gutter">
-        <div class="o-grid__cell">
-            <a class="c-nav__item gc-bc--palette-asbestos" href="{{ url('crelish/content/index.html') }}">
-                <span class="fui-arrow-left"></span> {{ t('crelish', 'Back') }}</span>
-            </a>
-        </div>
-        <div class="o-grid__cell gc-ta--center">
-            <span class="c-nav__content"><h3 class="c-heading">{{ t('crelish', 'Create new content') }}</h3></span>
-        </div>
-        <div class="o-grid__cell">
-            <span class="c-nav__item c-nav__item--right gc-bc--palette-nephritis btn-save" type="button"
-                  onclick="$('#content-form').submit();">
-                <span class="fui-check"></span> {{ t('crelish', 'Save') }} <i class="fa fa-floppy"></i></span>
-            </span>
-            <span class="c-nav__item c-nav__item--right gc-bc--palette-nephritis btn-save" type="button"
-                  onclick="$('#save_n_return').val(1); $('#content-form').submit();">
+<div class="c-input-group group-content-filter">
+
+    <a class="c-button" href="{{ url('crelish/content/index.html') }}">
+        <span class="fui-arrow-left"></span> {{ t('crelish', 'Back') }}</span>
+    </a>
+    <span class="c-button btn-save" type="button"
+          onclick="$('#content-form').submit();">
+          <i class="fa fa-save"></i></span>
+    </span>
+    <span class="c-button btn-save" type="button"
+          onclick="$('#save_n_return').val(1); $('#content-form').submit();">
             <i class="fa fa-save"></i> <i class="fa fa-reply"></i></span>
-            </span>
-        </div>
-    </div>
-</nav>
+    </span>
+</div>

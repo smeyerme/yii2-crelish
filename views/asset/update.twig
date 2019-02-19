@@ -1,40 +1,36 @@
 {{ use('yii/bootstrap/ActiveForm') }}
 
 {% set form = active_form_begin({
-'id' : 'asset-form',
+'id' : 'content-form',
 'layout' : 'default'
 }) %}
-<div class="o-grid gc-bc--palette-clouds u-window-box--medium">
+<div class="o-grid u-window-box--medium">
     <div class="o-grid__cell o-grid__cell--width-75 o-grid__cell--no-gutter">
-        <div class="c-card c-card--high gc-m--lbr-1 gc-bc--palette-white">
-            <div class="c-card__content c-heading dz-filename gc-bc--palette-silver gc-to--ellipsis u-pillar-box--medium    ">
+        <div class="">
+            <div class="c-heading u-pillar-box-medium">
                 {{ model.systitle }}
             </div>
             <div class="c-card__content">
-                <div class="image gc-o--hidden">
+                <div class="u-pillar-box-medium">
 
                     {% if model.mime =='image/jpeg' %}
-                        <img src="{{ model.src }}" class="o-image">
+                        <img src="/crelish/asset/glide.html?path={{ model.fileName }}" class="o-image">
                     {% elseif model.mime =='image/jpg' %}
-                        <img src="{{ model.src }}" class="o-image">
+                        <img src="/crelish/asset/glide.html?path={{ model.fileName }}&" class="o-image">
                     {% elseif model.mime =='image/png' %}
-                        <img src="{{ model.src }}" class="o-image">
+                        <img src="/crelish/asset/glide.html?path={{ model.fileName }}" class="o-image">
                     {% elseif model.mime =='image/gif' %}
-                        <img src="{{ model.src }}" class="o-image">
+                        <img src="/crelish/asset/glide.html?path={{ model.fileName }}" class="o-image">
                     {% elseif model.mime =='application/pdf' %}
                         <object type="application/pdf" width="100%" height="800px" data="{{ model.src }}"></object>
                     {% elseif model.mime == 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' %}
                         <iframe src="http://view.officeapps.live.com/op/view.aspx?src=={{ model.src }}&name={{ model.systitle }}" width="100%" height="800px" "></iframe>
                     {% endif %}
-
-                </div>
-                <div class="description gc-box--h-60 gc-to--ellipsis">
-                    {{ form.field(model, 'description', {'options': {'style': 'margin-bottom: 0px;' }}).textarea({'rows':6 }).label('') | raw }}
                 </div>
             </div>
         </div>
     </div>
-    <div class="o-grid__cell o-grid__cell">
+    <div class="o-grid__cell o-grid__cell u-letter-box-medium">
         {{ form.field(model, 'systitle') | raw }}
         {{ form.field(model, 'state').dropdownlist({0:'Offline',1:'Draft',2:'Published',3:'Archived'}) | raw }}
         {{ form.field(model, 'colormain_hex', { 'inputOptions': { 'class': 'form-control colorspawn' }}) | raw }}
@@ -51,13 +47,18 @@
         </div>
 
         {{ form.field(model, 'src', { 'inputOptions': { 'class': 'form-control disabled', 'disabled': 'disabled'}}) | raw }}
+        {{ form.field(model, 'src_remote', { 'inputOptions': { 'class': 'form-control'}}) | raw }}
+        {{ form.field(model, 'description', {'options': {'style': 'margin-bottom: 0px;' }}).textarea({'rows':6 }) | raw }}
+
+        <input type="hidden" name="save_n_return" id="save_n_return" value="0"/>
 
     </div>
 </div>
+
+<span class="c-badge gc-mt--1">{{ model.uuid }} : {{ model.ctype }}</span>
+
 {{ active_form_end() }}
 <script>
-
     $('.colorspawn').css('border-bottom', '4px solid {{ model.colormain_hex }}');
-
     $('[data-toggle="tooltip"]').tooltip({html: true});
 </script>

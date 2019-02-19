@@ -4,75 +4,102 @@
 <!DOCTYPE html>
 <html lang="{{ app.language }}">
 <head>
-    <meta charset="{{ app.charset }}">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Crelish | {{ html.encode(this.title) }}</title>
-    {{ html.csrfMetaTags | raw }}
-    {{ void(this.head) }}
+  <meta charset="{{ app.charset }}">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Crelish {% if this.title %}| {% endif %} {{ html.encode(this.title) }}</title>
+  {{ html.csrfMetaTags | raw }}
+  {{ void(this.head) }}
 </head>
-<body class="crelish c-text gc-bc--palette-clouds">
+<body class="crelish-app-root u-text">
 {{ void(this.beginBody()) }}
 
-<div class="o-panel">
-    <nav class="c-nav c-nav--inline gc-bc--palette-dark-blue">
-        <a href="{{ url('crelish/dashboard/index') }}" class="active">
-            <span class="c-nav__content gc-bfont crelish-brand ">crelish</span>
-        </a>
-        {% include '_side_nav.twig' %}
+<section class="cr-root_wrap">
+  <div id="cr-left-pane" class="left-col scrollable">
+    <div class="navbar--main">
+      <div class="brand">
+        <a href="{{ url('crelish/dashboard/index') }}">cr</a>
+      </div>
+      {% include '_side_nav.twig' %}
+    </div>
+  </div>
+  <div id="cr-right-pane" class="scrollable">
+    <div class="avatar-nav">
+      <div class="navbar-item dropdown">
+        <div class="c-avatar u-xsmall">
+          {{ crelish_gravatar_widget({ 'email': app.user.identity.email , 'options': { 'alt': app.user.identity.username }, 'size': 32 }) }}
+        </div>
+        <div class="dropdown-content right">
+          <ul role="menu">
+            <li>
+              <h6>{{ app.user.identity.username }}</h6>
+            </li>
+            <li>
+              <a href="{{ url('crelish/user/logout') }}">
+                {{ t('crelish', 'Logout') }}
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <nav class="navbar--controller">
+      {% include '@crelish/views/' ~ app.controller.id ~ '/' ~ app.controller.action.id ~ "_header_bar.twig" %}
     </nav>
-    {% include '@crelish/views/' ~ app.controller.id ~ '/' ~ app.controller.action.id ~ "_header_bar.twig" %}
 
     {{ flash_messages_widget() }}
 
-    <section class="o-panel o-panel--nav-top o-panel--nav-top-super">
-        {{ content | raw }}
+    <section>
+      {{ content | raw }}
     </section>
-</div>
-
-<!-- Modal definitions -->
+  </div>
+</section>
+{#<!-- Modal definitions -->
 <div class="modal fade" id="confirm-delete" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
      aria-hidden="true">
-    <div class="modal-dialog gc-no-border-radius">
-        <div class="modal-content gc-no-border-radius gc-bc--palette-clouds">
-            <div class="modal-header gc-no-border gc-bc--palette-silver-light">
-                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
-                <h4 class="modal-title" id="myModalLabel">{{ t('crelish', 'Confirm Delete') }}</h4>
-            </div>
-            <div class="modal-body">
-                <p>{{ t('crelish', 'You are about to delete this record, this procedure is irreversible.') }}</p>
-                <p>{{ t('crelish', 'Do you want to proceed?') }}</p>
-            </div>
-            <div class="modal-footer gc-no-border gc-bc--palette-silver-light">
-                <button type="button" class="btn btn-default" data-dismiss="modal">{{ t('crelish', 'Cancel') }}</button>
-                <button type="button" class="btn btn-danger btn-ok" data-url="/crelish/{{ app.controller.id }}/delete.html" data-uuid="{{ app.getRequest.getQueryParam('uuid') }}"
-                        data-model="{{ app.getRequest.getQueryParam('ctype') }}" onclick="window.location.href=$(this).data('url') +'?uuid=' + $(this).data('uuid') + '&ctype=' + $(this).data('model')">{{ t('crelish', 'Delete') }}
-                </button>
-            </div>
-        </div>
+  <div class="modal-dialog gc-no-border-radius">
+    <div class="modal-content gc-no-border-radius gc-bc--palette-clouds">
+      <div class="modal-header gc-no-border gc-bc--palette-silver-light">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+        <h4 class="modal-title" id="myModalLabel">{{ t('crelish', 'Confirm Delete') }}</h4>
+      </div>
+      <div class="modal-body">
+        <p>{{ t('crelish', 'You are about to delete this record, this procedure is irreversible.') }}</p>
+        <p>{{ t('crelish', 'Do you want to proceed?') }}</p>
+      </div>
+      <div class="modal-footer gc-no-border gc-bc--palette-silver-light">
+        <button type="button" class="btn btn-default" data-dismiss="modal">{{ t('crelish', 'Cancel') }}</button>
+        <button type="button" class="btn btn-danger btn-ok" data-url="/crelish/{{ app.controller.id }}/delete.html"
+                data-uuid="{{ app.getRequest.getQueryParam('uuid') }}"
+                data-model="{{ app.getRequest.getQueryParam('ctype') }}"
+                onclick="window.location.href=$(this).data('url') +'?uuid=' + $(this).data('uuid') + '&ctype=' + $(this).data('model')">{{ t('crelish', 'Delete') }}
+        </button>
+      </div>
     </div>
+  </div>
 </div>
-
-<div class="modal fade" id="confirm-cancel" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"  aria-hidden="true">
-    <div class="modal-dialog gc-no-border-radius">
-        <div class="modal-content gc-no-border-radius gc-bc--palette-clouds">
-            <div class="modal-header gc-no-border">
-                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
-                <h4 class="modal-title" id="myModalLabel">{{ t('crelish', 'Confirm cancel') }}</h4>
-            </div>
-            <div class="modal-body">
-                <p>{{ t('crelish', 'You are about to cancel your current action.') }}
-                <br/>{{ t('crelish', 'Unsaved changes might get lost.') }}</br>
-                <p>{{ t('crelish', 'Do you want to proceed?') }}</p>
-            </div>
-            <div class="modal-footer gc-no-border">
-                <button type="button" class="btn btn-default" data-dismiss="modal">{{ t('crelish', 'Cancel') }}</button>
-                <button type="button" class="btn btn-danger btn-cancel-proceed"
-                        data-href="">{{ t('crelish', 'Proceed') }}
-                </button>
-            </div>
-        </div>
+<div class="modal fade" id="confirm-cancel" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog gc-no-border-radius">
+    <div class="modal-content gc-no-border-radius gc-bc--palette-clouds">
+      <div class="modal-header gc-no-border">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+        <h4 class="modal-title" id="myModalLabel">{{ t('crelish', 'Confirm cancel') }}</h4>
+      </div>
+      <div class="modal-body">
+        <p>{{ t('crelish', 'You are about to cancel your current action.') }}
+          <br/>{{ t('crelish', 'Unsaved changes might get lost.') }}</br>
+        <p>{{ t('crelish', 'Do you want to proceed?') }}</p>
+      </div>
+      <div class="modal-footer gc-no-border">
+        <button type="button" class="btn btn-default" data-dismiss="modal">{{ t('crelish', 'Cancel') }}</button>
+        <button type="button" class="btn btn-danger btn-cancel-proceed"
+                data-href="">{{ t('crelish', 'Proceed') }}
+        </button>
+      </div>
     </div>
+  </div>
 </div>
+#}
 
 {{ void(this.endBody()) }}
 </body>

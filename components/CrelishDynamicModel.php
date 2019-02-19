@@ -14,6 +14,7 @@ class CrelishDynamicModel extends \yii\base\DynamicModel
   public $ctype;
   public $fieldDefinitions;
   public $elementDefinition;
+
   private $_attributeLabels;
   private $fileSource;
   private $isNew = true;
@@ -182,13 +183,14 @@ class CrelishDynamicModel extends \yii\base\DynamicModel
               $processorClass = str_replace("widget_", "", $fieldType) . 'ContentProcessor';
             }
 
+            // Do processor based pre processing.
             if (class_exists($processorClass) && method_exists($processorClass, 'processDataPreSave')) {
-              $model->{$attribute} = $processorClass::processDataPreSave($attribute, $modelArray[$attribute], $this->elementDefinition->fields[$attribute]);
+              $model->{$attribute} = $processorClass::processDataPreSave($attribute, $modelArray[$attribute], $this->elementDefinition->fields[$attribute], $model);
             } else {
               $model->{$attribute} = $modelArray[$attribute];
             }
           }
-          
+
           if ($attribute == 'slug') {
             $slugger = new Slugify();
             $model->{$attribute} = $slugger->slugify($modelArray[$attribute]);
@@ -213,7 +215,6 @@ class CrelishDynamicModel extends \yii\base\DynamicModel
 
     // Update cache
     $this->updateCache(($this->isNew) ? 'create' : 'update', CrelishBaseContentProcessor::processElement($this->ctype, $modelArray));
-    //\Yii::$app->cache->flush();
 
     // Todo: Create entry in slug storage.
     if (!empty($this->slug)) {
@@ -242,11 +243,12 @@ class CrelishDynamicModel extends \yii\base\DynamicModel
   public function delete()
   {
     $this->updateCache('delete', $this->uuid);
+
     if (file_exists($this->fileSource)) {
       unlink($this->fileSource);
     }
 
-    if($this->elementDefinition->storage == 'db') {
+    if ($this->elementDefinition->storage == 'db') {
       $model = call_user_func('app\workspace\models\\' . ucfirst($this->ctype) . '::find')->where(['uuid' => $this->uuid])->one();
       $model->delete();
     }
@@ -286,9 +288,6 @@ class CrelishDynamicModel extends \yii\base\DynamicModel
 
   private function updateCache($action, $data)
   {
-
-    return;
-
     $cacheStore = \Yii::$app->cache->get('crc_' . $this->ctype);
 
     switch ($action) {
@@ -320,6 +319,8 @@ class CrelishDynamicModel extends \yii\base\DynamicModel
         array_push($cacheStore, $data);
         \Yii::$app->cache->set('crc_' . $this->ctype, array_values($cacheStore));
     }
+
+    \Yii::$app->cache->flush();
 
     if (is_a(\Yii::$app, 'yii\web\Application')) {
       \Yii::$app->session->set('intellicache', $this->uuid);
@@ -415,5 +416,11 @@ class CrelishDynamicModel extends \yii\base\DynamicModel
     $elementDefinition->fields = $fieldDefinitions;
 
     return $elementDefinition;
+  }
+
+  public function getIsNewRecord()
+  {
+
+    return false;
   }
 }

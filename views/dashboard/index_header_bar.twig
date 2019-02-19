@@ -1,12 +1,27 @@
 {{ use('/giantbits/crelish/widgets') }}
-<nav class="c-nav c-nav--inline gc-bc--palette-belize">
-    <span class="c-nav__content"><h3 class="c-heading">Welcome</h3></span>
-    <span class="dropdown c-nav__item c-nav__item--right">
-        <span class="dropdown-toggle" data-toggle="dropdown">
-            <span class="fui-plus"></span> Add content <span class="caret"></span>
-        </span>
-        <ul role="menu" class="dropdown-menu" style="margin-left: -4em;">
+
+<div class="c-input-group group-content-filter">
+  <div><h4 class="c-heading" style="padding: 0; margin: 0;">Willkommen</h4></div>
+</div>
+
+{#
+<nav class="navbar--controller">
+  <div class="o-grid o-grid--no-gutter">
+    <div class="o-grid__cell--width-15">
+      <div><h3 class="c-heading">Welcome</h3></div>
+    </div>
+    <div class="o-grid__cell">
+      <div class="dropdown">
+        <div class="dropdown-toggle">
+          <i class="fa fa-plus"></i>
+        </div>
+        <div class="dropdown-content">
+          <ul role="menu">
             {{ element_nav_widget({"action":"create"}) }}
-        </ul>
-    </span>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
 </nav>
+#}

@@ -3,21 +3,21 @@
 namespace giantbits\crelish\plugins\relationselect;
 
 use giantbits\crelish\components\CrelishDataProvider;
+use giantbits\crelish\components\CrelishFormWidget;
 use Underscore\Types\Arrays;
-use yii\base\Widget;
+use yii\data\ArrayDataProvider;
+use yii\helpers\Html;
+use yii\helpers\Url;
 
-class RelationSelect extends Widget
+class RelationSelect extends CrelishFormWidget
 {
   public $data;
   public $rawData;
   public $formKey;
   public $field;
   public $value;
-  private $selectData = [];
+
   private $relationDataType;
-  private $allowMultiple = false;
-  private $hiddenValue = '';
-  private $selectedValue;
   private $predefinedOptions;
 
   public function init()
@@ -27,13 +27,30 @@ class RelationSelect extends Widget
     // Set related ctype.
     $this->relationDataType = $this->field->config->ctype;
     // Fetch options.
-    $optionProvider = new CrelishDataProvider($this->relationDataType, ['filter'=>['state'=>['strict', 2]]]);
+    $optionProvider = new CrelishDataProvider($this->relationDataType, ['filter' => ['state' => ['strict', 2]]]);
 
     $options = [];
-    foreach($optionProvider->rawAll() as $option){
+    foreach ($optionProvider->rawAll() as $option) {
       $options[$option['uuid']] = $option['systitle'];
     }
     $this->predefinedOptions = $options;
+    $ul = \Yii::$app->request->get('ul');
+    if($ul) {
+      // Todo: Get type of parent + uuid. Load parent. Unlink subelement.
+      //$ownerCtype = \Yii::$app->request->get('ctype');
+      //$ownerUuid = \Yii::$app->request->get('uuid');
+      $childCtype = str_replace('_list', null, explode('::', $ul)[0]);
+      $childUuid = explode('::', $ul)[1];
+
+      $child = call_user_func('app\workspace\models\\' . ucfirst($this->field->config->ctype) . '::find')->where(['uuid' => $childUuid])->one();
+      $owner = call_user_func('app\workspace\models\\' . ucfirst($this->model->ctype) . '::find')->where(['uuid' => $this->model->uuid])->one();
+
+      if($owner && $child) {
+        $owner->unlink($childCtype, $child, true);
+      }
+      \Yii::$app->response->redirect(Url::current(['ul'=>null]));
+    }
+
   }
 
   public function run()
@@ -47,6 +64,27 @@ class RelationSelect extends Widget
       }
       return false;
     });
+    $itemList = $itemListColumns = [];
+    $tagMode = true;
+
+    if (isset($this->field->config->multiple) && $this->field->config->multiple) {
+      $tagMode = false;
+      // Load related data.
+      $ar = call_user_func('app\workspace\models\\' . ucfirst($this->model->ctype) . '::find')->where(['uuid' => $this->model->uuid])->one();
+      $itemList = new ArrayDataProvider(['allModels' => $ar->{str_replace('_list', null, $this->field->key)}]);
+
+      $itemListColumns = [
+        'systitle',
+        'area',
+        [
+          'format'=>'raw',
+          'value' => function($data){
+            $url = \Yii::$app->request->absoluteUrl . '&ul=' . $this->field->key . '::' . $data->uuid;
+            return Html::a('<i class="fa fa-trash"></i>', $url, ['title' => 'Löschen', 'class'=>'c-button u-small']);
+          }
+        ]
+      ];
+    }
 
     return $this->render('relationselect.twig', [
       'formKey' => $this->formKey,
@@ -54,7 +92,10 @@ class RelationSelect extends Widget
       'required' => ($isRequired) ? 'required' : '',
       'selectData' => $this->predefinedOptions,
       'selectValue' => isset($this->data->uuid) ? $this->data->uuid : '',
-      'hiddenValue' => isset($this->data->uuid) ? $this->data->uuid :''
+      'hiddenValue' => isset($this->data->uuid) ? $this->data->uuid : '',
+      'tagMode' => $tagMode,
+      'itemlist' => $itemList,
+      'itemlistcolumns' => $itemListColumns
     ]);
   }
 }

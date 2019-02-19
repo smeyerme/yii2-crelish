@@ -1,55 +1,42 @@
 {{ use('giantbits/crelish/widgets/CrelishGravatar') }}
-<span class="c-nav__item c-nav__item--right">
-   <span class="dropdown" style="overflow: visible;">
-        <span class="dropdown-toggle" data-toggle="dropdown">
-            <span class="gravatar-icon">{{ crelish_gravatar_widget({ 'email': app.user.identity.email , 'options': { 'alt': app.user.identity.username }, 'size': 32 }) }}</span> {{ app.user.identity.username }} <span class="caret"></span>
-        </span>
-        <ul role="menu" class="dropdown-menu" style="margin-left: -4em;">
-            <li>
-                  <a href="{{ url('crelish/user/logout') }}">
-                    <span class="fa fa-sign-out"></span> {{ t('crelish', 'Logout') }}
-                  </a>
-            </li>
 
-        </ul>
-    </span>
-</span>
-<!-- still work in progress...
-<span class="c-nav__item c-nav__item--right {{ app.controller.id == 'elements' ? 'active' : '' }}">
-  <a href="{{ url('crelish/elements/index') }}">
-    <span class="fa fa-list"></span> {{ t('crelish', 'Elements') }}
+<div class="navbar-item {{ app.controller.id == 'dashboard' ? 'active' : '' }}">
+  <a href="{{ url('crelish/dashboard/index') }}">
+    <i class="fas fa-chart-pie"></i> {{ t('crelish', 'Dashboard') }}
   </a>
-</span>
--->
-<span class="c-nav__item c-nav__item--right {{ app.controller.id == 'export' ? 'active' : '' }}">
-  <a href="{{ url('crelish/export/index') }}">
-    <span class="fa fa-table"></span> {{ t('crelish', 'Export') }}
-  </a>
-</span>
-<span class="c-nav__item c-nav__item--right {{ app.controller.id == 'settings' ? 'active' : '' }}">
-  <a href="{{ url('crelish/settings/index') }}">
-    <span class="fa fa-cogs"></span> {{ t('crelish', 'Settings') }}
-  </a>
-</span>
-<!--
-<span class="c-nav__item c-nav__item--right disabled">
-  <a href="#fakelink">
-    <span class="fui-star"></span> Globals
-  </a>
-</span>
--->
-<span class="c-nav__item c-nav__item--right {{ app.controller.id == 'asset' ? 'active' : '' }}">
-  <a href="{{ url('crelish/user/index') }}">
-    <span class="fa fa-users"></span> {{ t('crelish', 'User') }}
-  </a>
-</span>
-<span class="c-nav__item c-nav__item--right {{ app.controller.id == 'asset' ? 'active' : '' }}">
-  <a href="{{ url('crelish/asset/index') }}">
-    <span class="fa fa-file-image-o"></span> {{ t('crelish', 'Assets') }}
-  </a>
-</span>
-<span class="c-nav__item c-nav__item--right {{ app.controller.id == 'content' ? 'active' : '' }}">
+</div>
+<div class="navbar-item {{ app.controller.id == 'content' ? 'active' : '' }}">
   <a href="{{ url('crelish/content/index') }}">
-    <span class="fa fa-pencil-square-o"></span> {{ t('crelish', 'Content') }}
+    <i class="fa fa-edit"></i> {{ t('crelish', 'Content') }}
   </a>
-</span>
+</div>
+<div class="navbar-item {{ app.controller.id == 'asset' ? 'active' : '' }}">
+  <a href="{{ url('crelish/asset/index') }}">
+    <i class="fas fa-folder-open"></i> {{ t('crelish', 'Assets') }}
+  </a>
+</div>
+<div class="navbar-item {{ app.controller.id == 'user' ? 'active' : '' }}">
+  <a href="{{ url('crelish/user/index') }}">
+    <i class="fa fa-users"></i> {{ t('crelish', 'User') }}
+  </a>
+</div>
+<div class="navbar-item disabled">
+  <a href="#fakelink">
+    <i class="fas fa-globe-africa"></i> Globals
+  </a>
+</div>
+<div class="navbar-item {{ app.controller.id == 'settings' ? 'active' : '' }}">
+  <a href="{{ url('crelish/settings/index') }}">
+    <i class="fa fa-cogs"></i> {{ t('crelish', 'Settings') }}
+  </a>
+</div>
+
+{#
+<div class="navbar-item {{ app.controller.id == 'export' ? 'active' : '' }}">
+  <a href="{{ url('crelish/export/index') }}">
+    <i class="fa fa-table"></i> {{ t('crelish', 'Export') }}
+  </a>
+</div>
+
+#}
+

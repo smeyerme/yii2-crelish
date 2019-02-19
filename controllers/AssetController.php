@@ -99,7 +99,7 @@ class AssetController extends CrelishBaseController
             case 'image/jpeg':
             case 'image/gif':
             case 'image/png':
-              $preview = Html::img($model['src'], ['style' => 'width: 80px; height: auto;']);
+              $preview = Html::img('/crelish/asset/glide.html?path=' . $model['fileName'] . '&w=160&f=fit', ['style' => 'width: 80px; height: auto;']);
           }
 
           return $preview;
@@ -126,12 +126,22 @@ class AssetController extends CrelishBaseController
     $uuid = !empty(\Yii::$app->getRequest()->getQueryParam('uuid')) ? \Yii::$app->getRequest()->getQueryParam('uuid') : null;
     $model = new CrelishDynamicModel([], ['uuid' => $uuid, 'ctype' => 'asset']);
 
+
     // Save content if post request.
     if (!empty(\Yii::$app->request->post()) && !\Yii::$app->request->isAjax) {
       $model->attributes = $_POST['CrelishDynamicModel'];
 
       if ($model->validate()) {
         $model->save();
+
+        if (!empty($_POST['save_n_return']) && $_POST['save_n_return'] == "1") {
+          header('Location: ' . Url::to([
+              'asset/index'
+            ]));
+
+          exit(0);
+        }
+
         \Yii::$app->session->setFlash('success', 'Asset saved successfully...');
         header("Location: " . Url::to(['asset/update', 'uuid' => $model->uuid]));
         exit(0);
@@ -164,7 +174,8 @@ class AssetController extends CrelishBaseController
       $model = new CrelishDynamicModel([], ['ctype' => 'asset']);
       $model->systitle = $destName;
       $model->title = $destName;
-      $model->src = \Yii::getAlias('@webroot') . '/' . 'uploads' . '/' . $destName;
+      //$model->src = \Yii::getAlias('@webroot') . '/' . 'uploads' . '/' . $destName;
+      $model->src = $destName;
       $model->fileName = $destName;
       $model->pathName = '/' . 'uploads' . '/';
       $model->mime = mime_content_type($targetFile);

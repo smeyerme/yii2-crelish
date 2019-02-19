@@ -2,29 +2,29 @@
 {{ use('/yii/grid/GridView') }}
 {{ use('/yii/widgets/Pjax') }}
 
-<div class="modal fade cr-modal--full media-modal-{{ formKey }}" id="media-modal-{{ formKey }}" tabindex="-1"
+<div class="modal fade cr-modal--full media-modal-{{ formKey }}"
+     id="media-modal-{{ formKey }}"
+     tabindex="-1"
      role="dialog"
      aria-labelledby="media-modal-{{ formKey }}" aria-hidden="true">
   <div class="modal-dialog" style="width: 100vw; height: 100vh; top: 0; left: 0; margin: 0; padding: 0;">
-    <div class="modal-content gc-bc--palette-clouds">
+    <div class="modal-content">
 
-      <nav class="modal-header c-nav c-nav--inline gc-bc--palette-belize">
+      <nav class="modal-header">
         <div class="o-grid">
           <div class="o-grid__cell--width-25">
             <span class="c-nav__content"><h3 class="c-heading">{{ t('crelish', 'Assets') }}</h3></span>
           </div>
           <div class="o-grid__cell--width-50 gc-fc--palette-dark-blue">
-
             <div class="c-input-group c-input-group--rounded" style="margin-top: .5em;">
               <div class="o-field">
-                <input class="c-field" name="cr_content_filter_{{ formKey }}" id="cr_content_filter_{{ formKey }}"
-                       value="{{ app.request.get.cr_content_filter }}"
+                <input class="c-field" name="cr_asset_filter_{{ formKey }}" id="cr_asset_filter_{{ formKey }}"
+                       value="{{ app.request.get.cr_asset_filter }}"
                        placeholder="{{ t('crelish', 'Type your search phrase here...') }}">
               </div>
               <button class="c-button c-button--brand do-search" onclick="return false;"><i class="fa fa-search"></i>
               </button>
             </div>
-
           </div>
           <div class="o-grid__cell--width-25">
             <div class="c-nav__content c-nav__content--right">
@@ -36,29 +36,25 @@
       </nav>
 
       <div class="modal-body o-panel-container">
-        <div class="o-panel">
-          <div class="o-grid gc-bc--palette-nephritis" style="cursor: pointer;">
-            <div class="o-grid__cell gc-ta--center gc-p--1" id="dropZone-{{ formKey }}">
+        <div style="cursor: pointer;">
+          <div id="dropZone-{{ formKey }}"></div>
+        </div>
+        <div>
 
-            </div>
-          </div>
-          <div class="o-grid gc-bc--palette-clouds">
-            <div class="o-grid__cell">
-              {{ pjax_begin({'id': 'assetList-' ~ formKey, 'enablePushState': false}) }}
+          {{ pjax_begin({'id': 'assetList', 'enablePushState': true}) }}
 
-              <h6>{{ t('crelish', 'Asset list') }}</h6>
+          <h6>{{ t('crelish', 'Asset list') }}</h6>
 
-              {{ grid_view_widget({
-                'dataProvider': dataProvider,
-                'columns': columns,
-                'filterSelector': '.cr-content-search',
-                'tableOptions': {'class':'table table-striped'},
-                'rowOptions': rowOptions ,
-                'formatter': {'class': 'yii\\i18n\\Formatter', 'nullDisplay': ''}}) | raw }}
+          {{ grid_view_widget({
+            'dataProvider': dataProvider,
+            'columns': columns,
+            'filterSelector': '.cr-content-search',
+            'tableOptions': {'class':'table table-striped'},
+            'rowOptions': rowOptions ,
+            'formatter': {'class': 'yii\\i18n\\Formatter', 'nullDisplay': ''}}) | raw }}
 
-              {{ pjax_end() }}
-            </div>
-          </div>
+          {{ pjax_end() }}
+
         </div>
       </div>
     </div>
@@ -82,10 +78,12 @@
       <div class="o-grid o-grid--wrap">
         <div class="o-gird__cell o-grid__cell--width-25">
           {% if "image" in data.mime %}
-            <img src="{{ data.src }}" class="o-image" id="asset-icon-{{ field.key }}"/>
+            <img src="/crelish/asset/glide.html?path={{ data.fileName }}&w=220&f=fit" class="o-image"
+                 id="asset-icon-{{ field.key }}"/>
           {% endif %}
         </div>
         <div class="o-grid__cell" id="asset-info-{{ field.key }}">
+          {{ data.description }}
           {{ data.systitle }} ({{ data.mime }})
         </div>
       </div>
@@ -94,44 +92,39 @@
 </div>
 
 <script>
+
+  function reloadList() {
+    if (window.location.href.indexOf('cr_asset_filter') >= 0) {
+      $.pjax.reload({
+        container: '#assetList',
+        async: false,
+        url: window.location.href.replace(/(cr_asset_filter=).*?(&|$)/, '$1' + $(this).val() + '$2')
+      });
+    } else {
+      var preFix = (window.location.href.indexOf("?") >= 0) ? '&' : '?';
+      $.pjax({
+        url: window.location.href + preFix + "cr_asset_filter=" + $(this).val(),
+        container: '#assetList',
+        async: false,
+      });
+    }
+  }
+
   $('#media-modal-{{ formKey }}').on('shown.bs.modal', function (e) {
 
     $('.do-search').on("click", function (e) {
       e.preventDefault();
     });
 
-    console.info('{{ formKey }}');
-
-    $('#cr_content_filter_{{ formKey }}').on("blur", function (e) {
-      if (window.location.href.indexOf('cr_content_filter') >= 0) {
-        $.pjax({
-          url: window.location.href.replace(/(cr_content_filter=).*?(&|$)/, '$1' + $(this).val() + '$2'),
-          container: '#assetList-{{ formKey }}'
-        });
-      } else {
-        var preFix = (window.location.href.indexOf("?") >= 0) ? '&' : '?';
-        $.pjax({
-          url: window.location.href + preFix + "cr_content_filter=" + $(this).val(),
-          container: '#assetList-{{ formKey }}'
-        });
-      }
+    $('#cr_asset_filter_{{ formKey }}').on("blur", function (e) {
+      e.preventDefault();
+      reloadList();
     });
 
-    $('#cr_content_filter_{{ formKey }}').on("keypress", function (e) {
+    $('#cr_asset_filter_{{ formKey }}').on("keypress", function (e) {
       if (e.which == 10 || e.which == 13) {
         e.preventDefault();
-        if (window.location.href.indexOf('cr_content_filter') >= 0) {
-          $.pjax({
-            url: window.location.href.replace(/(cr_content_filter=).*?(&|$)/, '$1' + $(this).val() + '$2'),
-            container: '#assetList-{{ formKey }}'
-          });
-        } else {
-          var preFix = (window.location.href.indexOf("?") >= 0) ? '&' : '?';
-          $.pjax({
-            url: window.location.href + preFix + "cr_content_filter=" + $(this).val(),
-            container: '#assetList-{{ formKey }}'
-          });
-        }
+        reloadList();
       }
     });
 
@@ -145,12 +138,10 @@
       init: function () {
         var myDropzone = this;
         $(this.element).addClass("dropzone");
-
         $(this.element).append(defMessage);
-
         this.on("complete", function (file) {
           setTimeout(function () {
-            $.pjax.reload({container: '#assetList-{{ formKey }}'});
+            $.pjax.reload({container: '#assetList', async: false});
             myDropzone.removeFile(file);
           }, 250);
         });

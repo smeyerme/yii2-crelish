@@ -14,6 +14,7 @@ class MatrixConnector extends Widget
   public $data;
   public $formKey;
   public $field;
+  public $model;
 
   public function init()
   {

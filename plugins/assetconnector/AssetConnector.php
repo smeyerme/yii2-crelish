@@ -4,12 +4,13 @@ namespace giantbits\crelish\plugins\assetconnector;
 
 use giantbits\crelish\components\CrelishDynamicModel;
 use giantbits\crelish\components\CrelishDataProvider;
+use giantbits\crelish\components\CrelishFormWidget;
 use Underscore\Types\Arrays;
 use yii\base\Widget;
 use yii\helpers\Html;
 use yii\helpers\Json;
 
-class AssetConnector extends Widget
+class AssetConnector extends CrelishFormWidget
 {
   public $data;
   public $rawData;
@@ -83,8 +84,8 @@ class AssetConnector extends Widget
     });
 
     $filter = null;
-    if (!empty($_GET['cr_content_filter'])) {
-      $filter = ['freesearch' => $_GET['cr_content_filter']];
+    if (!empty($_GET['cr_asset_filter'])) {
+      $filter = ['freesearch' => $_GET['cr_asset_filter']];
     }
 
     $modelProvider = new CrelishDataProvider('asset', ['filter' => $filter], NULL);
@@ -101,7 +102,7 @@ class AssetConnector extends Widget
             case 'image/jpeg':
             case 'image/gif':
             case 'image/png':
-              $preview = Html::img($model['src'], ['style' => 'width: 80px; height: auto;']);
+              $preview = Html::img('/crelish/asset/glide.html?path=' . $model['fileName'] . '&w=160&f=fit', ['style' => 'width: 80px; height: auto;']);
           }
 
           return $preview;

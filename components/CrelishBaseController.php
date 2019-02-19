@@ -182,6 +182,7 @@ class CrelishBaseController extends Controller
             // Check for crelish special fields.
             if (class_exists($class)) {
               echo $class::widget([
+                'model' => $this->model,
                 'formKey' => $keyName,
                 'data' => $this->model{$field->key},
                 'field' => $field

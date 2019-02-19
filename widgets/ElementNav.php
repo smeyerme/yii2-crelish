@@ -49,10 +49,9 @@ class ElementNav extends Widget
       'limit' => 99
     ]);
 
-    $params[0] = $this->action;
+    $params[0] = 'content/' . $this->action;
 
-    foreach (\Yii::$app->getRequest()
-               ->getQueryParams() as $param => $value) {
+    foreach (\Yii::$app->getRequest()->getQueryParams() as $param => $value) {
       $params[$param] = $value;
     }
 
@@ -62,10 +61,12 @@ class ElementNav extends Widget
         continue;
       }
 
+      /*
       if($lastCat != $element['category']) {
         $nav .= Html::tag('li', "<h6>" . $element['category'] . "</h6>", ['class' => 'gc-elementgroup__heading']);
         $lastCat = $element['category'];
       }
+      */
 
       $css = ($this->ctype == $element['key']) ? 'gc-active-filter' : '';
       $params[$this->selector] = $element['key'];

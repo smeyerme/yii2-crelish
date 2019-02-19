@@ -3,70 +3,63 @@
 {{ use('/yii/widgets/Pjax') }}
 
 {% if alerts %}
-    <div class="o-grid" style="margin-bottom: -1em;">
-        <div class="o-grid__cell o-grid__cell--no-gutter">
-            {{ alerts | raw }}
-        </div>
+  <div class="o-grid" style="margin-bottom: -1em;">
+    <div class="o-grid__cell o-grid__cell--no-gutter">
+      {{ alerts | raw }}
     </div>
+  </div>
 {% endif %}
 
-<div class="o-grid gc-bc--palette-nephritis">
-    <div class="o-grid__cell gc-ta--center gc-p--1" id="dropZone">
-        <form action="{{ url('crelish/asset/upload.html') }}"
-              class="dropzone"
-              id="crelish-drop-zone">
-        </form>
-    </div>
+<div class="assets--dropzone" id="dropZone">
+  <form action="{{ url('crelish/asset/upload.html') }}"
+        class="dropzone"
+        id="crelish-drop-zone">
+  </form>
 </div>
-<div class="o-grid gc-bc--palette-clouds">
-    <div class="o-grid__cell">
-        {{ pjax_begin({'id':'assetList', 'enablePushState': false}) }}
 
-        <h6>{{ t('crelish', 'Asset list') }}</h6>
-
-        {{ grid_view_widget({
-            'dataProvider': dataProvider,
-            'columns': columns,
-            'filterSelector': '.cr-content-search',
-            'tableOptions': {'class':'table table-striped'},
-            'rowOptions': rowOptions ,
-            'formatter': {'class': 'yii\\i18n\\Formatter', 'nullDisplay': ''}}) | raw }}
-
-        {{ pjax_end() }}
-    </div>
+<div class="u-window-box-medium">
+  {{ pjax_begin({'id':'assetList', 'enablePushState': false}) }}
+  {{ grid_view_widget({
+    'dataProvider': dataProvider,
+    'columns': columns,
+    'filterSelector': '.cr-content-search',
+    'tableOptions': {'class':'table table-striped'},
+    'rowOptions': rowOptions ,
+    'formatter': {'class': 'yii\\i18n\\Formatter', 'nullDisplay': ''}}) | raw }}
+  {{ pjax_end() }}
 </div>
 
 <script type="text/javascript">
-    Dropzone.options.crelishDropZone = {
-        paramName: "file", // The name that will be used to transfer the file
-        maxFilesize: 250, // MB
-        dictDefaultMessage: "<span class=\"c-button c-button--ghost\" style=\"border-color: #fff; color: #fff; border-radius: .5rem;\">{{ t('crelish', 'Click or drag files here to upload.') }}</span>",
-        init: function () {
-            var myDropzone = this;
+  Dropzone.options.crelishDropZone = {
+    paramName: "file", // The name that will be used to transfer the file
+    maxFilesize: 250, // MB
+    dictDefaultMessage: "<span class=\"c-button c-button--ghost\" style=\"border-color: #fff; color: #fff; border-radius: .5rem;\">{{ t('crelish', 'Click or drag files here to upload.') }}</span>",
+    init: function () {
+      var myDropzone = this;
 
-            this.on("complete", function (file) {
-                setTimeout(function () {
-                    $.pjax.reload({container: '#assetList'});
-                    myDropzone.removeFile(file);
-                }, 250);
-            });
+      this.on("complete", function (file) {
+        setTimeout(function () {
+          $.pjax.reload({container: '#assetList'});
+          myDropzone.removeFile(file);
+        }, 250);
+      });
 
-        },
-        accept: function (file, done) {
-            console.log(file.name);
-            /*
-            if (file.name == "justinbieber.jpg") {
-                done("Naha, you don't.");
-            }
-            else {
-                done();
-            }*/
-            done();
-        }
-    };
+    },
+    accept: function (file, done) {
+      console.log(file.name);
+      /*
+      if (file.name == "justinbieber.jpg") {
+          done("Naha, you don't.");
+      }
+      else {
+          done();
+      }*/
+      done();
+    }
+  };
 
-    $("#assetList").on("pjax:end", function () {
+  $("#assetList").on("pjax:end", function () {
 
-    });
+  });
 
 </script>

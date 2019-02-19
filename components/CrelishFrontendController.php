@@ -83,7 +83,8 @@ class CrelishFrontendController extends Controller
     // 3. Assemble sub content from parent entry point content.
 
     // Add content aka. do the magic.
-    $this->data = new CrelishDynamicModel([], ['ctype' => $this->entryPoint['ctype'], 'uuid' => $this->entryPoint['uuid']]);
+    //$this->data = new CrelishDynamicModel([], ['ctype' => $this->entryPoint['ctype'], 'uuid' => $this->entryPoint['uuid']]);
+    $this->data = call_user_func('app\workspace\models\\' . ucfirst($this->entryPoint['ctype']) . '::find')->where(['uuid' => $this->entryPoint['uuid']])->one();
 
     // Set layout.
     $this->setLayout();
