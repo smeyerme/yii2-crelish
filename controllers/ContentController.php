@@ -179,7 +179,6 @@ class ContentController extends CrelishBaseController
     $model = new CrelishDynamicModel([], ['ctype' => $ctype, 'uuid' => $uuid]);
     $model->delete();
 
-    die();
     $this->redirect('/crelish/content/index.html');
   }
 }

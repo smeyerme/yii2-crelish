@@ -93,17 +93,17 @@
 
 <script>
 
-  function reloadList() {
+  function reloadList(val) {
     if (window.location.href.indexOf('cr_asset_filter') >= 0) {
       $.pjax.reload({
         container: '#assetList',
         async: false,
-        url: window.location.href.replace(/(cr_asset_filter=).*?(&|$)/, '$1' + $(this).val() + '$2')
+        url: window.location.href.replace(/(cr_asset_filter=).*?(&|$)/, '$1' + val + '$2')
       });
     } else {
       var preFix = (window.location.href.indexOf("?") >= 0) ? '&' : '?';
       $.pjax({
-        url: window.location.href + preFix + "cr_asset_filter=" + $(this).val(),
+        url: window.location.href + preFix + "cr_asset_filter=" + val,
         container: '#assetList',
         async: false,
       });
@@ -118,13 +118,13 @@
 
     $('#cr_asset_filter_{{ formKey }}').on("blur", function (e) {
       e.preventDefault();
-      reloadList();
+      reloadList($(this).val());
     });
 
     $('#cr_asset_filter_{{ formKey }}').on("keypress", function (e) {
       if (e.which == 10 || e.which == 13) {
         e.preventDefault();
-        reloadList();
+        reloadList($(this).val());
       }
     });
 
