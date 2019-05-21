@@ -5,6 +5,7 @@ namespace giantbits\crelish\plugins\relationselect;
 use giantbits\crelish\components\CrelishDataProvider;
 use giantbits\crelish\components\CrelishFormWidget;
 use Underscore\Types\Arrays;
+use Yii;
 use yii\data\ArrayDataProvider;
 use yii\helpers\Html;
 use yii\helpers\Url;
@@ -33,9 +34,14 @@ class RelationSelect extends CrelishFormWidget
     foreach ($optionProvider->rawAll() as $option) {
       $options[$option['uuid']] = $option['systitle'];
     }
+
+    $options = Arrays::sort($options, function ($elm) {
+      return !empty($elm['systitle']) ? $elm['systitle'] : false;
+    });
+
     $this->predefinedOptions = $options;
-    $ul = \Yii::$app->request->get('ul');
-    if($ul) {
+    $ul = Yii::$app->request->get('ul');
+    if ($ul) {
       // Todo: Get type of parent + uuid. Load parent. Unlink subelement.
       //$ownerCtype = \Yii::$app->request->get('ctype');
       //$ownerUuid = \Yii::$app->request->get('uuid');
@@ -45,17 +51,18 @@ class RelationSelect extends CrelishFormWidget
       $child = call_user_func('app\workspace\models\\' . ucfirst($this->field->config->ctype) . '::find')->where(['uuid' => $childUuid])->one();
       $owner = call_user_func('app\workspace\models\\' . ucfirst($this->model->ctype) . '::find')->where(['uuid' => $this->model->uuid])->one();
 
-      if($owner && $child) {
+      if ($owner && $child) {
         $owner->unlink($childCtype, $child, true);
       }
-      \Yii::$app->response->redirect(Url::current(['ul'=>null]));
+      Yii::$app->response->redirect(Url::current(['ul' => null]));
     }
 
   }
 
   public function run()
   {
-
+    $itemList = $itemListColumns = [];
+    $tagMode = true;
     $isRequired = Arrays::find($this->field->rules, function ($rule) {
       foreach ($rule as $set) {
         if ($set == 'required') {
@@ -64,8 +71,6 @@ class RelationSelect extends CrelishFormWidget
       }
       return false;
     });
-    $itemList = $itemListColumns = [];
-    $tagMode = true;
 
     if (isset($this->field->config->multiple) && $this->field->config->multiple) {
       $tagMode = false;
@@ -73,17 +78,17 @@ class RelationSelect extends CrelishFormWidget
       $ar = call_user_func('app\workspace\models\\' . ucfirst($this->model->ctype) . '::find')->where(['uuid' => $this->model->uuid])->one();
       $itemList = new ArrayDataProvider(['allModels' => $ar->{str_replace('_list', null, $this->field->key)}]);
 
-      $itemListColumns = [
-        'systitle',
-        'area',
+      $actionCol = [
         [
-          'format'=>'raw',
-          'value' => function($data){
-            $url = \Yii::$app->request->absoluteUrl . '&ul=' . $this->field->key . '::' . $data->uuid;
-            return Html::a('<i class="fa fa-trash"></i>', $url, ['title' => 'Löschen', 'class'=>'c-button u-small']);
+          'format' => 'raw',
+          'value' => function ($data) {
+            $url = Yii::$app->request->absoluteUrl . '&ul=' . $this->field->key . '::' . $data->uuid;
+            return Html::a('<i class="fa fa-trash"></i>', $url, ['title' => 'Löschen', 'class' => 'c-button u-small']);
           }
         ]
       ];
+
+      $itemListColumns = array_merge($this->field->config->columns, $actionCol);
     }
 
     return $this->render('relationselect.twig', [

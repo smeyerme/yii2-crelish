@@ -110,6 +110,10 @@ class CrelishBaseController extends Controller
         if ($field->format == 'date') {
           $this->model->{$field->key} = $formatter->asDate($this->model->{$field->key});
         }
+
+        if ($field->format == 'datetime') {
+          $this->model->{$field->key} = $formatter->asDatetime($this->model->{$field->key}, 'dd.MM.yyyy HH:mm');
+        }
       }
     }
 

@@ -34,7 +34,6 @@ class ContentController extends CrelishBaseController
    */
   public function init()
   {
-
     /*$this->ctype = (!empty(\Yii::$app->getRequest()
         ->getQueryParam('ctype'))) ? \Yii::$app->getRequest()
         ->getQueryParam('ctype') : 'page';*/
