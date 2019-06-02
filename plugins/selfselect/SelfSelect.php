@@ -61,7 +61,7 @@ class SelfSelect extends CrelishFormWidget
     if(!empty($dataItems)) {
       foreach ($dataItems as $item) {
 
-        if (!empty($item[$this->formKey])) {
+        if (!empty($item[$this->formKey]) && is_string($item[$this->formKey])) {
           if (strpos($item[$this->formKey], ";") > 0) {
             foreach (explode("; ", $item[$this->formKey]) as $entry) {
               $this->selectData[$entry] = $entry;

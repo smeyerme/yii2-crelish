@@ -199,6 +199,34 @@ class CrelishDynamicModel extends \yii\base\DynamicModel
         }
 
         $model->save();
+
+        // New post save handlers.
+        foreach ($this->attributes() as $attribute) {
+
+          $fieldType = Arrays::find($this->elementDefinition->fields, function ($def) use ($attribute) {
+            return $def->key == $attribute;
+          });
+          if (!empty($fieldType) && is_object($fieldType)) {
+            $fieldType = (property_exists($fieldType, 'type')) ? $fieldType->type : 'textInput';
+          }
+          if (!empty($fieldType)) {
+
+            // Get processor class.
+            $processorClass = 'giantbits\crelish\plugins\\' . strtolower($fieldType) . '\\' . ucfirst($fieldType) . 'ContentProcessor';
+
+            if (strpos($fieldType, "widget_") !== false) {
+              $processorClass = str_replace("widget_", "", $fieldType) . 'ContentProcessor';
+            }
+
+            // Do processor based pre processing.
+            if (class_exists($processorClass) && method_exists($processorClass, 'processDataPostSave')) {
+              $model->{$attribute} = $processorClass::processDataPostSave($attribute, $modelArray[$attribute], $this->elementDefinition->fields[$attribute], $model);
+            } else {
+              $model->{$attribute} = $modelArray[$attribute];
+            }
+          }
+        }
+
         break;
       default:
         $outModel = Json::encode($modelArray);

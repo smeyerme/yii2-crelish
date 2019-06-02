@@ -27,6 +27,7 @@ class RelationSelect extends CrelishFormWidget
 
     // Set related ctype.
     $this->relationDataType = $this->field->config->ctype;
+
     // Fetch options.
     $optionProvider = new CrelishDataProvider($this->relationDataType, ['filter' => ['state' => ['strict', 2]]]);
 
@@ -76,7 +77,10 @@ class RelationSelect extends CrelishFormWidget
       $tagMode = false;
       // Load related data.
       $ar = call_user_func('app\workspace\models\\' . ucfirst($this->model->ctype) . '::find')->where(['uuid' => $this->model->uuid])->one();
-      $itemList = new ArrayDataProvider(['allModels' => $ar->{str_replace('_list', null, $this->field->key)}]);
+      $itemList = new ArrayDataProvider();
+      if($ar) {
+        $itemList = new ArrayDataProvider(['allModels' => $ar->{str_replace('_list', null, $this->field->key)}]);
+      }
 
       $actionCol = [
         [

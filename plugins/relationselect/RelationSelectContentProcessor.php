@@ -27,6 +27,11 @@ class RelationSelectContentProcessor extends Component
       return $model->uuid;
     }
 
+    return $data;
+  }
+
+  public static function processDataPostSave($key, $data, $fieldConfig, &$parent)
+  {
     if (
       isset($fieldConfig->config->multiple) &&
       $fieldConfig->config->multiple === true &&

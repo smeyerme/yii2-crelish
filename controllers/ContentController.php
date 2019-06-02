@@ -60,6 +60,13 @@ class ContentController extends CrelishBaseController
 
     $this->ctype = \Yii::$app->session->get('ctype');
 
+    \Yii::$app->view->registerJs('
+    
+      $(document).on("pjax:complete" , function(event) {
+        $(".scrollable").animate({ scrollTop: "0" });
+      });
+    ', \yii\web\View::POS_LOAD);
+
     return parent::init();
   }
 

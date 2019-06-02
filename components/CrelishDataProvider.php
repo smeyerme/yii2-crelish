@@ -198,13 +198,11 @@ class CrelishDataProvider extends Component
                 $isMatch = true;
                 $itemString = strtolower(serialize($value));
                 $searchFragments = explode(" ", trim($keyValue));
-
                 foreach ($searchFragments as $fragment) {
                   if (strpos($itemString, strtolower($fragment)) === false) {
                     $isMatch = false;
                   }
                 }
-
                 return $isMatch;
               });
             } else {
