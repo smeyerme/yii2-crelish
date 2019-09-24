@@ -8,7 +8,7 @@ use giantbits\crelish\components\CrelishBaseController;
 use Underscore\Types\Arrays;
 use yii\filters\AccessControl;
 
-class ContentController extends CrelishBaseController
+class PageController extends CrelishBaseController
 {
   public $layout = 'crelish.twig';
 
@@ -34,13 +34,9 @@ class ContentController extends CrelishBaseController
    */
   public function init()
   {
-    /*$this->ctype = (!empty(\Yii::$app->getRequest()
-        ->getQueryParam('ctype'))) ? \Yii::$app->getRequest()
-        ->getQueryParam('ctype') : 'page';*/
     $this->uuid = (!empty(\Yii::$app->getRequest()
       ->getQueryParam('uuid'))) ? \Yii::$app->getRequest()
       ->getQueryParam('uuid') : null;
-
 
     if (key_exists('cr_content_filter', $_GET)) {
       \Yii::$app->session->set('cr_content_filter', $_GET['cr_content_filter']);
@@ -50,18 +46,9 @@ class ContentController extends CrelishBaseController
       }
     }
 
-    if (key_exists('ctype', $_GET)) {
-      \Yii::$app->session->set('ctype', $_GET['ctype']);
-    } else {
-      if (!empty(\Yii::$app->session->get('ctype'))) {
-        \Yii::$app->request->setQueryParams(['ctype' => \Yii::$app->session->get('ctype')]);
-      }
-    }
-
-    $this->ctype = \Yii::$app->session->get('ctype');
+    $this->ctype = 'page';
 
     \Yii::$app->view->registerJs('
-    
       $(document).on("pjax:complete" , function(event) {
         $(".scrollable").animate({ scrollTop: "0" });
       });
@@ -185,6 +172,6 @@ class ContentController extends CrelishBaseController
     $model = new CrelishDynamicModel([], ['ctype' => $ctype, 'uuid' => $uuid]);
     $model->delete();
 
-    $this->redirect('/crelish/content/index');
+    $this->redirect('/crelish/page/index');
   }
 }

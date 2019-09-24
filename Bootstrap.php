@@ -29,11 +29,13 @@ class Bootstrap implements BootstrapInterface
               'cachePath' => '@runtime/Twig/cache',
               //'extensions' => ['\Twig_Extension_Debug'],
               'extensions' => [
-                new \Cocur\Slugify\Bridge\Twig\SlugifyExtension(\Cocur\Slugify\Slugify::create())
+                new \Cocur\Slugify\Bridge\Twig\SlugifyExtension(\Cocur\Slugify\Slugify::create()),
+                YII_DEBUG  ? '\Twig_Extension_Debug' : null
               ],
-              'options' => [
-                'auto_reload' => TRUE,
-              ],
+              'options' => YII_DEBUG ? [
+                'debug' => true,
+                'auto_reload' => true,
+              ] : [],
               'globals' => [
                 'html' => ['class' => '\yii\helpers\Html']
               ],
@@ -46,10 +48,13 @@ class Bootstrap implements BootstrapInterface
         'urlManager' => [
           'class' => 'yii\web\UrlManager',
           'enablePrettyUrl' => TRUE,
-          'showScriptName' => FALSE,
           'enableStrictParsing' => TRUE,
-          'suffix' => '.html',
-          'rules' => [],
+          'showScriptName' => FALSE,
+          'rules' => [
+            ['class' => 'yii\rest\UrlRule', 'controller' => 'user', 'tokens' => ['{uuid}' => '<uuid:\\d[\\d,]*>']],
+            ['class' => 'yii\rest\UrlRule', 'controller' => 'company', 'tokens' => ['{uuid}' => '<uuid:\\d[\\d,]*>']],
+            ['class' => 'yii\rest\UrlRule', 'controller' => 'product', 'tokens' => ['{uuid}' => '<uuid:\\d[\\d,]*>']],
+          ],
         ],
         'i18n' => [
           'class' => 'yii\i18n\I18N',
@@ -98,11 +103,12 @@ class Bootstrap implements BootstrapInterface
         ],
       ]);
 
+
       $app->getUrlManager()->addRules([
         [
           'class' => 'yii\web\UrlRule',
           'pattern' => 'crelish',
-          'route' => 'crelish/dahboard/index'
+          'route' => 'crelish/dashboard/index'
         ],
         [
           'class' => 'yii\web\UrlRule',
@@ -113,11 +119,6 @@ class Bootstrap implements BootstrapInterface
           'class' => 'yii\web\UrlRule',
           'pattern' => 'site/<action:[\w\-]+>',
           'route' => 'site/<action>'
-        ],
-        [
-          'class' => 'yii\web\UrlRule',
-          'pattern' => 'data/<action:[\w\-]+>',
-          'route' => 'data/<action>'
         ],
         ['class' => 'giantbits\crelish\components\CrelishBaseUrlRule'],
         [

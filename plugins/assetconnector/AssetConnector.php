@@ -102,7 +102,7 @@ class AssetConnector extends CrelishFormWidget
             case 'image/jpeg':
             case 'image/gif':
             case 'image/png':
-              $preview = Html::img('/crelish/asset/glide.html?path=' . $model['fileName'] . '&w=160&f=fit', ['style' => 'width: 80px; height: auto;']);
+              $preview = Html::img('/crelish/asset/glide?path=' . $model['fileName'] . '&w=160&f=fit', ['style' => 'width: 80px; height: auto;']);
           }
 
           return $preview;

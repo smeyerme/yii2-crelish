@@ -80,7 +80,7 @@ class CrelishBaseController extends Controller
 
         if (!empty($_POST['save_n_return']) && $_POST['save_n_return'] == "1") {
           header('Location: ' . Url::to([
-              'content/index',
+              \Yii::$app->controller->id . '/index',
               'ctype' => $this->ctype
             ]));
 

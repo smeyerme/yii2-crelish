@@ -11,6 +11,10 @@ namespace giantbits\crelish\components;
 use Yii;
 use yii\base\Controller;
 
+/**
+ * Class CrelishFrontendController
+ * @package giantbits\crelish\components
+ */
 class CrelishFrontendController extends Controller
 {
   /**
@@ -93,6 +97,8 @@ class CrelishFrontendController extends Controller
     $this->setViewTemplate();
 
     // Process data and render.
+
+    Yii::$app->params['content'] = $this->data;
     $data = CrelishBaseContentProcessor::processContent($this->entryPoint['ctype'], $this->data);
 
     if (isset(Yii::$app->params['crelish']['pageTitleAttribute']) && isset($data[Yii::$app->params['crelish']['pageTitleAttribute']])) {

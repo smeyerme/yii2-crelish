@@ -78,7 +78,7 @@
       <div class="o-grid o-grid--wrap">
         <div class="o-gird__cell o-grid__cell--width-25">
           {% if "image" in data.mime %}
-            <img src="/crelish/asset/glide.html?path={{ data.fileName }}&w=220&f=fit" class="o-image"
+            <img src="/crelish/asset/glide?path={{ data.fileName }}&w=220&f=fit" class="o-image"
                  id="asset-icon-{{ field.key }}"/>
           {% endif %}
         </div>
@@ -131,7 +131,7 @@
     Dropzone.autoDiscover = false;
     var defMessage = "<span class=\"c-button c-button--ghost\" style=\"border-color: #fff; color: #fff; border-radius: .5rem; pointer-events: none;\">{{ t('crelish', 'Click or drag files here to upload.') }}</span>";
     var dZoneOptions = {
-      url: '/crelish/asset/upload.html',
+      url: '/crelish/asset/upload',
       paramName: "file", // The name that will be used to transfer the file
       maxFilesize: 250, // MB
       dictDefaultMessage: defMessage,

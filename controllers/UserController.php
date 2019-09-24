@@ -107,7 +107,7 @@ class UserController extends CrelishBaseController
     $columns = array_merge($checkCol, $modelProvider->columns);
 
     $rowOptions = function ($model, $key, $index, $grid) {
-      return ['onclick' => 'location.href="update.html?uuid=' . $model['uuid'] . '";'];
+      return ['onclick' => 'location.href="update?uuid=' . $model['uuid'] . '";'];
     };
 
     return $this->render('index.twig', [

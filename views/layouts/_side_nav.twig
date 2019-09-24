@@ -5,6 +5,11 @@
     <i class="fas fa-chart-pie"></i> {{ t('crelish', 'Dashboard') }}
   </a>
 </div>
+<div class="navbar-item {{ app.controller.id == 'page' ? 'active' : '' }}">
+  <a href="{{ url('crelish/page/index') }}">
+    <i class="fa fa-bookmark"></i> {{ t('crelish', 'Pages') }}
+  </a>
+</div>
 <div class="navbar-item {{ app.controller.id == 'content' ? 'active' : '' }}">
   <a href="{{ url('crelish/content/index') }}">
     <i class="fa fa-edit"></i> {{ t('crelish', 'Content') }}
@@ -30,13 +35,3 @@
     <i class="fa fa-cogs"></i> {{ t('crelish', 'Settings') }}
   </a>
 </div>
-
-{#
-<div class="navbar-item {{ app.controller.id == 'export' ? 'active' : '' }}">
-  <a href="{{ url('crelish/export/index') }}">
-    <i class="fa fa-table"></i> {{ t('crelish', 'Export') }}
-  </a>
-</div>
-
-#}
-
