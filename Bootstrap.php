@@ -12,7 +12,6 @@ class Bootstrap implements BootstrapInterface
   {
 
     if ($app instanceof \yii\web\Application) {
-
       \Yii::$app->setComponents([
         'user' => [
           'class' => 'yii\web\User',
@@ -30,18 +29,20 @@ class Bootstrap implements BootstrapInterface
               //'extensions' => ['\Twig_Extension_Debug'],
               'extensions' => [
                 new \Cocur\Slugify\Bridge\Twig\SlugifyExtension(\Cocur\Slugify\Slugify::create()),
-                YII_DEBUG  ? '\Twig_Extension_Debug' : null
+                '\Twig_Extension_Debug'
               ],
-              'options' => YII_DEBUG ? [
+              'options' => YII_ENV_DEV ? [
                 'debug' => true,
                 'auto_reload' => true,
               ] : [],
               'globals' => [
-                'html' => ['class' => '\yii\helpers\Html']
+                'url' => ['class' => '\yii\helper\Url'],
+                'html' => ['class' => '\yii\helpers\Html'],
+                'chelper'=>['class' => '\giantbits\crelish\components\CrelishBaseHelper']
               ],
-              'functions' => array(
-                't' => 'Yii::t',
-              )
+              'functions' => [
+                't' => 'Yii::t'
+              ]
             ]
           ]
         ],
@@ -100,9 +101,8 @@ class Bootstrap implements BootstrapInterface
               'fit' => 'crop',
             ]
           ]
-        ],
+        ]
       ]);
-
 
       $app->getUrlManager()->addRules([
         [
@@ -126,7 +126,6 @@ class Bootstrap implements BootstrapInterface
           'pattern' => '<controller:[\w\-]+>/<action:[\w\-]+>',
           'route' => '/<controller>/<action>'
         ],
-        //['class' => 'yii\web\UrlRule', 'pattern' => '<lang:[\w\-]+]>/<controller:[\w\-]+>/<action:[\w\-]+>', 'route' => '/<controller>/<action>']
       ], TRUE);
     }
 
@@ -135,8 +134,7 @@ class Bootstrap implements BootstrapInterface
       'crelish' => [
         'class' => 'giantbits\crelish\Module',
         'theme' => \Yii::$app->params['crelish']['theme']
-      ],
-      'redactor' => 'yii\redactor\RedactorModule'
+      ]
     ]);
   }
 }

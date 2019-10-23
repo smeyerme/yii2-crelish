@@ -61,13 +61,6 @@ class ElementNav extends Widget
         continue;
       }
 
-      /*
-      if($lastCat != $element['category']) {
-        $nav .= Html::tag('li', "<h6>" . $element['category'] . "</h6>", ['class' => 'gc-elementgroup__heading']);
-        $lastCat = $element['category'];
-      }
-      */
-
       $css = ($this->ctype == $element['key']) ? 'gc-active-filter' : '';
       $params[$this->selector] = $element['key'];
       $targetUrl = Url::to($params);

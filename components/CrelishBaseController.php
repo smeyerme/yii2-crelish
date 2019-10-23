@@ -11,7 +11,8 @@ use yii\helpers\Url;
 
 class CrelishBaseController extends Controller
 {
-  protected $ctype, $uuid, $filePath, $elementDefinition, $model;
+  protected $ctype, $uuid, $filePath, $elementDefinition;
+  public $model;
 
   public function init()
   {

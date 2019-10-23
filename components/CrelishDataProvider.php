@@ -15,7 +15,6 @@ use yii\base\Component;
 use yii\data\ArrayDataProvider;
 use yii\helpers\FileHelper;
 use yii\helpers\Json;
-use yii\helpers\VarDumper;
 use yii\widgets\LinkPager;
 
 class CrelishDataProvider extends Component
@@ -65,7 +64,7 @@ class CrelishDataProvider extends Component
           }
         }
 
-        $this->allModels = $processedData;
+        $this->allModels = !empty($processedData) ? $processedData : [];
 
         if (!empty($this->allModels)) {
           if (Arrays::has($settings, 'filter')) {
@@ -169,7 +168,8 @@ class CrelishDataProvider extends Component
               });
             }
 
-            if ($keyValue[0] == '*' && !empty($keyValue[1])) {
+            if ($keyValue[0] == '*'
+              && !empty($keyValue[1])) {
               $this->allModels = Arrays::filter($this->allModels, function ($value) use ($key, $keyValue) {
                 $isMatch = true;
                 $itemString = strtolower($value[$key]);

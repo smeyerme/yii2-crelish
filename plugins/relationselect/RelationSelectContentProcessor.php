@@ -33,6 +33,7 @@ class RelationSelectContentProcessor extends Component
   public static function processDataPostSave($key, $data, $fieldConfig, &$parent)
   {
     if (
+      $data &&
       isset($fieldConfig->config->multiple) &&
       $fieldConfig->config->multiple === true &&
       isset($fieldConfig->config->key)
@@ -40,7 +41,9 @@ class RelationSelectContentProcessor extends Component
       $relatedModel = new CrelishDynamicModel([], ['ctype' => $fieldConfig->config->ctype, 'uuid' => $data]);
 
       // Link it.
-      $parent->link($fieldConfig->config->key, $relatedModel);
+      if($relatedModel) {
+        $parent->link($fieldConfig->config->key, $relatedModel);
+      }
     }
 
     return $data;

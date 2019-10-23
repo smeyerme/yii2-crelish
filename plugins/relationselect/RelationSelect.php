@@ -17,6 +17,7 @@ class RelationSelect extends CrelishFormWidget
   public $formKey;
   public $field;
   public $value;
+  public $attribute;
 
   private $relationDataType;
   private $predefinedOptions;
@@ -78,7 +79,7 @@ class RelationSelect extends CrelishFormWidget
       // Load related data.
       $ar = call_user_func('app\workspace\models\\' . ucfirst($this->model->ctype) . '::find')->where(['uuid' => $this->model->uuid])->one();
       $itemList = new ArrayDataProvider();
-      if($ar) {
+      if ($ar) {
         $itemList = new ArrayDataProvider(['allModels' => $ar->{str_replace('_list', null, $this->field->key)}]);
       }
 

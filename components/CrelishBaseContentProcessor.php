@@ -21,13 +21,11 @@ class CrelishBaseContentProcessor extends Component
   public static function processContent($ctype, $data)
   {
     $processedData = [];
-
     $elementDefinition = CrelishDynamicJsonModel::loadElementDefinition($ctype);
 
     if ($data) {
 
       foreach ($data as $key => $content) {
-
         $fieldType = Arrays::find($elementDefinition->fields, function ($def) use ($key) {
           return $def->key == $key;
         });

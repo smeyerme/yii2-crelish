@@ -193,12 +193,20 @@ class CrelishDynamicModel extends \yii\base\DynamicModel
           }
 
           if ($attribute == 'slug') {
-            $slugger = new Slugify();
+            $slugger = new Slugify(['regexp' => '([^A-Za-z0-9\/]+)']);
             $model->{$attribute} = $slugger->slugify($modelArray[$attribute]);
           }
         }
 
+        if (method_exists('\\app\\workspace\\hooks\\' . ucfirst($this->ctype) . 'Hooks', 'beforeSave')) {
+          return call_user_func(['\\app\\workspace\\hooks\\' . ucfirst($this->ctype) . 'Hooks', 'afterSave'], ['data' => $this]);
+        }
+
         $model->save();
+
+        if (method_exists('\\app\\workspace\\hooks\\' . ucfirst($this->ctype) . 'Hooks', 'afterSave')) {
+          return call_user_func(['\\app\\workspace\\hooks\\' . ucfirst($this->ctype) . 'Hooks', 'afterSave'], ['data' => $this]);
+        }
 
         // New post save handlers.
         foreach ($this->attributes() as $attribute) {

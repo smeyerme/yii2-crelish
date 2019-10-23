@@ -32,7 +32,7 @@ class CrelishFrontendController extends Controller
    * @var [type]
    */
   private $viewTemplate;
-  private $data;
+  public $data;
 
   /**
    * [init description]
@@ -55,24 +55,6 @@ class CrelishFrontendController extends Controller
 
     // Define entry point.
     $this->resolvePathRequested();
-
-  }
-
-  /**
-   * [actionError description]
-   * @return [type] [description]
-   */
-  public function actionError()
-  {
-    $this->layout = 'main.twig';
-    $this->title = 'Error';
-    \Yii::$app->name = $this->title;
-
-    $exception = \Yii::$app->errorHandler->exception;
-
-    if ($exception !== null) {
-      return $this->render('error.twig', ['message' => $exception->getMessage()]);
-    }
   }
 
   /**
@@ -97,7 +79,6 @@ class CrelishFrontendController extends Controller
     $this->setViewTemplate();
 
     // Process data and render.
-
     Yii::$app->params['content'] = $this->data;
     $data = CrelishBaseContentProcessor::processContent($this->entryPoint['ctype'], $this->data);
 
@@ -156,6 +137,7 @@ class CrelishFrontendController extends Controller
     }
 
     $this->entryPoint = ['ctype' => $ctype, 'slug' => $slug, 'path' => $path, 'uuid' => $entryModel['uuid'], 'template' => $entryModel['template']];
+
   }
 
   /**

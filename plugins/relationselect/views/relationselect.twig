@@ -1,5 +1,5 @@
 {{ use('kartik/widgets/Select2') }}
-{{ use('/yii/widgets/GridView') }}
+{{ use('yii/widgets/GridView') }}
 
 <div class="form-group field-crelishdynamicjsonmodel-{{ formKey }} {{ required }}">
   <label class="control-label" for="crelishdynamicjsonmodel-{{ field.key }}">{{ field.label }}</label>
@@ -7,6 +7,7 @@
          name="CrelishDynamicModel[{{ field.key }}]"
          value='{{ hiddenValue }}'
          id="select_{{ field.key }}"/>
+
   {{ Select2_widget({
     'name': "temp_select",
     'value': selectValue,
@@ -26,13 +27,13 @@
   }) }}
 
   {% if itemlist %}
-  {{ grid_view_widget({
-    'dataProvider': itemlist,
-    'columns': itemlistcolumns,
-    'options': {
-      'class': 'crelish-list',
-      'style': 'margin-top: 1rem;'
-    }
-  }) | raw }}
+    {{ grid_view_widget({
+      'dataProvider': itemlist,
+      'columns': itemlistcolumns,
+      'options': {
+        'class': 'crelish-list',
+        'style': 'margin-top: 1rem;'
+      }
+    }) | raw }}
   {% endif %}
 </div>
