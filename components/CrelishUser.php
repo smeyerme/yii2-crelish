@@ -88,7 +88,11 @@ class CrelishUser extends BaseObject implements \yii\web\IdentityInterface
   public static function crelishLogin($data)
   {
     // Fetch the single wanted user only.
-    $userProvider = new CrelishDataProvider('user', ['filter' => ['email' => ['strict', $data['email']]]], null, true);
+    if(!empty($data['uuid'])) {
+      $userProvider = new CrelishDataProvider('user', [], $data['uuid']);
+    }  else {
+      $userProvider = new CrelishDataProvider('user', ['filter' => ['email' => ['strict', $data['email']]]]);
+    }
     $user = $userProvider->one();
 
     if (!empty($user)) {

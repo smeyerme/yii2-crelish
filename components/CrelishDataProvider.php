@@ -413,8 +413,8 @@ class CrelishDataProvider extends Component
       'ctype' => $this->ctype,
     ]);
 
-    if (!empty($_GET['CrelishDynamicJsonModel'])) {
-      foreach ($_GET['CrelishDynamicJsonModel'] as $filter => $value) {
+    if (!empty($_GET['CrelishDynamicModel'])) {
+      foreach ($_GET['CrelishDynamicModel'] as $filter => $value) {
         if (!empty($value)) {
           $filters[$filter] = $value;
           $_GET[$filter] = $value;
@@ -422,8 +422,8 @@ class CrelishDataProvider extends Component
       }
     }
 
-    if (!empty($_GET['CrelishDynamicJsonModel'])) {
-      $model->attributes = $_GET['CrelishDynamicJsonModel'];
+    if (!empty($_GET['CrelishDynamicModel'])) {
+      $model->attributes = $_GET['CrelishDynamicModel'];
     }
 
     return $model;

@@ -1,5 +1,4 @@
 <?php
-
 namespace giantbits\crelish\controllers;
 
 use giantbits\crelish\components\CrelishBaseController;
@@ -22,8 +21,7 @@ class UserController extends CrelishBaseController
    *
    * @return [type] [description]
    */
-  public function init()
-  {
+  public function init() {
 
     parent::init();
     $this->ctype = 'user';
@@ -145,6 +143,18 @@ class UserController extends CrelishBaseController
     ]);
   }
 
+  public function actionDelete()
+    {
+      $ctype = 'user';
+      $uuid = \Yii::$app->request->get('uuid');
+
+      $model = new CrelishDynamicModel([], ['ctype' => $ctype, 'uuid' => $uuid]);
+      $model->delete();
+
+      \Yii::$app->cache->flush();
+
+      $this->redirect('/crelish/user/index');
+    }
 
   /**
    * [actionLogout description].
