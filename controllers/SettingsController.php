@@ -49,6 +49,14 @@ class SettingsController extends CrelishBaseController
   public function actionClearcache()
   {
     \Yii::$app->cache->flush();
+
+    if(extension_loaded('apc') && ini_get('apc.enabled'))
+    {
+      apc_clear_cache();
+    }
+
+    opcache_reset();
+
     return $this->redirect('/crelish/settings/index', 302);
   }
 

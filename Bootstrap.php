@@ -120,6 +120,11 @@ class Bootstrap implements BootstrapInterface
           'pattern' => 'site/<action:[\w\-]+>',
           'route' => 'site/<action>'
         ],
+        [
+          'class' => 'yii\web\UrlRule',
+          'pattern' => 'api/<action:[\w\-]+>',
+          'route' => 'api/<action>'
+        ],
         ['class' => 'giantbits\crelish\components\CrelishBaseUrlRule'],
         [
           'class' => 'yii\web\UrlRule',
