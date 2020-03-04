@@ -54,6 +54,14 @@
   </div>
 </section>
 
+<script type="text/javascript">
+  function execDelete(url) {
+    var urlParams = new URLSearchParams(window.location.search);
+    console.log(urlParams.get('ctype') + ':' + urlParams.get('uuid'))
+    window.location.href=url + '?uuid=' + urlParams.get('uuid') + '&ctype=' + urlParams.get('ctype')
+  }
+</script>
+
 <div class="modal fade" id="confirm-delete" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
   <div class="modal-dialog gc-no-border-radius">
     <div class="modal-content gc-no-border-radius gc-bc--palette-clouds">
@@ -67,10 +75,7 @@
       </div>
       <div class="modal-footer gc-no-border gc-bc--palette-silver-light">
         <button type="button" class="btn btn-default" data-dismiss="modal">{{ t('crelish', 'Cancel') }}</button>
-        <button type="button" class="btn btn-danger btn-ok" data-url="/crelish/{{ app.controller.id }}/delete"
-                data-uuid="{{ app.getRequest.getQueryParam('uuid') }}"
-                data-model="{{ app.getRequest.getQueryParam('ctype') }}"
-                onclick="window.location.href=$(this).data('url') +'?uuid=' + $(this).data('uuid') + '&ctype=' + $(this).data('model')">{{ t('crelish', 'Delete') }}
+        <button type="button" class="btn btn-danger btn-ok" onclick="execDelete('/crelish/{{ app.controller.id }}/delete')">{{ t('crelish', 'Delete') }}
         </button>
       </div>
     </div>

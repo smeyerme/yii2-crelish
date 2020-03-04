@@ -179,11 +179,16 @@ class ContentController extends CrelishBaseController
    */
   public function actionDelete()
   {
-    $ctype = \Yii::$app->request->get('ctype');
-    $uuid = \Yii::$app->request->get('uuid');
-
+    $ctype =$_GET['ctype'];
+    $uuid =$_GET['uuid'];
     $model = new CrelishDynamicModel([], ['ctype' => $ctype, 'uuid' => $uuid]);
-    $model->delete();
+
+    if($model) {
+      $model->delete();
+      \Yii::$app->session->setFlash('success', \Yii::t("crelish", 'Content was deleted successfully...'));
+    } else {
+      \Yii::$app->session->setFlash('warning', \Yii::t("crelish", 'Content could not be deleted.'));
+    }
 
     $this->redirect('/crelish/content/index');
   }

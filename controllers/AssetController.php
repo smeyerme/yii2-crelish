@@ -62,18 +62,18 @@ class AssetController extends CrelishBaseController
   {
     $path = \Yii::$app->request->get('path', null);
     $params = \Yii::$app->request->getQueryParams();
-
     unset($params['path']);
 
-    // Todo: Add image manipulation support.
-
-    $server = ServerFactory::create([
-      'source' => \Yii::getAlias('@app/web/uploads'),
-      'cache' => \Yii::getAlias('@runtime/glide'),
-      'presets' => \Yii::$app->params['crelish']['glide_presets']
-    ]);
-
-    $server->outputImage($path, $params);
+    if(file_exists( \Yii::getAlias('@app/web/uploads') . '/' . $path)){
+      // Todo: Add image manipulation support.
+      $server = ServerFactory::create([
+        'source' => \Yii::getAlias('@app/web/uploads'),
+        'cache' => \Yii::getAlias('@runtime/glide'),
+        'presets' => \Yii::$app->params['crelish']['glide_presets']
+      ]);
+      $server->outputImage($path, $params);
+    }
+    return;
   }
 
   public function actionIndex()
@@ -210,6 +210,7 @@ class AssetController extends CrelishBaseController
       header("Location: " . Url::to(['asset/index']));
       exit(0);
     };
+
 
     \Yii::$app->session->setFlash('danger', 'Asset could not be deleted...');
     header("Location: " . Url::to(['asset/index', ['uuid' => $modelProvider->uuid]]));

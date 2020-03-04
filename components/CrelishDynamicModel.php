@@ -285,9 +285,11 @@ class CrelishDynamicModel extends \yii\base\DynamicModel
       unlink($this->fileSource);
     }
 
-    if ($this->elementDefinition->storage == 'db') {
+    if (is_object($this->elementDefinition) && $this->elementDefinition->storage == 'db') {
       $model = call_user_func('app\workspace\models\\' . ucfirst($this->ctype) . '::find')->where(['uuid' => $this->uuid])->one();
-      $model->delete();
+      if($model){
+        $model->delete();
+      }
     }
   }
 
@@ -330,13 +332,16 @@ class CrelishDynamicModel extends \yii\base\DynamicModel
     switch ($action) {
       case 'delete':
         $data = $this->uuid;
-        Arrays::each($cacheStore, function ($cacheItem, $index) use ($data, $cacheStore) {
-          if (!empty($cacheItem['uuid']) && $cacheItem['uuid'] == $data) {
-            unset($cacheStore[$index]);
-            Yii::$app->cache->set('crc_' . $this->ctype, array_values($cacheStore));
-          }
-        });
-        break;
+
+        if(!empty($data) && $cacheStore) {
+          Arrays::each($cacheStore, function ($cacheItem, $index) use ($data, $cacheStore) {
+            if (!empty($cacheItem['uuid']) && $cacheItem['uuid'] == $data) {
+              unset($cacheStore[$index]);
+              Yii::$app->cache->set('crc_' . $this->ctype, array_values($cacheStore));
+            }
+          });
+        }
+      break;
       case 'update':
         if (!$this->isNew && $cacheStore) {
           Arrays::each($cacheStore, function ($cacheItem, $index) use ($data, $cacheStore) {
