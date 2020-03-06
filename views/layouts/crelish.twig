@@ -1,5 +1,5 @@
 {{ use('giantbits/crelish/widgets/FlashMessages') }}
-{{ register_asset_bundle('giantbits/crelish/CrelishAsset') }}  {# asset root for yii advanced template #}
+{% set crelishBundle = register_asset_bundle('giantbits/crelish/CrelishAsset', true) %}
 {{ void(this.beginPage()) }}
 <!DOCTYPE html>
 <html lang="{{ app.language }}">
@@ -16,9 +16,9 @@
 <section class="cr-root_wrap">
   <div id="cr-left-pane" class="left-col scrollable">
     <div class="navbar--main">
-      <div class="brand">
-        <a href="{{ url('crelish/dashboard/index') }}">cr</a>
-      </div>
+      <a href="{{ url('crelish/dashboard/index') }}">
+        <img src="{{ crelishBundle.baseUrl }}/img/crelish_logo.svg" border="0" width="128" style="transform: translate(-10px, -26px);" />
+      </a>
       {% include '_side_nav.twig' %}
     </div>
   </div>

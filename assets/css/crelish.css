@@ -29,6 +29,37 @@
 .crelish-app-root .cr-root_wrap {
   display: flex;
 }
+
+.gc-full-bg {
+  position: absolute;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.gc-full-bg > img {
+
+}
+
+.gc-login--wrapper {
+  color: white;
+  width: 25vw;
+  padding: 2rem;
+  margin: 15vw 0 0 15vw;
+  position: absolute;
+  background: rgba(8, 17, 34, 0.95);
+  border-radius: 2rem;
+  -webkit-box-shadow: 0px 0px 25rem 0px rgba(245,14,245,0.32);
+  -moz-box-shadow: 0px 0px 25rem 0px rgba(245,14,245,0.32);
+  box-shadow: 0px 0px 25rem 0px rgba(245,14,245,0.32);
+}
+
+.gc-login--wrapper input {
+  background-color: transparent;
+  border-color: rgba(245,14,245,0.5);
+  color: white;
+}
+
 .crelish-app-root .gutter {
   background-color: #3c3c3c;
   border-right: 1px solid #eaeaea;
@@ -37,7 +68,7 @@
 }
 .crelish-app-root #cr-left-pane {
   position: relative;
-  background-color: #344563;
+  background-color: #050313;
   height: 100vh;
   width: 280px;
 }
