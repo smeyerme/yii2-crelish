@@ -1,4 +1,5 @@
 <?php
+
 namespace giantbits\crelish\controllers;
 
 use giantbits\crelish\components\CrelishBaseController;
@@ -7,8 +8,7 @@ use giantbits\crelish\components\CrelishDataProvider;
 use giantbits\crelish\components\CrelishDynamicModel;
 use yii\helpers\Url;
 
-class UserController extends CrelishBaseController
-{
+class UserController extends CrelishBaseController {
   /**
    * [$layout description].
    *
@@ -64,8 +64,7 @@ class UserController extends CrelishBaseController
    *
    * @return [type] [description]
    */
-  public function actionLogin()
-  {
+  public function actionLogin() {
     // Turn away if logged in.
     if (!\Yii::$app->user->isGuest) {
       return $this->redirect(Url::to(['/crelish/dashboard/index']));

@@ -33,7 +33,7 @@ class CrelishAsset extends AssetBundle
     'https://cdn.jsdelivr.net/dropzone/4.3.0/dropzone.min.js',
     'https://cdn.jsdelivr.net/riot/3.4.4/riot+compiler.min.js',
     'https://cdn.jsdelivr.net/npm/perfect-scrollbar@1.4.0/dist/perfect-scrollbar.min.js',
-    'https://cdn.jsdelivr.net/npm/split.js@1.5.4/split.min.js',
+    'https://cdn.jsdelivr.net/npm/split.js@1.5.11/dist/split.min.js',
     'https://cdn.jsdelivr.net/npm/pace-js@1.0.2/pace.min.js',
     'js/crelish.js'
   ];

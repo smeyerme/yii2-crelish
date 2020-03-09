@@ -61,21 +61,21 @@
 }
 
 .crelish-app-root .gutter {
-  background-color: #3c3c3c;
+  background-color: #d70cc0;
   border-right: 1px solid #eaeaea;
   box-shadow: rgba(0, 0, 0, 0.4) -2px 0px 15px;
   cursor: col-resize;
 }
 .crelish-app-root #cr-left-pane {
   position: relative;
-  background-color: #050313;
+  background-color: #221f3c;
   height: 100vh;
-  width: 280px;
+  width: 16vw;
 }
 .crelish-app-root #cr-right-pane {
   position: relative;
   height: 100vh;
-  width: 100%;
+  width: 84vw;
 }
 .crelish-app-root #cr_content_filter {
   border-color: transparent;
@@ -110,6 +110,8 @@
 }
 .crelish-app-root .navbar--main {
   padding: 1rem;
+  margin-top: 1rem;
+  background-color: rgba(0, 0, 0, 0.25);
 }
 .crelish-app-root .navbar--main .brand {
   display: block;
@@ -146,12 +148,17 @@
 }
 .crelish-app-root .navbar--main .navbar-item a {
   color: #eef2f5;
+  display: block;
 }
 .crelish-app-root .navbar--main .navbar-item a i {
   width: 2.333rem;
 }
 .crelish-app-root .navbar--main .navbar-item a:hover {
   color: white;
+}
+.crelish-app-root .navbar--main .navbar-item.active {
+  background-color: #d70cc07d;
+  box-shadow: 0 0 0 10px #d70cc07d;
 }
 .crelish-app-root .navbar--main .navbar-item.active a {
   color: #59e3d6;
@@ -167,6 +174,7 @@
   background-color: #ffffff;
   padding-right: 4rem;
   border-bottom: 1px solid rgba(52, 69, 99, 0.2);
+  width: 100%;
 }
 .crelish-app-root .avatar-nav {
   position: absolute;

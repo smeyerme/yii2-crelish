@@ -23,11 +23,20 @@ $(document).ready(function () {
     $(".btn-cancel-proceed").attr("data-href", targetUrl);
   });
 
-  /*
+  var gSizes = sessionStorage.getItem('split-sizes');
+
+  if (gSizes) {
+    gSizes = JSON.parse(gSizes)
+  } else {
+    gSizes = [12, 88] // default sizes
+  }
+
   Split(['#cr-left-pane', '#cr-right-pane'], {
-    sizes: [12, 88],
+    sizes: gSizes,
     minSize: [220, 440],
-    gutterSize: 5
-  })
-  */
+    gutterSize: 3,
+    onDragEnd: function(sizes) {
+      sessionStorage.setItem('split-sizes', JSON.stringify(sizes))
+    },
+  });
 });
