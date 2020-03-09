@@ -79,6 +79,7 @@ class ContentController extends CrelishBaseController
     $filter = null;
 
     if (!empty($_POST['selection'])) {
+
       foreach ($_POST['selection'] as $selection) {
         $delModel = new CrelishDynamicModel([], ['ctype' => $this->ctype, 'uuid' => $selection]);
         $delModel->delete();
