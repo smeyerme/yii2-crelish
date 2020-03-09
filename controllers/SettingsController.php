@@ -50,36 +50,37 @@ class SettingsController extends CrelishBaseController
   {
     \Yii::$app->cache->flush();
 
-    if(extension_loaded('apc') && ini_get('apc.enabled'))
-    {
+    if (extension_loaded('apc') && ini_get('apc.enabled')) {
       apc_clear_cache();
     }
 
     opcache_reset();
 
+    \Yii::$app->session->setFlash('success', \Yii::t('crelish', 'Caches cleared successfully.'));
     return $this->redirect('/crelish/settings/index', 302);
   }
 
-  public function actionRebuildcache() {
-      \Yii::$app->cache->flush();
+  public function actionRebuildcache()
+  {
+    \Yii::$app->cache->flush();
 
-      // Fetch data types.
-      $elements = new CrelishJsonDataProvider('elements', [
-          'key' => 'key',
-          'sort' => ['by' => ['label', 'asc']],
-          'limit' => 99
-      ]);
+    // Fetch data types.
+    $elements = new CrelishJsonDataProvider('elements', [
+      'key' => 'key',
+      'sort' => ['by' => ['label', 'asc']],
+      'limit' => 99
+    ]);
 
-      $importItems = $elements->all()['models'];
+    $importItems = $elements->all()['models'];
 
-      foreach ($importItems as $item) {
-          // Build cache for each.
-          $dataCache = new CrelishJsonDataProvider($item['key']);
-          $tmp = $dataCache->rawAll();
-      }
+    foreach ($importItems as $item) {
+      // Build cache for each.
+      $dataCache = new CrelishJsonDataProvider($item['key']);
+      $tmp = $dataCache->rawAll();
+    }
 
-      \Yii::$app->session->setFlash('success', 'Caches rebuild successfully...');
-      return $this->redirect('/crelish/settings/index', 302);
+    \Yii::$app->session->setFlash('success', \Yii::t('crelish', 'Caches rebuild successfully.'));
+    return $this->redirect('/crelish/settings/index', 302);
   }
 
   public function actionClearwebassets()
@@ -91,34 +92,36 @@ class SettingsController extends CrelishBaseController
         FileHelper::removeDirectory($filePath . DIRECTORY_SEPARATOR . $f);
       }
     }
+    \Yii::$app->session->setFlash('success', \Yii::t('crelish', 'WebAssets deleted successfully.'));
     return $this->redirect('/crelish/settings/index', 302);
   }
 
-  public function actionIntellicache() {
-      //2e212e112e-2e12ea-vhrto4
+  public function actionIntellicache()
+  {
+    //2e212e112e-2e12ea-vhrto4
 
-      //Rebuild caches
-      if(\Yii::$app->request->get('auth') != "2e212e112e-2e12ea-vhrto4") {
-          die("NOT ALLOWED");
-      }
+    //Rebuild caches
+    if (\Yii::$app->request->get('auth') != "2e212e112e-2e12ea-vhrto4") {
+      die("NOT ALLOWED");
+    }
 
-      $files = FileHelper::findFiles(\Yii::getAlias('@app/workspace/data'));
+    $files = FileHelper::findFiles(\Yii::getAlias('@app/workspace/data'));
 
-      foreach($files as $file) {
-          $contents = file_get_contents($file);
-          if (!strpos($contents, \Yii::$app->request->get('uuid'))) continue;
+    foreach ($files as $file) {
+      $contents = file_get_contents($file);
+      if (!strpos($contents, \Yii::$app->request->get('uuid'))) continue;
 
-          $json = Json::decode($contents);
-          if($json['uuid'] == \Yii::$app->request->get('uuid')) continue;
+      $json = Json::decode($contents);
+      if ($json['uuid'] == \Yii::$app->request->get('uuid')) continue;
 
-          $ctypeArr = explode(DIRECTORY_SEPARATOR, $file);
-          $ctype = $ctypeArr[count($ctypeArr)-2];
+      $ctypeArr = explode(DIRECTORY_SEPARATOR, $file);
+      $ctype = $ctypeArr[count($ctypeArr) - 2];
 
-          $item = new CrelishDynamicJsonModel([],['ctype'=>$ctype, 'uuid'=>$json['uuid']]);
-          $item->save();
+      $item = new CrelishDynamicJsonModel([], ['ctype' => $ctype, 'uuid' => $json['uuid']]);
+      $item->save();
 
-          var_dump($json);
-      }
-      die();
+      var_dump($json);
+    }
+    die();
   }
 }

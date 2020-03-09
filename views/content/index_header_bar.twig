@@ -8,20 +8,18 @@
   </div>
 </div>
 
-<div class="dropdown">
-  <div class="dropdown-toggle">
-    <i class="c-button fa fa-plus"></i>
+<span class="c-input-group u-small" >
+  <button class="c-button c-button--warning btn-delete-grid ">
+    <i class="fa fa-trash"></i>
+  </button>
+  <div class="c-button dropdown" style="overflow: visible;">
+    <div class="dropdown-toggle">
+      <i class="c-button fa fa-plus"></i>
+    </div>
+    <div class="dropdown-content right">
+      <ul role="menu" class="content-dropper-subnav">
+        {{ element_nav_widget({"action":"create"}) }}
+      </ul>
+    </div>
   </div>
-  <div class="dropdown-content right">
-    <ul role="menu">
-      {{ element_nav_widget({"action":"create"}) }}
-    </ul>
-  </div>
-</div>
-{#
-<div class="o-grid__cell">
-  <div class="c-nav__item c-nav__item--right gc-bc--palette-pomgranate hidden btn-delete-grid">
-    <i class="fa fa-trash-o" aria-hidden="true"></i>
-  </div>
-</div>
-#}
+</span>

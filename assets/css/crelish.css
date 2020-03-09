@@ -191,10 +191,29 @@
   background-color: #fbfcfd;
   min-width: 160px;
   box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
-  padding: 12px 16px;
+  padding: 0;
   z-index: 1;
   color: #494950;
   white-space: nowrap;
+}
+
+.crelish-app-root .dropdown .dropdown-content .content-dropper-subnav li {
+  font-size: 1.33rem;
+  text-align: left;
+  margin: 0;
+  padding: 0;
+}
+
+.crelish-app-root .dropdown .dropdown-content .content-dropper-subnav li a {
+  display: block;
+  padding: 0.5rem 2rem;
+}
+
+.crelish-app-root .dropdown .dropdown-content .content-dropper-subnav li:hover a {
+  color: #e90f92 !important;
+  background-color: #d70cc07d;
+  box-shadow: 0 0 0 10px #d70cc07d;
+  color: #59e3d6;
 }
 .crelish-app-root .dropdown .dropdown-content.right {
   right: 0;
@@ -283,6 +302,11 @@
 .crelish-app-root .c-card .c-card__item {
   background-color: #fafbfd;
 }
+
+.c-card__item .c-card__item--divider {
+  background-color: rgba(132, 114, 131, 0.19) !important;
+}
+
 .crelish-app-root .c-card .c-card__item.c-card__item--brand {
   background-color: #344563 !important;
 }
@@ -308,9 +332,21 @@
 }
 .crelish-app-root input[type=checkbox] + span:before {
   content: "\f0c8";
+  font-size: 1.7rem;
+  position: absolute;
+  margin: -17px 0 0 0px;
+  cursor: pointer;
+  background-color: transparent;
+  width: 34px;
+  height: 34px;
+  display: block;
+  text-align: center;
+  line-height: 3.33rem;
 }
+
+/*TheDriveToDevelop*/
 .crelish-app-root input[type=checkbox]:checked + span:before {
-  content: "\f14a";
+   content: "\f14a";
 }
 .crelish-app-root .cr-modal--full {
   margin: 0 !important;
@@ -327,4 +363,13 @@
   color: #0f0f0f !important;
   background: transparent !important;
 }
+
+.draggable-mirror {
+  background-color: white;
+  box-shadow: 0 0 20px 0 rgba(0,0,0,0.6);
+  z-index: 1001;
+}
+
+
+
 /*# sourceMappingURL=crelish.css.map */

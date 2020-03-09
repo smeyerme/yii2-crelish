@@ -89,7 +89,7 @@ class CrelishBaseController extends Controller
         }
 
         header('Location: ' . Url::to([
-            'content/update',
+            \Yii::$app->controller->id . '/update',
             'ctype' => $this->ctype,
             'uuid' => $this->model->uuid
           ]));

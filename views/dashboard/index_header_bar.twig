@@ -1,27 +1,6 @@
 {{ use('/giantbits/crelish/widgets') }}
-
-<div class="c-input-group group-content-filter">
-  <div><h4 class="c-heading" style="padding: 0; margin: 0;">Willkommen</h4></div>
-</div>
-
-{#
-<nav class="navbar--controller">
-  <div class="o-grid o-grid--no-gutter">
-    <div class="o-grid__cell--width-15">
-      <div><h3 class="c-heading">Welcome</h3></div>
-    </div>
-    <div class="o-grid__cell">
-      <div class="dropdown">
-        <div class="dropdown-toggle">
-          <i class="fa fa-plus"></i>
-        </div>
-        <div class="dropdown-content">
-          <ul role="menu">
-            {{ element_nav_widget({"action":"create"}) }}
-          </ul>
-        </div>
-      </div>
-    </div>
-  </div>
+<nav class="content-navbar">
+  <h4>
+    {{ t('crelish', 'Welcome') }}
+  </h4>
 </nav>
-#}

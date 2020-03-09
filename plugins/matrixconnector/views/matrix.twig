@@ -57,19 +57,18 @@
 
         <div id="sortable_{{ formKey }}">
           <div class="c-card" ref-area={ name } each={ value }>
-            <div class="c-card__item c-card__item--divider">
-              <span class="glyphicon glyphicon-move" aria-hidden="true"></span>
-              { ctype }
+            <div role="separator" class="c-card__item c-card__item--divider">
+            <span class="glyphicon glyphicon-move" aria-hidden="true"></span> <strong>{ info[0].value }</strong>
               <span class="c-input-group pull-right">
                 <a class="c-button gc-bc--palette-wetasphalt u-xsmall" href="/crelish/content/update?ctype={ ctype }&uuid={ uuid }" target="_blank"><i class="glyphicon glyphicon-pencil"></i></a>
                 <a class="c-button gc-bc--palette-pomgranate u-xsmall" onclick={ parent.removeItem }><i class="glyphicon glyphicon-trash"></i></a>
               </span>
             </div>
-            <div class="c-card__content">
+            <div class="c-card__content u-window-box-small">
               <dl>
-                <span each={ info }>
-                  <dt>{ label }</dt>
-                  <dd>{ value }</dd>
+                <span each={  item, index in info } if={ index > 0 }>
+                  <dt>{ item.label }</dt>
+                  <dd>{ item.value }</dd>
                 </span>
               </dl>
             </div>
