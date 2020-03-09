@@ -8,7 +8,7 @@
 	],
 	"type": "yii2-extension",
 	"license": "BSD-3-Clause",
-	"version": "0.2.9",
+	"version": "0.2.10",
 	"support": {
 		"issues": "https://github.com/giantbits/yii2-crelish/issues",
 		"forum": "http://www.crelish.io/forum/",
