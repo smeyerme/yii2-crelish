@@ -12,6 +12,7 @@ class Bootstrap implements BootstrapInterface
   {
 
     if ($app instanceof \yii\web\Application) {
+      // Add components.
       \Yii::$app->setComponents([
         'user' => [
           'class' => 'yii\web\User',
@@ -38,7 +39,8 @@ class Bootstrap implements BootstrapInterface
               'globals' => [
                 'url' => ['class' => '\yii\helper\Url'],
                 'html' => ['class' => '\yii\helpers\Html'],
-                'chelper'=>['class' => '\giantbits\crelish\components\CrelishBaseHelper']
+                'chelper'=>['class' => '\giantbits\crelish\components\CrelishBaseHelper'],
+                'globals'=>['class' => '\giantbits\crelish\components\CrelishGlobals'],
               ],
               'functions' => [
                 't' => 'Yii::t'
@@ -103,7 +105,7 @@ class Bootstrap implements BootstrapInterface
           ]
         ]
       ]);
-
+      // Add url rules.
       $app->getUrlManager()->addRules([
         [
           'class' => 'yii\web\UrlRule',

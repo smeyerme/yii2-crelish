@@ -88,7 +88,8 @@ class PageController extends CrelishBaseController
       ]
     ];
 
-    $columns = array_merge($checkCol, $modelProvider->columns);
+    //$columns = array_merge($checkCol, $modelProvider->columns);
+    $columns = $modelProvider->columns;
 
     $columns = Arrays::invoke($columns, function ($item) {
 
