@@ -36,8 +36,12 @@ class AssetConnector extends CrelishFormWidget
 
   private function processData($data)
   {
-    if (is_string($data)) {
-      $data = Json::decode($data);
+    if(!is_object($data)) {
+      if (substr($data, 0, 1) == '{' || substr($data, 0, 1) == '[') {
+        $data = Json::decode($data);
+      } else {
+        $data = ['uuid' => $data];
+      }
     }
 
     $processedData = [];

@@ -90,6 +90,11 @@ class CrelishDynamicModel extends \yii\base\DynamicModel
         $this->fileSource = Yii::getAlias('@app/workspace/data/') . DIRECTORY_SEPARATOR . $this->ctype . DIRECTORY_SEPARATOR . $this->uuid . '.json';
         if (file_exists($this->fileSource)) {
           $rawData = Json::decode(file_get_contents($this->fileSource));
+        } else {
+          $rawData = null;
+          $this->attributes = null;
+          $this->uuid = null;
+          return;
         }
     }
 
