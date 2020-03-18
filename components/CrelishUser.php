@@ -2,6 +2,7 @@
 
 namespace giantbits\crelish\components;
 
+use app\workspace\models\User;
 use yii\base\BaseObject;
 use yii\base\NotSupportedException;
 
@@ -77,6 +78,12 @@ class CrelishUser extends BaseObject implements \yii\web\IdentityInterface
   public $company;
   public $user;
   public $role;
+  public $password;
+  public $state;
+  public $from;
+  public $created;
+  public $updated;
+  public $to;
 
   /**
    * [crelishLogin description].
@@ -87,13 +94,13 @@ class CrelishUser extends BaseObject implements \yii\web\IdentityInterface
    */
   public static function crelishLogin($data)
   {
+
     // Fetch the single wanted user only.
     if(!empty($data['uuid'])) {
-      $userProvider = new CrelishDataProvider('user', [], $data['uuid']);
+      $user = User::findOne(['uuid' => $data['uuid']]);
     }  else {
-      $userProvider = new CrelishDataProvider('user', ['filter' => ['email' => ['strict', $data['email']]]]);
+      $user = User::findOne(['email' => $data['email']]);
     }
-    $user = $userProvider->one();
 
     if (!empty($user)) {
       if (\Yii::$app->getSecurity()->validatePassword($data['password'], $user['password'])) {
