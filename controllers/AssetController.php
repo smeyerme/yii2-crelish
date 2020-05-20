@@ -63,16 +63,19 @@ class AssetController extends CrelishBaseController
     $path = \Yii::$app->request->get('path', null);
     $params = \Yii::$app->request->getQueryParams();
     unset($params['path']);
-
+  
+    $server = ServerFactory::create([
+      'source' => \Yii::getAlias('@app/web/uploads'),
+      'cache' => \Yii::getAlias('@runtime/glide'),
+      'presets' => \Yii::$app->params['crelish']['glide_presets']
+    ]);
+    
     if(file_exists( \Yii::getAlias('@app/web/uploads') . '/' . $path)){
       // Todo: Add image manipulation support.
-      $server = ServerFactory::create([
-        'source' => \Yii::getAlias('@app/web/uploads'),
-        'cache' => \Yii::getAlias('@runtime/glide'),
-        'presets' => \Yii::$app->params['crelish']['glide_presets']
-      ]);
       $server->outputImage($path, $params);
+      return;
     }
+    
     return;
   }
 

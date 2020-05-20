@@ -182,6 +182,11 @@ class CrelishBaseController extends Controller
               ->label($field->label);
           } elseif ($field->type == 'submitButton') {
             echo Html::submitButton($field->label, array('class' => 'c-button c-button--brand c-button--block'));
+          } elseif ($field->type == 'passwordInput') {
+            //unset($this->model[$keyName]);
+            echo $form->field($this->model, $keyName)
+              ->{$field->type}((array)$fieldOptions)
+              ->label($field->label);
           } else {
             $class = 'giantbits\crelish\plugins\\' . strtolower($field->type) . '\\' . ucfirst($field->type);
             // Check for crelish special fields.

@@ -12,13 +12,12 @@ class RelationSelectContentProcessor extends Component
 
   public static function processDataPreSave($key, $data, $fieldConfig, &$parent)
   {
-
     $UUIDv4 = '/^[0-9A-F]{8}-[0-9A-F]{4}-4[0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}$/i';
 
     if (
       isset($fieldConfig->config->autocreate)
       && $fieldConfig->config->autocreate === true
-      && !preg_match($UUIDv4, $data)
+      && (!is_object($data) && !preg_match($UUIDv4, $data))
       && !empty($data)) {
       $model = new CrelishDynamicModel([], ['ctype' => $fieldConfig->config->ctype]);
       $model->systitle = $data;
