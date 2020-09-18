@@ -403,7 +403,7 @@ class CrelishDataProvider extends Component
         }
       }
     }
-
+    
     return $sorting;
   }
 
