@@ -109,6 +109,11 @@ class Bootstrap implements BootstrapInterface
       $app->getUrlManager()->addRules([
         [
           'class' => 'yii\web\UrlRule',
+          'pattern' => '<pathRequested:[\w\-]+>',
+          'route' => 'crelish/frontend/run'
+        ],
+        [
+          'class' => 'yii\web\UrlRule',
           'pattern' => 'crelish',
           'route' => 'crelish/dashboard/index'
         ],
