@@ -167,9 +167,14 @@ class CrelishDataProvider extends Component
                 return (($value[$key] >= $keyValue[1] && $value[$key] <= $keyValue[2]) || ($value[$key] >= $keyValue[2] && $value[$key] <= $keyValue[1]));
               });
             }
+  
+            if ($keyValue[0] == 'neq') {
+              $this->allModels = Arrays::filter($this->allModels, function ($value) use ($key, $keyValue) {
+                return $value['uuid'] <> $keyValue[1];
+              });
+            }
 
-            if ($keyValue[0] == '*'
-              && !empty($keyValue[1])) {
+            if ($keyValue[0] == '*' && !empty($keyValue[1])) {
               $this->allModels = Arrays::filter($this->allModels, function ($value) use ($key, $keyValue) {
                 $isMatch = true;
                 $itemString = strtolower($value[$key]);
