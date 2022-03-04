@@ -88,6 +88,7 @@
     public $cardBrand;
     public $cardLastFour;
     public $trialEndAt;
+    public $activationDate;
     
     /**'
      * [crelishLogin description].
@@ -100,16 +101,19 @@
     {
       
       // Fetch the single wanted user only.
-      if(!empty($data['uuid'])) {
+      if (!empty($data['uuid'])) {
         $user = User::findOne(['uuid' => $data['uuid']]);
+        if (!empty($user)) {
+          self::prepareUserdata($user);
+          return \Yii::$app->user->login(new static($user), 3600);
+        }
       }  else {
         $user = User::findOne(['email' => $data['email']]);
-      }
-      
       if (!empty($user)) {
         if (\Yii::$app->getSecurity()->validatePassword($data['password'], $user['password'])) {
           self::prepareUserdata($user);
-          return \Yii::$app->user->login(new static($user), 0);
+            return \Yii::$app->user->login(new static($user), 3600);
+          }
         }
       }
       

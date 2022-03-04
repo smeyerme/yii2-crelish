@@ -101,7 +101,7 @@ class CrelishBaseUrlRule implements UrlRuleInterface
       'language' => $langCode,
       $additional
     ]);
-
+    
     if (!empty($langCode)) {
       \Yii::$app->language = $langCode;
     }

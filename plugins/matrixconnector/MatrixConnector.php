@@ -39,7 +39,7 @@ class MatrixConnector extends Widget
       'columns' => [
         'systitle',
         [
-          'class' => ActionColumn::className(),
+          'class' => ActionColumn::class,
           'template' => '{update}',
           'buttons' => [
             'update' => function ($url, $model) {

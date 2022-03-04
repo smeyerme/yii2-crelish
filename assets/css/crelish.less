@@ -31,6 +31,23 @@
   height: 2px;
 }
 
+.gc-full-bg {
+  max-height: 100vh;
+  overflow: hidden;
+}
+
+.gc-login--wrapper {
+  position: absolute;
+  top: 38%;
+  width: 400px;
+  height: 290px;
+  left: 15%;
+  background-color: rgb(0 0 0 / 82%);
+  padding: 26px;
+  border-radius: 12px;
+  box-shadow: 0px 0px 210px 0px black;
+}
+
 .crelish-app-root {
   position: relative;
   height: 100vh;
@@ -174,6 +191,10 @@
     background-color: @color-back-lighter;
     padding-right: 4rem;
     border-bottom: 1px solid rgba(52, 69, 99, .2);
+
+    > *:not(:last-child) {
+      margin-right: 1rem;
+    }
   }
 
   .avatar-nav {
@@ -191,8 +212,8 @@
       position: absolute;
       background-color: @color-back-controls;
       min-width: 160px;
-      box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
-      padding: 12px 16px;
+      box-shadow: 0px 4px 46px 2px rgb(0 0 0 / 78%);
+      padding: 12px 0;
       z-index: 1;
       color: @color-text;
       white-space: nowrap;
@@ -203,16 +224,29 @@
 
       a {
         color: @color-text;
+        display: block;
+        padding: 4px 14px;
+
+        &:hover {
+          background-color: #e8e8e8;
+        }
       }
 
       h6 {
         margin: 1rem 0 0 0;
+        font-size: 14px;
+        font-weight: bold;
+        boder-bottom: 1px solod #444;
+        display: block;
+        padding: 4px 14px;
       }
 
       ul {
         list-style: none;
         margin: 0;
         padding: 0;
+        font-size: 14px;
+        text-align: left;
 
         li:first-child {
           h6 {
@@ -360,7 +394,6 @@
     content: "\f14a";
   }
 
-
   // Modals
   .cr-modal--full {
     margin: 0 !important;
@@ -380,5 +413,20 @@
       background: transparent !important;
     }
   }
-}
 
+  table a {
+    &.desc:after {
+      display: inline-block;
+      transform: translate(10px, 2px);
+      content: "\e114";
+      font-family: 'Glyphicons Halflings';
+    }
+
+    &.asc:after {
+      display: inline-block;
+      transform: translate(10px, 2px);
+      content: "\e113";
+      font-family: 'Glyphicons Halflings';
+    }
+  }
+}

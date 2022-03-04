@@ -18,7 +18,7 @@ class DashboardController extends Controller {
     public function behaviors() {
         return [
             'access' => [
-                'class' => AccessControl::className(),
+                'class' => AccessControl::class,
                 'only' => ['create', 'index', 'delete'],
                 'rules' => [
                     [

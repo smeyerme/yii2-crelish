@@ -9,6 +9,7 @@ use Underscore\Types\Arrays;
 use yii\base\Widget;
 use yii\helpers\Html;
 use yii\helpers\Json;
+use yii\helpers\Url;
 
 class AssetConnector extends CrelishFormWidget
 {
@@ -131,6 +132,8 @@ class AssetConnector extends CrelishFormWidget
 
       return ['onclick' => $onclick];
     };
+    
+    //$removalUrl =  !empty(\Yii::$app->request->get('uuid')) ? Url::to(['', 'ctype' => \Yii::$app->request->get('ctype'), 'uuid' => \Yii::$app->request->get('uuid'), 'remAsset' => $this->field->key]) : null;
 
     return $this->render('assets.twig', [
       'dataProvider' => $modelProvider->raw(),
@@ -141,7 +144,8 @@ class AssetConnector extends CrelishFormWidget
       'field' => $this->field,
       'rawData' => !empty($this->data->uuid) ? $this->data->uuid : '',
       'data' => $this->data,
-      'formKey' => $this->formKey
+      'formKey' => $this->formKey,
+      //'removalUrl' => $removalUrl
     ]);
   }
 

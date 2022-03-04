@@ -14,6 +14,7 @@
   use app\workspace\models\News;
   use app\workspace\models\Product;
   use app\workspace\models\Reference;
+  use app\workspace\models\User;
   use yii\helpers\Url;
   
   class CrelishBaseHelper
@@ -40,30 +41,70 @@
       return Url::to(array_merge(['/' . \Yii::$app->controller->entryPoint['slug']], $params));
     }
     
-    public static function getAccountData($company) {
+    public static function getAccountData($company = null) {
+      
+      if(!$company) {
+        $company = \Yii::$app->user->identity->company->uuid;
+      } else {
+        $userData = User::findOne(['company' => $company]);
+        $user = $userData->role;
+      }
+      
+      // Get user data as it contains payed package.
+      if(!$user)
+        $user = \Yii::$app->user->identity->role;
+      
+      $rolePackageMap = [
+        "1" => "registered",
+        "2" => "basic",
+        "4" => "basic_plus",
+        "6" => "premium",
+        "8" => "premium_plus",
+        "9" => "admin"
+      ];
       
       $data = new class{};
+      
+      $data->package = $rolePackageMap[(int) $user];
+  
+      $packageData =  CrelishGlobals::get('packages')[$data->package];
+      
       // Count products, news, events, projects and downloads for the company.
       $data->productCount = (int) Product::find()
         ->where(['company' => $company])
         ->count();
   
+      $data->productCountMax = (int) $packageData['productCount'];
+      $data->canAddProduct = ((int) $packageData['productCount'] > (int) $data->productCount);
+  
       $data->newsCount = (int) News::find()
         ->where(['company' => $company])
         ->count();
+  
+      $data->newsCountMax = (int) $packageData['newsCount'];
+      $data->canAddNews = ((int) $packageData['newsCount'] > (int) $data->newsCount);
   
       $data->eventCount = (int) Event::find()
         ->where(['company' => $company])
         ->count();
   
+      $data->eventCountMax = (int) $packageData['eventCount'];
+      $data->canAddEvent = ((int) $packageData['eventCount'] > (int) $data->eventCount);
+  
       $data->projectCount = (int) Reference::find()
         ->where(['company' => $company])
         ->count();
       
+      $data->projectCountMax = (int) $packageData['projectCount'];
+      $data->canAddProject = ((int) $packageData['projectCount'] > (int) $data->projectCount);
+      
       $data->downloadCount = (int) Download::find()
         ->where(['company' => $company])
         ->count();
-
+  
+      $data->downloadCountMax = (int) $packageData['downloadCount'];
+      $data->canAddDownload = ((int) $packageData['downloadCount'] > (int) $data->downloadCount);
+      
       return $data;
     }
     

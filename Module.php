@@ -1,44 +1,44 @@
 <?php
-/**
+  /**
  * @link http://www.yiiframework.com/
  * @copyright Copyright (c) 2008 Yii Software LLC
  * @license http://www.yiiframework.com/license/
  */
-
-namespace giantbits\crelish;
-
-use Yii;
-use yii\base\BootstrapInterface;
-use giantbits\crelish\components\CrelishI18nEventHandler;
-use yii\di\Container;
-
-/**
+  
+  namespace giantbits\crelish;
+  
+  use Yii;
+  use yii\base\BootstrapInterface;
+  use giantbits\crelish\components\CrelishI18nEventHandler;
+  use yii\di\Container;
+  
+  /**
  * The Yii Debug Module provides the debug toolbar and debugger
  *
  * @author Qiang Xue <qiang.xue@gmail.com>
  * @since 2.0
  */
-class Module extends \yii\base\Module
-{
-
+  class Module extends \yii\base\Module
+  {
+    
     /**
      * [$dataPath description]
      * @var [type]
      */
     private $dataPath;
-
+    
     /**
      * [$defaultLanguage description]
      * @var [type]
      */
     public $defaultLanguage;
-
+    
     /**
      * [$theme description]
      * @var string
      */
     public $theme = 'default';
-
+    
     /**
      * [$entryPoint description]
      * @var string
@@ -48,26 +48,26 @@ class Module extends \yii\base\Module
         'path' => 'home',
         'slug' => 'home'
     ];
-
+    
     /**
      * @inheritdoc
      */
     public function init()
     {
-
+      
         parent::init();
-
+      
         Yii::setAlias('@crelish', '@app/vendor/giantbits/yii2-crelish');
-
+      
         // Detect language.
         $this->processLanguage();
         $this->buildControllerMap();
         $this->setDependencies();
         $this->registerTranslations();
-
+      
         //$this->dataPath = Yii::getAlias($this->dataPath);
     }
-
+    
     private function setDependencies()
     {
         /*\Yii::$container->set('yii\bootstrap\ActiveField', [
@@ -77,12 +77,12 @@ class Module extends \yii\base\Module
           'labelOptions' => ['class' => 'c-label']
         ]);*/
     }
-
+    
     private function buildControllerMap()
     {
         $this->controllerMap = [];
     }
-
+    
     /**
      * [processLanguage description]
      * @return [type] [description]
@@ -92,22 +92,22 @@ class Module extends \yii\base\Module
         Yii::$app->sourceLanguage = 'en-US';
         Yii::$app->params['defaultLanguage'] = 'de-CH';
     }
-
+    
     public function beforeAction($action)
     {
         if (!parent::beforeAction($action)) {
             return false;
         }
-
+      
         //if (Yii::$app instanceof \yii\web\Application && !$this->checkAccess()) {
         //  throw new ForbiddenHttpException('You are not allowed to access this page.');
         //}
-
+      
         $this->resetGlobalSettings();
-
+      
         return true;
     }
-
+    
     /**
      * Resets potentially incompatible global settings done in app config.
      */
@@ -117,7 +117,7 @@ class Module extends \yii\base\Module
             Yii::$app->assetManager->bundles = [];
         }
     }
-
+    
     /**
      * [checkAccess description]
      * @return [type] [description]
@@ -139,18 +139,19 @@ class Module extends \yii\base\Module
         Yii::warning('Access to debugger is denied due to IP address restriction. The requesting IP address is ' . $ip, __METHOD__);
         return FALSE;
     }
-
-    public function registerTranslations()
+    
+    private function registerTranslations()
     {
+      
         Yii::$app->i18n->translations['modules/crelish/*'] = [
             'class' => 'yii\i18n\PhpMessageSource',
             'sourceLanguage' => 'en-US',
-            'basePath' => '@app/modules/crelish/messages',
-
+        'basePath' => __DIR__ . '/messages',
+        
             //'fileMap' => [
             //    'modules/foo/validation' => 'validation.php',
             //    'modules/foo/form' => 'form.php'
             //],
         ];
     }
-}
+  }

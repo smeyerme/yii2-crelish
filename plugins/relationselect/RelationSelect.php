@@ -30,7 +30,7 @@ class RelationSelect extends CrelishFormWidget
     $this->relationDataType = $this->field->config->ctype;
 
     // Fetch options.
-    $optionProvider = new CrelishDataProvider($this->relationDataType, ['filter' => ['state' => ['strict', 2]]]);
+    $optionProvider = new CrelishDataProvider($this->relationDataType);
 
     $options = [];
     foreach ($optionProvider->rawAll() as $option) {
@@ -43,6 +43,7 @@ class RelationSelect extends CrelishFormWidget
 
     $this->predefinedOptions = $options;
     $ul = Yii::$app->request->get('ul');
+    
     if ($ul) {
       // Todo: Get type of parent + uuid. Load parent. Unlink subelement.
       //$ownerCtype = \Yii::$app->request->get('ctype');

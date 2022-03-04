@@ -3,6 +3,7 @@
   namespace giantbits\crelish\components;
   
   use Cocur\Slugify\Slugify;
+  use giantbits\crelish\components\transformer\CrelishFieldTransformerHash;
   use Underscore\Types\Arrays;
   use Yii;
   use yii\helpers\FileHelper;
@@ -124,6 +125,10 @@
       }
       
       $modelArray['uuid'] = $this->uuid;
+      
+      if(!empty($this->new_password)) {
+        $this->defineAttribute('password', \Yii::$app->getSecurity()->generatePasswordHash($this->new_password));
+      }
       
       // Transform and set data, detect json.
       foreach ($this->attributes() as $attribute) {
@@ -425,7 +430,7 @@
         return $elem->key == "state";
       }))
       ) {
-        $elementDefinition->fields[] = Json::decode('{ "label": "State", "key": "state",  "type": "dropDownList", "transform": "state", "visibleInGrid": true, "rules": [["required"], ["integer"]], "options": {"prompt":"Please set state"}, "items": {"0":"Offline", "1":"Draft", "2":"Online", "3":"Archived"}}', false);
+        $elementDefinition->fields[] = Json::decode('{ "label": "State", "key": "state",  "type": "dropDownList", "transform": "state", "visibleInGrid": true, "rules": [["required"], ["integer"]], "items": {"0":"Offline", "1":"Draft", "2":"Online", "3":"Archived"}}', false);
       }
       
       if (empty(Arrays::find($elementDefinition->fields, function ($elem) {
@@ -467,6 +472,11 @@
     
     public function getIsNewRecord()
     {
-      return false;
+      return $this->isNew;
     }
+    
+    public static function getDb() {
+      return \Yii::$app->getDb();
+    }
+    
   }

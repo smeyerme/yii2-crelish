@@ -54,6 +54,12 @@ class Bootstrap implements BootstrapInterface
           'enableStrictParsing' => TRUE,
           'showScriptName' => FALSE,
           'rules' => [
+            [
+              'class' => 'yii\web\UrlRule',
+              'pattern' => 'sitemap',
+              'route' => 'sitemap/index',
+              'suffix' => '.xml',
+            ],
             ['class' => 'yii\rest\UrlRule', 'controller' => 'user', 'tokens' => ['{uuid}' => '<uuid:\\d[\\d,]*>']],
             ['class' => 'yii\rest\UrlRule', 'controller' => 'company', 'tokens' => ['{uuid}' => '<uuid:\\d[\\d,]*>']],
             ['class' => 'yii\rest\UrlRule', 'controller' => 'product', 'tokens' => ['{uuid}' => '<uuid:\\d[\\d,]*>']],

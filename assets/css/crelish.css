@@ -17,6 +17,21 @@
   width: 100%;
   height: 2px;
 }
+.gc-full-bg {
+  max-height: 100vh;
+  overflow: hidden;
+}
+.gc-login--wrapper {
+  position: absolute;
+  top: 38%;
+  width: 400px;
+  height: 290px;
+  left: 15%;
+  background-color: rgba(0, 0, 0, 0.82);
+  padding: 26px;
+  border-radius: 12px;
+  box-shadow: 0px 0px 210px 0px black;
+}
 .crelish-app-root {
   position: relative;
   height: 100vh;
@@ -29,53 +44,22 @@
 .crelish-app-root .cr-root_wrap {
   display: flex;
 }
-
-.gc-full-bg {
-  position: absolute;
-  width: 100vw;
-  height: 100vh;
-  overflow: hidden;
-}
-
-.gc-full-bg > img {
-
-}
-
-.gc-login--wrapper {
-  color: white;
-  width: 25vw;
-  padding: 2rem;
-  margin: 15vw 0 0 15vw;
-  position: absolute;
-  background: rgba(8, 17, 34, 0.95);
-  border-radius: 2rem;
-  -webkit-box-shadow: 0px 0px 25rem 0px rgba(245,14,245,0.32);
-  -moz-box-shadow: 0px 0px 25rem 0px rgba(245,14,245,0.32);
-  box-shadow: 0px 0px 25rem 0px rgba(245,14,245,0.32);
-}
-
-.gc-login--wrapper input {
-  background-color: transparent;
-  border-color: rgba(245,14,245,0.5);
-  color: white;
-}
-
 .crelish-app-root .gutter {
-  background-color: #d70cc0;
+  background-color: #3c3c3c;
   border-right: 1px solid #eaeaea;
   box-shadow: rgba(0, 0, 0, 0.4) -2px 0px 15px;
   cursor: col-resize;
 }
 .crelish-app-root #cr-left-pane {
   position: relative;
-  background-color: #221f3c;
+  background-color: #344563;
   height: 100vh;
-  width: 16vw;
+  width: 280px;
 }
 .crelish-app-root #cr-right-pane {
   position: relative;
   height: 100vh;
-  width: 84vw;
+  width: 100%;
 }
 .crelish-app-root #cr_content_filter {
   border-color: transparent;
@@ -110,8 +94,6 @@
 }
 .crelish-app-root .navbar--main {
   padding: 1rem;
-  margin-top: 1rem;
-  background-color: rgba(0, 0, 0, 0.25);
 }
 .crelish-app-root .navbar--main .brand {
   display: block;
@@ -148,17 +130,12 @@
 }
 .crelish-app-root .navbar--main .navbar-item a {
   color: #eef2f5;
-  display: block;
 }
 .crelish-app-root .navbar--main .navbar-item a i {
   width: 2.333rem;
 }
 .crelish-app-root .navbar--main .navbar-item a:hover {
   color: white;
-}
-.crelish-app-root .navbar--main .navbar-item.active {
-  background-color: #d70cc07d;
-  box-shadow: 0 0 0 10px #d70cc07d;
 }
 .crelish-app-root .navbar--main .navbar-item.active a {
   color: #59e3d6;
@@ -174,7 +151,9 @@
   background-color: #ffffff;
   padding-right: 4rem;
   border-bottom: 1px solid rgba(52, 69, 99, 0.2);
-  width: 100%;
+}
+.crelish-app-root .navbar--controller > *:not(:last-child) {
+  margin-right: 1rem;
 }
 .crelish-app-root .avatar-nav {
   position: absolute;
@@ -190,44 +169,37 @@
   position: absolute;
   background-color: #fbfcfd;
   min-width: 160px;
-  box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
-  padding: 0;
+  box-shadow: 0px 4px 46px 2px rgba(0, 0, 0, 0.78);
+  padding: 12px 0;
   z-index: 1;
   color: #494950;
   white-space: nowrap;
-}
-
-.crelish-app-root .dropdown .dropdown-content .content-dropper-subnav li {
-  font-size: 1.33rem;
-  text-align: left;
-  margin: 0;
-  padding: 0;
-}
-
-.crelish-app-root .dropdown .dropdown-content .content-dropper-subnav li a {
-  display: block;
-  padding: 0.5rem 2rem;
-}
-
-.crelish-app-root .dropdown .dropdown-content .content-dropper-subnav li:hover a {
-  color: #e90f92 !important;
-  background-color: #d70cc07d;
-  box-shadow: 0 0 0 10px #d70cc07d;
-  color: #59e3d6;
 }
 .crelish-app-root .dropdown .dropdown-content.right {
   right: 0;
 }
 .crelish-app-root .dropdown .dropdown-content a {
   color: #494950;
+  display: block;
+  padding: 4px 14px;
+}
+.crelish-app-root .dropdown .dropdown-content a:hover {
+  background-color: #e8e8e8;
 }
 .crelish-app-root .dropdown .dropdown-content h6 {
   margin: 1rem 0 0 0;
+  font-size: 14px;
+  font-weight: bold;
+  boder-bottom: 1px solod #444;
+  display: block;
+  padding: 4px 14px;
 }
 .crelish-app-root .dropdown .dropdown-content ul {
   list-style: none;
   margin: 0;
   padding: 0;
+  font-size: 14px;
+  text-align: left;
 }
 .crelish-app-root .dropdown .dropdown-content ul li:first-child h6 {
   margin: 0;
@@ -302,11 +274,6 @@
 .crelish-app-root .c-card .c-card__item {
   background-color: #fafbfd;
 }
-
-.c-card__item .c-card__item--divider {
-  background-color: rgba(132, 114, 131, 0.19) !important;
-}
-
 .crelish-app-root .c-card .c-card__item.c-card__item--brand {
   background-color: #344563 !important;
 }
@@ -322,6 +289,10 @@
 .crelish-app-root .c-button:hover {
   color: white;
 }
+.crelish-app-root .gc-full-bg {
+  position: absolute;
+  z-index: 0;
+}
 .crelish-app-root input[type=checkbox] {
   display: none;
 }
@@ -332,19 +303,7 @@
 }
 .crelish-app-root input[type=checkbox] + span:before {
   content: "\f0c8";
-  font-size: 1.7rem;
-  position: absolute;
-  margin: -17px 0 0 0px;
-  cursor: pointer;
-  background-color: transparent;
-  width: 1%;
-  height: 34px;
-  display: block;
-  text-align: center;
-  line-height: 3.33rem;
 }
-
-/*TheDriveToDevelop*/
 .crelish-app-root input[type=checkbox]:checked + span:before {
    content: "\f14a";
 }
@@ -363,13 +322,16 @@
   color: #0f0f0f !important;
   background: transparent !important;
 }
-
-.draggable-mirror {
-  background-color: white;
-  box-shadow: 0 0 20px 0 rgba(0,0,0,0.6);
-  z-index: 1001;
+.crelish-app-root table a.desc:after {
+  display: inline-block;
+  transform: translate(10px, 2px);
+  content: "\e114";
+  font-family: 'Glyphicons Halflings';
 }
-
-
-
+.crelish-app-root table a.asc:after {
+  display: inline-block;
+  transform: translate(10px, 2px);
+  content: "\e113";
+  font-family: 'Glyphicons Halflings';
+}
 /*# sourceMappingURL=crelish.css.map */

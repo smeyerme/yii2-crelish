@@ -9,7 +9,7 @@ namespace yii\db;
 
 use Yii;
 use yii\base\InvalidConfigException;
-use yii\base\InvalidParamException;
+use yii\base\InvalidArgumentException;
 use yii\helpers\ArrayHelper;
 use yii\helpers\Inflector;
 use yii\helpers\StringHelper;
@@ -357,7 +357,7 @@ class CrelishActiveRecord extends BaseActiveRecord
    */
   public static function find()
   {
-    return Yii::createObject(ActiveQuery::className(), [get_called_class()]);
+    return Yii::createObject(ActiveQuery::class, [get_called_class()]);
   }
 
   /**

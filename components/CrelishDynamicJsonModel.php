@@ -3,7 +3,7 @@
 namespace giantbits\crelish\components;
 
 use Underscore\Types\Arrays;
-use yii\base\InvalidParamException;
+use yii\base\InvalidArgumentException;
 use yii\helpers\FileHelper;
 use yii\helpers\Json;
 

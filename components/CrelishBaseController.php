@@ -32,34 +32,45 @@ class CrelishBaseController extends Controller
       \Yii::$app->view->registerJs($js);
       \Yii::$app->session->remove('intellicache');
     }
+    
+    if(\Yii::$app->user->identity->role < 9
+      && \Yii::$app->requestedRoute != 'crelish/user/login'
+      && \Yii::$app->requestedRoute != 'crelish/asset/glide') {
+      return $this->redirect('/');
+    }
 
     parent::init();
   }
 
-  public function buildForm($action = 'update', $settings = [])
+  public function buildForm($action = 'default', $settings = [])
   {
     $formatter = new Formatter();
     $formatter->dateFormat = "dd.MM.yyyy";
     $formatter->nullDisplay = "";
 
     //default settings
-    $defaults = array(
+    $defaults = [
       'id' => 'content-form',
       'outerClass' => 'gc-ptb--2',
       'groupClass' => 'c-card',
       'tabs' => []
-    );
+    ];
 
     $settings = $settings + $defaults;
-
+    
     // Build form for type.
     $this->model = new CrelishDynamicModel([], [
       'ctype' => (!empty($settings['ctype'])) ? $settings['ctype'] : $this->ctype,
       'uuid' => (!empty($settings['uuid'])) ? $settings['uuid'] : $this->uuid
     ]);
+  
+    if ($action !== 'default') {
+      $this->model->scenario = $action;
+    }
 
     // Save content if post request.
     if (in_array($action, array(
+        'default',
         'update',
         'create'
       ))
@@ -116,8 +127,12 @@ class CrelishBaseController extends Controller
           $this->model->{$field->key} = $formatter->asDatetime($this->model->{$field->key}, 'dd.MM.yyyy HH:mm');
         }
       }
+      
+      if (!empty($field->defaultValue) && empty($this->uuid)) {
+        $this->model->{$field->key} = $field->defaultValue;
+      }
     }
-
+    
     ob_start();
     $form = ActiveForm::begin([
       'id' => $settings['id'],
@@ -183,7 +198,7 @@ class CrelishBaseController extends Controller
           } elseif ($field->type == 'submitButton') {
             echo Html::submitButton($field->label, array('class' => 'c-button c-button--brand c-button--block'));
           } elseif ($field->type == 'passwordInput') {
-            //unset($this->model[$keyName]);
+            unset($this->model[$keyName]);
             echo $form->field($this->model, $keyName)
               ->{$field->type}((array)$fieldOptions)
               ->label($field->label);
@@ -194,13 +209,14 @@ class CrelishBaseController extends Controller
               echo $class::widget([
                 'model' => $this->model,
                 'formKey' => $keyName,
-                'data' => $this->model{$field->key},
+                'data' => $this->model[$field->key],
                 'field' => $field
               ]);
             } else {
               echo $form->field($this->model, $keyName)
                 ->{$field->type}((array)$fieldOptions)
                 ->label($field->label);
+              
             }
           }
         }

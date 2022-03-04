@@ -28,7 +28,7 @@
       {% include '@crelish/views/' ~ app.controller.id ~ '/' ~ app.controller.action.id ~ "_header_bar.twig" %}
       <div class="avatar-nav">
         <div class="navbar-item dropdown">
-          <div class="c-avatar u-xsmall">
+          <div class="c-avatar u-small">
             {{ crelish_gravatar_widget({ 'email': app.user.identity.email , 'options': { 'alt': app.user.identity.username }, 'size': 32 }) }}
           </div>
           <div class="dropdown-content right">

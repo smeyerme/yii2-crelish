@@ -49,7 +49,7 @@ class CrelishDataProvider extends Component
         } else {
           $processedData = \Yii::$app->cache->get('crc_' . $ctype);
 
-          if ($processedData === false) {
+          if ($processedData === false or $forceFull) {
             // $data is not found in cache, calculate it from scratch
             $dataModels = \Yii::$app->db->createCommand('SELECT * FROM ' . $modelTable)->queryAll();
 
@@ -173,6 +173,12 @@ class CrelishDataProvider extends Component
                 return $value['uuid'] <> $keyValue[1];
               });
             }
+            
+            if ($keyValue[0] == 'in') {
+              $this->allModels = Arrays::filter($this->allModels, function ($value) use ($key, $keyValue) {
+                return in_array($value[$key], $keyValue[1]);
+              });
+            }
 
             if ($keyValue[0] == '*' && !empty($keyValue[1])) {
               $this->allModels = Arrays::filter($this->allModels, function ($value) use ($key, $keyValue) {
@@ -197,7 +203,7 @@ class CrelishDataProvider extends Component
             if ($key === 'slug') {
               $this->allModels = Arrays::filterBy($this->allModels, $key, $keyValue);
             } elseif ($key === 'state') {
-              $this->allModels = Arrays::filterBy($this->allModels, $key, $keyValue);
+              $this->allModels = Arrays::filterBy($this->allModels, $key, (string) $keyValue);
             } elseif ($key === 'freesearch') {
               $this->allModels = Arrays::filter($this->allModels, function ($value) use ($keyValue) {
                 $isMatch = true;
@@ -536,7 +542,7 @@ class CrelishDataProvider extends Component
   {
     $args = func_get_args();
     $data = array_shift($args);
-
+    
     foreach ($args as $n => $field) {
       if (is_string($field)) {
         $tmp = [];

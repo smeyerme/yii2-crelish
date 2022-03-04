@@ -7,7 +7,7 @@
      tabindex="-1"
      role="dialog"
      aria-labelledby="media-modal-{{ formKey }}" aria-hidden="true">
-  <div class="modal-dialog" style="width: 100vw; height: 100vh; top: 0; left: 0; margin: 0; padding: 0;">
+  <div class="modal-dialog" style="width: 97vw; height: 97vh; top: 1vh; margin: 0 auto; padding: 0;">
     <div class="modal-content">
 
       <nav class="modal-header">
@@ -22,13 +22,14 @@
                        value="{{ app.request.get.cr_asset_filter }}"
                        placeholder="{{ t('crelish', 'Type your search phrase here...') }}">
               </div>
-              <button class="c-button c-button--brand do-search" onclick="return false;"><i class="fa fa-search"></i>
+              <button class="c-button c-button--brand do-search" onclick="return false;" style="border: 1px solid grey;
+    margin-left: -1px;"><i class="fa fa-search"></i>
               </button>
             </div>
           </div>
           <div class="o-grid__cell--width-25">
             <div class="c-nav__content c-nav__content--right">
-              <button type="button" class="close" style="color: white; margin-top: 14px;" data-dismiss="modal"
+              <button type="button" class="close" style="margin-top: 14px;" data-dismiss="modal"
                       aria-label="Close"><span aria-hidden="true">×</span></button>
             </div>
           </div>
@@ -36,12 +37,15 @@
       </nav>
 
       <div class="modal-body o-panel-container">
-        <div style="cursor: pointer;">
+        <div style="cursor: pointer;
+    background-color: #7391a7;
+    padding: 10px 0;
+    text-align: center;">
           <div id="dropZone-{{ formKey }}"></div>
         </div>
         <div>
 
-          {{ pjax_begin({'id': 'assetList', 'enablePushState': true}) }}
+          {{ pjax_begin({'id': 'assetList-' ~ formKey, 'enablePushState': true}) }}
 
           <h6>{{ t('crelish', 'Asset list') }}</h6>
 
@@ -57,6 +61,7 @@
 
         </div>
       </div>
+
     </div>
   </div>
 </div>
@@ -67,16 +72,23 @@
          id="asset_{{ field.key }}"/>
   <br>
   <div class="c-card">
-    <div class="c-card__item c-card__item--divider">
+    <div class="c-card__item c-card__item--brand">
       Media
-      <a class="c-button c-button--rounded c-button--success  open-media-modal pull-right" data-toggle="modal"
+      <span class="c-input-group pull-right">
+        {% if data.fileName %}
+          <a class="c-button c-button--error" href style="margin-top: -6px;" id="rem_{{ field.key }}">
+          <span class="fui-image"></span> <i class="fa fa-trash"></i> {{ t('crelish', 'Remove media...') }}
+        </a>
+        {% endif %}
+        <a class="c-button c-button--info open-media-modal" data-toggle="modal"
          data-target="#media-modal-{{ formKey }}" href style="margin-top: -6px; margin-right: -6px;">
-        <span class="fui-image"></span> {{ t('crelish', 'Select media...') }}</a>
+          <span class="fui-image"></span> {{ t('crelish', 'Select media...') }}
       </a>
+      </span>
     </div>
-    <div class="c-card__item">
+    <div class="c-card__body">
       <div class="o-grid o-grid--wrap">
-        <div class="o-gird__cell o-grid__cell--width-25">
+        <div class="o-gird__cell o-grid__cell--width-25" id="asset-media-{{ field.key }}">
           {% if "image" in data.mime %}
             <img src="/crelish/asset/glide?path={{ data.fileName }}&w=220&f=fit" class="o-image"
                  id="asset-icon-{{ field.key }}"/>
@@ -153,4 +165,13 @@
 
     var newDropzone = new Dropzone("div#dropZone-{{ formKey }}", dZoneOptions);
   });
+
+  $('#rem_{{ field.key }}').on('click', function (e) {
+    e.preventDefault();
+
+    $('#asset_{{ field.key }}').attr('value', '');
+    $('#asset-info-{{ field.key }}').html('<span style="color: red;">{{ t('crelish', 'Save the entry to remove the media.') }}</span>');
+    $('#asset-media-{{ field.key }}').html('');
+  });
+
 </script>

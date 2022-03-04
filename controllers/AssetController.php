@@ -28,7 +28,7 @@ class AssetController extends CrelishBaseController
   {
     return [
       'access' => [
-        'class' => AccessControl::className(),
+        'class' => AccessControl::class,
         'rules' => [
           [
             'allow' => true,
