@@ -4,7 +4,6 @@ namespace giantbits\crelish\plugins\relationselect;
 
 use giantbits\crelish\components\CrelishDynamicModel;
 use yii\base\Component;
-use yii\helpers\VarDumper;
 
 class RelationSelectContentProcessor extends Component
 {
@@ -50,7 +49,7 @@ class RelationSelectContentProcessor extends Component
 
   public static function processData($key, $data, &$processedData)
   {
-    if (!empty($data)) {
+		if (!empty($data)) {
       $sourceData = new CrelishDynamicModel([], ['ctype' => 'asset', 'uuid' => $data['uuid']]);
 
       if ($sourceData) {
@@ -67,7 +66,7 @@ class RelationSelectContentProcessor extends Component
   {
     $definition = CrelishDynamicModel::loadElementDefinition($ctype);
     $relatedCtype = $definition->fields[$key]->config->ctype;
-
+		
     if ($data && $relatedCtype) {
       $sourceData = new CrelishDynamicModel([], ['ctype' => $relatedCtype, 'uuid' => $data]);
       if ($sourceData) {

@@ -86,17 +86,20 @@
       </a>
       </span>
     </div>
-    <div class="c-card__body">
+    <div id="asset-body-{{ field.key }}" class="c-card__body {% if data is empty %}{% endif %}">
       <div class="o-grid o-grid--wrap">
         <div class="o-gird__cell o-grid__cell--width-25" id="asset-media-{{ field.key }}">
-          {% if "image" in data.mime %}
+          {% if "image" in data.mime and "svg" not in data.mime %}
             <img src="/crelish/asset/glide?path={{ data.fileName }}&w=220&f=fit" class="o-image"
                  id="asset-icon-{{ field.key }}"/>
+          {% endif %}
+          {% if "image" in data.mime and "svg" in data.mime %}
+            <img src="{{ data.pathName }}{{ data.fileName }}" class="o-image" id="asset-icon-{{ field.key }}"/>
           {% endif %}
         </div>
         <div class="o-grid__cell" id="asset-info-{{ field.key }}">
           {{ data.description }}
-          {{ data.systitle }} ({{ data.mime }})
+          {{ data.systitle }} {% if data.mime %}({{ data.mime }}){% endif %}
         </div>
       </div>
     </div>
@@ -108,7 +111,7 @@
   function reloadList(val) {
     if (window.location.href.indexOf('cr_asset_filter') >= 0) {
       $.pjax.reload({
-        container: '#assetList',
+        container: '#assetList-{{ formKey }}',
         async: false,
         url: window.location.href.replace(/(cr_asset_filter=).*?(&|$)/, '$1' + val + '$2')
       });
@@ -116,7 +119,7 @@
       var preFix = (window.location.href.indexOf("?") >= 0) ? '&' : '?';
       $.pjax({
         url: window.location.href + preFix + "cr_asset_filter=" + val,
-        container: '#assetList',
+        container: '#assetList-{{ formKey }}',
         async: false,
       });
     }
@@ -153,7 +156,7 @@
         $(this.element).append(defMessage);
         this.on("complete", function (file) {
           setTimeout(function () {
-            $.pjax.reload({container: '#assetList', async: false});
+            $.pjax.reload({container: '#assetList-{{ formKey }}', async: false});
             myDropzone.removeFile(file);
           }, 250);
         });
@@ -168,7 +171,8 @@
 
   $('#rem_{{ field.key }}').on('click', function (e) {
     e.preventDefault();
-
+  
+    $('#asset-body-{{ field.key }}').removeClass('hidden');
     $('#asset_{{ field.key }}').attr('value', '');
     $('#asset-info-{{ field.key }}').html('<span style="color: red;">{{ t('crelish', 'Save the entry to remove the media.') }}</span>');
     $('#asset-media-{{ field.key }}').html('');

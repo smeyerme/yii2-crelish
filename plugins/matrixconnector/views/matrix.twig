@@ -23,7 +23,8 @@
       <div class="modal-body o-panel-container " style=" height: 90%;">
         <div class="o-panel">
 
-          {{ pjax_begin({'id':'contentList', 'enablePushState': false}) }}
+          {{ pjax_begin({'id':'contentList', 'enablePushState': true}) }}
+
             <div class="o-grid gc-bc--palette-clouds">
               <div class="o-grid__cell o-grid__cell--width-20">
                 <h6>Type filter</h6>
@@ -40,6 +41,7 @@
                     }) | raw }}
                 </div>
               </div>
+
             {{ pjax_end() }}
 
         </div>
@@ -101,8 +103,7 @@
         })
       })
     }.bind(this)
-
-
+  
     addContent(e) {
       e.preventDefault()
       $('.matrix-modal-{{ formKey }}').modal('show')
@@ -120,7 +121,6 @@
       var el = document.getElementById('sortable_{{ formKey }}');
 
       if(el) {
-
         var sortable = new Draggable.Sortable(el, {
           draggable: '.c-card',
           handle: '.glyphicon-move',
@@ -135,20 +135,6 @@
           app.data = matrixData;
           app.update();
         });
-
-        /*
-        var sortable = Sortable.create(el, {
-          handle: '.glyphicon-move',
-          animation: 150,
-          onSort: function (evt) {
-            console.log("sort")
-            // same properties as onUpdate
-            matrixData.main.move(evt.oldIndex, evt.newIndex)
-            app.data = matrixData;
-            app.update();
-          }
-        });
-        */
       }
 
       $("#matrix-modal-{{ formKey }}").on('pjax:end', function () {

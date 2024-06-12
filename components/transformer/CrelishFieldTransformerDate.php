@@ -15,7 +15,7 @@ class CrelishFieldTransformerDate extends CrelishFieldBaseTransformer
      */
     public static function beforeSave(&$value)
     {
-        if(strpos($value, ".") !== false) {
+        if(!is_null($value) && str_contains($value, ".")) {
             $value = (string) strtotime($value);
         }
     }

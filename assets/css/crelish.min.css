@@ -1,0 +1,608 @@
+.pace {
+  -webkit-pointer-events: none;
+  pointer-events: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+}
+.pace-inactive {
+  display: none;
+}
+.pace .pace-progress {
+  background: #e90f92;
+  position: fixed;
+  z-index: 2000;
+  top: 0;
+  right: 100%;
+  width: 100%;
+  height: 2px;
+}
+.gc-full-bg {
+  max-height: 100vh;
+  overflow: hidden;
+}
+.gc-login--wrapper {
+  position: absolute;
+  top: 33vh;
+  width: min(40rem, 90vw);
+  height: 33vh;
+  left: 5vw;
+  background-color: rgba(0, 0, 0, 0.82);
+  padding: 3rem;
+  border-radius: 12px;
+  box-shadow: 0px 0px 210px 0px black;
+}
+html,
+body {
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+.crelish-app-root {
+  position: relative;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  color: #494950;
+  background: #eef2f5;
+  /*checkboxing*/
+}
+.crelish-app-root .pagination > .active > a,
+.crelish-app-root .pagination > .active > span,
+.crelish-app-root .pagination > .active > a:hover,
+.crelish-app-root .pagination > .active > span:hover,
+.crelish-app-root .pagination > .active > a:focus,
+.crelish-app-root .pagination > .active > span:focus {
+  color: #fff;
+  background-color: #363b51;
+  border-color: #363b51;
+}
+.crelish-app-root .pagination > li > a,
+.crelish-app-root .pagination > li > span {
+  color: #363b51;
+}
+.crelish-app-root .cr-root_wrap {
+  display: flex;
+}
+.crelish-app-root .gutter {
+  background-color: #3c3c3c;
+  border-right: none;
+  box-shadow: rgba(0, 0, 0, 0.4) -2px 0px 15px;
+  cursor: col-resize;
+}
+.crelish-app-root .content-navbar {
+  display: flex;
+  align-items: center;
+}
+.crelish-app-root .content-navbar h4,
+.crelish-app-root .content-navbar .h4 {
+  font-size: 18px;
+  line-height: 4rem;
+  padding-left: 2rem;
+}
+.crelish-app-root .gc-list--inline {
+  list-style: none;
+  display: flex;
+  padding: 0;
+}
+.crelish-app-root .gc-list--inline li {
+  height: 30px;
+  width: 30px;
+}
+.crelish-app-root .toggle-sidenav {
+  z-index: 1000;
+  transition: 0.4s;
+  transform: translatex(0);
+  background-color: #363b51;
+  display: flex;
+}
+.crelish-app-root .toggle-sidenav.active {
+  transform: translateX(0);
+}
+@media (min-width: 30rem) {
+  .crelish-app-root .toggle-sidenav {
+    display: none;
+    transform: translatex(-60px);
+  }
+}
+.crelish-app-root .menu-btn-4 {
+  height: 6rem;
+  width: 6rem;
+  cursor: pointer;
+  justify-content: center;
+  padding-top: 1.5rem;
+}
+.crelish-app-root .menu-btn-4 span,
+.crelish-app-root .menu-btn-4 span::before,
+.crelish-app-root .menu-btn-4 span::after {
+  background: #bebebe;
+  content: '';
+  position: absolute;
+  width: 40px;
+  height: 3px;
+  margin-top: 13px;
+  transition: 0.4s ease-in-out;
+}
+.crelish-app-root .menu-btn-4 span::before {
+  margin-top: -12px;
+}
+.crelish-app-root .menu-btn-4 span::after {
+  margin-top: 12px;
+}
+.crelish-app-root .menu-btn-4.active {
+  display: flex;
+}
+.crelish-app-root .menu-btn-4.active span {
+  border-radius: 1px 0px 0px 1px;
+}
+.crelish-app-root .menu-btn-4.active span::before {
+  right: 24px;
+  width: 17px;
+  top: 7.8px;
+  border-radius: 1px 0px 0px 1px;
+  transform: rotate(-34deg);
+}
+.crelish-app-root .menu-btn-4.active span::after {
+  right: 24px;
+  width: 17px;
+  top: -7.8px;
+  border-radius: 1px 0px 0px 1px;
+  transform: rotate(34deg);
+}
+.crelish-app-root .menu-btn-4.active {
+  transition: 0.4s;
+}
+.crelish-app-root #cr-left-pane {
+  position: relative;
+  background-color: #363b51;
+  height: 100vh;
+  width: 280px;
+}
+.crelish-app-root #cr-left-pane .c-avatar {
+  background-color: #7a7992;
+  margin-right: 1rem;
+  text-align: center;
+  line-height: 4rem;
+  font-weight: 800;
+}
+@media (max-width: 30rem) {
+  .crelish-app-root #cr-left-pane {
+    position: absolute;
+    width: 100vw !important;
+    z-index: 999;
+    transform: translateX(-100vw);
+    transition: 0.4s;
+    font-size: 16px;
+  }
+  .crelish-app-root #cr-left-pane.open {
+    transform: translateX(0);
+  }
+}
+.crelish-app-root #cr-right-pane {
+  position: relative;
+  height: 100vh;
+  width: 100%;
+  padding-bottom: 12rem;
+}
+@media (max-width: 30rem) {
+  .crelish-app-root #cr-right-pane {
+    width: 100vw !important;
+  }
+}
+.crelish-app-root #cr_content_filter {
+  border-color: transparent;
+  color: #494950;
+  height: 100%;
+  font-size: 1.75rem;
+}
+.crelish-app-root #cr_content_filter:focus {
+  outline: none;
+  border-color: transparent;
+  box-shadow: none;
+}
+.crelish-app-root .logo-head {
+  height: 6rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #2c3041;
+}
+.crelish-app-root .c-button.c-button--brand {
+  border: 1px solid transparent;
+  background-color: transparent;
+  color: #494950;
+}
+.crelish-app-root .c-heading {
+  color: #878792;
+}
+.crelish-app-root a {
+  color: #494950;
+  text-decoration: none;
+}
+.crelish-app-root a:hover {
+  color: #878792;
+}
+.crelish-app-root .active a,
+.crelish-app-root .gc-active-filter a {
+  font-weight: bold;
+}
+.crelish-app-root #cr_content_filter {
+  background-color: transparent;
+}
+.crelish-app-root .navbar--main {
+  padding: 0;
+}
+.crelish-app-root .navbar--main .brand {
+  display: block;
+  margin-bottom: 2rem;
+  text-transform: capitalize;
+  font-weight: 800;
+  letter-spacing: -0.1rem;
+  line-height: 4.333rem;
+  width: 4.333rem;
+  height: 4.333rem;
+  border: 2px solid #59e3d6;
+  font-size: 3rem;
+  position: relative;
+}
+.crelish-app-root .navbar--main .brand a {
+  color: #59e3d6;
+  display: block;
+  position: absolute;
+  bottom: -11px;
+  left: 1px;
+}
+.crelish-app-root .navbar--main .brand a:hover {
+  color: #59e3d6;
+}
+.crelish-app-root .navbar--main .brand:hover {
+  border-color: #494950;
+  color: #494950;
+}
+.crelish-app-root .navbar--main .brand:hover a {
+  color: #494950;
+}
+.crelish-app-root .navbar--main .navbar-item {
+  padding: 1rem 2rem;
+}
+.crelish-app-root .navbar--main .navbar-item a {
+  color: #eef2f5;
+  display: block;
+}
+.crelish-app-root .navbar--main .navbar-item a i {
+  width: 2.333rem;
+}
+.crelish-app-root .navbar--main .navbar-item a:hover {
+  color: white;
+}
+.crelish-app-root .navbar--main .navbar-item:hover {
+  background-color: #2c3041;
+  cursor: pointer;
+}
+.crelish-app-root .navbar--main .navbar-item.active {
+  background-color: #2c3041;
+  border-left: 6px solid #59e3d6;
+}
+.crelish-app-root .navbar--main .navbar-item.active a {
+  font-weight: normal;
+  color: #59e3d6;
+  margin-left: -6px;
+}
+.crelish-app-root .navbar--controller {
+  height: auto;
+  min-height: 6rem;
+  background-color: #ffffff;
+  box-shadow: 0px 2px 26px -12px rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.crelish-app-root .navbar--controller .group-content-filter {
+  height: 6rem;
+  display: flex;
+}
+.crelish-app-root .navbar--controller .group-content-filter:first-of-type {
+  flex-grow: 1;
+}
+.crelish-app-root .navbar--controller > *:not(:last-child) {
+  margin-right: 1rem;
+}
+.crelish-app-root .navbar--controller .c-button {
+  padding: 1rem;
+  border-radius: 0;
+  min-width: 6rem;
+  height: 6rem;
+  line-height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.crelish-app-root .navbar--controller .c-button--success {
+  background-color: #309a2e;
+}
+.crelish-app-root .navbar--controller .c-button--success-darker {
+  background-color: #247122;
+}
+.crelish-app-root .navbar--controller .c-button--success-darker:hover {
+  background-color: #287d26 !important;
+}
+.crelish-app-root .avatar-nav {
+  display: flex;
+  color: white;
+  padding: 1rem 2rem;
+}
+.crelish-app-root .avatar-nav .c-avatar {
+  margin-right: 1rem;
+}
+.crelish-app-root .avatar-nav .user-info h6 {
+  margin-bottom: 0;
+  font-size: 1.3rem;
+}
+.crelish-app-root .avatar-nav .user-info a {
+  color: #7a8797;
+  font-size: 1rem;
+}
+.crelish-app-root .avatar-nav .user-info a:hover {
+  color: #b7c5d8;
+}
+.crelish-app-root .dropdown {
+  position: relative;
+  display: inline-block;
+}
+.crelish-app-root .dropdown .dropdown-content {
+  display: none;
+  position: absolute;
+  background-color: #fbfcfd;
+  min-width: 270px;
+  box-shadow: 0px 4px 26px -8px rgba(0, 0, 0, 0.78);
+  padding: 12px 0;
+  z-index: 1;
+  color: #494950;
+  border: 1px solid #59e3d6;
+  white-space: nowrap;
+  border-radius: 0.6rem;
+}
+.crelish-app-root .dropdown .dropdown-content.right {
+  right: 0;
+}
+.crelish-app-root .dropdown .dropdown-content li {
+  padding: 0;
+}
+.crelish-app-root .dropdown .dropdown-content a {
+  color: #494950;
+  display: block;
+  padding: 1rem 2rem;
+}
+.crelish-app-root .dropdown .dropdown-content a:hover {
+  background-color: #e8e8e8;
+}
+.crelish-app-root .dropdown .dropdown-content h6 {
+  margin: 1rem 0 0 0;
+  font-size: 14px;
+  font-weight: bold;
+  boder-bottom: 1px solod #444;
+  display: block;
+  padding: 4px 14px;
+}
+.crelish-app-root .dropdown .dropdown-content ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 14px;
+  text-align: left;
+}
+.crelish-app-root .dropdown .dropdown-content ul li:first-child h6 {
+  margin: 0;
+}
+.crelish-app-root .dropdown:hover .dropdown-content {
+  display: block;
+}
+.crelish-app-root .content-filter {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: space-between;
+  font-weight: 600;
+}
+.crelish-app-root .content-filter li {
+  margin-bottom: 0.6rem;
+  white-space: nowrap;
+}
+.crelish-app-root .content-filter li a {
+  display: block;
+  padding: 1rem;
+}
+.crelish-app-root .content-filter li.gc-active-filter {
+  border-bottom: 1px solid #e33265;
+}
+.crelish-app-root .content-filter h6 {
+  margin: 2rem 0 0 0;
+}
+.crelish-app-root .content-filter li:first-child h6 {
+  margin: 0;
+}
+.crelish-app-root .content-filter li:hover a {
+  color: #878792;
+}
+.crelish-app-root .filter-top {
+  background-color: #cad2d8;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+.crelish-app-root .filter-top .content-filter li {
+  margin-bottom: 0;
+}
+@media (max-width: 30rem) {
+  .crelish-app-root .filter-top {
+    font-size: 16px;
+  }
+  .crelish-app-root .filter-top ul > li {
+    padding: 1rem 2rem;
+  }
+}
+.crelish-app-root .table-striped {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 0.75em;
+}
+.crelish-app-root .table-striped tr {
+  cursor: pointer;
+  border-bottom: 2rem solid transparent;
+}
+.crelish-app-root .table-striped tr td {
+  background: #fafbfd;
+  padding: 0.75rem 1rem;
+  vertical-align: middle;
+}
+.crelish-app-root .table-striped tr td:first-of-type {
+  border-top-left-radius: 0.5rem;
+  border-bottom-left-radius: 0.5rem;
+}
+.crelish-app-root .table-striped tr td:last-of-type {
+  border-top-right-radius: 0.5rem;
+  border-bottom-right-radius: 0.5rem;
+}
+.crelish-app-root .table-striped tr td input[type="checkbox"] {
+  background: #494950;
+}
+.crelish-app-root .table-striped tr:hover td {
+  background: #ffffff;
+  color: #494950;
+}
+.crelish-app-root .grid-view .table-striped tr {
+  display: flex;
+  flex-wrap: wrap;
+}
+.crelish-app-root .grid-view .table-striped tr td,
+.crelish-app-root .grid-view .table-striped tr th {
+  width: 100%;
+}
+@media (min-width: 30rem) {
+  .crelish-app-root .grid-view .table-striped tr {
+    display: table-row;
+  }
+  .crelish-app-root .grid-view .table-striped tr td,
+  .crelish-app-root .grid-view .table-striped tr th {
+    width: inherit;
+  }
+}
+.crelish-app-root .c-card {
+  border-radius: 0.6rem;
+}
+.crelish-app-root .c-card .c-card__item {
+  background-color: #fafbfd;
+}
+.crelish-app-root .c-card .c-card__item.c-card__item--brand {
+  background-color: #344563 !important;
+  font-weight: bold;
+  text-align: center;
+}
+.crelish-app-root .c-badge {
+  border-radius: 0;
+  border: none;
+  background-color: #6176a6;
+}
+.crelish-app-root .c-button {
+  color: #fafbfd;
+  cursor: pointer;
+}
+.crelish-app-root .c-button:hover {
+  color: white;
+}
+.crelish-app-root .gc-full-bg {
+  position: absolute;
+  z-index: 0;
+}
+.crelish-app-root .content-dropper-subnav {
+  display: flex;
+  flex-wrap: wrap;
+  list-style: none;
+  padding: 0;
+}
+.crelish-app-root .content-dropper-subnav li {
+  width: 50%;
+}
+.crelish-app-root .content-dropper-subnav li a {
+  color: #494950;
+  text-decoration: none;
+  display: flex;
+  justify-content: center;
+  height: 6rem;
+  border-top: 1px solid #eeeeee;
+  align-items: center;
+  margin-bottom: -1px;
+  margin-left: -1px;
+  border-right: 1px solid #eeeeee;
+}
+.crelish-app-root .content-dropper-subnav li a span {
+  display: inline-block;
+  position: relative;
+  transition: 0.5s;
+}
+.crelish-app-root .content-dropper-subnav li a span:after {
+  content: '»';
+  position: absolute;
+  opacity: 0;
+  top: 0;
+  right: -20px;
+  transition: 0.5s;
+}
+.crelish-app-root .content-dropper-subnav li a:hover span {
+  padding-right: 25px;
+}
+.crelish-app-root .content-dropper-subnav li a:hover span:after {
+  opacity: 1;
+  right: 0;
+}
+.crelish-app-root .content-dropper-subnav li:nth-child(-n + 2) a {
+  border-top: 0;
+}
+.crelish-app-root .content-dropper-subnav li:nth-child(even) a {
+  border-right: 0;
+}
+.crelish-app-root input[type=checkbox] {
+  display: none;
+}
+.crelish-app-root input[type=checkbox] + span:before {
+  font-family: "Font Awesome 5 Free";
+  display: inline-block;
+  font-size: 1.75rem;
+  margin-top: 50%;
+}
+.crelish-app-root input[type=checkbox] + span:before {
+  content: "\f0c8";
+}
+.crelish-app-root input[type=checkbox]:checked + span:before {
+  content: "\f14a";
+}
+.crelish-app-root .cr-modal--full {
+  margin: 0 !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+}
+.crelish-app-root .assets--dropzone {
+  background-color: #cad2d8;
+}
+.crelish-app-root .assets--dropzone .c-button {
+  display: block !important;
+  margin: 0 auto !important;
+  border: none !important;
+  color: #0f0f0f !important;
+  background: transparent !important;
+}
+.crelish-app-root table a.desc:after {
+  display: inline-block;
+  transform: translate(10px, 2px);
+  content: "\e114";
+  font-family: 'Glyphicons Halflings';
+}
+.crelish-app-root table a.asc:after {
+  display: inline-block;
+  transform: translate(10px, 2px);
+  content: "\e113";
+  font-family: 'Glyphicons Halflings';
+}
+/*# sourceMappingURL=crelish.min.css.map */

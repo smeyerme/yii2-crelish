@@ -1,23 +1,20 @@
 <?php
   /**
- * @link http://www.yiiframework.com/
- * @copyright Copyright (c) 2008 Yii Software LLC
- * @license http://www.yiiframework.com/license/
- */
+   * @link http://www.yiiframework.com/
+   * @copyright Copyright (c) 2008 Yii Software LLC
+   * @license http://www.yiiframework.com/license/
+   */
   
   namespace giantbits\crelish;
   
   use Yii;
-  use yii\base\BootstrapInterface;
-  use giantbits\crelish\components\CrelishI18nEventHandler;
-  use yii\di\Container;
   
   /**
- * The Yii Debug Module provides the debug toolbar and debugger
- *
- * @author Qiang Xue <qiang.xue@gmail.com>
- * @since 2.0
- */
+   * The Yii Debug Module provides the debug toolbar and debugger
+   *
+   * @author Qiang Xue <qiang.xue@gmail.com>
+   * @since 2.0
+   */
   class Module extends \yii\base\Module
   {
     
@@ -44,9 +41,9 @@
      * @var string
      */
     public $entryPoint = [
-        'ctype' => 'page',
-        'path' => 'home',
-        'slug' => 'home'
+      'ctype' => 'page',
+      'path' => 'home',
+      'slug' => 'home'
     ];
     
     /**
@@ -54,33 +51,36 @@
      */
     public function init()
     {
+	    parent::init();
+	    
+	    if (\Yii::$app instanceof \yii\console\Application) {
+		    $this->controllerNamespace = 'giantbits\crelish\commands';
+	    }
       
-        parent::init();
+      Yii::setAlias('@crelish', '@app/vendor/giantbits/yii2-crelish');
+      Yii::setAlias('@workspace', '@app/workspace');
+      Yii::setAlias('@workspace/actions', '@workspace/actions');
       
-        Yii::setAlias('@crelish', '@app/vendor/giantbits/yii2-crelish');
-      
-        // Detect language.
-        $this->processLanguage();
-        $this->buildControllerMap();
-        $this->setDependencies();
-        $this->registerTranslations();
-      
-        //$this->dataPath = Yii::getAlias($this->dataPath);
+      // Detect language.
+      $this->processLanguage();
+      $this->buildControllerMap();
+      $this->setDependencies();
+      $this->registerTranslations();
     }
     
     private function setDependencies()
     {
-        /*\Yii::$container->set('yii\bootstrap\ActiveField', [
-          'options' => ['class' => 'o-form-element'],
-          'hintOptions' => ['class' => 'c-hint'],
-          'inputOptions' => ['class' => 'c-field'],
-          'labelOptions' => ['class' => 'c-label']
-        ]);*/
+      /*\Yii::$container->set('yii\bootstrap\ActiveField', [
+        'options' => ['class' => 'o-form-element'],
+        'hintOptions' => ['class' => 'c-hint'],
+        'inputOptions' => ['class' => 'c-field'],
+        'labelOptions' => ['class' => 'c-label']
+      ]);*/
     }
     
     private function buildControllerMap()
     {
-        $this->controllerMap = [];
+      $this->controllerMap = [];
     }
     
     /**
@@ -89,23 +89,23 @@
      */
     private function processLanguage()
     {
-        Yii::$app->sourceLanguage = 'en-US';
-        Yii::$app->params['defaultLanguage'] = 'de-CH';
+      Yii::$app->sourceLanguage = 'en-US';
+      Yii::$app->params['defaultLanguage'] = 'de-CH';
     }
     
     public function beforeAction($action)
     {
-        if (!parent::beforeAction($action)) {
-            return false;
-        }
+      if (!parent::beforeAction($action)) {
+        return false;
+      }
       
-        //if (Yii::$app instanceof \yii\web\Application && !$this->checkAccess()) {
-        //  throw new ForbiddenHttpException('You are not allowed to access this page.');
-        //}
+      //if (Yii::$app instanceof \yii\web\Application && !$this->checkAccess()) {
+      //  throw new ForbiddenHttpException('You are not allowed to access this page.');
+      //}
       
-        $this->resetGlobalSettings();
+      $this->resetGlobalSettings();
       
-        return true;
+      return true;
     }
     
     /**
@@ -113,9 +113,9 @@
      */
     protected function resetGlobalSettings()
     {
-        if (Yii::$app instanceof \yii\web\Application) {
-            Yii::$app->assetManager->bundles = [];
-        }
+      if (Yii::$app instanceof \yii\web\Application) {
+        Yii::$app->assetManager->bundles = [];
+      }
     }
     
     /**
@@ -124,34 +124,28 @@
      */
     protected function checkAccess()
     {
-        $ip = Yii::$app->getRequest()->getUserIP();
-        foreach ($this->allowedIPs as $filter) {
-            if ($filter === '*' || $filter === $ip || (($pos = strpos($filter, '*')) !== FALSE && !strncmp($ip, $filter, $pos))) {
-                return TRUE;
-            }
+      $ip = Yii::$app->getRequest()->getUserIP();
+      foreach ($this->allowedIPs as $filter) {
+        if ($filter === '*' || $filter === $ip || (($pos = strpos($filter, '*')) !== FALSE && !strncmp($ip, $filter, $pos))) {
+          return TRUE;
         }
-        foreach ($this->allowedHosts as $hostname) {
-            $filter = gethostbyname($hostname);
-            if ($filter === $ip) {
-                return TRUE;
-            }
+      }
+      foreach ($this->allowedHosts as $hostname) {
+        $filter = gethostbyname($hostname);
+        if ($filter === $ip) {
+          return TRUE;
         }
-        Yii::warning('Access to debugger is denied due to IP address restriction. The requesting IP address is ' . $ip, __METHOD__);
-        return FALSE;
+      }
+      Yii::warning('Access to debugger is denied due to IP address restriction. The requesting IP address is ' . $ip, __METHOD__);
+      return FALSE;
     }
     
     private function registerTranslations()
     {
-      
-        Yii::$app->i18n->translations['modules/crelish/*'] = [
-            'class' => 'yii\i18n\PhpMessageSource',
-            'sourceLanguage' => 'en-US',
+      Yii::$app->i18n->translations['modules/crelish/*'] = [
+        'class' => 'yii\i18n\PhpMessageSource',
+        'sourceLanguage' => 'en-US',
         'basePath' => __DIR__ . '/messages',
-        
-            //'fileMap' => [
-            //    'modules/foo/validation' => 'validation.php',
-            //    'modules/foo/form' => 'form.php'
-            //],
-        ];
+      ];
     }
   }

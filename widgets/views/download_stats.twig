@@ -1,0 +1,91 @@
+{{ use('kartik/form/ActiveForm') }}
+
+{% if filter == true %}
+	{% set form = active_form_begin({
+		'id': 'user-edit-form',
+		'type': 'horizontal',
+		'fieldConfig': {'autoPlaceholder':false, 'labelSpan': 4}
+	}) %}
+	
+	<section>
+		<div class="o-container o-container--xlarge">
+			<div class="o-grid o-grid--small-full o-grid--medium-fit o-grid--no-gutter">
+				<div class="form-group row">
+					<div class="col-sm-6">
+						{{ form.field(model, 'from').widget(datePicker, {
+							'pluginOptions': {
+	              'autoclose': true,
+	              'format': 'dd.mm.yyyy'
+							}
+						}) | raw }}
+					</div>
+					<div class="col-sm-6 u-right">
+						{{ form.field(model, 'to').widget(datePicker, {
+							'pluginOptions': {
+								'autoclose': true,
+								'format': 'dd.mm.yyyy'
+							}
+						}) | raw }}
+					</div>
+				</div>
+				
+				<div class="form-group row">
+					<div class="col-sm-4"></div>
+					<div class="col-sm-8 u-right">
+						{{ html.submitButton(t('app', 'Senden'), {'class':'btn btn-primary mr-1'}) | raw }}
+					</div>
+				</div>
+			</div>
+		</div>
+	</section>
+		{{ active_form_end() }}
+
+{% endif %}
+
+<div class="canvas-wrapper">
+	<canvas id="myChart" width="400" height="400"></canvas>
+</div>
+
+{% apply registerJs %}
+	window.addEventListener("load", (event) => {
+		const ctx = document.getElementById('myChart');
+		const barUrls = {{ barUrls | raw }};
+		
+		new Chart(ctx, {
+			plugins: [ChartDataLabels],
+			type: 'bar',
+			data: {
+				labels: {{ labels | raw }},
+				datasets: [{
+				label: '# Downloads',
+				data: {{ data | raw }},
+				borderWidth: 1
+			}]
+		},
+		options: {
+			indexAxis: 'y',
+			scales: {
+				y: {
+					beginAtZero: true
+				}
+			},
+			onClick: function(event, elements) {
+				if (elements.length > 0) {
+					const clickedIndex = elements[0].index;
+					const url = barUrls[clickedIndex];
+					if (url) {
+						window.open(url, '_self'); // Open the URL in a new tab
+					}
+				}
+			}
+		}
+	});
+})
+{% endapply %}
+
+{% apply registerCss %}
+	.canvas-wrapper {
+		width: 100%;
+		height: fit-content;
+	}
+{% endapply %}

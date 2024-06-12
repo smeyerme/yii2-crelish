@@ -1,5 +1,6 @@
 {{ use('/giantbits/crelish/widgets') }}
 <div class="c-input-group group-content-filter">
+  {% include('@crelish/views/layouts/base_header_bar.twig') %}
   <button class="c-button c-button--brand"><i class="fa fa-search"></i></button>
   <div class="o-field">
     <input class="c-field" name="cr_content_filter" id="cr_content_filter"
@@ -9,6 +10,5 @@
 </div>
 
 <a class="c-button" href="{{ url('crelish/page/create') }}">
-  <i class="fa fa-plus"></i>
-  Seite anlegen
+  <i class="fa fa-plus"></i>&nbsp; Seite anlegen
 </a>

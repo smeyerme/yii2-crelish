@@ -5,6 +5,7 @@ namespace giantbits\crelish\plugins\datainclude;
 use giantbits\crelish\components\CrelishBaseContentProcessor;
 use giantbits\crelish\components\CrelishDataProvider;
 use giantbits\crelish\components\CrelishDynamicModel;
+use yii\base\InvalidArgumentException;
 use yii\helpers\Json;
 
 class DataIncludeContentProcessor extends CrelishBaseContentProcessor
@@ -29,8 +30,19 @@ class DataIncludeContentProcessor extends CrelishBaseContentProcessor
 
   public static function processJson($key, $data, &$processedData)
   {
-    if(is_string($data)) {
-      $data = Json::decode($data);
+	  $transformedData = null;
+		
+    if (is_string($data)) {
+	
+	    try {
+		    $transformedData = @Json::decode($data);
+	    } catch (InvalidArgumentException) {
+				// did not work.
+	    }
+			
+			if($transformedData) {
+				$data = $transformedData;
+			}
     }
 
     if ($data) {

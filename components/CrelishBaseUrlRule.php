@@ -5,23 +5,14 @@
 
 namespace giantbits\crelish\components;
 
-use Underscore\Types\Arrays;
-//use Underscore\Types\Strings;
 use yii\web\UrlRuleInterface;
+use function _\remove;
 
 /**
  *
  */
 class CrelishBaseUrlRule implements UrlRuleInterface
 {
-  /**
-   * [init description]
-   * @return [type] [description]
-   */
-  public function init()
-  {
-    parent::init();
-  }
 
   public function createUrl($manager, $route, $params)
   {
@@ -43,10 +34,11 @@ class CrelishBaseUrlRule implements UrlRuleInterface
 
       $url .= $params['pathRequested'];
     }
-
-    $paramsClean = Arrays::remove($params, 'language');
-    $paramsClean = Arrays::remove($paramsClean, 'pathRequested');
-
+	  
+	  $paramsClean = $params;
+		unset($params['language']);
+	  unset($paramsClean['pathRequested']);
+	  
     $paramsExposed = '?';
     foreach ($paramsClean as $key => $value) {
       $paramsExposed .= $key . '=' . $value . '&';
@@ -102,7 +94,7 @@ class CrelishBaseUrlRule implements UrlRuleInterface
       $additional
     ]);
     
-    if (!empty($langCode)) {
+    if (!empty($langCode)){
       \Yii::$app->language = $langCode;
     }
 

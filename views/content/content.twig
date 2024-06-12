@@ -12,6 +12,8 @@
 
 <div class="u-window-box-medium">
   {{ html.beginForm('', 'POST', {'id': 'grid-form'}) | raw }}
+  {% if dataProvider %}
+		
   {{ grid_view_widget({
     'dataProvider': dataProvider,
     'columns': columns,
@@ -23,6 +25,8 @@
       'nullDisplay': false,
       'dateFormat': 'dd.MM.yyyy'
     }}) | raw }}
+	
+  {% endif %}
   {{ html.endForm() | raw }}
 </div>
 
@@ -86,3 +90,20 @@
   });
 </script>
 {{ pjax_end() }}
+
+<div class="modal fade" id="modal-create-content" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog gc-no-border-radius">
+    <div class="modal-content gc-no-border-radius gc-bc--palette-clouds">
+      <div class="modal-header gc-no-border gc-bc--palette-silver-light">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+        <h4 class="modal-title" id="myModalLabel">{{ t('crelish', 'Create new content') }}</h4>
+      </div>
+      <div class="modal-body">
+        <ul role="menu" class="content-dropper-subnav">
+          {{ element_nav_widget({"action":"create"}) }}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>

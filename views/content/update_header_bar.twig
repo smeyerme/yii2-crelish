@@ -1,26 +1,29 @@
 <div class="c-input-group group-content-filter">
-
+  {% include('@crelish/views/layouts/base_header_bar.twig') %}
   <a class="c-button" href="{{ url('crelish/content/index') }}">
     <span class="fui-arrow-left"></span> {{ t('crelish', 'Back') }}</span>
   </a>
-  <span class="c-button btn-save" type="button"
+</div>
+<div class="c-input-group group-content-filter">
+  <span id="submitButton" class="c-button btn-save c-button--success" type="button"
         onclick="$('#content-form').submit();">
           <i class="fa fa-save"></i></span>
   </span>
-  <span class="c-button btn-save" type="button"
+  <span class="c-button btn-save c-button--success-darker" type="button"
         onclick="$('#save_n_return').val(1); $('#content-form').submit();">
             <i class="fa fa-save"></i> <i class="fa fa-reply"></i></span>
   </span>
-  <span class="c-button gc-bc--palette-pomgranate" data-toggle="modal"
+  <span class="c-button c-button--error" data-toggle="modal"
         data-target="#confirm-delete">
             <i class="fa fa-trash" aria-hidden="true"></i>
         </span>
 </div>
-{#
-<button class="c-button c-button--brand"><i class="fa fa-search"></i></button>
-<div class="o-field">
-  <input class="c-field" name="cr_content_filter" id="cr_content_filter"
-         value="{{ app.session.get('cr_content_filter') }}"
-         placeholder="{{ t('crelish', 'Type your search phrase here...') }}">
-</div>
-#}
+<script>
+  document.addEventListener('keydown', function (event) {
+    
+    if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+      event.preventDefault();
+      document.getElementById('submitButton').click();
+    }
+  });
+</script>

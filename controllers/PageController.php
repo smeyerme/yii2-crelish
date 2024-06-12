@@ -5,8 +5,8 @@ namespace giantbits\crelish\controllers;
 use giantbits\crelish\components\CrelishDataProvider;
 use giantbits\crelish\components\CrelishDynamicModel;
 use giantbits\crelish\components\CrelishBaseController;
-use Underscore\Types\Arrays;
 use yii\filters\AccessControl;
+use function _\map;
 
 class PageController extends CrelishBaseController
 {
@@ -79,8 +79,8 @@ class PageController extends CrelishBaseController
         $filter = ['freesearch' => \Yii::$app->session->get('cr_content_filter')];
       }
     }
-
-    $modelProvider = new CrelishDataProvider($this->ctype, ['filter' => $filter]);
+	
+	  $modelProvider = new CrelishDataProvider($this->ctype, ['filter' => $filter]);
 
     $checkCol = [
       [
@@ -88,10 +88,9 @@ class PageController extends CrelishBaseController
       ]
     ];
 
-    //$columns = array_merge($checkCol, $modelProvider->columns);
-    $columns = $modelProvider->columns;
+    $columns = array_merge($checkCol, $modelProvider->columns);
 
-    $columns = Arrays::invoke($columns, function ($item) {
+    $columns = map($columns, function ($item) {
 
       if (key_exists('attribute', $item) && $item['attribute'] === 'state') {
         $item['format'] = 'raw';
@@ -123,7 +122,7 @@ class PageController extends CrelishBaseController
     };
 
     return $this->render('content.twig', [
-      'dataProvider' => $modelProvider->raw(),
+      'dataProvider' => $modelProvider->getProvider(),
       'filterProvider' => $modelProvider->getFilters(),
       'columns' => $columns,
       'ctype' => $this->ctype,

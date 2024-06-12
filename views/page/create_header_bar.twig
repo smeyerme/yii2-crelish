@@ -1,13 +1,15 @@
 <div class="c-input-group group-content-filter">
-    <a class="c-button" href="{{ url('crelish/page/index.html') }}">
-        <span class="fui-arrow-left"></span> {{ t('crelish', 'Back') }}</span>
-    </a>
-    <span class="c-button btn-save" type="button"
+	<a class="c-button" href="{{ url('crelish/page/index') }}">
+		<span class="fui-arrow-left"></span> {{ t('crelish', 'Back') }}</span>
+	</a>
+</div>
+<div class="c-input-group group-content-filter">
+    <span class="c-button c-button--success btn-save" type="button"
           onclick="$('#content-form').submit();">
           <i class="fa fa-save"></i></span>
-    </span>
-    <span class="c-button btn-save" type="button"
-          onclick="$('#save_n_return').val(1); $('#content-form').submit();">
+	</span>
+	<span class="c-button c-button--success-darker btn-save" type="button"
+	      onclick="$('#save_n_return').val(1); $('#content-form').submit();">
             <i class="fa fa-save"></i> <i class="fa fa-reply"></i></span>
-    </span>
+	</span>
 </div>

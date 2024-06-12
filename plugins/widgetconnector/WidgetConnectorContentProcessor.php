@@ -12,10 +12,14 @@ class WidgetConnectorContentProcessor extends Component
 
   public static function processData($key, $data, &$processedData)
   {
-
+		
+		if(is_null($data)) {
+			return;
+		}
+		
     $config = explode(':', $data);
 
-    if(count($config) > 1) {
+    if(count($config) > 1 && $config[0] != '') {
       $widgetToLoad = "app\\workspace\\widgets\\" . $config[0] . "\\" . $config[0];
       $config = [
         'action' => $config[1]
@@ -24,7 +28,7 @@ class WidgetConnectorContentProcessor extends Component
       $widgetToLoad = "app\\workspace\\widgets\\" . $data . "\\" . $data;
       $config = null;
     }
-
+		
     $processedData[$key] = $widgetToLoad::widget($config);
   }
 }

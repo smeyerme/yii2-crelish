@@ -2,6 +2,7 @@
 
 namespace giantbits\crelish\plugins\matrixconnector;
 
+use giantbits\crelish\components\CrelishDataResolver;
 use giantbits\crelish\components\CrelishDynamicModel;
 use giantbits\crelish\components\CrelishDataProvider;
 use yii\base\Widget;
@@ -30,11 +31,12 @@ class MatrixConnector extends Widget
   public function run()
   {
     $elementType = !empty($_GET['cet']) ? $_GET['cet'] : 'page';
-    $modelProvider = new CrelishDataProvider($elementType, [], null);
+    //$modelProvider = new CrelishDataProvider($elementType);
+	  $modelProvider = CrelishDataResolver::resolveProvider($elementType, []);
     $filterModel = new CrelishDynamicModel(['ctype' => $elementType]);
-
+		
     return $this->render('matrix.twig', [
-      'dataProvider' => $modelProvider->raw(),
+      'dataProvider' => method_exists($modelProvider, 'getProvider') ? $modelProvider->getProvider() : $modelProvider,
       'filterModel ' => $filterModel,
       'columns' => [
         'systitle',
@@ -42,14 +44,21 @@ class MatrixConnector extends Widget
           'class' => ActionColumn::class,
           'template' => '{update}',
           'buttons' => [
-            'update' => function ($url, $model) {
-              return Html::a('<span class="glyphicon glyphicon-plus"></span>', '', [
+            'update' => function ($url, $model, $elementType) {
+							if(!is_array($model)) {
+								$ctype = explode('\\', strtolower($model::class));
+								$ctype= end($ctype);
+							} else {
+								$ctype = $elementType;
+							}
+							
+              return Html::a('<span class="fa fa-plus"></span>', '', [
                 'title' => \Yii::t('app', 'Add'),
                 'data-pjax' => '0',
                 'data-content' => Json::encode(
                   [
                     'uuid' => $model['uuid'],
-                    'ctype' => $model['ctype'],
+                    'ctype' => $ctype,
                     'info' => [
                       [
                         'label' => \Yii::t('app', 'Titel intern'),
@@ -80,7 +89,7 @@ class MatrixConnector extends Widget
     if (is_string($data)) {
       $data = Json::decode($data);
     }
-
+		
     $processedData = [];
 
     foreach ($data as $key => $item) {
@@ -92,6 +101,7 @@ class MatrixConnector extends Widget
         $info = [];
         $dataItem = new CrelishDataProvider($reference['ctype'], [], $reference['uuid']);
         $itemData = $dataItem->one();
+				
 
         foreach ($dataItem->definitions->fields as $field) {
           if (isset($field->visibleInGrid) && $field->visibleInGrid) {

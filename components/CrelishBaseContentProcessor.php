@@ -1,8 +1,8 @@
 <?php
 namespace giantbits\crelish\components;
 
-use Underscore\Types\Arrays;
 use yii\base\Component;
+use function _\find;
 
 class CrelishBaseContentProcessor extends Component
 {
@@ -26,7 +26,7 @@ class CrelishBaseContentProcessor extends Component
     if ($data) {
 
       foreach ($data as $key => $content) {
-        $fieldType = Arrays::find($elementDefinition->fields, function ($def) use ($key) {
+        $fieldType = find($elementDefinition->fields, function ($def) use ($key) {
           return $def->key == $key;
         });
 
@@ -40,7 +40,7 @@ class CrelishBaseContentProcessor extends Component
 
           // Get processor class.
           $processorClass = 'giantbits\crelish\plugins\\' . strtolower($fieldType) . '\\' . ucfirst($fieldType) . 'ContentProcessor';
-          $transformClass = 'giantbits\crelish\components\transformer\CrelishFieldTransformer' . ucfirst($transform);
+          if(!empty($transform)) $transformClass = 'giantbits\crelish\components\transformer\CrelishFieldTransformer' . ucfirst($transform);
 
           if (strpos($fieldType, "widget_") !== false) {
             $processorClass = str_replace("widget_", "", $fieldType) . 'ContentProcessor';
@@ -79,7 +79,7 @@ class CrelishBaseContentProcessor extends Component
     $fieldType = 'textInput';
 
     // Get type of field.
-    $field = Arrays::find($elementDefinition->fields, function ($value) use ($attr) {
+    $field = find($elementDefinition->fields, function ($value) use ($attr) {
       return $value->key == $attr;
     });
 
@@ -91,7 +91,7 @@ class CrelishBaseContentProcessor extends Component
 
     // Get processor class.
     $processorClass = 'giantbits\crelish\plugins\\' . strtolower($fieldType) . '\\' . ucfirst($fieldType) . 'ContentProcessor';
-    $transformClass = 'giantbits\crelish\components\transformer\CrelishFieldTransformer' . ucfirst($transform);
+    if(!empty($transform)) $transformClass = 'giantbits\crelish\components\transformer\CrelishFieldTransformer' . ucfirst($transform);
 
     if (strpos($fieldType, "widget_") !== FALSE) {
       $processorClass = str_replace("widget_", "", $fieldType) . 'ContentProcessor';

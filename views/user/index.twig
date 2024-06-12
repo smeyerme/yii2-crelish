@@ -3,13 +3,103 @@
 {{ use('/yii/widgets/Pjax') }}
 
 <div class="u-window-box-medium">
-  {{ pjax_begin({'id':'userList', 'enablePushState': false}) }}
-  {{ grid_view_widget({
-    'dataProvider': dataProvider,
-    'columns': columns,
-    'filterSelector': '.cr-content-search',
-    'tableOptions': {'class':'table table-striped'},
-    'rowOptions': rowOptions ,
-    'formatter': {'class': 'yii\\i18n\\Formatter', 'nullDisplay': ''}}) | raw }}
-  {{ pjax_end() }}
+	{{ pjax_begin({'id':'userList', 'enablePushState': false}) }}
+	{{ html.beginForm('', 'POST', {'id': 'grid-form'}) | raw }}
+	{{ grid_view_widget({
+		'dataProvider': dataProvider,
+		'columns': columns,
+		'id': 'grid-form',
+		'filterSelector': '.cr-content-search',
+		'tableOptions': {'class':'table table-striped'},
+		'rowOptions': rowOptions ,
+		'formatter': {
+			'class': 'yii\\i18n\\Formatter',
+			'nullDisplay': '',
+			'dateFormat': 'dd.MM.yyyy'
+		}}) | raw }}
+	
+	{{ html.endForm() | raw }}
+	
+	
+	<script>
+    $(document).ready(function () {
+
+      $('#cr_content_filter').on("blur", function (e) {
+        e.preventDefault();
+        if (window.location.href.indexOf('cr_content_filter') >= 0) {
+          $.pjax({
+            url: window.location.href.replace(/(cr_content_filter=).*?(&|$)/, '$1' + $(this).val() + '$2'),
+            container: '#userList'
+          });
+        } else {
+          var preFix = (window.location.href.indexOf("?") === -1) ? '?' : '&';
+          $.pjax({
+            url: window.location.href + preFix + "cr_content_filter=" + $(this).val(),
+            container: '#userList'
+          });
+        }
+      });
+
+      $('#cr_content_filter').on("keypress", function (e) {
+        if (e.which == 10 || e.which == 13) {
+          if (window.location.href.indexOf('cr_content_filter') >= 0) {
+            $.pjax({
+              url: window.location.href.replace(/(cr_content_filter=).*?(&|$)/, '$1' + $(this).val() + '$2'),
+              container: '#userList'
+            });
+          } else {
+            var preFix = (window.location.href.indexOf("?") === -1) ? '?' : '&';
+            $.pjax({
+              url: window.location.href + preFix + "cr_content_filter=" + $(this).val(),
+              container: '#userList'
+            });
+          }
+        }
+      });
+      
+      $('#cr_status_filter').on("change", function (e) {
+
+        e.preventDefault();
+        if (window.location.href.indexOf('cr_status_filter') >= 0) {
+          $.pjax({
+            url: window.location.href.replace(/(cr_status_filter=).*?(&|$)/, '$1' + $(this).val() + '$2'),
+            container: '#userList'
+          });
+        } else {
+          var preFix = (window.location.href.indexOf("?") === -1) ? '?' : '&';
+          $.pjax({
+            url: window.location.href + preFix + "cr_status_filter=" + $(this).val(),
+            container: '#userList'
+          });
+        }
+        
+        
+      });
+	    
+      $("input[name='selection[]'], .select-on-check-all").on("change", function () {
+        console.log($("#grid-form").serializeArray().length);
+        if ($("#grid-form").serializeArray().length > 1) {
+          $('.btn-delete-grid').removeClass("hidden");
+        } else {
+          $('.btn-delete-grid').addClass("hidden");
+        }
+      });
+
+      $(".btn-delete-grid").on("click", function () {
+        $('#grid-form').submit();
+      });
+
+      $('td input[type="checkbox"]').parent().on("click", function (e) {
+        e.stopPropagation();
+        return true;
+      });
+
+      $('td input[type="checkbox"]').on("click", function (e) {
+        e.stopPropagation();
+        return true;
+      });
+    });
+	</script>
+	
+	{{ pjax_end() }}
 </div>

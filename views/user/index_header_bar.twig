@@ -1,13 +1,22 @@
 {{ use('/giantbits/crelish/widgets') }}
 <div class="c-input-group group-content-filter">
   <button class="c-button c-button--brand"><i class="fa fa-search"></i></button>
-  <div class="o-field">
+  <div class="o-field" style="display: flex;">
     <input class="c-field" name="cr_content_filter" id="cr_content_filter"
            value="{{ app.session.get('cr_content_filter') }}"
            placeholder="{{ t('crelish', 'Type your search phrase here...') }}">
+    <select name="cr_status_filter" id="cr_status_filter" style="border: none;">
+      <option value="">{{ t('crelish', 'State') }}</option>
+      <option value="1"{% if app.session.get('cr_status_filter') == 1 %} selected{% endif %}>{{ t('crelish', 'Inactive') }}</option>
+      <option value="2"{% if app.session.get('cr_status_filter') == 2 %} selected{% endif %}>{{ t('crelish', 'Online') }}</option>
+      <option value="3"{% if app.session.get('cr_status_filter') == 3 %} selected{% endif %}>{{ t('crelish', 'Archived') }}</option>
+    </select>
   </div>
 </div>
 
-<div class="">
-  <a href="/crelish/user/create"><i class="c-button fa fa-plus"></i></a>
+<div class="c-input-group">
+  <button class="c-button c-button--error btn-delete-grid hidden">
+    <i class="fa fa-check-square"></i> {{ t('crelish', 'Löschen') }}
+  </button>
+  <a href="/crelish/user/create" class="c-button "><i class="fa fa-plus"></i></a>
 </div>

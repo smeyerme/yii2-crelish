@@ -11,6 +11,7 @@ namespace giantbits\crelish\components;
 
 use yii\grid\CheckboxColumn;
 use yii\helpers\Html;
+use yii\helpers\Json;
 
 class CrelishCheckboxColumn extends CheckboxColumn
 {
@@ -21,11 +22,12 @@ class CrelishCheckboxColumn extends CheckboxColumn
       return parent::renderHeaderCellContent();
     }
 
-    return'<label style="padding-left: 1rem;">' .  Html::checkbox($this->getHeaderCheckBoxName(), false, ['class' => 'select-on-check-all']) . '<span></span></label>';
+    return'<label style="padding-left: 0.15rem;">' .  Html::checkbox($this->getHeaderCheckBoxName(), false, ['class' => 'select-on-check-all']) . '<span></span></label>';
   }
 
   protected function renderDataCellContent($model, $key, $index)
   {
+		
     if ($this->checkboxOptions instanceof Closure) {
       $options = call_user_func($this->checkboxOptions, $model, $key, $index, $this);
     } else {
@@ -33,7 +35,7 @@ class CrelishCheckboxColumn extends CheckboxColumn
     }
 
     if (!isset($options['value'])) {
-      $options['value'] = is_array($key) ? Json::encode($key) : $key;
+      $options['value'] = is_array($key) ? $key['uuid'] : $key;
     }
 
     if ($this->cssClass !== null) {

@@ -4,86 +4,78 @@
 <!DOCTYPE html>
 <html lang="{{ app.language }}">
 <head>
-  <meta charset="{{ app.charset }}">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Crelish {% if this.title %}| {% endif %} {{ html.encode(this.title) }}</title>
-  {{ html.csrfMetaTags | raw }}
-  {{ void(this.head) }}
+	<meta charset="{{ app.charset }}">
+	<meta name="viewport" content="width=device-width, minimum-scale=1, maximum-scale=1, user-scalable=no">
+	<title>Crelish {% if this.title %}| {% endif %} {{ html.encode(this.title) }}</title>
+	{{ html.csrfMetaTags | raw }}
+	{{ void(this.head) }}
 </head>
 <body class="crelish-app-root u-text">
 {{ void(this.beginBody()) }}
 
 <section class="cr-root_wrap">
-  <div id="cr-left-pane" class="left-col scrollable">
-    <a href="{{ url('crelish/dashboard/index') }}">
-      <img src="{{ crelishBundle.baseUrl }}/img/crelish_logo.svg" border="0" width="128" />
-    </a>
-    <div class="navbar--main">
-      {% include '_side_nav.twig' %}
-    </div>
-  </div>
-  <div id="cr-right-pane" class="scrollable">
-
-    <nav class="navbar--controller">
-      {% include '@crelish/views/' ~ app.controller.id ~ '/' ~ app.controller.action.id ~ "_header_bar.twig" %}
-      <div class="avatar-nav">
-        <div class="navbar-item dropdown">
-          <div class="c-avatar u-small">
-            {{ crelish_gravatar_widget({ 'email': app.user.identity.email , 'options': { 'alt': app.user.identity.username }, 'size': 32 }) }}
-          </div>
-          <div class="dropdown-content right">
-            <ul role="menu">
-              <li>
-                <h6>{{ app.user.identity.username }}</h6>
-              </li>
-              <li>
-                <a href="{{ url('crelish/user/logout') }}">
-                  {{ t('crelish', 'Logout') }}
-                </a>
-              </li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    </nav>
-
-    {{ flash_messages_widget() }}
-
-    <section>
-      {{ content | raw }}
-    </section>
-  </div>
+	<div id="cr-left-pane" class="left-col scrollable">
+		<div class="logo-head">
+			<a href="{{ url('crelish/dashboard/index') }}">
+				<img src="{{ crelishBundle.baseUrl }}/img/crelish_logo.svg" border="0" width="128"/>
+			</a>
+		</div>
+		<div class="navbar--main">
+			{% include '_side_nav.twig' %}
+		</div>
+	</div>
+	<div id="cr-right-pane" class="scrollable">
+		
+		<nav class="navbar--controller">
+			{% include  [
+				('@workspace/actions/' ~ app.controller.id ~ '/views/' ~ app.controller.action.id ~ "_header_bar.twig"),
+				('@workspace/actions/' ~ app.controller.id ~ '/views/default_header_bar.twig'),
+				('@workspace/actions/default/default_header_bar.twig'),
+				('@crelish/views/' ~ app.controller.id ~ '/' ~ app.controller.action.id ~ "_header_bar.twig"),
+				('@crelish/views/' ~ app.controller.id ~ '/default_header_bar.twig'),
+				('@crelish/views/default/default_header_bar.twig'),
+			] ignore missing %}
+		</nav>
+		
+		{{ flash_messages_widget() }}
+		
+		<section>
+			{{ content | raw }}
+		</section>
+	</div>
 </section>
 
 <script type="text/javascript">
   function execDelete(url) {
     var urlParams = new URLSearchParams(window.location.search);
     console.log(urlParams.get('ctype') + ':' + urlParams.get('uuid'))
-    window.location.href=url + '?uuid=' + urlParams.get('uuid') + '&ctype=' + urlParams.get('ctype')
+    window.location.href = url + '?uuid=' + urlParams.get('uuid') + '&ctype=' + urlParams.get('ctype')
   }
 </script>
 
-<div class="modal fade" id="confirm-delete" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-  <div class="modal-dialog gc-no-border-radius">
-    <div class="modal-content gc-no-border-radius gc-bc--palette-clouds">
-      <div class="modal-header gc-no-border gc-bc--palette-silver-light">
-        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
-        <h4 class="modal-title" id="myModalLabel">{{ t('crelish', 'Confirm Delete') }}</h4>
-      </div>
-      <div class="modal-body">
-        <p>{{ t('crelish', 'You are about to delete this record, this procedure is irreversible.') }}</p>
-        <p>{{ t('crelish', 'Do you want to proceed?') }}</p>
-      </div>
-      <div class="modal-footer gc-no-border gc-bc--palette-silver-light">
-        <button type="button" class="btn btn-default" data-dismiss="modal">{{ t('crelish', 'Cancel') }}</button>
-        <button type="button" class="btn btn-danger btn-ok" onclick="execDelete('/crelish/{{ app.controller.id }}/delete')">{{ t('crelish', 'Delete') }}
-        </button>
-      </div>
-    </div>
-  </div>
+<div class="modal fade" id="confirm-delete" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+     aria-hidden="true">
+	<div class="modal-dialog gc-no-border-radius">
+		<div class="modal-content gc-no-border-radius gc-bc--palette-clouds">
+			<div class="modal-header gc-no-border gc-bc--palette-silver-light">
+				<button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+				<h4 class="modal-title" id="myModalLabel">{{ t('crelish', 'Confirm Delete') }}</h4>
+			</div>
+			<div class="modal-body">
+				<p>{{ t('crelish', 'You are about to delete this record, this procedure is irreversible.') }}</p>
+				<p>{{ t('crelish', 'Do you want to proceed?') }}</p>
+			</div>
+			<div class="modal-footer gc-no-border gc-bc--palette-silver-light">
+				<button type="button" class="btn btn-default" data-dismiss="modal">{{ t('crelish', 'Cancel') }}</button>
+				<button type="button" class="btn btn-danger btn-ok"
+				        onclick="execDelete('/crelish/{{ app.controller.id }}/delete')">{{ t('crelish', 'Delete') }}
+				</button>
+			</div>
+		</div>
+	</div>
 </div>
 
-{#<!-- Modal definitions -->
+{# <!-- Modal definitions -->
 <div class="modal fade" id="confirm-cancel" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
      aria-hidden="true">
   <div class="modal-dialog gc-no-border-radius">

@@ -1,25 +1,20 @@
 {{ use('/giantbits/crelish/widgets') }}
 <div class="c-input-group group-content-filter">
-  <button class="c-button c-button--brand"><i class="fa fa-search"></i></button>
-  <div class="o-field">
-    <input class="c-field" name="cr_content_filter" id="cr_content_filter"
-           value="{{ app.session.get('cr_content_filter') }}"
-           placeholder="{{ t('crelish', 'Type your search phrase here...') }}">
-  </div>
+	{% include('@crelish/views/layouts/base_header_bar.twig') %}
+	<button class="c-button c-button--brand"><i class="fa fa-search"></i></button>
+	<div class="o-field">
+		<input class="c-field" name="cr_content_filter" id="cr_content_filter"
+		       value="{{ app.session.get('cr_content_filter') }}"
+		       placeholder="{{ t('crelish', 'Type your search phrase here...') }}">
+	</div>
 </div>
 
-<span class="c-input-group u-small" >
+<span class="c-input-group">
   <button class="c-button c-button--error btn-delete-grid hidden">
     <i class="fa fa-check-square"></i> {{ t('crelish', 'Löschen') }}
   </button>
-  <div class="c-button dropdown" style="overflow: visible;">
-    <div class="dropdown-toggle">
+  <div class="c-button" data-toggle="modal"
+       data-target="#modal-create-content" style=" overflow: visible;">
       <i class="c-button fa fa-plus"></i>
-    </div>
-    <div class="dropdown-content right">
-      <ul role="menu" class="content-dropper-subnav">
-        {{ element_nav_widget({"action":"create"}) }}
-      </ul>
-    </div>
-  </div>
+	</div>
 </span>

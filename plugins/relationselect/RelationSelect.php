@@ -4,11 +4,12 @@ namespace giantbits\crelish\plugins\relationselect;
 
 use giantbits\crelish\components\CrelishDataProvider;
 use giantbits\crelish\components\CrelishFormWidget;
-use Underscore\Types\Arrays;
 use Yii;
 use yii\data\ArrayDataProvider;
 use yii\helpers\Html;
 use yii\helpers\Url;
+use function _\find;
+use function _\orderBy;
 
 class RelationSelect extends CrelishFormWidget
 {
@@ -27,19 +28,16 @@ class RelationSelect extends CrelishFormWidget
     parent::init();
 
     // Set related ctype.
-    $this->relationDataType = $this->field->config->ctype;
-
+    $this->relationDataType = '\app\workspace\models\\' . ucfirst($this->field->config->ctype);
+	  
     // Fetch options.
     $optionProvider = new CrelishDataProvider($this->relationDataType);
+	  $optionProvider = $this->relationDataType::find()->asArray()->all();
 
     $options = [];
-    foreach ($optionProvider->rawAll() as $option) {
+    foreach ($optionProvider as $option) {
       $options[$option['uuid']] = $option['systitle'];
     }
-
-    $options = Arrays::sort($options, function ($elm) {
-      return !empty($elm['systitle']) ? $elm['systitle'] : false;
-    });
 
     $this->predefinedOptions = $options;
     $ul = Yii::$app->request->get('ul');
@@ -66,7 +64,7 @@ class RelationSelect extends CrelishFormWidget
   {
     $itemList = $itemListColumns = [];
     $tagMode = true;
-    $isRequired = Arrays::find($this->field->rules, function ($rule) {
+    $isRequired = find($this->field->rules, function ($rule) {
       foreach ($rule as $set) {
         if ($set == 'required') {
           return true;

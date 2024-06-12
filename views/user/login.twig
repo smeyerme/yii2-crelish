@@ -1,7 +1,6 @@
 {% set crelishBundle = register_asset_bundle('giantbits/crelish/CrelishAsset', true) %}
 {{ use('yii/widgets/ActiveForm') }}
-<div class="gc-full-bg">
-  <img src="{{ crelishBundle.baseUrl }}/img/login.webp" border="0" width="100%" />
+<div class="gc-full-bg" style="background-image: url({{ crelishBundle.baseUrl }}/img/login.webp); width: 100vw;height: 100vh; background-size: cover;">
 </div>
 <div class="gc-login--wrapper">
   <img src="{{ crelishBundle.baseUrl }}/img/crelish_logo.svg" border="0" width="180" />

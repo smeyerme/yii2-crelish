@@ -3,17 +3,17 @@
 <!DOCTYPE html>
 <html lang="{{ app.language }}" class="gc-login--background">
 <head>
-  <meta charset="{{ app.charset }}">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ html.encode(this.title) }}</title>
-  {{ html.csrfMetaTags | raw }}
-  {{ void(this.head) }}
+	<meta charset="{{ app.charset }}">
+	<meta name="viewport" content="width=device-width, minimum-scale=1, maximum-scale=1, user-scalable=no">
+	<title>{{ html.encode(this.title) }}</title>
+	{{ html.csrfMetaTags | raw }}
+	{{ void(this.head) }}
 </head>
 <body class="crelish c-text gc-bc--palette-wetasphalt">
 {{ void(this.beginBody()) }}
 
 <section rel="main">
-  {{ content | raw }}
+	{{ content | raw }}
 </section>
 
 <div class="c-overlay c-overlay--dismissable"></div>

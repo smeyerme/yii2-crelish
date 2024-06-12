@@ -5,11 +5,9 @@ namespace giantbits\crelish\plugins\assetconnector;
 use giantbits\crelish\components\CrelishDynamicModel;
 use giantbits\crelish\components\CrelishDataProvider;
 use giantbits\crelish\components\CrelishFormWidget;
-use Underscore\Types\Arrays;
-use yii\base\Widget;
 use yii\helpers\Html;
 use yii\helpers\Json;
-use yii\helpers\Url;
+use function _\find;
 
 class AssetConnector extends CrelishFormWidget
 {
@@ -49,7 +47,7 @@ class AssetConnector extends CrelishFormWidget
 
     $typeDefinitions = CrelishDynamicModel::loadElementDefinition($this->includeDataType);
 
-    if (Arrays::has($data, 'uuid')) {
+    if (array_key_exists( 'uuid',(array) $data)) {
 
       $itemData = new CrelishDynamicModel([], ['ctype' => $this->includeDataType, 'uuid' => $data['uuid']]);
 
@@ -79,7 +77,7 @@ class AssetConnector extends CrelishFormWidget
 
   public function run()
   {
-    $isRequired = Arrays::find($this->field->rules, function ($rule) {
+    $isRequired = find($this->field->rules, function ($rule) {
       foreach ($rule as $set) {
         if ($set == 'required') {
           return true;
@@ -119,14 +117,14 @@ class AssetConnector extends CrelishFormWidget
     $rowOptions = function ($model, $key, $index, $grid) {
 
       $onclick = "
-      $('#asset_" . $this->formKey . "').val('" . $model['uuid'] . "'); 
-      $('#asset-info-" . $this->formKey . "').html('" . $model['systitle'] . " (" . $model['mime'] . ")'); 
+      $('#asset_" . $this->formKey . "').val('" . $model['uuid'] . "');
+      $('#asset-info-" . $this->formKey . "').html('" . $model['systitle'] . " (" . $model['mime'] . ")');
       $('#media-modal-" . $this->formKey . "').modal('hide');
       ";
 
       if(substr($model['mime'], 0, 5) == 'image') {
         $onclick .= "
-        $('#asset-icon-" . $this->formKey . "').attr('src', '" . $model['src'] . "');  
+        $('#asset-icon-" . $this->formKey . "').attr('src', '" . $model['src'] . "');
         ";
       }
 
@@ -136,7 +134,7 @@ class AssetConnector extends CrelishFormWidget
     //$removalUrl =  !empty(\Yii::$app->request->get('uuid')) ? Url::to(['', 'ctype' => \Yii::$app->request->get('ctype'), 'uuid' => \Yii::$app->request->get('uuid'), 'remAsset' => $this->field->key]) : null;
 
     return $this->render('assets.twig', [
-      'dataProvider' => $modelProvider->raw(),
+      'dataProvider' => $modelProvider->getProvider(),
       'filterProvider' => $modelProvider->getFilters(),
       'columns' => $columns,
       'ctype' => 'asset',

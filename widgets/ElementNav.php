@@ -33,9 +33,6 @@ class ElementNav extends Widget
   public function init()
   {
     parent::init();
-    if ($this->message === NULL) {
-      $this->message = 'Hello World';
-    }
   }
 
   public function run()
@@ -64,7 +61,7 @@ class ElementNav extends Widget
       $css = ($this->ctype == $element['key']) ? 'gc-active-filter' : '';
       $params[$this->selector] = $element['key'];
       $targetUrl = Url::to($params);
-      $nav .= Html::tag('li', Html::a($element['label'], $targetUrl), ['class' => $css]);
+      $nav .= Html::tag('li', Html::a(Html::tag('span', $element['label']), $targetUrl, ['data-pjax'=>1]), ['class' => $css]);
     }
 
     return $nav;

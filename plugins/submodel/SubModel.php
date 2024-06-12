@@ -2,8 +2,8 @@
 
 namespace giantbits\crelish\plugins\submodel;
 
-use Underscore\Types\Arrays;
 use yii\base\Widget;
+use function _\find;
 
 class SubModel extends Widget
 {
@@ -55,7 +55,7 @@ class SubModel extends Widget
       'prefix' => $this->formKey
     ]);
 
-    $isRequired = Arrays::find($this->field->rules, function ($rule) {
+    $isRequired = find($this->field->rules, function ($rule) {
       foreach ($rule as $set) {
         if ($set == 'required') {
           return true;

@@ -1,4 +1,5 @@
 <div class="c-input-group group-content-filter">
+  {% include('@crelish/views/layouts/base_header_bar.twig') %}
   <button class="c-button c-button--brand"><i class="fa fa-search"></i></button>
   <div class="o-field">
     <input class="c-field" name="cr_content_filter" id="cr_content_filter"
@@ -6,6 +7,16 @@
            placeholder="{{ t('crelish', 'Type your search phrase here...') }}">
   </div>
 </div>
+
+<span class="c-input-group u-small" >
+  <button class="c-button c-button--error btn-delete-grid hidden">
+    <i class="fa fa-check-square"></i> {{ t('crelish', 'Löschen') }}
+  </button>
+  <div>
+        <button id="switch-to-grid">Grid View</button>
+        <button id="switch-to-list">List View</button>
+    </div>
+</span>
 
 <script>
   $(document).ready(function () {
