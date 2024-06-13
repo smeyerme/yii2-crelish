@@ -21,6 +21,10 @@
 		private $fileSource;
 		private $isNew = true;
 		
+		public $i18n = [];
+		
+		public $allTranslations = null;
+		
 		public function init()
 		{
 			parent::init();
@@ -34,7 +38,7 @@
 				
 				// Build field array.
 				foreach ($this->elementDefinition->fields as $field) {
-					array_push($fields, $field->key);
+					$fields[] = $field->key;
 				}
 				
 				$this->identifier = $this->ctype;
@@ -70,7 +74,7 @@
 			}
 		}
 		
-		private function loadModelData()
+		private function loadModelData(): void
 		{
 			$this->isNew = false;
 			$attributes = [];
@@ -86,6 +90,10 @@
 			switch ($this->elementDefinition->storage) {
 				case 'db':
 					$rawData = call_user_func('app\workspace\models\\' . ucfirst($this->ctype) . '::find')->where(['uuid' => $this->uuid])->one();
+					
+					if ($rawData && $rawData->hasMethod('loadAllTranslations')) {
+						$this->allTranslations = $rawData->loadAllTranslations();
+					}
 					break;
 				default:
 					$this->fileSource = Yii::getAlias('@app/workspace/data/') . DIRECTORY_SEPARATOR . $this->ctype . DIRECTORY_SEPARATOR . $this->uuid . '.json';
@@ -196,7 +204,9 @@
 							if (class_exists($processorClass) && method_exists($processorClass, 'processDataPreSave')) {
 								$model->{$attribute} = $processorClass::processDataPreSave($attribute, $modelArray[$attribute], $this->elementDefinition->fields[$attribute], $model);
 							} else {
+								if ($attribute !== 'i18n') {
 								@$model->{$attribute} = $modelArray[$attribute];
+								}
 							}
 						}
 						
@@ -237,7 +247,9 @@
 								if (class_exists($processorClass) && method_exists($processorClass, 'processDataPostSave')) {
 									$model->{$attribute} = $processorClass::processDataPostSave($attribute, $modelArray[$attribute], $this->elementDefinition->fields[$attribute], $model);
 								} else {
+									if ($attribute !== 'i18n') {
 									$model->{$attribute} = $modelArray[$attribute];
+									}
 								}
 							}
 						}

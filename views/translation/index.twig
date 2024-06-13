@@ -1,0 +1,30 @@
+{% for language, items in translations %}
+	<div class="language-section" data-language="{{ language }}">
+		{% for key, value in items %}
+			<input type="text" class="translation-input" data-key="{{ key }}" value="{{ value }}" />
+		{% endfor %}
+	</div>
+{% endfor %}
+
+<script>
+  document.querySelectorAll('.translation-input').forEach(function(input) {
+    input.addEventListener('blur', function() {
+      var key = this.dataset.key;
+      var value = this.value;
+      var language = this.closest('.language-section').dataset.language;
+
+      $.ajax({
+        url: '{{ path('translation/update') }}',
+        type: 'POST',
+        data: {key: key, value: value, language: language},
+        success: function(response) {
+          if (response.success) {
+            console.log('Updated successfully');
+          } else {
+            console.log('Update failed');
+          }
+        }
+      });
+    });
+  });
+</script>

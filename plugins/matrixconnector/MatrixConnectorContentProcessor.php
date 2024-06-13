@@ -44,7 +44,9 @@
 							$sourceDataOut['parentUuid'] = $processedData['uuid'];
 						}
 						
-						$processedData[$key][$section] .= \Yii::$app->controller->renderPartial($subContentdata['ctype'] . '.twig', ['data' => $sourceDataOut]);
+						$view = file_exists(\Yii::$app->view->theme->basePath . '/frontend/elements/'.$subContentdata['ctype'] . '.twig') ? 'elements/'.$subContentdata['ctype'] . '.twig' : $subContentdata['ctype'] . '.twig';
+						
+						$processedData[$key][$section] .= \Yii::$app->controller->renderPartial($view, ['data' => $sourceDataOut]);
 					}
 				}
 			}

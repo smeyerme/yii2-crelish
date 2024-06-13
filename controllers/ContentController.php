@@ -169,6 +169,11 @@
 						$item['value'] = function ($data) use ($itemDef) {
 							return $data[$itemDef->key] == 0 ? 'Nein' : 'Ja';
 						};
+					} elseif (is_object($itemDef) && property_exists($itemDef, 'valueOverwrite')) {
+						$item['format'] = 'raw';
+						$item['value'] = function ($data) use ($itemDef) {
+							return Arrays::get($data, $itemDef->valueOverwrite);
+						};
 					}
 				}
 				

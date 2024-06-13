@@ -9,18 +9,11 @@ class CrelishFieldTransformerState extends CrelishFieldBaseTransformer
 
   public static function afterFinder(&$value)
   {
-    switch ($value) {
-      case 3:
-        $value = 'Archived';
-        break;
-      case 2:
-        $value = 'Online';
-        break;
-      case 1:
-        $value = 'Draft';
-        break;
-      default:
-        $value = 'Offline';
-    }
+	  $value = match ((int)$value) {
+		  3 => 'Archived',
+		  2 => 'Online',
+		  1 => 'Draft',
+		  default => 'Offline',
+	  };
   }
 }

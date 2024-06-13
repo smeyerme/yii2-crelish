@@ -24,7 +24,7 @@
 <div class="u-window-box-medium">
 	{{ html.beginForm('', 'POST', {'id': 'grid-form'}) | raw }}
  
-	<div class="view-type-grid hidden" id="grid-view">
+	<div class="view-type-list hidden" id="list-view">
 		{{ grid_view_widget({
 			'dataProvider': dataProvider,
 			'columns': columns,
@@ -33,7 +33,7 @@
 			'rowOptions': rowOptions ,
 			'formatter': {'class': 'yii\\i18n\\Formatter', 'nullDisplay': ''}}) | raw }}
 	</div>
-	<div class="view-type-list hidden" id="list-view">
+	<div class="view-type-grid hidden" id="grid-view">
 		{{ list_view_widget({
 			'dataProvider': dataProvider,
 			'itemView': 'asset_item.twig',

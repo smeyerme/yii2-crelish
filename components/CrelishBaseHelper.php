@@ -23,6 +23,8 @@
     {
       $url = '/' . $slug;
       
+			unset($params['pathRequested']);
+			
       if (isset(\Yii::$app->params['crelish']['langprefix']) && \Yii::$app->params['crelish']['langprefix']) {
         if (empty($langCode)) {
           $langCode = \Yii::$app->language;

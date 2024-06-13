@@ -8,7 +8,7 @@
     ],
     "type": "yii2-extension",
     "license": "BSD-3-Clause",
-    "version": "0.4.2",
+    "version": "0.4.3",
     "support": {
         "issues": "https://github.com/giantbits/yii2-crelish/issues",
         "forum": "http://www.crelish.io/forum/",
@@ -55,7 +55,8 @@
         "kartik-v/yii2-dialog": "dev-master",
         "kartik-v/yii2-dynagrid": "dev-master",
         "kartik-v/yii2-grid": "v3.5.3",
-        "yiisoft/yii2-httpclient": "^2.0"
+        "yiisoft/yii2-httpclient": "^2.0",
+        "scn/deepl-api-connector": "^3.0"
     },
     "autoload": {
         "psr-4": {

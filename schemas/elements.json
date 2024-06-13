@@ -1,0 +1,87 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "key": { "type": "string" },
+    "storage": { "type": "string" },
+    "label": { "type": "string" },
+    "category": { "type": "string" },
+    "selectable": { "type": "boolean" },
+    "tabs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "label": { "type": "string" },
+          "key": { "type": "string" },
+          "groups": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "label": { "type": "string" },
+                "key": { "type": "string" },
+                "settings": {
+                  "type": "object",
+                  "properties": {
+                    "width": { "type": "integer" }
+                  },
+                  "required": ["width"]
+                },
+                "fields": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                }
+              },
+              "required": ["label", "key", "fields"]
+            }
+          }
+        },
+        "required": ["label", "key", "groups"]
+      }
+    },
+    "fields": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "label": { "type": "string" },
+          "key": { "type": "string" },
+          "type": { "type": "string" },
+          "visibleInGrid": { "type": "boolean" },
+          "rules": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "oneOf": [
+                  { "type": "string" },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "max": { "type": "integer" }
+                    },
+                    "required": ["max"]
+                  }
+                ]
+              }
+            }
+          },
+          "sortable": { "type": "boolean" },
+          "clientOptions": { "type": "object" },
+          "options": { "type": "object" },
+          "items": { "type": "object" }
+        },
+        "required": ["label", "key", "type"]
+      }
+    },
+    "sortDefault": {
+      "type": "object",
+      "properties": {
+        "from": { "type": "string" }
+      },
+      "required": ["from"]
+    }
+  },
+  "required": ["key", "storage", "label", "category", "selectable", "tabs", "fields"]
+}
