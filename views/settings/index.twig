@@ -1,23 +1,22 @@
 <div class="o-grid">
-    <div class="o-grid__cell">
-        <h6>{{ t('crelish', 'Settings') }}</h6>
-        <table class="table table-striped">
-            <tbody>
-            <tr>
-                <td>FileCache</td>
-                <td><a class="c-button" href="{{ url('crelish/settings/clearcache') }}">Clear cache</a></td>
-            </tr>
-            <tr>
-                <td>FileCache</td>
-                <td><a class="c-button" href="{{ url('crelish/settings/rebuildcache') }}">Rebuild cache</a></td>
-            </tr>
-            <tr>
-                <td>Web Assets</td>
-                <td><a class="c-button" href="{{ url('crelish/settings/clearwebassets') }}">Clear assets</a></td>
-            </tr>
-            </tbody>
-        </table>
-    </div>
+  <div class="o-grid__cell">
+    <table class="table table-striped">
+      <tbody>
+      <tr>
+        <td>FileCache</td>
+        <td><a class="c-button" href="{{ url('crelish/settings/clearcache') }}">Clear cache</a></td>
+      </tr>
+      {#<tr>
+        <td>FileCache</td>
+        <td><a class="c-button" href="{{ url('crelish/settings/rebuildcache') }}">Rebuild cache</a></td>
+      </tr>#}
+      <tr>
+        <td>Web Assets</td>
+        <td><a class="c-button" href="{{ url('crelish/settings/clearwebassets') }}">Clear assets</a></td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
 </div>
 
 

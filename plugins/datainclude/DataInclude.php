@@ -4,9 +4,9 @@ namespace giantbits\crelish\plugins\datainclude;
 
 use giantbits\crelish\components\CrelishDynamicModel;
 use giantbits\crelish\components\CrelishDataProvider;
-use Underscore\Types\Arrays;
 use yii\base\Widget;
 use yii\helpers\Json;
+use function _\find;
 
 class DataInclude extends Widget
 {
@@ -47,8 +47,7 @@ class DataInclude extends Widget
 
     $typeDefinitions = CrelishDynamicModel::loadElementDefinition($this->includeDataType);
 
-    if (Arrays::has($data, 'uuid')) {
-
+    if (array_key_exists('uuid', $data)) {
       $itemData = new CrelishDynamicModel([], ['ctype' => $this->includeDataType, 'uuid' => $data['uuid']]);
 
       if (!empty($itemData['uuid'])) {
@@ -80,7 +79,7 @@ class DataInclude extends Widget
 
   public function run()
   {
-    $isRequired = Arrays::find($this->field->rules, function ($rule) {
+		$isRequired = find($this->field->rules, function ($rule) {
       foreach ($rule as $set) {
         if ($set == 'required') {
           return true;

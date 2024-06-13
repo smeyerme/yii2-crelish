@@ -7,11 +7,8 @@
  */
 
 namespace giantbits\crelish\controllers;
-
 use giantbits\crelish\components\CrelishFrontendController;
 
-
 class FrontendController extends CrelishFrontendController {
-
 
 }

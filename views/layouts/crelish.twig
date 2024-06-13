@@ -1,78 +1,143 @@
 {{ use('giantbits/crelish/widgets/FlashMessages') }}
-{{ register_asset_bundle('giantbits/crelish/CrelishAsset') }}  {# asset root for yii advanced template #}
+{% set crelishBundle = register_asset_bundle('giantbits/crelish/CrelishAsset', true) %}
 {{ void(this.beginPage()) }}
 <!DOCTYPE html>
 <html lang="{{ app.language }}">
 <head>
-    <meta charset="{{ app.charset }}">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Crelish | {{ html.encode(this.title) }}</title>
-    {{ html.csrfMetaTags | raw }}
-    {{ void(this.head) }}
+	<meta charset="{{ app.charset }}">
+	<meta name="viewport" content="width=device-width, minimum-scale=1, maximum-scale=1, user-scalable=no">
+	<title>Crelish {% if this.title %}| {% endif %} {{ html.encode(this.title) }}</title>
+	{{ html.csrfMetaTags | raw }}
+	{{ void(this.head) }}
 </head>
-<body class="crelish c-text gc-bc--palette-clouds">
+<body class="crelish-app-root u-text">
 {{ void(this.beginBody()) }}
 
-<div class="o-panel">
-    <nav class="c-nav c-nav--inline gc-bc--palette-dark-blue">
-        <a href="{{ url('crelish/dashboard/index') }}" class="active">
-            <span class="c-nav__content gc-bfont crelish-brand ">crelish</span>
-        </a>
-        {% include '_side_nav.twig' %}
-    </nav>
-    {% include '@crelish/views/' ~ app.controller.id ~ '/' ~ app.controller.action.id ~ "_header_bar.twig" %}
+<section class="cr-root_wrap">
+	<div id="cr-left-pane" class="left-col scrollable">
+		<div class="logo-head">
+			<a href="{{ url('crelish/dashboard/index') }}">
+				<img src="{{ crelishBundle.baseUrl }}/img/crelish_logo.svg" border="0" width="128"/>
+			</a>
+		</div>
+		<div class="navbar--main">
+			{% include '_side_nav.twig' %}
+		</div>
+	</div>
+	<div id="cr-right-pane" class="scrollable">
+		
+		<nav class="navbar--controller">
+			{% include  [
+				('@workspace/actions/' ~ app.controller.id ~ '/views/' ~ app.controller.action.id ~ "_header_bar.twig"),
+				('@workspace/actions/' ~ app.controller.id ~ '/views/default_header_bar.twig'),
+				('@workspace/actions/default/default_header_bar.twig'),
+				('@crelish/views/' ~ app.controller.id ~ '/' ~ app.controller.action.id ~ "_header_bar.twig"),
+				('@crelish/views/' ~ app.controller.id ~ '/default_header_bar.twig'),
+				('@crelish/views/default/default_header_bar.twig'),
+			] ignore missing %}
+		</nav>
+		
+		{{ flash_messages_widget() }}
+		
+		<section>
+			{{ content | raw }}
+		</section>
+	</div>
+</section>
 
-    {{ flash_messages_widget() }}
+<script type="text/javascript">
+  function execDelete(url) {
+    var urlParams = new URLSearchParams(window.location.search);
+    console.log(urlParams.get('ctype') + ':' + urlParams.get('uuid'))
+    window.location.href = url + '?uuid=' + urlParams.get('uuid') + '&ctype=' + urlParams.get('ctype')
+  }
+</script>
 
-    <section class="o-panel o-panel--nav-top o-panel--nav-top-super">
-        {{ content | raw }}
-    </section>
-</div>
-
-<!-- Modal definitions -->
 <div class="modal fade" id="confirm-delete" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
      aria-hidden="true">
-    <div class="modal-dialog gc-no-border-radius">
-        <div class="modal-content gc-no-border-radius gc-bc--palette-clouds">
-            <div class="modal-header gc-no-border gc-bc--palette-silver-light">
-                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
-                <h4 class="modal-title" id="myModalLabel">{{ t('crelish', 'Confirm Delete') }}</h4>
-            </div>
-            <div class="modal-body">
-                <p>{{ t('crelish', 'You are about to delete this record, this procedure is irreversible.') }}</p>
-                <p>{{ t('crelish', 'Do you want to proceed?') }}</p>
-            </div>
-            <div class="modal-footer gc-no-border gc-bc--palette-silver-light">
-                <button type="button" class="btn btn-default" data-dismiss="modal">{{ t('crelish', 'Cancel') }}</button>
-                <button type="button" class="btn btn-danger btn-ok" data-url="/crelish/{{ app.controller.id }}/delete.html" data-uuid="{{ app.getRequest.getQueryParam('uuid') }}"
-                        data-model="{{ app.getRequest.getQueryParam('ctype') }}" onclick="window.location.href=$(this).data('url') +'?uuid=' + $(this).data('uuid') + '&ctype=' + $(this).data('model')">{{ t('crelish', 'Delete') }}
-                </button>
-            </div>
-        </div>
-    </div>
+	<div class="modal-dialog gc-no-border-radius">
+		<div class="modal-content gc-no-border-radius gc-bc--palette-clouds">
+			<div class="modal-header gc-no-border gc-bc--palette-silver-light">
+				<button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+				<h4 class="modal-title" id="myModalLabel">{{ t('crelish', 'Confirm Delete') }}</h4>
+			</div>
+			<div class="modal-body">
+				<p>{{ t('crelish', 'You are about to delete this record, this procedure is irreversible.') }}</p>
+				<p>{{ t('crelish', 'Do you want to proceed?') }}</p>
+			</div>
+			<div class="modal-footer gc-no-border gc-bc--palette-silver-light">
+				<button type="button" class="btn btn-default" data-dismiss="modal">{{ t('crelish', 'Cancel') }}</button>
+				<button type="button" class="btn btn-danger btn-ok"
+				        onclick="execDelete('/crelish/{{ app.controller.id }}/delete')">{{ t('crelish', 'Delete') }}
+				</button>
+			</div>
+		</div>
+	</div>
 </div>
 
-<div class="modal fade" id="confirm-cancel" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"  aria-hidden="true">
-    <div class="modal-dialog gc-no-border-radius">
-        <div class="modal-content gc-no-border-radius gc-bc--palette-clouds">
-            <div class="modal-header gc-no-border">
-                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
-                <h4 class="modal-title" id="myModalLabel">{{ t('crelish', 'Confirm cancel') }}</h4>
-            </div>
-            <div class="modal-body">
-                <p>{{ t('crelish', 'You are about to cancel your current action.') }}
-                <br/>{{ t('crelish', 'Unsaved changes might get lost.') }}</br>
-                <p>{{ t('crelish', 'Do you want to proceed?') }}</p>
-            </div>
-            <div class="modal-footer gc-no-border">
-                <button type="button" class="btn btn-default" data-dismiss="modal">{{ t('crelish', 'Cancel') }}</button>
-                <button type="button" class="btn btn-danger btn-cancel-proceed"
-                        data-href="">{{ t('crelish', 'Proceed') }}
-                </button>
-            </div>
-        </div>
+{# <!-- Modal definitions -->
+<div class="modal fade" id="confirm-cancel" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog gc-no-border-radius">
+    <div class="modal-content gc-no-border-radius gc-bc--palette-clouds">
+      <div class="modal-header gc-no-border">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+        <h4 class="modal-title" id="myModalLabel">{{ t('crelish', 'Confirm cancel') }}</h4>
+      </div>
+      <div class="modal-body">
+        <p>{{ t('crelish', 'You are about to cancel your current action.') }}
+          <br/>{{ t('crelish', 'Unsaved changes might get lost.') }}</br>
+        <p>{{ t('crelish', 'Do you want to proceed?') }}</p>
+      </div>
+      <div class="modal-footer gc-no-border">
+        <button type="button" class="btn btn-default" data-dismiss="modal">{{ t('crelish', 'Cancel') }}</button>
+        <button type="button" class="btn btn-danger btn-cancel-proceed"
+                data-href="">{{ t('crelish', 'Proceed') }}
+        </button>
+      </div>
     </div>
+  </div>
 </div>
+#}
+
+{% apply registerCss %}
+
+.lang-ui-switch {
+	display: flex;
+	width: 100%;
+	background-image: linear-gradient(130deg, #edd15f 25%, #d9c362 25%, #d9c362 50%, #edd15f 50%, #edd15f 75%, #d9c362 75%,
+	#d9c362 100%);
+	background-size: 52.22px 62.23px;
+	padding: 1rem;
+	margin-top: -2.1rem;
+	z-index: 0;
+	position: relative;
+	margin-bottom: 2rem;
+	box-shadow: inset 2px 2px 2px rgba(0, 0, 0, 0.2);
+	justify-content: space-between;
+	font-weight: bold;
+}
+
+.lang-ver {
+	border-left: 1rem solid #FFBF00;
+	padding-left: 1rem;
+	transform: translateX(-1rem);
+}
+
+{% endapply %}
+
+{% apply registerJs %}
+$(document).ready(function() {
+	$('#language-select').on('change', function() {
+		var selectedLanguage = $(this).val();
+		$('[data-language]').hide();
+		$('[data-language="' + selectedLanguage + '"]').show();
+	});
+	
+	// Initial display on page load
+	$('#language-select').trigger('change');
+});
+{% endapply %}
 
 {{ void(this.endBody()) }}
 </body>

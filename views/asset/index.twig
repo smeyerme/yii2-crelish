@@ -3,70 +3,395 @@
 {{ use('/yii/widgets/Pjax') }}
 
 {% if alerts %}
-    <div class="o-grid" style="margin-bottom: -1em;">
-        <div class="o-grid__cell o-grid__cell--no-gutter">
-            {{ alerts | raw }}
-        </div>
-    </div>
+	<div class="o-grid" style="margin-bottom: -1em;">
+		<div class="o-grid__cell o-grid__cell--no-gutter">
+			{{ alerts | raw }}
+		</div>
+	</div>
 {% endif %}
 
-<div class="o-grid gc-bc--palette-nephritis">
-    <div class="o-grid__cell gc-ta--center gc-p--1" id="dropZone">
-        <form action="{{ url('crelish/asset/upload.html') }}"
-              class="dropzone"
-              id="crelish-drop-zone">
-        </form>
-    </div>
+<div class="" id="drop-area">
+	<form action="{{ url('crelish/asset/upload') }}" id="crelish-drop-zone">
+		<input type="file" id="fileElem" multiple onchange="handleFiles(this.files)">
+		<label id="label" class="button" for="fileElem">Select some files</label>
+		<progress id="progress-bar" max=100 value=0></progress>
+		<div id="gallery"></div>
+	</form>
 </div>
-<div class="o-grid gc-bc--palette-clouds">
-    <div class="o-grid__cell">
-        {{ pjax_begin({'id':'assetList', 'enablePushState': false}) }}
 
-        <h6>{{ t('crelish', 'Asset list') }}</h6>
+{{ pjax_begin({'id':'assetList', 'enablePushState': false}) }}
 
-        {{ grid_view_widget({
-            'dataProvider': dataProvider,
-            'columns': columns,
-            'filterSelector': '.cr-content-search',
-            'tableOptions': {'class':'table table-striped'},
-            'rowOptions': rowOptions ,
-            'formatter': {'class': 'yii\\i18n\\Formatter', 'nullDisplay': ''}}) | raw }}
+<div class="u-window-box-medium">
+	{{ html.beginForm('', 'POST', {'id': 'grid-form'}) | raw }}
+ 
+	<div class="view-type-list hidden" id="list-view">
+		{{ grid_view_widget({
+			'dataProvider': dataProvider,
+			'columns': columns,
+			'filterSelector': '.cr-content-search',
+			'tableOptions': {'class':'table table-striped'},
+			'rowOptions': rowOptions ,
+			'formatter': {'class': 'yii\\i18n\\Formatter', 'nullDisplay': ''}}) | raw }}
+	</div>
+	<div class="view-type-grid hidden" id="grid-view">
+		{{ list_view_widget({
+			'dataProvider': dataProvider,
+			'itemView': 'asset_item.twig',
+			'itemOptions': {
+				'class': 'card'
+			},
+			'layout': '{summary}\n<div class="data-list">{items}</div>\n{pager}'
+		}) | raw }}
+	</div>
+	
+	{{ html.endForm() | raw }}
 
-        {{ pjax_end() }}
-    </div>
 </div>
 
 <script type="text/javascript">
-    Dropzone.options.crelishDropZone = {
-        paramName: "file", // The name that will be used to transfer the file
-        maxFilesize: 250, // MB
-        dictDefaultMessage: "<span class=\"c-button c-button--ghost\" style=\"border-color: #fff; color: #fff; border-radius: .5rem;\">{{ t('crelish', 'Click or drag files here to upload.') }}</span>",
-        init: function () {
-            var myDropzone = this;
+  $(document).ready(function () {
 
-            this.on("complete", function (file) {
-                setTimeout(function () {
-                    $.pjax.reload({container: '#assetList'});
-                    myDropzone.removeFile(file);
-                }, 250);
-            });
-
-        },
-        accept: function (file, done) {
-            console.log(file.name);
-            /*
-            if (file.name == "justinbieber.jpg") {
-                done("Naha, you don't.");
-            }
-            else {
-                done();
-            }*/
-            done();
-        }
-    };
-
-    $("#assetList").on("pjax:end", function () {
-
+    $("input[name='selection[]'], .select-on-check-all").on("change", function () {
+      if ($("#grid-form").serializeArray().length > 1) {
+        $('.btn-delete-grid').removeClass("hidden");
+      } else {
+        $('.btn-delete-grid').addClass("hidden");
+      }
     });
 
+    $(".btn-delete-grid").on("click", function () {
+      $('#grid-form').submit();
+    });
+
+    $('td input[type="checkbox"]').parent().on("click", function (e) {
+      e.stopPropagation();
+      return true;
+    });
+
+    $('td input[type="checkbox"]').on("click", function (e) {
+      e.stopPropagation();
+      return true;
+    });
+  });
 </script>
+{{ pjax_end() }}
+
+<script type="text/javascript">
+  //$.pjax.reload({container: '#assetList'});
+
+  const labelStart = "Select some files."
+  const labelRunning = "Upload is running... please wait!"
+
+  // ************************ Drag and drop ***************** //
+  let dropArea = document.getElementById("drop-area")
+  let label = document.getElementById("label")
+
+    // Prevent default drag behaviors
+  ;['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    dropArea.addEventListener(eventName, preventDefaults, false)
+    document.body.addEventListener(eventName, preventDefaults, false)
+  })
+
+  // Highlight drop area when item is dragged over it
+  ;['dragenter', 'dragover'].forEach(eventName => {
+    dropArea.addEventListener(eventName, highlight, false)
+  })
+
+  ;['dragleave', 'drop'].forEach(eventName => {
+    dropArea.addEventListener(eventName, unhighlight, false)
+  })
+
+  // Handle dropped files
+  dropArea.addEventListener('drop', handleDrop, false)
+
+  function preventDefaults(e) {
+    e.preventDefault()
+    e.stopPropagation()
+  }
+
+  function highlight(e) {
+    dropArea.classList.add('highlight')
+  }
+
+  function unhighlight(e) {
+    dropArea.classList.remove('active')
+  }
+
+  function handleDrop(e) {
+    var dt = e.dataTransfer
+    var files = dt.files
+
+    handleFiles(files)
+  }
+
+  let uploadProgress = []
+  let progressBar = document.getElementById('progress-bar')
+
+  function initializeProgress(numFiles) {
+
+    label.innerText = labelRunning
+    progressBar.value = 0
+    uploadProgress = []
+
+    for (let i = numFiles; i > 0; i--) {
+      uploadProgress.push(0)
+    }
+  }
+
+  function updateProgress(fileNumber, percent) {
+    uploadProgress[fileNumber] = percent
+    let total = uploadProgress.reduce((tot, curr) => tot + curr, 0) / uploadProgress.length
+    progressBar.value = total
+  }
+
+  function handleFiles(files) {
+    files = [...files]
+    initializeProgress(files.length)
+    files.forEach(uploadFile)
+    //files.forEach(previewFile)
+  }
+
+  function previewFile(file) {
+    let reader = new FileReader()
+    reader.readAsDataURL(file)
+    reader.onloadend = function () {
+      let img = document.createElement('img')
+      img.src = reader.result
+      document.getElementById('gallery').appendChild(img)
+    }
+  }
+
+  function resetUpload(i) {
+    updateProgress(i, 0) // <- Add this
+    label.innerText = labelStart
+  }
+
+  function uploadFile(file, i) {
+    var url = '{{ url('crelish/asset/upload') }}'
+    var xhr = new XMLHttpRequest()
+    var formData = new FormData()
+    xhr.open('POST', url, true)
+    xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest')
+
+    // Update progress (can be used to show progress indicator)
+    xhr.upload.addEventListener("progress", function (e) {
+      updateProgress(i, (e.loaded * 100.0 / e.total) || 100)
+    })
+
+    xhr.addEventListener('readystatechange', function (e) {
+      if (xhr.readyState == 4 && xhr.status == 200) {
+        updateProgress(i, 100) // <- Add this
+        $.pjax.reload({container: '#assetList'});
+        label.innerText = "Upload finished."
+        setTimeout(resetUpload(i), 50000)
+      } else if (xhr.readyState == 4 && xhr.status != 200) {
+        // Error. Inform the user
+      }
+    })
+
+    formData.append('upload_preset', 'ujpu6gyk')
+    formData.append('file', file)
+    xhr.send(formData)
+  }
+
+</script>
+
+{% apply registerJs %}
+
+const userId = window.crelish.user.uuid; // Example user ID (UUIDv4)
+const controllerId = 'asset'; // Example controller ID
+const actionId = 'index'; // Example action ID
+
+// Generate a unique key for local storage
+const storageKey = `${userId}-${controllerId}-${actionId}-view-mode`;
+
+function switchView(mode) {
+  const gridView = document.getElementById('grid-view');
+  const listView = document.getElementById('list-view');
+
+  if (mode === 'grid') {
+    gridView.classList.remove('hidden');
+    listView.classList.add('hidden');
+  } else if (mode === 'list') {
+    gridView.classList.add('hidden');
+    listView.classList.remove('hidden');
+  }
+  localStorage.setItem(storageKey, mode);
+}
+
+function initializeViewMode() {
+  const gridButton = document.getElementById('switch-to-grid');
+  const listButton = document.getElementById('switch-to-list');
+
+  // Load the view mode from local storage
+  const savedMode = localStorage.getItem(storageKey);
+  if (savedMode) {
+    switchView(savedMode);
+  } else {
+    // Default to grid view if no preference is saved
+    switchView('grid');
+  }
+
+  gridButton.addEventListener('click', () => switchView('grid'));
+  listButton.addEventListener('click', () => switchView('list'));
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  initializeViewMode();
+});
+
+// Reinitialize view mode after PJAX request completes
+$(document).on('pjax:end', function() {
+  initializeViewMode();
+});
+
+{% endapply %}
+
+{% apply registerCss %}
+#drop-area {
+  width: 100%;
+  text-align: center;
+  background-color: #cad2d8;
+  padding: 1rem 0 0 0;
+  position: relative;
+  height: 4rem;
+}
+
+#drop-area.highlight {
+  border-color: purple;
+}
+
+p {
+  margin-top: 0;
+}
+
+.my-form {
+  margin-bottom: 10px;
+}
+
+#gallery {
+  margin-top: 10px;
+}
+
+#gallery img {
+  width: 150px;
+  margin-bottom: 10px;
+  margin-right: 10px;
+  vertical-align: middle;
+}
+
+.button {
+
+  background: transparent;
+  display: block;
+  z-index: 5;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-50%);
+}
+
+.button:hover {
+  background: transparent;
+}
+
+#fileElem {
+  display: none;
+}
+
+#progress-bar {
+  width: 100%;
+  border-radius: 0;
+  position: absolute;
+  height: 100%;
+  left: 0;
+  top: 0;
+  z-index: 0;
+}
+
+progress {
+  /* style rules */
+  background-color: #cad2d8;
+  accent-color: #00b393;
+}
+
+progress::-webkit-progress-bar {
+  /* style rules */
+  background-color: #cad2d8;
+  accent-color: #00b393;
+}
+
+progress::-webkit-progress-value {
+  /* style rules */
+  background-color: #00b393;
+  accent-color: #00b393;
+}
+
+progress::-moz-progress-bar {
+  /* style rules */
+  background-color: #00b393;
+  accent-color: #00b393;
+}
+
+
+.list-view {
+  overflow-x: hidden;
+  display: block;
+  position: relative;
+}
+
+.card {
+  background-color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: auto;
+  border-bottom: 2px solid gray;
+}
+
+.card a {
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
+.card img {
+  width: 100%;
+  align-self: center;
+}
+
+.card .description {
+  width: 100%;
+  display: grid;
+  background-color: #EFEFEFFF;
+
+  margin-top: auto;
+}
+
+.card h3 {
+  padding: 1% 5%;
+  width: 100%;
+  font-size: 1.333rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.data-list {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto;
+  grid-template-rows: auto;
+  grid-gap: 20px;
+}
+
+@media all and (min-width: 900px) {
+  .data-list {
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+    grid-template-rows: auto;
+  }
+}
+
+{% endapply %}

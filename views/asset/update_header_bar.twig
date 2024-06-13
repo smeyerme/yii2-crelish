@@ -1,23 +1,20 @@
-<nav class="c-nav c-nav--inline gc-bc--palette-belize">
-    <div class="o-grid o-grid--no-gutter">
-        <div class="o-grid__cell">
-            <span class="c-nav__item gc-bc--palette-asbestos open-back-modal" data-toggle="modal" data-target="#confirm-cancel"
-                  data-href="{{ url('crelish/asset/index.html') }}">
-                <span class="fui-arrow-left"></span> {{ t('crelish', 'Back') }}</span>
-            </span>
-        </div>
-        <div class="o-grid__cell gc-ta--center">
-            <span class="c-nav__content"><h3 class="c-heading">{{ t('crelish', 'Modify asset') }}</h3></span>
-        </div>
-        <div class="o-grid__cell">
-            <span class="c-nav__item c-nav__item--right gc-bc--palette-nephritis btn-save" type="button"
-                  onclick="$('#asset-form').submit();">
-                <span class="fui-check"></span> {{ t('crelish', 'Save') }}</span>
-            </span>
-            <span class="c-nav__item c-nav__item--right gc-bc--palette-pomgranate" data-toggle="modal"
-                  data-target="#confirm-delete">
-                <i class="fa fa-trash-o" aria-hidden="true"></i>
-            </span>
-        </div>
-    </div>
-</nav>
+<div class="c-input-group group-content-filter">
+  {% include('@crelish/views/layouts/base_header_bar.twig') %}
+  <a class="c-button" href="{{ url('crelish/asset/index') }}">
+    <span class="fui-arrow-left"></span> {{ t('crelish', 'Back') }}</span>
+  </a>
+</div>
+<div class="c-input-group group-content-filter">
+  <span class="c-button btn-save c-button--success" type="button"
+        onclick="$('#content-form').submit();">
+          <i class="fa fa-save"></i></span>
+  </span>
+  <span class="c-button btn-save c-button--success-darker" type="button"
+        onclick="$('#save_n_return').val(1); $('#content-form').submit();">
+            <i class="fa fa-save"></i> <i class="fa fa-reply"></i></span>
+  </span>
+  <span class="c-button c-button--error" data-toggle="modal"
+        data-target="#confirm-delete">
+            <i class="fa fa-trash" aria-hidden="true"></i>
+        </span>
+</div>

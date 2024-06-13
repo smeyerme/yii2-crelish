@@ -3,141 +3,149 @@
 {{ use('/yii/widgets/Pjax') }}
 
 <div class="form-group field-crelishdynamicmodel-body required">
-    <label class="control-label" for="crelishdynamicmodel-body">{{ label }}</label>
-    <div class="">
-        <matrix_{{ formKey }}></matrix_{{ formKey }}>
-        <div class="help-block help-block-error "></div>
-    </div>
+  <label class="control-label" for="crelishdynamicmodel-body">{{ label }}</label>
+  <div class="">
+    <matrix_{{ formKey }}></matrix_{{ formKey }}>
+    <div class="help-block help-block-error "></div>
+  </div>
 </div>
 
 <div class="modal fade cr-modal--full matrix-modal-{{ formKey }}" tabindex="-1" role="dialog"
      aria-labelledby="matrix-modal-{{ formKey }}" id="matrix-modal-{{ formKey }}">
-    <div class="modal-dialog" style="width: 100vw; height: 100vh; top: 0; left: 0; margin: 0; padding: 0;">
-        <div class="modal-content gc-bc--palette-clouds">
-            <div class="modal-header gc-bc--palette-green-sea gc-fc--palette-clouds">
-                <button type="button" class="close" style="color: white;" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-                <h4 class="modal-title" id="myModalLabel">Content selection</h4>
-            </div>
-            <div class="modal-body o-panel-container ">
-                <div class="o-panel">
+  <div class="modal-dialog" style="width: 100vw; height: 100vh; top: 0; left: 0; margin: 0; padding: 0;">
+    <div class="modal-content gc-bc--palette-clouds" style="height: 100%;">
+      <div class="modal-header gc-bc--palette-green-sea gc-fc--palette-clouds">
+        <button type="button" class="close" style="color: white;" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+        <h4 class="modal-title" id="myModalLabel">Content selection</h4>
+      </div>
+      <div class="modal-body o-panel-container " style=" height: 90%;">
+        <div class="o-panel">
 
-                    {{ pjax_begin({'id':'contentList', 'enablePushState': false}) }}
-                    <div class="o-grid gc-bc--palette-clouds">
-                        <div class="o-grid__cell o-grid__cell--width-20">
-                            <h6>Type filter</h6>
-                            <ul role="menu" class="gc-nav__content-filter">
-                                {{ element_nav_widget({'ctype':ctype, 'selector':'cet'}) }}
-                            </ul>
-                        </div>
-                        <div class="o-grid__cell">
-                            <h6>Content</h6>
-                            {{ grid_view_widget({
-                                'dataProvider': dataProvider,
-                                'columns': columns,
-                                'tableOptions': {'class':'table table-striped'}
-                            }) | raw }}
-                        </div>
-                    </div>
-                    {{ pjax_end() }}
+          {{ pjax_begin({'id':'contentList', 'enablePushState': true}) }}
 
+            <div class="o-grid gc-bc--palette-clouds">
+              <div class="o-grid__cell o-grid__cell--width-20">
+                <h6>Type filter</h6>
+                <ul role="menu" class="gc-nav__content-filter">
+                  {{ element_nav_widget({'ctype':ctype, 'selector':'cet'}) }}
+                </ul>
                 </div>
-            </div>
+                <div class="o-grid__cell">
+                  <h6>Content</h6>
+                    {{ grid_view_widget({
+                      'dataProvider': dataProvider,
+                      'columns': columns,
+                      'tableOptions': {'class':'table table-striped'}
+                    }) | raw }}
+                </div>
+              </div>
+
+            {{ pjax_end() }}
+
         </div>
+      </div>
     </div>
+  </div>
 </div>
 
 <script type="riot/tag">
-    <matrix_{{ formKey }}>
-        <input type="hidden" ref="CrelishDynamicModel_{{ formKey }}" name="CrelishDynamicModel[{{ formKey }}]" id="CrelishDynamicModel_{{ formKey }}" value="{ JSON.stringify(data) }" />
-        <div class="o-grid o-grid--no-gutter">
-            <div class="o-grid__cell" each="{ value, name in data }">
-                <span class="c-badge">{ name }</span>
+  <matrix_{{ formKey }}>
+    <input type="hidden" ref="CrelishDynamicModel_{{ formKey }}" name="CrelishDynamicModel[{{ formKey }}]" id="CrelishDynamicModel_{{ formKey }}" value="{ JSON.stringify(data) }" />
+    <div class="o-grid o-grid--no-gutter">
+      <div class="o-grid__cell" each="{ value, name in data }">
+        <span class="c-badge">{ name }</span>
 
-                <div id="sortable">
-                    <div class="c-card" ref-area={ name } each={ value }>
-                        <div class="c-card__item c-card__item--divider">
-                            <span class="glyphicon glyphicon-move" aria-hidden="true"></span>
-                                { ctype }
-                            <span class="c-input-group pull-right">
-                                <a class="c-button gc-bc--palette-wetasphalt u-xsmall" href="/crelish/content/update.html?ctype={ ctype }&uuid={ uuid }" target="_blank"><i class="glyphicon glyphicon-pencil"></i></a>
-                                <a class="c-button gc-bc--palette-pomgranate u-xsmall" onclick={ parent.removeItem }><i class="glyphicon glyphicon-trash"></i></a>
-                            </span>
-                        </div>
-                        <div class="c-card__content">
-                            <dl>
-                                <span each={ info }>
-                                    <dt>{ label }</dt>
-                                    <dd>{ value }</dd>
-                                </span>
-                            </dl>
-                        </div>
-                    </div>
-                </div>
-                <button type="button" onclick={ addContent } class="c-button c-button--ghost-primary c-button--block gc-mt--1" data-target=".matrix-modal-{{ formKey }}" >Add content</button>
+        <div id="sortable_{{ formKey }}">
+          <div class="c-card" ref-area={ name } each={ value }>
+            <div role="separator" class="c-card__item c-card__item--divider">
+            <span class="glyphicon glyphicon-move" aria-hidden="true"></span> <strong>{ info[0].value }</strong>
+              <span class="c-input-group pull-right">
+                <a class="c-button gc-bc--palette-wetasphalt u-xsmall" href="/crelish/content/update?ctype={ ctype }&uuid={ uuid }" target="_blank"><i class="glyphicon glyphicon-pencil"></i></a>
+                <a class="c-button gc-bc--palette-pomgranate u-xsmall" onclick={ parent.removeItem }><i class="glyphicon glyphicon-trash"></i></a>
+              </span>
             </div>
+            <div class="c-card__content u-window-box-small">
+              <dl>
+                <span each={  item, index in info } if={ index > 0 }>
+                  <dt>{ item.label }</dt>
+                  <dd>{ item.value }</dd>
+                </span>
+              </dl>
+            </div>
+          </div>
         </div>
+        <button type="button" onclick={ addContent } class="c-button c-button--ghost-primary c-button--block gc-mt--1" data-target=".matrix-modal-{{ formKey }}" >Add content</button>
+      </div>
+    </div>
 
-        // Logic goes here.
-        this.data = opts.data
-        var app = this
-        var targetArea = 'main'
+    // Logic goes here.
+    this.data = opts.data
+    var app = this
+    var targetArea = 'main'
 
-        var activateContentMatrix = function() {
-            var wrap = this
-            $("#matrix-modal-{{ formKey }} a.cntAdd").each(function () {
-                $(this).on('click', function (e) {
-                    e.preventDefault()
-                    var content = $(this).data("content")
-                    if(content) {
-                        content.area = targetArea
-                        wrap.data[targetArea].push(content)
-                        //app.refs[CrelishDynamicModel_{{ formKey }}].value = JSON.stringify(app.data)
-                    }
-                    console.log(this)
-                    $('.matrix-modal-{{ formKey }}').modal('hide')
-                    wrap.update()
-                })
-            })
-        }.bind(this)
+    var activateContentMatrix = function() {
+      var wrap = this
 
-        addContent(e) {
-            e.preventDefault()
-            $('.matrix-modal-{{ formKey }}').modal('show')
-        }
+      $("#matrix-modal-{{ formKey }} a.cntAdd").each(function () {
+        $(this).on('click', function (e) {
+          e.preventDefault()
+          var content = $(this).data("content")
 
-        removeItem(e) {
-            var item = e.item
-            var index = this.data[item.area].indexOf(item)
-            this.data[item.area].splice(index, 1)
-        }
+          if(content) {
+            content.area = targetArea
+            wrap.data[targetArea].push(content)
+          }
 
-        this.on("mount", function() {
-            var that = this;
-            var matrixData = app.data;
-            var el = document.getElementById('sortable');
-            if(el) {
-                var sortable = Sortable.create(el, {
-                    handle: '.glyphicon-move',
-                    animation: 150,
-                    onSort: function (evt) {
-                        // same properties as onUpdate
-                        matrixData.main.move(evt.oldIndex, evt.newIndex)
-                        app.data = matrixData;
-                        app.update();
-                    }
-                });
-            }
+          $('.matrix-modal-{{ formKey }}').modal('hide')
+          wrap.update()
+        })
+      })
+    }.bind(this)
+  
+    addContent(e) {
+      e.preventDefault()
+      $('.matrix-modal-{{ formKey }}').modal('show')
+    }
 
-            $("#matrix-modal-{{ formKey }}").on("pjax:end", function () {
-                activateContentMatrix();
-            });
-            $("#matrix-modal-{{ formKey }}").on('shown.bs.modal', function (e) {
-                activateContentMatrix();
-            });
+    removeItem(e) {
+      var item = e.item
+      var index = this.data[item.area].indexOf(item)
+      this.data[item.area].splice(index, 1)
+    }
+
+    this.on("mount", function() {
+      var that = this;
+      var matrixData = app.data;
+      var el = document.getElementById('sortable_{{ formKey }}');
+
+      if(el) {
+        var sortable = new Draggable.Sortable(el, {
+          draggable: '.c-card',
+          handle: '.glyphicon-move',
+          mirror: {
+            appendTo: '#sortable_{{ formKey }}',
+            constrainDimensions: true,
+          },
         });
-    </matrix_{{ formKey }}>
+        sortable.on('sortable:sorted', function(evt){
+          console.log(evt.data.oldIndex, evt.data.newIndex)
+          matrixData.main.move(evt.data.oldIndex, evt.data.newIndex)
+          app.data = matrixData;
+          app.update();
+        });
+      }
+
+      $("#matrix-modal-{{ formKey }}").on('pjax:end', function () {
+        activateContentMatrix();
+      });
+
+      $("#matrix-modal-{{ formKey }}").on('shown.bs.modal', function (e) {
+        activateContentMatrix();
+      });
+    });
+  </matrix_{{ formKey }}>
 
 </script>
 

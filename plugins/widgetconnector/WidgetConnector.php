@@ -22,7 +22,8 @@ class WidgetConnector extends Widget
 
   public function run()
   {
-    $modelType = get_class($this->model);
+  
+		$modelType = get_class($this->model);
 
     $fieldName = $modelType . "[" . $this->attribute . "]";
     $fieldId = $modelType . "_" . $this->attribute;

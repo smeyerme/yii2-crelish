@@ -1,6 +1,7 @@
 {{ use('/giantbits/crelish/widgets') }}
-<nav class="c-nav c-nav--inline gc-bc--palette-orange">
-  <span class="c-nav__content">
+<nav class="content-navbar">
+  {% include('@crelish/views/layouts/base_header_bar.twig') %}
+  <h4>
     {{ t('crelish', 'Settings') }}
-  </span>
+  </h4>
 </nav>

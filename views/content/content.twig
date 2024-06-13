@@ -3,86 +3,107 @@
 {{ use('/giantbits/crelish/widgets') }}
 
 {{ pjax_begin({'id':'contentList', 'enablePushState': true}) }}
-<div class="o-grid">
-    <div class="o-grid__cell o-grid__cell--width-20">
-        <ul role="menu" class="gc-nav__content-filter">
-            {{ element_nav_widget({'ctype':ctype, 'action':"index"}) }}
-        </ul>
-    </div>
-    <div class="o-grid__cell">
-        <h6>{{ t('crelish', 'Content') }}</h6>
-        {{ html.beginForm('', 'POST', {'id': 'grid-form'}) | raw }}
-        {{ grid_view_widget({
-            'dataProvider': dataProvider,
-            'columns': columns,
-            'filterSelector': '.cr-content-search',
-            'tableOptions': {'class':'table table-striped'},
-            'rowOptions': rowOptions ,
-            'formatter': {
-                'class': 'yii\\i18n\\Formatter',
-                'nullDisplay': false,
-                'dateFormat': 'dd.MM.yyyy'
-            }}) | raw }}
-        {{ html.endForm() | raw }}
-    </div>
+
+<div class="filter-top">
+  <ul role="menu" class="content-filter">
+    {{ element_nav_widget({'ctype':ctype, 'action':"index"}) }}
+  </ul>
 </div>
+
+<div class="u-window-box-medium">
+  {{ html.beginForm('', 'POST', {'id': 'grid-form'}) | raw }}
+  {% if dataProvider %}
+		
+  {{ grid_view_widget({
+    'dataProvider': dataProvider,
+    'columns': columns,
+    'filterSelector': '.cr-content-search',
+    'tableOptions': {'class':'table table-striped'},
+    'rowOptions': rowOptions ,
+    'formatter': {
+      'class': 'yii\\i18n\\Formatter',
+      'nullDisplay': false,
+      'dateFormat': 'dd.MM.yyyy'
+    }}) | raw }}
+	
+  {% endif %}
+  {{ html.endForm() | raw }}
+</div>
+
 <script>
+  $(document).ready(function () {
 
-    $(document).ready(function () {
-
-        $('#cr_content_filter').on("blur", function (e) {
-            if (window.location.href.indexOf('cr_content_filter') >= 0) {
-                $.pjax({
-                    url: window.location.href.replace(/(cr_content_filter=).*?(&|$)/, '$1' + $(this).val() + '$2'),
-                    container: '#contentList'
-                });
-            } else {
-                var preFix = (window.location.href.indexOf("?") === -1) ? '?' : '&';
-                $.pjax({
-                    url: window.location.href + preFix + "cr_content_filter=" + $(this).val(),
-                    container: '#contentList'
-                });
-            }
+    $('#cr_content_filter').on("blur", function (e) {
+      e.preventDefault();
+      if (window.location.href.indexOf('cr_content_filter') >= 0) {
+        $.pjax({
+          url: window.location.href.replace(/(cr_content_filter=).*?(&|$)/, '$1' + $(this).val() + '$2'),
+          container: '#contentList'
         });
-
-        $('#cr_content_filter').on("keypress", function (e) {
-            if (e.which == 10 || e.which == 13) {
-                if (window.location.href.indexOf('cr_content_filter') >= 0) {
-                    $.pjax({
-                        url: window.location.href.replace(/(cr_content_filter=).*?(&|$)/, '$1' + $(this).val() + '$2'),
-                        container: '#contentList'
-                    });
-                } else {
-                    var preFix = (window.location.href.indexOf("?") === -1) ? '?' : '&';
-                    $.pjax({
-                        url: window.location.href + preFix + "cr_content_filter=" + $(this).val(),
-                        container: '#contentList'
-                    });
-                }
-            }
+      } else {
+        var preFix = (window.location.href.indexOf("?") === -1) ? '?' : '&';
+        $.pjax({
+          url: window.location.href + preFix + "cr_content_filter=" + $(this).val(),
+          container: '#contentList'
         });
-
-        $("input[name='selection[]'], .select-on-check-all").on("change", function(){
-            if($("#grid-form").serializeArray().length > 1){
-                $('.btn-delete-grid').removeClass("hidden");
-            } else {
-                $('.btn-delete-grid').addClass("hidden");
-            }
-        });
-
-        $(".btn-delete-grid").on("click", function() {
-            $('#grid-form').submit();
-        });
-
-        $('td input[type="checkbox"]').parent().on("click", function (e) {
-            e.stopPropagation();
-            return true;
-        });
-
-        $('td input[type="checkbox"]').on("click", function (e) {
-            e.stopPropagation();
-            return true;
-        });
+      }
     });
+
+    $('#cr_content_filter').on("keypress", function (e) {
+      if (e.which == 10 || e.which == 13) {
+        if (window.location.href.indexOf('cr_content_filter') >= 0) {
+          $.pjax({
+            url: window.location.href.replace(/(cr_content_filter=).*?(&|$)/, '$1' + $(this).val() + '$2'),
+            container: '#contentList'
+          });
+        } else {
+          var preFix = (window.location.href.indexOf("?") === -1) ? '?' : '&';
+          $.pjax({
+            url: window.location.href + preFix + "cr_content_filter=" + $(this).val(),
+            container: '#contentList'
+          });
+        }
+      }
+    });
+
+    $("input[name='selection[]'], .select-on-check-all").on("change", function () {
+      if ($("#grid-form").serializeArray().length > 1) {
+        $('.btn-delete-grid').removeClass("hidden");
+      } else {
+        $('.btn-delete-grid').addClass("hidden");
+      }
+    });
+
+    $(".btn-delete-grid").on("click", function () {
+      $('#grid-form').submit();
+    });
+
+    $('td input[type="checkbox"]').parent().on("click", function (e) {
+      e.stopPropagation();
+      return true;
+    });
+
+    $('td input[type="checkbox"]').on("click", function (e) {
+      e.stopPropagation();
+      return true;
+    });
+  });
 </script>
 {{ pjax_end() }}
+
+<div class="modal fade" id="modal-create-content" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog gc-no-border-radius">
+    <div class="modal-content gc-no-border-radius gc-bc--palette-clouds">
+      <div class="modal-header gc-no-border gc-bc--palette-silver-light">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+        <h4 class="modal-title" id="myModalLabel">{{ t('crelish', 'Create new content') }}</h4>
+      </div>
+      <div class="modal-body">
+        <ul role="menu" class="content-dropper-subnav">
+          {{ element_nav_widget({"action":"create"}) }}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>

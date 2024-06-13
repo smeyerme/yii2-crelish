@@ -8,14 +8,27 @@ use yii\helpers\Json;
 
 class WidgetConnectorContentProcessor extends Component
 {
-    public $data;
+  public $data;
 
-    public static function processData($key, $data, &$processedData)
-    {
-        $html = '';
-        //$sourceData = new CrelishDataProvider('widget', [], $processedData['uuid']);
-        $widgetToLoad = "app\\workspace\\widgets\\" . $data . "\\" . $data;
+  public static function processData($key, $data, &$processedData)
+  {
+		
+		if(is_null($data)) {
+			return;
+		}
+		
+    $config = explode(':', $data);
 
-        $processedData[$key] = $widgetToLoad::widget();
+    if(count($config) > 1 && $config[0] != '') {
+      $widgetToLoad = "app\\workspace\\widgets\\" . $config[0] . "\\" . $config[0];
+      $config = [
+        'action' => $config[1]
+      ];
+    } else {
+      $widgetToLoad = "app\\workspace\\widgets\\" . $data . "\\" . $data;
+      $config = null;
     }
+		
+    $processedData[$key] = $widgetToLoad::widget($config);
+  }
 }

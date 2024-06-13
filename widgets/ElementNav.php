@@ -33,9 +33,6 @@ class ElementNav extends Widget
   public function init()
   {
     parent::init();
-    if ($this->message === NULL) {
-      $this->message = 'Hello World';
-    }
   }
 
   public function run()
@@ -49,10 +46,9 @@ class ElementNav extends Widget
       'limit' => 99
     ]);
 
-    $params[0] = $this->action;
+    $params[0] = 'content/' . $this->action;
 
-    foreach (\Yii::$app->getRequest()
-               ->getQueryParams() as $param => $value) {
+    foreach (\Yii::$app->getRequest()->getQueryParams() as $param => $value) {
       $params[$param] = $value;
     }
 
@@ -62,15 +58,10 @@ class ElementNav extends Widget
         continue;
       }
 
-      if($lastCat != $element['category']) {
-        $nav .= Html::tag('li', "<h6>" . $element['category'] . "</h6>", ['class' => 'gc-elementgroup__heading']);
-        $lastCat = $element['category'];
-      }
-
       $css = ($this->ctype == $element['key']) ? 'gc-active-filter' : '';
       $params[$this->selector] = $element['key'];
       $targetUrl = Url::to($params);
-      $nav .= Html::tag('li', Html::a($element['label'], $targetUrl), ['class' => $css]);
+      $nav .= Html::tag('li', Html::a(Html::tag('span', $element['label']), $targetUrl, ['data-pjax'=>1]), ['class' => $css]);
     }
 
     return $nav;

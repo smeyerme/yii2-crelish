@@ -1,2 +1,4 @@
-{{ content | raw}}
-<span class="c-badge gc-mt--1">{{ uuid }} : {{ ctype }}</span>
+<div class="u-letter-box-large">
+  {{ content | raw }}
+</div>
+<span class="c-badge gc-mt--1">{{  uuid ? uuid : t('crelish', 'new') }} : {{ ctype }}</span>

@@ -18,7 +18,7 @@ class ExportController extends CrelishBaseController
     {
         return [
             'access' => [
-                'class' => AccessControl::className(),
+                'class' => AccessControl::class,
                 'rules' => [
                     [
                         'allow' => true,
@@ -151,7 +151,7 @@ class ExportController extends CrelishBaseController
             $sheet->setCellValue('Q'.$row, $model['message']);
             $tmp = explode("_",$model['images']);
             $sheet->setCellValue('R'.$row,'download');
-            $sheet->getCell('R'.$row)->getHyperlink()->setUrl('https://kita.bauundhobby.ch/site/download.html?id=' . array_shift($tmp));
+            $sheet->getCell('R'.$row)->getHyperlink()->setUrl('https://kita.bauundhobby.ch/site/download?id=' . array_shift($tmp));
             $sheet->getCell('R'.$row)->getStyle()->getFont()->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color(\PhpOffice\PhpSpreadsheet\Style\Color::COLOR_BLUE))->setUnderline(true);
             $sheet->setCellValue('S'.$row,date('d.m.Y H:i:s',$model['created']));
             $row++;

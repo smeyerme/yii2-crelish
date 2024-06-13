@@ -3,11 +3,8 @@
 namespace giantbits\crelish\controllers;
 
 use giantbits\crelish\components\CrelishBaseController;
-use giantbits\crelish\components\CrelishDynamicJsonModel;
-use giantbits\crelish\components\CrelishJsonDataProvider;
 use yii\filters\AccessControl;
 use yii\helpers\FileHelper;
-use yii\helpers\Json;
 
 
 class ElementsController extends CrelishBaseController
@@ -18,7 +15,7 @@ class ElementsController extends CrelishBaseController
   {
     return [
       'access' => [
-        'class' => AccessControl::className(),
+        'class' => AccessControl::class,
         'rules' => [
           [
             'allow' => true,

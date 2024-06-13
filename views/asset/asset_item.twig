@@ -1,17 +1,17 @@
-<div class="o-grid__cell o-grid__cell--width-20">
-	<a href="{{ url('asset/update', {uuid: model.uuid}) }}" class="gc-tc--inherit">
-		<div class="c-card c-card--high gc-m--lbr-1 gc-bc--palette-white">
-			<div class="c-card__content c-heading dz-filename gc-bc--palette-silver gc-to--ellipsis">
-				{{ model.systitle }}
-			</div>
-			<div class="c-card__content">
-				<div class="image gc-o--hidden" style="background-color: {{ model.colormain_hex }};">
-					<img class="lazy" data-original="{{ model.src }}" height="140" >
-				</div>
-				<div class="description gc-box--h-60 gc-to--ellipsis">
-					{{ model.description | raw }}
-				</div>
-			</div>
+{% set preview = '' %}
+{% if model.mime == 'image/jpg' or model.mime == 'image/jpeg' or model.mime == 'image/gif' or model.mime == 'image/png' %}
+	{% set preview = '<img src="/crelish/asset/glide?path=' ~ model.fileName ~ '&w=160&f=fit" onerror="this.style.display=\'none\';" />' %}
+{% elseif model.mime == 'image/svg+xml' %}
+	{% set preview = '<img src="' ~ model.pathName ~ model.fileName ~ '" onerror="this.style.display=\'none\';" />' %}
+{% elseif model.mime == 'application/pdf' %}
+	{% set preview = '<img src="/crelish/asset/glide?path=thumbs/' ~ model.thumbnail ~ '&p=small" onerror="this.style.display=\'none\';" />' %}
+{% endif %}
+
+
+	<a href="{{ url('asset/update', {uuid: model.uuid}) }}">
+		{{ preview|raw }}
+		<div class="description">
+			<h3>{{ model.systitle }}</h3>
+			{{ model.description | raw }}
 		</div>
 	</a>
-</div>

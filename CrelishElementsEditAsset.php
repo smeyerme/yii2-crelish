@@ -27,7 +27,7 @@ class CrelishElementsEditAsset extends AssetBundle
     public $jsOptions = ['position' => \yii\web\View::POS_HEAD];
 
     public $depends = [
-        'yii\web\YiiAsset',
+        //'yii\web\YiiAsset',
         //'yii\bootstrap\BootstrapAsset'
     ];
 }

@@ -1,0 +1,117 @@
+<style>
+  .translations-container {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 20px;
+  }
+
+  .category {
+    padding: 10px;
+    background-color: #f5f5f5;
+    border: 1px solid #ddd;
+    margin-bottom: 5px;
+    font-weight: 800;
+    font-size: 1.6rem;
+  }
+
+  .translation-row {
+    display: flex;
+    margin-bottom: 5px;
+    padding-right: 2rem;
+	  padding-block: 1rem;
+  }
+
+  .translation-row:nth-of-type(odd) {
+    background-color: #dddee4;
+  }
+
+  .translation-row > label {
+    flex: 1;
+    padding: 5px;
+    align-self: center; /* Align label vertically */
+  }
+
+  .translation-row > textarea {
+    flex: 3;
+    padding: 5px;
+    border: 1px solid #ddd;
+    resize: vertical; /* Allow vertical resizing */
+  }
+
+  button[type="submit"] {
+    padding: 10px 20px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    cursor: pointer;
+  }
+</style>
+
+<script>
+  $(document).ready(function () {
+    // Function to resize textarea
+    function resizeTextarea(textarea) {
+      $(textarea).css('height', 'auto').css('height', textarea.scrollHeight + 'px');
+    }
+
+    // Initial resize
+    $('textarea').each(function () {
+      resizeTextarea(this);
+    });
+
+    // Resize on input
+    $(document).on('input', 'textarea', function () {
+      resizeTextarea(this);
+    });
+  });
+
+  function changeLanguage() {
+    var selectedLanguage = document.getElementById('language-select').value;
+    var currentLanguage = '{{ app.request.get('language') }}'; // Get the current language from the query parameter
+
+    // Check if the selected language is different from the current language
+    if (selectedLanguage !== currentLanguage) {
+      var url = new URL(window.location);
+      url.searchParams.set('language', selectedLanguage); // Set or update the 'language' parameter
+      window.location.href = url.href; // Redirect to the updated URL
+    }
+  }
+</script>
+
+{% if app.params.crelish.languages|length > 1 %}
+	<div class="lang-ui-switch" style="margin-top: 0;">
+		<span>{{ t('crelish', 'Select language to edit:') }}</span>
+		<select id="language-select" onchange="changeLanguage()">
+			{% for lang in app.params.crelish.languages %}
+				<option value="{{ lang }}"
+				        {% if lang == app.request.get('language') %}selected{% endif %}>{{ lang|upper }}</option>
+			{% endfor %}
+		</select>
+	</div>
+{% endif %}
+
+<div class="o-grid o-grid--wrap o-grid--small-full">
+	<div class="o-grid__cell">
+		<form id="content-form" method="post" action="{{ path('/crelish/translation/save', {'language': language}) }}">
+			{# Include CSRF Token #}
+			<input type="hidden" name="{{ _csrfParam }}" value="{{ _csrfToken }}">
+			
+			{% for category, items in translations %}
+				<div class="c-card">
+					<div class="c-card__item c-card__item--brand">{{ category }}</div>
+					<div class="c-card__item">
+						{% for key, value in items %}
+							<div class="translation-row">
+								<label for="textarea-{{ category }}-{{ key | slugify }}">{{ key | raw }}</label>
+								<textarea id="textarea-{{ category }}-{{ key | slugify }}"
+								          name="Translations[{{ category }}][{{ key }}]">{{ value }}</textarea>
+							</div>
+						{% endfor %}
+					</div>
+				</div>
+				<br>
+				<br>
+			{% endfor %}
+		</form>
+	</div>
+</div>
