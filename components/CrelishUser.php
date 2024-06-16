@@ -2,6 +2,7 @@
 	
 	namespace giantbits\crelish\components;
 	
+	use app\workspace\models\Company;
 	use app\workspace\models\User;
 	use yii\base\BaseObject;
 	use yii\base\NotSupportedException;
@@ -9,8 +10,10 @@
 	
 	class CrelishUser extends BaseObject implements \yii\web\IdentityInterface
 	{
-		public $loginUrl = ['crelish/user/login'];
 		
+		private $customProperties = [];
+		
+		public $loginUrl = ['crelish/user/login'];
 		/**
 		 * [$id description].
 		 *
@@ -156,8 +159,15 @@
 		 */
 		public static function findIdentity($id)
 		{
-			$userData = User::findOne(['uuid' => $id]);
-			return new static($userData);
+			$user = User::findOne(['uuid' => $id]);
+			$userData = new static($user);
+			
+			$company = Company::find()->where(['=', 'uuid', $userData->company])->one();
+			if($company) {
+				$userData->companyName = $company->systitle;
+			}
+			
+			return $userData;
 		}
 		
 		/**
@@ -205,5 +215,33 @@
 		public function validatePassword($password)
 		{
 			return true; //$this->getPassword() === $password;
+		}
+		
+		public function __get($name)
+		{
+			if (array_key_exists($name, $this->customProperties)) {
+				return $this->customProperties[$name];
+			}
+			
+			return parent::__get($name);
+		}
+		
+		public function __set($name, $value)
+		{
+			$this->customProperties[$name] = $value;
+		}
+		
+		public function __isset($name)
+		{
+			return isset($this->customProperties[$name]) || parent::__isset($name);
+		}
+		
+		public function __unset($name)
+		{
+			if (isset($this->customProperties[$name])) {
+				unset($this->customProperties[$name]);
+			} else {
+				parent::__unset($name);
+			}
 		}
 	}

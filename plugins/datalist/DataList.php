@@ -10,6 +10,7 @@ class DataList extends Widget
   public $data;
   public $formKey;
   public $field;
+	public $model;
 
   public function init()
   {
