@@ -3,8 +3,8 @@
 	namespace giantbits\crelish\components;
 	
 	use Doctrine\Inflector\Language;
-	use Scn\DeeplApiConnector\DeeplClient;
 	use Scn\DeeplApiConnector\DeeplClientFactory;
+	use Scn\DeeplApiConnector\Enum\LanguageEnum;
 	use Scn\DeeplApiConnector\Exception\RequestException;
 	use Scn\DeeplApiConnector\Model\TranslationConfig;
 	use yii\i18n\MissingTranslationEvent;
@@ -46,10 +46,10 @@
 			$deepl = DeeplClientFactory::create('81e2ffda-aa5a-e813-52e8-b416fd65f4ec:fx');
 			
 			try {
-				$deepTranslation = new \Scn\DeeplApiConnector\Model\TranslationConfig(
+				$deepTranslation = new TranslationConfig(
 					$event->message,
 					strtoupper($event->language),
-					\Scn\DeeplApiConnector\Enum\LanguageEnum::LANGUAGE_DE,
+					LanguageEnum::LANGUAGE_DE,
 					['html']
 				);
 				
