@@ -61,6 +61,9 @@
       Yii::setAlias('@workspace', '@app/workspace');
       Yii::setAlias('@workspace/actions', '@workspace/actions');
       
+			Yii::setAlias('@bower', '@vendor/bower-asset');
+      Yii::setAlias('@npm',  '@vendor/npm-asset');
+      
       // Detect language.
       $this->processLanguage();
       $this->buildControllerMap();
