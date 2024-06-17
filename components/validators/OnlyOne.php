@@ -12,8 +12,7 @@
     
     public function validateAttribute($model, $attribute)
     {
-      var_dump('hier');
-      
+			
     }
     
     public function clientValidateAttribute($model, $attribute, $view)

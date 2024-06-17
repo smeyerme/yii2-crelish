@@ -26,7 +26,6 @@
               'twig' => [
                 'class' => 'yii\twig\ViewRenderer',
                 'cachePath' => '@runtime/Twig/cache',
-                //'extensions' => ['\Twig_Extension_Debug'],
                 'extensions' => [
                   new \Cocur\Slugify\Bridge\Twig\SlugifyExtension(\Cocur\Slugify\Slugify::create()),
                   '\Twig_Extension_Debug',
