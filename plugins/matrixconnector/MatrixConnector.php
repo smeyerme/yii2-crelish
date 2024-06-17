@@ -30,6 +30,7 @@
 		
 		public function run()
 		{
+			
 			$elementType = !empty($_GET['cet']) ? $_GET['cet'] : 'page';
 			//$modelProvider = new CrelishDataProvider($elementType);
 			$modelProvider = CrelishDataResolver::resolveProvider($elementType, []);
@@ -85,7 +86,6 @@
 		
 		private function processData($data)
 		{
-			
 			if (is_string($data)) {
 				$data = Json::decode($data);
 			}
@@ -97,7 +97,6 @@
 				$processedData[$key] = [];
 				
 				foreach ($item as $reference) {
-					
 					$info = [];
 					$dataItem = new CrelishDataProvider($reference['ctype'], [], $reference['uuid']);
 					$itemData = $dataItem->one();

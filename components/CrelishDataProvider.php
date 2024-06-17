@@ -67,11 +67,12 @@
 								$dataModel['ctype'] = $this->ctype;
 								$processedData[$dataModel['uuid']] = $this->processSingle($dataModel);
 							}
+							
+							$this->allModels = $dataModels;
 						} else {
 							$processedDataIn = false;
+							$this->allModels = $this->modelClass::find()->all();
 						}
-						
-						$this->allModels = $this->modelClass::find()->all();
 						
 						if (!empty($this->allModels)) {
 							if (array_key_exists( 'filter', $settings)) {

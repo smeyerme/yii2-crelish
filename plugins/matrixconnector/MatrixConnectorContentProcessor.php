@@ -16,6 +16,7 @@
 		
 		public static function processData($key, $data, &$processedData): void
 		{
+			
 			if (empty($processedData[$key])) {
 				$processedData[$key] = [];
 			}

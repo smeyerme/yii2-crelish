@@ -2,9 +2,9 @@
 	
 	namespace giantbits\crelish\components;
 	
+	use kartik\widgets\ActiveForm;
 	use Yii;
 	use yii\base\InvalidRouteException;
-	use yii\bootstrap\ActiveForm;
 	use yii\i18n\Formatter;
 	use yii\web\Controller;
 	use yii\helpers\Html;
@@ -171,7 +171,7 @@
 			}
 			
 			ob_start();
-			$form = \kartik\widgets\ActiveForm::begin([
+			$form = ActiveForm::begin([
 				'id' => $settings['id'],
 				'options' => [
 					'role' => 'presentation',

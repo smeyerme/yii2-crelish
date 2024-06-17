@@ -41,6 +41,6 @@ class CrelishAsset extends AssetBundle
 
   public $depends = [
     'yii\web\YiiAsset',
-    'yii\bootstrap\BootstrapPluginAsset'
+    'yii\bootstrap5\BootstrapPluginAsset'
   ];
 }

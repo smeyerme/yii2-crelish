@@ -162,9 +162,11 @@
 			$user = User::findOne(['uuid' => $id]);
 			$userData = new static($user);
 			
-			$company = Company::find()->where(['=', 'uuid', $userData->company])->one();
-			if($company) {
-				$userData->companyName = $company->systitle;
+			if (class_exists('Company')) {
+				$company = Company::find()->where(['=', 'uuid', $userData->company])->one();
+				if ($company) {
+					$userData->companyName = $company->systitle;
+				}
 			}
 			
 			return $userData;
