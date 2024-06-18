@@ -1,4 +1,4 @@
-# yii2-crelish
+# yii2-crelish 0.4.8
 Content management for the Yii2 framework.
 
 ## Installation
