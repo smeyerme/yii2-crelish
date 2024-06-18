@@ -53,3 +53,15 @@
 		<i class="fa fa-cogs"></i> {{ t('crelish', 'Settings') }}
 	</a>
 </div>
+
+<span class="cr-version">V0.4.9</span>
+
+{% apply registerCss %}
+.cr-version {
+	position: absolute;
+	bottom: 1rem;
+	left: 1rem;
+	font-size: 0.8rem;
+	color: #34877FFF;
+}
+{% endapply %}
