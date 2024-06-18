@@ -89,13 +89,12 @@
 </script>
 {{ pjax_end() }}
 
-<div class="modal fade" id="modal-create-content" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
-     aria-hidden="true">
-  <div class="modal-dialog gc-no-border-radius">
-    <div class="modal-content gc-no-border-radius gc-bc--palette-clouds">
-      <div class="modal-header gc-no-border gc-bc--palette-silver-light">
-        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+<div class="modal modal-lg fade" id="modal-create-content" tabindex="-1" role="dialog">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
         <h4 class="modal-title" id="myModalLabel">{{ t('crelish', 'Create new content') }}</h4>
+        <button type="button" class="close" data-bs-dismiss="modal">×</button>
       </div>
       <div class="modal-body">
         <ul role="menu" class="content-dropper-subnav">
