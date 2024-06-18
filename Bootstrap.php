@@ -130,6 +130,9 @@
                   'handleMissingTranslation'
                 ]
               ],
+	            '*' => [
+		            'class' => 'yii\i18n\PhpMessageSource',
+	            ],
             ],
           ],
           'glide' => [
