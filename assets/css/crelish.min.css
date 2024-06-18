@@ -636,11 +636,11 @@ body {
 .crelish-app-root .pull-right {
   float: right;
 }
-.crelish-app-root .modal-content {
-  width: 100vw;
-}
 .crelish-app-root .modal-header .close {
   float: right;
   margin-inline: auto 0;
+  border: none;
+  border-radius: 0.4rem;
+  background: lightgrey;
 }
 /*# sourceMappingURL=crelish.min.css.map */

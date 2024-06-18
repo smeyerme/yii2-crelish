@@ -10,9 +10,9 @@
   </div>
 </div>
 
-<div class="modal fade cr-modal--full matrix-modal-{{ formKey }}" tabindex="-1" role="dialog"
+<div class="modal fade modal-xl matrix-modal-{{ formKey }}" tabindex="-1" role="dialog"
      aria-labelledby="matrix-modal-{{ formKey }}" id="matrix-modal-{{ formKey }}">
-  <div class="modal-dialog" style="width: 100vw; height: 100vh; top: 0; left: 0; margin: 0; padding: 0;">
+  <div class="modal-dialog" style="height: 80vh;">
     <div class="modal-content gc-bc--palette-clouds" style="height: 100%;">
       <div class="modal-header gc-bc--palette-green-sea gc-fc--palette-clouds">
         <h4 class="modal-title" id="myModalLabel">Content selection</h4>
@@ -28,7 +28,7 @@
             <div class="o-grid gc-bc--palette-clouds">
               <div class="o-grid__cell o-grid__cell--width-20">
                 <h6>Type filter</h6>
-                <ul role="menu" class="gc-nav__content-filter">
+                <ul role="menu" class="content-filter">
                   {{ element_nav_widget({'ctype':ctype, 'selector':'cet'}) }}
                 </ul>
                 </div>
@@ -171,5 +171,24 @@ fa fa-arrows-alt" aria-hidden="true"></span> <strong>{ info[0].value }</strong>
 {% apply registerCss %}
 #contentList {
   padding-top: 1.333rem;
+}
+
+.content-filter {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  font-weight: 600;
+  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 0;
+}
+
+.content-filter li {
+  padding: 0;
+}
+
+#contentList .content-filter li a {
+  padding: 0;
 }
 {% endapply %}
