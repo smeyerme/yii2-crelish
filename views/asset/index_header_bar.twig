@@ -1,6 +1,6 @@
 <div class="c-input-group group-content-filter">
   {% include('@crelish/views/layouts/base_header_bar.twig') %}
-  <button class="c-button c-button--brand"><i class="fa fa-search"></i></button>
+  <button class="c-button c-button--brand"><i class="fa-sharp fa-regular  fa-search"></i></button>
   <div class="o-field">
     <input class="c-field" name="cr_content_filter" id="cr_content_filter"
            value="{{ app.session.get('cr_content_filter') }}"
@@ -10,7 +10,7 @@
 
 <span class="c-input-group u-small" style="margin-right: 0;">
   <button class="c-button c-button--error btn-delete-grid hidden">
-    <i class="fa fa-check-square"></i> {{ t('crelish', 'Löschen') }}
+    <i class="fa-sharp fa-regular  fa-check-square"></i> {{ t('crelish', 'Löschen') }}
   </button>
   <a class="c-button" id="switch-to-grid"><i class="fas fa-th-large"></i></a>
   <a class="c-button" id="switch-to-list"><i class="fas fa-list"></i></a>

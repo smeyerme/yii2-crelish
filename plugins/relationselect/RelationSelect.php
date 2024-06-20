@@ -87,7 +87,7 @@ class RelationSelect extends CrelishFormWidget
           'format' => 'raw',
           'value' => function ($data) {
             $url = Yii::$app->request->absoluteUrl . '&ul=' . $this->field->key . '::' . $data->uuid;
-            return Html::a('<i class="fa fa-trash"></i>', $url, ['title' => 'Löschen', 'class' => 'c-button u-small']);
+            return Html::a('<i class="fa-sharp fa-regular  fa-trash"></i>', $url, ['title' => 'Löschen', 'class' => 'c-button u-small']);
           }
         ]
       ];

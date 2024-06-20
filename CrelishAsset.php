@@ -22,7 +22,7 @@ class CrelishAsset extends AssetBundle
     //'https://cdn.jsdelivr.net/dropzone/4.3.0/basic.min.css',
     'https://cdn.jsdelivr.net/npm/perfect-scrollbar@1.5.5/css/perfect-scrollbar.min.css',
     'https://cdn.jsdelivr.net/npm/blaze-css@1.2.2/dist/blaze.min.css',
-    ['https://use.fontawesome.com/releases/v5.3.1/css/all.css', 'integrity' => 'sha384-mzrmE5qonljUremFsqc01SB46JvROS7bZs3IO2EmfFsd15uHvIt+Y8vEf7N7fWAU', 'crossorigin' => 'anonymous'],
+    //['https://use.fontawesome.com/releases/v5.3.1/css/all.css', 'integrity' => 'sha384-mzrmE5qonljUremFsqc01SB46JvROS7bZs3IO2EmfFsd15uHvIt+Y8vEf7N7fWAU', 'crossorigin' => 'anonymous'],
     'css/crelish.min.css',
   ];
   public $js = [
@@ -35,6 +35,7 @@ class CrelishAsset extends AssetBundle
     'https://cdn.jsdelivr.net/npm/perfect-scrollbar@1.5.5/dist/perfect-scrollbar.min.js',
     'https://cdn.jsdelivr.net/npm/split.js@1.5.11/dist/split.min.js',
     'https://cdn.jsdelivr.net/npm/pace-js@1.0.2/pace.min.js',
+	  ['https://kit.fontawesome.com/c7033483c3.js', 'crossorigin' => 'anonymous'],
     'js/crelish.js'
   ];
   public $jsOptions = ['position' => \yii\web\View::POS_HEAD];

@@ -20,12 +20,12 @@
 </div>
 <div class="navbar-item {{ app.controller.id == 'page' ? 'active' : '' }}">
 	<a href="{{ url('crelish/page/index') }}">
-		<i class="fa fa-bookmark"></i> {{ t('crelish', 'Pages') }}
+		<i class="fa-sharp fa-regular  fa-bookmark"></i> {{ t('crelish', 'Pages') }}
 	</a>
 </div>
 <div class="navbar-item {{ app.controller.id == 'content' ? 'active' : '' }}">
 	<a href="{{ url('crelish/content/index') }}">
-		<i class="fa fa-edit"></i> {{ t('crelish', 'Content') }}
+		<i class="fa-sharp fa-regular  fa-edit"></i> {{ t('crelish', 'Content') }}
 	</a>
 </div>
 <div class="navbar-item {{ app.controller.id == 'asset' ? 'active' : '' }}">
@@ -35,7 +35,7 @@
 </div>
 <div class="navbar-item {{ app.controller.id == 'user' ? 'active' : '' }}">
 	<a href="{{ url('crelish/user/index') }}">
-		<i class="fa fa-users"></i> {{ t('crelish', 'User') }}
+		<i class="fa-sharp fa-regular  fa-users"></i> {{ t('crelish', 'User') }}
 	</a>
 </div>
 <div class="navbar-item disabled">
@@ -45,16 +45,16 @@
 </div>
 <div class="navbar-item {{ app.controller.id == 'translation' ? 'active' : '' }}">
 	<a href="{{ url('crelish/translation/index') }}">
-		<i class="fa fa-language"></i> {{ t('crelish', 'Translations') }}
+		<i class="fa-sharp fa-regular  fa-language"></i> {{ t('crelish', 'Translations') }}
 	</a>
 </div>
 <div class="navbar-item {{ app.controller.id == 'settings' ? 'active' : '' }}">
 	<a href="{{ url('crelish/settings/index') }}">
-		<i class="fa fa-cogs"></i> {{ t('crelish', 'Settings') }}
+		<i class="fa-sharp fa-regular  fa-cogs"></i> {{ t('crelish', 'Settings') }}
 	</a>
 </div>
 
-<span class="cr-version">V0.4.10</span>
+<span class="cr-version">V0.4.11</span>
 
 {% apply registerCss %}
 .cr-version {
