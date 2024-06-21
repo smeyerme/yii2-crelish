@@ -63,6 +63,8 @@
       
 			Yii::setAlias('@bower', '@vendor/bower-asset');
       Yii::setAlias('@npm',  '@vendor/npm-asset');
+			
+			Yii::$app->params['bsVersion'] = '5.x';
       
       // Detect language.
       $this->processLanguage();
