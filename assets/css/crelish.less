@@ -96,6 +96,7 @@ html, body {
   }
 
   .pagination > li > a,
+
   .pagination > li > a span {
 
   }
@@ -162,7 +163,7 @@ html, body {
   }
 
   .menu-btn-4 {
-    height: 6rem;
+    height: 4rem;
     width: 6rem;
     cursor: pointer;
     justify-content: center;
@@ -261,7 +262,7 @@ html, body {
     border-color: transparent;
     color: @color-text;
     height: 100%;
-    font-size: 1.75rem;
+    font-size: 1.333rem;
 
     &:focus {
       outline: none;
@@ -271,7 +272,7 @@ html, body {
   }
 
   .logo-head {
-    height: 6rem;
+    height: 4rem;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -383,14 +384,14 @@ html, body {
 
   .navbar--controller {
     height: auto;
-    min-height: 6rem;
+    min-height: 4rem;
     background-color: #ffffff;
     box-shadow: 0px 2px 26px -12px rgba(0, 0, 0, 0.75);
     display: flex;
     justify-content: space-between;
 
     .group-content-filter {
-      height: 6rem;
+
       display: flex;
 
       &:first-of-type {
@@ -402,15 +403,10 @@ html, body {
       }
     }
 
-    > *:not(:last-child) {
-      margin-right: 1rem;
-    }
 
     .c-button {
-      padding: 1rem;
+      padding-inline: 1.9rem;
       border-radius: 0;
-      min-width: 6rem;
-      height: 6rem;
       line-height: 16px;
       display: flex;
       align-items: center;
@@ -732,23 +728,38 @@ html, body {
 
   /*checkboxing*/
 
-  input[type=checkbox] {
+  td input[type=checkbox],
+  th input[type=checkbox] {
     display: none;
   }
 
-  input[type=checkbox] + span:before {
-    font-family: "Font Awesome 5 Free";
-    display: inline-block;
-    font-size: 1.75rem;
-    margin-top: 50%;
+  td:has(input[type=checkbox]),
+  th:has(input[type=checkbox]) {
+    svg {
+      width: 1.33rem;
+      height: 1.33rem;
+      cursor: pointer;
+    }
   }
 
-  input[type=checkbox] + span:before {
-    content: "\f0c8";
+  td label:has(input[type=checkbox]) span:nth-of-type(2),
+  th label:has(input[type=checkbox]) span:nth-of-type(2) {
+    display: none;
   }
 
-  input[type=checkbox]:checked + span:before {
-    content: "\f14a";
+  td label:has(input[type=checkbox]) span:nth-of-type(1),
+  th label:has(input[type=checkbox]) span:nth-of-type(1) {
+    display: block;
+  }
+
+  td label:has(input[type=checkbox]:checked) span:nth-of-type(2),
+  th label:has(input[type=checkbox]:checked) span:nth-of-type(2) {
+    display: block;
+  }
+
+  td label:has(input[type=checkbox]:checked) span:nth-of-type(1),
+  th label:has(input[type=checkbox]:checked) span:nth-of-type(1) {
+    display: none;
   }
 
   // Modals
@@ -798,6 +809,20 @@ html, body {
       border: none;
       border-radius: 0.4rem;
       background: lightgrey;
+    }
+  }
+
+  h6, .h6, h5, .h5, h4, .h4, h3, .h3, h2, .h2, h1, .h1 {
+    margin-top: 0;
+    margin-bottom: 0;
+    font-weight: 500;
+    line-height: 1.2;
+    color: var(--bs-heading-color);
+  }
+
+  .btn-delete-grid {
+    svg {
+margin-right: .5rem;
     }
   }
 }

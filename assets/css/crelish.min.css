@@ -137,7 +137,7 @@ body {
   }
 }
 .crelish-app-root .menu-btn-4 {
-  height: 6rem;
+  height: 4rem;
   width: 6rem;
   cursor: pointer;
   justify-content: center;
@@ -224,7 +224,7 @@ body {
   border-color: transparent;
   color: #494950;
   height: 100%;
-  font-size: 1.75rem;
+  font-size: 1.333rem;
 }
 .crelish-app-root #cr_content_filter:focus {
   outline: none;
@@ -232,7 +232,7 @@ body {
   box-shadow: none;
 }
 .crelish-app-root .logo-head {
-  height: 6rem;
+  height: 4rem;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -321,27 +321,21 @@ body {
 }
 .crelish-app-root .navbar--controller {
   height: auto;
-  min-height: 6rem;
+  min-height: 4rem;
   background-color: #ffffff;
   box-shadow: 0px 2px 26px -12px rgba(0, 0, 0, 0.75);
   display: flex;
   justify-content: space-between;
 }
 .crelish-app-root .navbar--controller .group-content-filter {
-  height: 6rem;
   display: flex;
 }
 .crelish-app-root .navbar--controller .group-content-filter:first-of-type {
   flex-grow: 1;
 }
-.crelish-app-root .navbar--controller > *:not(:last-child) {
-  margin-right: 1rem;
-}
 .crelish-app-root .navbar--controller .c-button {
-  padding: 1rem;
+  padding-inline: 1.9rem;
   border-radius: 0;
-  min-width: 6rem;
-  height: 6rem;
   line-height: 16px;
   display: flex;
   align-items: center;
@@ -591,20 +585,31 @@ body {
 .crelish-app-root .content-dropper-subnav li:nth-child(even) a {
   border-right: 0;
 }
-.crelish-app-root input[type=checkbox] {
+.crelish-app-root td input[type=checkbox],
+.crelish-app-root th input[type=checkbox] {
   display: none;
 }
-.crelish-app-root input[type=checkbox] + span:before {
-  font-family: "Font Awesome 5 Free";
-  display: inline-block;
-  font-size: 1.75rem;
-  margin-top: 50%;
+.crelish-app-root td:has(input[type=checkbox]) svg,
+.crelish-app-root th:has(input[type=checkbox]) svg {
+  width: 1.33rem;
+  height: 1.33rem;
+  cursor: pointer;
 }
-.crelish-app-root input[type=checkbox] + span:before {
-  content: "\f0c8";
+.crelish-app-root td label:has(input[type=checkbox]) span:nth-of-type(2),
+.crelish-app-root th label:has(input[type=checkbox]) span:nth-of-type(2) {
+  display: none;
 }
-.crelish-app-root input[type=checkbox]:checked + span:before {
-  content: "\f14a";
+.crelish-app-root td label:has(input[type=checkbox]) span:nth-of-type(1),
+.crelish-app-root th label:has(input[type=checkbox]) span:nth-of-type(1) {
+  display: block;
+}
+.crelish-app-root td label:has(input[type=checkbox]:checked) span:nth-of-type(2),
+.crelish-app-root th label:has(input[type=checkbox]:checked) span:nth-of-type(2) {
+  display: block;
+}
+.crelish-app-root td label:has(input[type=checkbox]:checked) span:nth-of-type(1),
+.crelish-app-root th label:has(input[type=checkbox]:checked) span:nth-of-type(1) {
+  display: none;
 }
 .crelish-app-root .cr-modal--full {
   margin: 0 !important;
@@ -642,5 +647,26 @@ body {
   border: none;
   border-radius: 0.4rem;
   background: lightgrey;
+}
+.crelish-app-root h6,
+.crelish-app-root .h6,
+.crelish-app-root h5,
+.crelish-app-root .h5,
+.crelish-app-root h4,
+.crelish-app-root .h4,
+.crelish-app-root h3,
+.crelish-app-root .h3,
+.crelish-app-root h2,
+.crelish-app-root .h2,
+.crelish-app-root h1,
+.crelish-app-root .h1 {
+  margin-top: 0;
+  margin-bottom: 0;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--bs-heading-color);
+}
+.crelish-app-root .btn-delete-grid svg {
+  margin-right: 0.5rem;
 }
 /*# sourceMappingURL=crelish.min.css.map */
