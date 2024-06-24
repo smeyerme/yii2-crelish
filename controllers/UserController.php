@@ -161,6 +161,7 @@
 			];
 			
 			$columns = array_merge($checkCol, $modelProvider->columns);
+			
 			$columns = map($columns, function ($item) use ($modelProvider) {
 				
 				if (key_exists('attribute', $item) && $item['attribute'] === 'state') {
@@ -176,6 +177,7 @@
 						return $state;
 					};
 				}
+				
 				
 				if (key_exists('attribute', $item) && $item['attribute'] === 'role') {
 					$item['format'] = 'raw';
@@ -198,6 +200,7 @@
 					};
 				}
 				
+				
 				if (key_exists('attribute', $item) && $item['attribute'] === 'activationDate') {
 					$item['format'] = 'raw';
 					$item['label'] = 'Datum Aktivierung';
@@ -205,6 +208,7 @@
 						return !empty($data['activationDate']) ? strftime("%d.%m.%Y", $data['activationDate']) : '';
 					};
 				}
+				
 				
 				if (key_exists('attribute', $item) && $item['attribute'] === 'trialEndAt') {
 					$item['format'] = 'raw';
@@ -220,11 +224,14 @@
 						return $itm->key == $item['attribute'];
 					});
 					
+					
 					if (is_object($itemDef) && property_exists($itemDef, 'items')) {
 						$item['format'] = 'raw';
 						$item['label'] = $itemDef->label;
 						$item['value'] = function ($data) use ($itemDef) {
-							return $itemDef->items->{$data[$itemDef->key]};
+							
+							$key = $data[$itemDef->key];
+							return $itemDef->items->{$key};
 						};
 					} elseif (is_object($itemDef) && property_exists($itemDef, 'type') && str_contains($itemDef->type, 'SwitchInput')) {
 						$item['format'] = 'raw';
@@ -233,10 +240,13 @@
 							return $data[$itemDef->key] == 0 ? 'Nein' : 'Ja';
 						};
 					}
+					
 				}
+				
 				
 				return $item;
 			});
+			
 			
 			$rowOptions = function ($model, $key, $index, $grid) {
 				return ['onclick' => 'location.href="update?uuid=' . $model['uuid'] . '";'];

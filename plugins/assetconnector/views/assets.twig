@@ -2,7 +2,7 @@
 {{ use('/yii/grid/GridView') }}
 {{ use('/yii/widgets/Pjax') }}
 
-<div class="modal fade cr-modal--full media-modal-{{ formKey }}"
+<div class="modal modal-xl fade cr-modal--full media-modal-{{ formKey }}"
      id="media-modal-{{ formKey }}"
      tabindex="-1"
      role="dialog"
@@ -29,7 +29,7 @@
           </div>
           <div class="o-grid__cell--width-25">
             <div class="c-nav__content c-nav__content--right">
-              <button type="button" class="close" style="margin-top: 14px;" data-dismiss="modal"
+              <button type="button" class="close" style="margin-top: 14px;" data-bs-dismiss="modal"
                       aria-label="Close"><span aria-hidden="true">×</span></button>
             </div>
           </div>
@@ -80,8 +80,8 @@
           <span class="fui-image"></span> <i class="fa-sharp fa-regular  fa-trash"></i> {{ t('crelish', 'Remove media...') }}
         </a>
         {% endif %}
-        <a class="c-button c-button--info open-media-modal" data-toggle="modal"
-         data-target="#media-modal-{{ formKey }}" href style="margin-top: -6px; margin-right: -6px;">
+        <a class="c-button c-button--info open-media-modal" data-bs-toggle="modal"
+         data-bs-target="#media-modal-{{ formKey }}" href style="margin-top: -6px; margin-right: -6px;">
           <span class="fui-image"></span> {{ t('crelish', 'Select media...') }}
       </a>
       </span>

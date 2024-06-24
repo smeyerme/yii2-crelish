@@ -42,10 +42,9 @@
 				<label class="control-label" for="crelishdynamicjsonmodel-state">{{ t('crelish', 'Color palette') }}</label>
 				<ul class="gc-list--inline">
 					{% for color in colorpalette %}
-						<li data-toggle="tooltip" title=""
-						    data-original-title="rgb({{ color[0] }}, {{ color[1] }} , {{ color[2] }})
-              <br>{{ colormain_hex }}"
-						    style="background-color: rgb({{ color[0] }}, {{ color[1] }}, {{ color[2] }});"></li>
+						<li class="cr-tooltip"  style="background-color: rgb({{ color[0] }}, {{ color[1] }}, {{ color[2] }});">
+								<span>rgb({{ color[0] }}, {{ color[1] }} , {{ color[2] }})</span>
+						</li>
 					{% endfor %}
 				</ul>
 			</div>
@@ -53,7 +52,9 @@
 			<div class="form-group field-crelishdynamicjsonmodel-state required">
 				<label class="control-label" for="crelishdynamicjsonmodel-state">{{ t('crelish', 'Main color') }}</label>
 				<ul class="gc-list--inline">
-					<li style="background-color: {{ colormain_hex }}; width: 100%;"></li>
+					<li class="cr-tooltip" style="background-color: {{ colormain_hex }}; width: 100%;">
+						<span>{{ colormain_hex }}</span>
+					</li>
 				</ul>
 			</div>
 		{% endif %}
@@ -106,7 +107,32 @@
 
 <script>
   $('.colorspawn').css('border-bottom', '4px solid {{ colormain_hex }}');
-  $('[data-toggle="tooltip"]').tooltip({html: true});
 </script>
 
 <span class="c-badge gc-mt--1">{{ model.uuid }} : {{ model.ctype }}</span>
+
+{% apply registerCss %}
+.cr-tooltip {
+  position: relative;
+  display: inline-block;
+  cursor: crosshair;
+}
+
+.cr-tooltip span  {
+  visibility: hidden;
+  width: fit-content;
+  background-color: black;
+  color: #fff;
+  text-align: center;
+  border-radius: 6px;
+  position: absolute;
+  z-index: 1;
+  padding: 1rem;
+  min-width: 12rem;
+  transform: translateY(-100%) translateX(-50%);
+}
+
+.cr-tooltip:hover span {
+  visibility: visible;
+}
+{% endapply %}
