@@ -38,6 +38,8 @@ class RelationSelect extends CrelishFormWidget
     foreach ($optionProvider as $option) {
       $options[$option['uuid']] = $option['systitle'];
     }
+	  
+	  asort($options);
 
     $this->predefinedOptions = $options;
     $ul = Yii::$app->request->get('ul');
