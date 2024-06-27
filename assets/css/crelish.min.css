@@ -54,6 +54,9 @@ body {
   width: fit-content;
   border-radius: 0.333rem;
   background-color: white;
+  margin-top: 2.333rem;
+  margin-left: 50%;
+  transform: translateX(-50%);
 }
 .crelish-app-root .pagination a,
 .crelish-app-root .pagination span,
