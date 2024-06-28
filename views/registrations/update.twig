@@ -1,0 +1,32 @@
+<div class="u-letter-box-large">
+  {# content | raw #}
+	<div class="o-container o-container--super">
+		<h2>{{ content.nameFirst }}  {{ content.nameLast }} {{ content.company }}</h2>
+		<h3>{{ t('app', 'Registration for') }}: {{ content.eventCode }} {{ content.eventYear }}</h3>
+		
+		<table class="c-table c-table--striped">
+			<caption class="c-table__caption">{{ content.nameFirst }}  {{ content.nameLast }}</caption>
+			<tbody class="c-table__body">
+			{% for key, value in data %}
+				<tr class="c-table__row">
+					<td class="c-table__cell">{{ key }}</td>
+					<td class="c-table__cell">{{ value }}</td>
+				</tr>
+			{% endfor %}
+			</tbody>
+		</table>
+	</div>
+</div>
+
+<span class="c-badge gc-mt--1">{{ uuid }} : {{ ctype }}</span>
+
+{% apply registerCss %}
+	.c-table--striped :not(.c-table__row--heading).c-table__row:nth-of-type(odd) {
+		background-color: #363b511f;
+		color: initial;
+	}
+{% endapply %}
+
+{% apply registerJs(4) %}
+	console.error('Error');
+{% endapply %}

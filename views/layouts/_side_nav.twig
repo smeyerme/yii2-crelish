@@ -38,6 +38,15 @@
 		<i class="fa-sharp fa-regular  fa-users"></i> {{ t('crelish', 'User') }}
 	</a>
 </div>
+
+{% if 'portal' in app.basePath %}
+<div class="navbar-item {{ app.controller.id == 'registrations' ? 'active' : '' }}">
+	<a href="{{ url('crelish/registrations/export') }}">
+		<i class="fa fa-id-card"></i> {{ t('crelish', 'Registrations') }}
+	</a>
+</div>
+{% endif %}
+
 <div class="navbar-item disabled">
 	<a href="#fakelink">
 		<i class="fas fa-globe-africa"></i> Globals
@@ -54,7 +63,7 @@
 	</a>
 </div>
 
-<span class="cr-version">V0.4.18</span>
+<span class="cr-version">V0.4.19</span>
 
 {% apply registerCss %}
 .cr-version {
