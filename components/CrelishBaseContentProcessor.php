@@ -2,6 +2,7 @@
 namespace giantbits\crelish\components;
 
 use yii\base\Component;
+use yii\helpers\VarDumper;
 use function _\find;
 
 class CrelishBaseContentProcessor extends Component
@@ -22,23 +23,25 @@ class CrelishBaseContentProcessor extends Component
   {
     $processedData = [];
     $elementDefinition = CrelishDynamicJsonModel::loadElementDefinition($ctype);
-
-    if ($data) {
+		
+	  if ($data) {
+		  if($ctype === 'widget') {
+			  $widgetOptions = $data->options;
+		  }
 
       foreach ($data as $key => $content) {
-        $fieldType = find($elementDefinition->fields, function ($def) use ($key) {
+        $fieldTypeOrig = find($elementDefinition->fields, function ($def) use ($key) {
           return $def->key == $key;
         });
-
+				
         $transform = NULL;
-        if (!empty($fieldType) && is_object($fieldType)) {
-          $fieldType = (property_exists($fieldType, 'type')) ? $fieldType->type : 'textInput';
-          $transform = (property_exists($fieldType, 'transform')) ? $fieldType->transform : null;
+        if (!empty($fieldTypeOrig) && is_object($fieldTypeOrig)) {
+          $fieldType = (property_exists($fieldTypeOrig, 'type')) ? $fieldTypeOrig->type : 'textInput';
+          $transform = (property_exists($fieldTypeOrig, 'transform')) ? $fieldTypeOrig->transform : null;
         }
-
+				
         if (!empty($fieldType)) {
-
-          // Get processor class.
+	        // Get processor class.
           $processorClass = 'giantbits\crelish\plugins\\' . strtolower($fieldType) . '\\' . ucfirst($fieldType) . 'ContentProcessor';
           if(!empty($transform)) $transformClass = 'giantbits\crelish\components\transformer\CrelishFieldTransformer' . ucfirst($transform);
 
@@ -47,6 +50,9 @@ class CrelishBaseContentProcessor extends Component
           }
 
           if (class_exists($processorClass)) {
+	          if(!empty($widgetOptions)) {
+		          $content .= '|' . $widgetOptions;
+	          }
             $processorClass::processData($key, $content, $processedData);
           } else {
             $processedData[$key] = $content;
@@ -77,22 +83,22 @@ class CrelishBaseContentProcessor extends Component
   public static function processFieldData($ctype, $elementDefinition, $attr, $value, &$finalArr)
   {
     $fieldType = 'textInput';
-
+		
     // Get type of field.
     $field = find($elementDefinition->fields, function ($value) use ($attr) {
       return $value->key == $attr;
     });
-
-    $transform = NULL;
+		
+	  $transform = NULL;
     if (!empty($field) && is_object($field)) {
       $fieldType = (property_exists($field, 'type')) ? $field->type : 'textInput';
       $transform = (property_exists($field, 'transform')) ? $field->transform : null;
     }
-
-    // Get processor class.
+	  
+	  // Get processor class.
     $processorClass = 'giantbits\crelish\plugins\\' . strtolower($fieldType) . '\\' . ucfirst($fieldType) . 'ContentProcessor';
     if(!empty($transform)) $transformClass = 'giantbits\crelish\components\transformer\CrelishFieldTransformer' . ucfirst($transform);
-
+		
     if (strpos($fieldType, "widget_") !== FALSE) {
       $processorClass = str_replace("widget_", "", $fieldType) . 'ContentProcessor';
     }
@@ -102,7 +108,7 @@ class CrelishBaseContentProcessor extends Component
     } else {
       $finalArr[$attr] = $value;
     }
-
+		
     if (!empty($transform) && class_exists($transformClass)) {
       $transformClass::afterFind($finalArr[$attr]);
     }

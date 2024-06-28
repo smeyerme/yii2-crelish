@@ -22,6 +22,9 @@
 		
 		public static function afterFind(&$value)
 		{
-			$value = Json::decode($value);
+			
+			if(!is_array($value)) {
+				$value = Json::decode($value);
+			}
 		}
 	}

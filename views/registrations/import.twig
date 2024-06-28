@@ -1,0 +1,20 @@
+{{ use('kartik/form/ActiveForm') }}
+
+<div class="u-window-box-medium">
+  <h3>User import</h3>
+  {% set form = active_form_begin({
+    'type': 'vertical',
+    'fieldConfig': {'autoPlaceholder':false, 'labelSpan': 4},
+    'options': {'enctype': 'multipart/form-data'}
+  }) %}
+  <div class="form-group">
+    <label for="exampleInputFile">Excel Upload</label>
+    <input type="file" name="file" class="form-control" id="exampleInputFile">
+  </div>
+  <button type="submit" name="submit" class="btn btn-primary">Submit</button>
+  {{ active_form_end() }}
+
+  <div class="well">
+    {{ list | raw }}
+  </div>
+</div>

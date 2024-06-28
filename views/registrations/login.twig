@@ -1,0 +1,28 @@
+{% set crelishBundle = register_asset_bundle('giantbits/crelish/CrelishAsset', true) %}
+{{ use('yii/widgets/ActiveForm') }}
+<div class="gc-full-bg" style="background-image: url({{ crelishBundle.baseUrl }}/img/login.webp); width: 100vw;height: 100vh; background-size: cover;">
+</div>
+<div class="gc-login--wrapper">
+  <img src="{{ crelishBundle.baseUrl }}/img/crelish_logo.svg" border="0" width="180" />
+  {% set form = active_form_begin({
+    'id': 'login',
+    'options' : {'class' : ''},
+    'errorSummaryCssClass': 'gc-fc--palette-clouds'
+  }) %}
+  <div class="o-form-element">
+    {{ form.errorSummary(model) | raw }}
+
+    <div class="c-input-group c-input-group--stacked">
+      <div class="o-field">
+        {{ form.field(model, 'email', {'errorOptions':{'class':'help hidden'}, 'options':{'class':'gradient-box'}, 'inputOptions':{'class':'c-field', 'placeholder':'Email'}}).label(false) | raw }}
+      </div>
+      <div class="o-field">
+        {{ form.field(model, 'password', {'errorOptions':{'class':'help hidden'}, 'options':{'class':''}, 'inputOptions':{'class':'c-field', 'placeholder':'Pasword'}}).passwordInput().label(false) | raw }}
+      </div>
+    </div>
+  </div>
+  <div class="o-form-element">
+    <button class="c-button c-button--info c-button--block" type="submit">Login</button>
+  </div>
+  {{ active_form_end() }}
+</div>

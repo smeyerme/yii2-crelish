@@ -161,18 +161,17 @@
 			$ds = DIRECTORY_SEPARATOR;
 			
 			// 1. Was a template given?
-			//if(!empty($this->entryPoint['template'])) {
-			//$this->layout = '@app/themes/' . \giantbits\crelish\Module::getInstance()->theme . "/layouts/" . $this->entryPoint['template'];
-			//} else {
-			// 2. Do we have a template file matching the slug?
-			$path = \Yii::$app->view->theme->basePath . $ds . 'layouts' . $ds . $this->entryPoint['slug'] . '.twig';
-			if (file_exists($path)) {
-				$this->layout = '@app/themes/' . \giantbits\crelish\Module::getInstance()->theme . "/layouts/" . $this->entryPoint['slug'] . '.twig';
+			if (!empty($this->entryPoint['template'])) {
+				$this->layout = '@app/themes/' . \giantbits\crelish\Module::getInstance()->theme . "/layouts/" . $this->entryPoint['template'];
 			} else {
-				// 3. Take default main template.
-				$this->layout = '@app/themes/' . \giantbits\crelish\Module::getInstance()->theme . "/layouts/main.twig";
+				$path = \Yii::$app->view->theme->basePath . $ds . 'layouts' . $ds . $this->entryPoint['slug'] . '.twig';
+				if (file_exists($path)) {
+					$this->layout = '@app/themes/' . \giantbits\crelish\Module::getInstance()->theme . "/layouts/" . $this->entryPoint['slug'] . '.twig';
+				} else {
+					// 3. Take default main template.
+					$this->layout = '@app/themes/' . \giantbits\crelish\Module::getInstance()->theme . "/layouts/main.twig";
+				}
 			}
-			//}
 		}
 		
 		/**

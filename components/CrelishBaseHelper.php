@@ -10,11 +10,11 @@
   
   
   use app\workspace\models\Download;
-  use app\workspace\models\Event;
   use app\workspace\models\News;
   use app\workspace\models\Product;
   use app\workspace\models\Reference;
-  use app\workspace\models\User;
+  use OzdemirBurak\Iris\Color\Hex;
+  use MatthiasMullie\Minify\CSS;
   use yii\helpers\Url;
   
   class CrelishBaseHelper
@@ -141,4 +141,46 @@
       // every forbidden character is replace by an underscore
       return  preg_replace('/[^a-zA-Z0-9\-\._]/','-', $dangerousFilename);
     }
+	  
+	  public static function lightenColor($hexcolor, $percent) {
+		  
+		  $hex = new Hex($hexcolor);
+		  
+		  return $hex->lighten($percent);
+		  
+		  if ( strlen( $hexcolor ) < 6 ) {
+			  $hexcolor = $hexcolor[0] . $hexcolor[0] . $hexcolor[1] . $hexcolor[1] . $hexcolor[2] . $hexcolor[2];
+		  }
+		  $hexcolor = array_map('hexdec', str_split( str_pad( str_replace('#', '', $hexcolor), 6, '0' ), 2 ) );
+		  
+		  foreach ($hexcolor as $i => $color) {
+			  $from = $percent < 0 ? 0 : $color;
+			  $to = $percent < 0 ? $color : 255;
+			  $pvalue = ceil( ($to - $from) * $percent );
+			  $hexcolor[$i] = str_pad( dechex($color + $pvalue), 2, '0', STR_PAD_LEFT);
+		  }
+		  
+		  return '#' . implode($hexcolor);
+	  }
+	  
+	  public static function darkenColor($hexcolor, $percent)
+	  {
+		  $hex = new Hex($hexcolor);
+		  return $hex->darken($percent);
+		  
+		  return $hex->shade($percent);
+	  }
+	  
+	  
+	  public static function registerCustomCss($css, $overwrites = []) {
+		  
+		  foreach ($overwrites as $key => $cssVar) {
+			  $css = str_replace('var(pvar-' . $key . '--)', $cssVar, $css);
+		  }
+		  
+		  $minifier = new CSS();
+		  $minifier->add($css);
+		  
+		  \Yii::$app->view->registerCss($minifier->minify());
+	  }
   }

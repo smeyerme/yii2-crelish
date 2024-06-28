@@ -8,6 +8,7 @@
 	use giantbits\crelish\components\CrelishJsonDataProvider;
 	use yii\base\Component;
 	use yii\helpers\Json;
+	use yii\helpers\VarDumper;
 	use yii\web\View;
 	
 	class MatrixConnectorContentProcessor extends Component
@@ -16,7 +17,6 @@
 		
 		public static function processData($key, $data, &$processedData): void
 		{
-			
 			if (empty($processedData[$key])) {
 				$processedData[$key] = [];
 			}
@@ -46,7 +46,6 @@
 						}
 						
 						$view = file_exists(\Yii::$app->view->theme->basePath . '/frontend/elements/'.$subContentdata['ctype'] . '.twig') ? 'elements/'.$subContentdata['ctype'] . '.twig' : $subContentdata['ctype'] . '.twig';
-						
 						$processedData[$key][$section] .= \Yii::$app->controller->renderPartial($view, ['data' => $sourceDataOut]);
 					}
 				}

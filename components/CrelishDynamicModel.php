@@ -7,6 +7,7 @@
 	use yii\base\DynamicModel;
 	use yii\helpers\FileHelper;
 	use yii\helpers\Json;
+	use yii\helpers\VarDumper;
 	use function _\filter;
 	use function _\find;
 	
@@ -400,7 +401,9 @@
 		public static function loadElementDefinition($ctype)
 		{
 			$definitionPath = Yii::getAlias('@app/workspace/elements') . DIRECTORY_SEPARATOR . str_replace('db:', '', $ctype) . '.json';
-			$elementDefinition = Json::decode(file_get_contents($definitionPath), false);
+			if(file_exists($definitionPath)) {
+				$elementDefinition = Json::decode(file_get_contents($definitionPath), false);
+			}
 			
 			$usePublishingMeta = !((!property_exists($elementDefinition, 'usePublishingMeta') || $elementDefinition->usePublishingMeta === false));
 			
