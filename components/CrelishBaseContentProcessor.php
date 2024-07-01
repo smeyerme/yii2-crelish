@@ -25,7 +25,7 @@ class CrelishBaseContentProcessor extends Component
     $elementDefinition = CrelishDynamicJsonModel::loadElementDefinition($ctype);
 		
 	  if ($data) {
-		  if($ctype === 'widget') {
+		  if($ctype === 'widget' && !empty($data->options)) {
 			  $widgetOptions = $data->options;
 		  }
 
