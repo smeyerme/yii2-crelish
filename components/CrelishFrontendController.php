@@ -160,8 +160,12 @@
 		{
 			$ds = DIRECTORY_SEPARATOR;
 			
+			$path = \Yii::$app->view->theme->basePath . $ds . 'layouts' . $ds . $this->entryPoint['template'];
+			
+			var_dump($path);
+			
 			// 1. Was a template given?
-			if (!empty($this->entryPoint['template'])) {
+			if (file_exists($path)) {
 				$this->layout = '@app/themes/' . \giantbits\crelish\Module::getInstance()->theme . "/layouts/" . $this->entryPoint['template'];
 			} else {
 				$path = \Yii::$app->view->theme->basePath . $ds . 'layouts' . $ds . $this->entryPoint['slug'] . '.twig';

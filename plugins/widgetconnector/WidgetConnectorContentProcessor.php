@@ -20,14 +20,17 @@ class WidgetConnectorContentProcessor extends Component
 	 
 		$widgetData = explode('|', $data);
     $config = explode(':', $data);
-
-	  
+		
     if(count($config) > 1 && $config[0] != '') {
       $widgetToLoad = "app\\workspace\\widgets\\" . $config[0] . "\\" . $config[0];
       $config = [
-        'action' => $config[1],
-	      'data' => !empty($widgetData[1]) ? $widgetData[1] : null
+        'action' => $config[1]
       ];
+			
+			if(property_exists($widgetToLoad, 'data')) {
+				$config['data'] = !empty($widgetData[1]) ? $widgetData[1] : null;
+			}
+			
     } else {
       $widgetToLoad = "app\\workspace\\widgets\\" . $data . "\\" . $data;
       $config = null;
