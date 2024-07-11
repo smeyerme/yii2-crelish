@@ -14,6 +14,7 @@ return [
   'Save' => 'Speichern',
   'Back' => 'Zurück',
   'Pages' => 'Seiten',
+	'Download file' => 'Datei herunterladen',
   'Save the entry to remove the media.' => 'Sie müssen den Eintrag speichern, damit die Mediazuweisung entfernt wird.',
   'Type filter' => 'Inhaltstyp',
   'Create new content' => 'Neuen Inhalt erstellen',
