@@ -137,8 +137,8 @@ class PageController extends CrelishBaseController
   public function actionCreate()
   {
     $content = $this->buildForm();
-
-    return $this->render('create.twig', [
+		
+		return $this->render('create.twig', [
       'content' => $content,
       'ctype' => $this->ctype,
       'uuid' => $this->uuid,
@@ -152,6 +152,8 @@ class PageController extends CrelishBaseController
   public function actionUpdate()
   {
     $content = $this->buildForm();
+		
+		\Yii::$app->view->params['model'] = $this->model;
 
     return $this->render('create.twig', [
       'content' => $content,

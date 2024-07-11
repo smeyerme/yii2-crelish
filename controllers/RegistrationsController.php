@@ -22,6 +22,7 @@
 	use PhpOffice\PhpSpreadsheet\Style\Fill;
 	use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 	use yii\base\DynamicModel;
+	use yii\bootstrap5\Html;
 	use yii\data\ActiveDataProvider;
 	use yii\filters\AccessControl;
 	use function _\reject;
@@ -182,7 +183,7 @@
 					'label' => 'Created',
 					'attribute' => 'created',
 					'value' => function ($data) {
-						return !empty($data->created) ? strftime('%d.%m.%Y', $data->created) : '';
+						return !empty($data->created) ? date('d.m.Y H:i', $data->created) : '';
 					},
 					'enableSorting' => true
 				]
@@ -351,6 +352,10 @@
 							'1' => 'Ja',
 							default => 'Nein',
 						};
+					}
+					
+					if($field === 'matriculation') {
+						$value = Html::a(\Yii::t('crelish', 'Download file'), '/uploads/registration/' . $value, ['target' => '_blank']);
 					}
 					
 					$mailData[\Yii::t('app', $fieldLabel)] = $value;

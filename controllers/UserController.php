@@ -357,7 +357,7 @@
 					$creationTime = time();
 					
 					foreach ($sheetData as $entry) {
-						// Anrrde 4, Vorname 3, Name 2, Firma 6 , E-Mail 7, Mobile 12
+						// Anrede 4, Vorname 3, Name 2, Firma 6 , E-Mail 7, Mobile 12
 						if (!empty($entry[6])) {
 							
 							$lang = trim($entry[0]);
@@ -367,7 +367,6 @@
 							$mobile = !empty($entry[5]) ? trim($entry[5]) : trim($entry[4]);
 							$email = trim(str_replace(',', '.', $entry[6]));
 							$salutation = trim($entry[7]);
-							$created = $creationTime;
 							
 							// Check if user exists before creating new one.
 							$user = \app\workspace\models\User::find()
@@ -382,7 +381,7 @@
 								$user->company = $company;
 								$user->email = trim($email);
 								$user->phone = $mobile;
-								$user->created = $created;
+								$user->created = $creationTime;
 								$user->lang = $lang;
 								$user->uuid = CrelishBaseHelper::GUIDv4();
 								$user->role = 1;
@@ -401,7 +400,6 @@
 								
 								if ($user) {
 									$user->reminderSend = -1;
-									$user->state = 2;
 									$user->updated = $creationTime;
 									$user->save(false);
 								}

@@ -10,7 +10,7 @@
 			{% for key, value in data %}
 				<tr class="c-table__row">
 					<td class="c-table__cell">{{ key }}</td>
-					<td class="c-table__cell">{{ value }}</td>
+					<td class="c-table__cell">{{ value | raw }}</td>
 				</tr>
 			{% endfor %}
 			</tbody>
