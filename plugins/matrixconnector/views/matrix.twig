@@ -20,20 +20,20 @@
           <span aria-hidden="true">&times;</span>
         </button>
       </div>
-      <div class="modal-body o-panel-container " style=" height: 90%;">
+      <div class="modal-body o-panel-container" style=" height: 90%;">
         <div class="o-panel">
 
-          {{ pjax_begin({'id':'contentList', 'enablePushState': true}) }}
+          {{ pjax_begin({'id':'contentSelect', 'enablePushState': true}) }}
 
             <div class="o-grid gc-bc--palette-clouds">
               <div class="o-grid__cell o-grid__cell--width-20">
                 <h6>Type filter</h6>
                 <ul role="menu" class="content-filter">
-                  {{ element_nav_widget({'ctype':ctype, 'selector':'cet'}) }}
+                  {{ element_nav_widget({'ctype':'page', 'selector':'cet', 'action': 'update', 'target': '#contentSelector'}) }}
                 </ul>
                 </div>
                 <div class="o-grid__cell">
-                  <h6>Content</h6>
+                  <h6>{{ t('crelish', 'Content') }}</h6>
                     {{ grid_view_widget({
                       'dataProvider': dataProvider,
                       'columns': columns,
@@ -77,7 +77,7 @@ fa-sharp fa-regular  fa-arrows-alt" aria-hidden="true"></span> <strong>{ info[0]
             </div>
           </div>
         </div>
-        <button type="button" onclick={ addContent } class="c-button c-button--ghost-primary c-button--block gc-mt--1" data-target=".matrix-modal-{{ formKey }}" >Add content</button>
+        <button type="button" onclick={ addContent } class="c-button c-button--ghost-primary c-button--block gc-mt--1" data-target="#matrix-modal-{{ formKey }}" >Add content</button>
       </div>
     </div>
 
@@ -88,7 +88,6 @@ fa-sharp fa-regular  fa-arrows-alt" aria-hidden="true"></span> <strong>{ info[0]
 
     var activateContentMatrix = function() {
       var wrap = this
-
       $("#matrix-modal-{{ formKey }} a.cntAdd").each(function () {
         $(this).on('click', function (e) {
           e.preventDefault()
@@ -99,7 +98,7 @@ fa-sharp fa-regular  fa-arrows-alt" aria-hidden="true"></span> <strong>{ info[0]
             wrap.data[targetArea].push(content)
           }
 
-          $('.matrix-modal-{{ formKey }}').modal('hide')
+          $('#matrix-modal-{{ formKey }}').modal('hide')
           wrap.update()
         })
       })
@@ -107,7 +106,7 @@ fa-sharp fa-regular  fa-arrows-alt" aria-hidden="true"></span> <strong>{ info[0]
   
     addContent(e) {
       e.preventDefault()
-      $('.matrix-modal-{{ formKey }}').modal('show')
+      $('#matrix-modal-{{ formKey }}').modal('show')
     }
 
     removeItem(e) {
@@ -130,6 +129,7 @@ fa-sharp fa-regular  fa-arrows-alt" aria-hidden="true"></span> <strong>{ info[0]
             constrainDimensions: true,
           },
         });
+
         sortable.on('sortable:sorted', function(evt){
           console.log(evt.data.oldIndex, evt.data.newIndex)
           matrixData.main.move(evt.data.oldIndex, evt.data.newIndex)
@@ -167,9 +167,8 @@ fa-sharp fa-regular  fa-arrows-alt" aria-hidden="true"></span> <strong>{ info[0]
   });
 </script>
 
-
 {% apply registerCss %}
-#contentList {
+#contentSelect {
   padding-top: 1.333rem;
 }
 
@@ -188,7 +187,7 @@ fa-sharp fa-regular  fa-arrows-alt" aria-hidden="true"></span> <strong>{ info[0]
   padding: 0;
 }
 
-#contentList .content-filter li a {
+#contentSelect .content-filter li a {
   padding: 0;
 }
 {% endapply %}

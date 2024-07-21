@@ -2,7 +2,7 @@
 {{ use('/yii/widgets/Pjax') }}
 {{ use('/giantbits/crelish/widgets') }}
 
-{{ pjax_begin({'id':'contentList', 'enablePushState': true}) }}
+{{ pjax_begin({'id':'contentSelect', 'enablePushState': true}) }}
 
 <div class="filter-top">
   <ul role="menu" class="content-filter">
@@ -36,13 +36,13 @@
       if (window.location.href.indexOf('cr_content_filter') >= 0) {
         $.pjax({
           url: window.location.href.replace(/(cr_content_filter=).*?(&|$)/, '$1' + $(this).val() + '$2'),
-          container: '#contentList'
+          container: '#contentSelect'
         });
       } else {
         var preFix = (window.location.href.indexOf("?") === -1) ? '?' : '&';
         $.pjax({
           url: window.location.href + preFix + "cr_content_filter=" + $(this).val(),
-          container: '#contentList'
+          container: '#contentSelect'
         });
       }
     });
@@ -52,13 +52,13 @@
         if (window.location.href.indexOf('cr_content_filter') >= 0) {
           $.pjax({
             url: window.location.href.replace(/(cr_content_filter=).*?(&|$)/, '$1' + $(this).val() + '$2'),
-            container: '#contentList'
+            container: '#contentSelect'
           });
         } else {
           var preFix = (window.location.href.indexOf("?") === -1) ? '?' : '&';
           $.pjax({
             url: window.location.href + preFix + "cr_content_filter=" + $(this).val(),
-            container: '#contentList'
+            container: '#contentSelect'
           });
         }
       }
