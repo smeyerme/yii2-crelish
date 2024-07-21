@@ -24,7 +24,7 @@
         }
     ],
     "require": {
-        "yiisoft/yii2": "2.0.49.4",
+        "yiisoft/yii2": "2.0.51",
         "symfony/yaml": "v6.3.12",
         "lodash-php/lodash-php": "0.0.9",
         "ksubileau/color-thief-php": "^1.3",
