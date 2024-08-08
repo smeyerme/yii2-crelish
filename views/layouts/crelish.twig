@@ -47,8 +47,7 @@
 
 <script type="text/javascript">
   function execDelete(url) {
-    var urlParams = new URLSearchParams(window.location.search);
-    console.log(urlParams.get('ctype') + ':' + urlParams.get('uuid'))
+    const urlParams = new URLSearchParams(window.location.search);
     window.location.href = url + '?uuid=' + urlParams.get('uuid') + '&ctype=' + urlParams.get('ctype')
   }
 </script>
