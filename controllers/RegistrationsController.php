@@ -373,16 +373,10 @@
 		
 		public function actionDelete()
 		{
-			if (!empty(\Yii::$app->request->get('dl'))) {
-				if (\Yii::$app->request->get('dl') == 1) {
-					$registration = Registrations::findOne(['=', 'uuid', $this->uuid]);
-					$registration->state = -1;
-					$registration->save(false);
-					\Yii::$app->response->redirect('/crelish/registrations/export');
-				}
-			}
-			
-			$this->redirect('/crelish/registrations/export');
+			$registration = Registrations::findOne(['=', 'uuid', $this->uuid]);
+			$registration->state = -1;
+			$registration->save(false);
+			\Yii::$app->response->redirect('/crelish/registrations/export');
 		}
 		
 		/**
