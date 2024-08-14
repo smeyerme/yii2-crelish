@@ -24,7 +24,7 @@
 			if ($data && $data != '{"main":[]}') {
 				
 				if (is_string($data)) {
-					$data = Json::decode(Json::decode($data));
+					$data = Json::decode(stripcslashes(trim($data, '"')));
 				}
 				
 				foreach ($data as $section => $subContent) {

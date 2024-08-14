@@ -400,6 +400,7 @@
 		
 		public static function loadElementDefinition($ctype)
 		{
+			$elementDefinition = null;
 			$definitionPath = Yii::getAlias('@app/workspace/elements') . DIRECTORY_SEPARATOR . str_replace('db:', '', $ctype) . '.json';
 			if(file_exists($definitionPath)) {
 				$elementDefinition = Json::decode(file_get_contents($definitionPath), false);
