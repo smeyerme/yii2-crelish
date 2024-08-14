@@ -24,5 +24,21 @@
   <div class="o-form-element">
     <button class="c-button c-button--info c-button--block" type="submit">Login</button>
   </div>
+  <div style="font-size: 0.8rem; color: lightgray;">
+    {{ app.params.crelish.version }}
+  </div>
   {{ active_form_end() }}
 </div>
+
+{% apply registerCss %}
+  .o-form-element p,
+  .o-form-element li
+  {
+    color: red;
+  }
+  
+  .gc-login--wrapper {
+    min-height: 33vh;
+    height: auto;
+  }
+{% endapply %}

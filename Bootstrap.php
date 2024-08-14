@@ -205,5 +205,7 @@
           'theme' => \Yii::$app->params['crelish']['theme']
         ]
       ]);
+			
+			\Yii::$app->params['crelish']['version'] = 'V0.2.43';
     }
   }
