@@ -1,6 +1,7 @@
 <?php
 namespace giantbits\crelish\components;
 
+use stdClass;
 use yii\base\Component;
 use yii\helpers\VarDumper;
 use function _\find;
@@ -50,8 +51,13 @@ class CrelishBaseContentProcessor extends Component
           }
 
           if (class_exists($processorClass)) {
-	          if(!empty($widgetOptions)) {
-		          $content .= '|' . $widgetOptions;
+	          if($ctype === 'widget') {
+							$widget = $content;
+		          $content = new stdClass();
+							$content->widget = $widget;
+							if(!empty($widgetOptions)) {
+								$content->options = $widgetOptions;
+							}
 	          }
             $processorClass::processData($key, $content, $processedData);
           } else {

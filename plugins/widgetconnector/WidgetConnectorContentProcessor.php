@@ -1,41 +1,48 @@
 <?php
-
-namespace giantbits\crelish\plugins\widgetconnector;
-
-use giantbits\crelish\components\CrelishDataProvider;
-use yii\base\Component;
-use yii\helpers\Json;
-use yii\helpers\VarDumper;
-
-class WidgetConnectorContentProcessor extends Component
-{
-  public $data;
-
-  public static function processData($key, $data, &$processedData)
-  {
+	
+	namespace giantbits\crelish\plugins\widgetconnector;
+	
+	use giantbits\crelish\components\CrelishDataProvider;
+	use yii\base\Component;
+	use yii\helpers\Json;
+	use yii\helpers\VarDumper;
+	
+	class WidgetConnectorContentProcessor extends Component
+	{
+		public $data;
 		
-		if(is_null($data)) {
-			return;
-		}
-	 
-		$widgetData = explode('|', $data);
-    $config = explode(':', $data);
-		
-    if(count($config) > 1 && $config[0] != '') {
-      $widgetToLoad = "app\\workspace\\widgets\\" . $config[0] . "\\" . $config[0];
-      $config = [
-        'action' => $config[1]
-      ];
+		public static function processData($key, $data, &$processedData): void
+		{
+			$options = !empty($data->options) ? Json::decode($data->options) : [];
+			$widget = !empty($data->widget) ? $data->widget : null;
+			$widgetAction = null;
+			$widgetData = null;
 			
-			if(property_exists($widgetToLoad, 'data')) {
-				$config['data'] = !empty($widgetData[1]) ? $widgetData[1] : null;
+			if (is_null($data)) {
+				return;
 			}
 			
-    } else {
-      $widgetToLoad = "app\\workspace\\widgets\\" . $data . "\\" . $data;
-      $config = null;
-    }
-		
-    $processedData[$key] = $widgetToLoad::widget($config);
-  }
-}
+			/*if (str_contains($data->widget, "|")) {
+				$widgetData = explode('|', $data->widget);
+			}*/
+			
+			if (str_contains($widget, ":")) {
+				$widgetAction = explode(':', $widget)[1];
+				$widget = explode(':', $widget)[0];
+			}
+			
+			if (count($options) > 1 && !empty($widget)) {
+				$widgetToLoad = "app\\workspace\\widgets\\" . $widget . "\\" . $widget;
+				$options['action'] = $widgetAction;
+				
+				if (property_exists($widgetToLoad, 'data')) {
+					$options['data'] = $options;
+				}
+			} else {
+				$widgetToLoad = "app\\workspace\\widgets\\" . $widget . "\\" . $widget;
+				$options = null;
+			};
+			
+			$processedData[$key] = $widgetToLoad::widget($options);
+		}
+	}
