@@ -9,6 +9,7 @@
 	use app\workspace\components\RegistrationsExportTransformerHTK;
 	use app\workspace\components\RegistrationsExportTransformerDHK;
 	use app\workspace\components\RegistrationsExportTransformerSHK;
+	use app\workspace\components\RegistrationsExportTransformerWBN;
 	use app\workspace\models\Registrations;
 	use giantbits\crelish\components\CrelishBaseController;
 	use giantbits\crelish\components\CrelishJsonModel;
@@ -144,7 +145,8 @@
 				'nameFirst',
 				'nameLast',
 				'email',
-				'exported'
+				'exported',
+				'type'
 			]);
 			
 			$query = Registrations::find()
@@ -198,8 +200,8 @@
 				'attribute' => 'type',
 				'value' => function ($model) {
 					return match ($model->type) {
-						'3' => 'Aussteller',
-						'2' => 'Referent',
+						3 => 'Aussteller',
+						2 => 'Referent',
 						default => 'Teilnehmer',
 					};
 				},
@@ -249,7 +251,7 @@
 					'HTK' => new RegistrationsExportTransformerHTK($modelData, $entries),
 					'DHK' => new RegistrationsExportTransformerDHK($modelData, $entries),
 					'SHK' => new RegistrationsExportTransformerSHK($modelData, $entries),
-					default => new RegistrationsExportTransformerBase($modelData, $entries),
+					default => new RegistrationsExportTransformerWBN($modelData, $entries)
 				};
 				
 				$spreadsheet = new Spreadsheet();
@@ -371,7 +373,7 @@
 			]);
 		}
 		
-		public function actionDelete()
+		public function actionDelete(): void
 		{
 			$registration = Registrations::findOne(['=', 'uuid', $this->uuid]);
 			$registration->state = -1;
@@ -1013,6 +1015,115 @@
 						->getFont()
 						->setBold(true);
 					
+					break;
+				case 'WBN':
+					$sheet->getRowDimension(1)
+						->setRowHeight(45);
+					
+					// BG Colors
+					$sheet->getStyle('A1:' . $sheet->getHighestColumn() . '1')
+						->getFill()
+						->setFillType(Fill::FILL_SOLID)
+						->getStartColor()
+						->setRGB('ffd966');
+					
+					$sheet->getStyle('R1:T1')
+						->getFill()
+						->setFillType(Fill::FILL_SOLID)
+						->getStartColor()
+						->setRGB('f1c232');
+					
+					$sheet->getStyle('U1:X1')
+						->getFill()
+						->setFillType(Fill::FILL_SOLID)
+						->getStartColor()
+						->setRGB('bf9000');
+					
+					$sheet->getStyle('AA1:AB1')
+						->getFill()
+						->setFillType(Fill::FILL_SOLID)
+						->getStartColor()
+						->setRGB('38761d');
+					
+					$sheet->getStyle('AD1:AH1')
+						->getFill()
+						->setFillType(Fill::FILL_SOLID)
+						->getStartColor()
+						->setRGB('a2c4c9');
+					
+					
+					// Centered text
+					$sheet->getStyle('A1:' . $sheet->getHighestColumn() . '1')
+						->getAlignment()
+						->setVertical(Alignment::VERTICAL_CENTER);
+					
+					$sheet->getStyle('A2:AH' . $sheet->getHighestRow())
+						->getAlignment()
+						->setVertical(Alignment::VERTICAL_TOP);
+					
+					
+					// Text wrap
+					$sheet->getStyle('Y1:Y' . $sheet->getHighestRow())
+						->getAlignment()
+						->setWrapText(true);
+					
+					$sheet->getStyle('AA1:AA' . $sheet->getHighestRow())
+						->getAlignment()
+						->setWrapText(true);
+					
+					$sheet->getStyle('AB1:AB' . $sheet->getHighestRow())
+						->getAlignment()
+						->setWrapText(true);
+					
+					$sheet->getStyle('AC1:AC' . $sheet->getHighestRow())
+						->getAlignment()
+						->setWrapText(true);
+					
+					
+					// Horizontal align
+					$sheet->getStyle('R1:T' . $sheet->getHighestRow())
+						->getAlignment()
+						->setHorizontal(Alignment::HORIZONTAL_CENTER);
+					
+					$sheet->getStyle('V1:X' . $sheet->getHighestRow())
+						->getAlignment()
+						->setHorizontal(Alignment::HORIZONTAL_CENTER);
+					
+					// Force data types
+					for ($rowIndex = 1; $rowIndex <= $sheet->getHighestRow(); $rowIndex++) {
+						$sheet->getCell('J' . $rowIndex)
+							->setDataType(\PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+						
+						$sheet->getCell('M' . $rowIndex)
+							->setDataType(\PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+						
+						$sheet->getCell('N' . $rowIndex)
+							->setDataType(\PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+						
+						$sheet->getCell('P' . $rowIndex)
+							->setDataType(\PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+						
+						$sheet->getCell('AF' . $rowIndex)
+							->setDataType(\PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+					}
+					
+					
+					// Header styles
+					$borderStyle = [
+						'borders' => [
+							'outline' => [
+								'borderStyle' => Border::BORDER_MEDIUM,
+								'color' => ['rgb' => '000000'],
+							],
+						],
+					];
+					
+					$sheet->getStyle('A1:' . $sheet->getHighestColumn() . '1')
+						->applyFromArray($borderStyle);
+					
+					$sheet->getStyle('A1:' . $sheet->getHighestColumn() . '1')
+						->getFont()
+						->setBold(true);
 					break;
 				default:
 					// Default formatting if needed

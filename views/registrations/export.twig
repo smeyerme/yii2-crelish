@@ -52,6 +52,17 @@
 				</div>
 				<div class="row">
 					<div class="col-sm">
+						{{ form.field(filterModel, 'type').dropDownList({0:t('crelish', 'Alle'), 1:t('crelish', 'Teilnehmer'), 2:t('crelish', 'Referent'), 3:t('crelish', 'Partner-Teilnehmer')}, {'custom': true}).label(t('app', 'Type')) | raw }}
+					</div>
+					<div class="col-sm">
+					</div>
+					<div class="col-sm">
+					</div>
+					<div class="col-sm">
+					</div>
+				</div>
+				<div class="row">
+					<div class="col-sm">
 						{{ html.submitButton(t('app', 'Filter'), {'class':'btn btn-primary c-button--block mr-1', 'name':'export', 'value': false}) | raw }}
 					</div>
 				</div>

@@ -96,7 +96,6 @@
 			if (isset(Yii::$app->params['crelish']['pageTitleAttribute']) && isset($data[Yii::$app->params['crelish']['pageTitleAttribute']])) {
 				if (isset(Yii::$app->params['crelish']['pageTitle'])) {
 					$this->view->title = str_replace('{title}', $data[Yii::$app->params['crelish']['pageTitleAttribute']], Yii::$app->params['crelish']['pageTitle']);
-					
 				} else {
 					$this->view->title = $data[Yii::$app->params['crelish']['pageTitleAttribute']];
 				}
