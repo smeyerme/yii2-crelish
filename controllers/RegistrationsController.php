@@ -509,7 +509,7 @@
 						->setRGB('99ccff');
 					
 					// fill dark green
-					$sheet->getStyle('AU1')
+					$sheet->getStyle('AS1')
 						->getFill()
 						->setFillType(Fill::FILL_SOLID)
 						->getStartColor()
