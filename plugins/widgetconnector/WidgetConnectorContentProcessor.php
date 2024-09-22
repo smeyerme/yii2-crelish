@@ -16,31 +16,30 @@
 			$options = !empty($data->options) ? Json::decode($data->options) : [];
 			$widget = !empty($data->widget) ? $data->widget : null;
 			$widgetAction = null;
-			$widgetData = null;
 			
 			if (is_null($data)) {
 				return;
 			}
-			
-			/*if (str_contains($data->widget, "|")) {
-				$widgetData = explode('|', $data->widget);
-			}*/
 			
 			if (str_contains($widget, ":")) {
 				$widgetAction = explode(':', $widget)[1];
 				$widget = explode(':', $widget)[0];
 			}
 			
-			if (count($options) > 1 && !empty($widget)) {
-				$widgetToLoad = "app\\workspace\\widgets\\" . $widget . "\\" . $widget;
-				$options['action'] = $widgetAction;
+			$widgetToLoad = "app\\workspace\\widgets\\" . $widget . "\\" . $widget;
+			
+			if (count($options) >= 1 && !empty($widget)) {
+				if(!empty($widgetAction)) {
+					$options['action'] = $widgetAction;
+				}
 				
 				if (property_exists($widgetToLoad, 'data')) {
 					$options['data'] = $options;
 				}
 			} else {
-				$widgetToLoad = "app\\workspace\\widgets\\" . $widget . "\\" . $widget;
-				$options = null;
+				if(property_exists($widgetToLoad, 'action')) {
+					$options['action'] = $widgetAction;
+				}
 			};
 			
 			$processedData[$key] = $widgetToLoad::widget($options);
