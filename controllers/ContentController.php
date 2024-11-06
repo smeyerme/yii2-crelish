@@ -41,28 +41,12 @@
 			
 			parent::init();
 			
-			/*$this->ctype = (!empty(\Yii::$app->getRequest()
-					->getQueryParam('ctype'))) ? \Yii::$app->getRequest()
-					->getQueryParam('ctype') : 'page';*/
 			$this->uuid = (!empty(Yii::$app->getRequest()
 				->getQueryParam('uuid'))) ? Yii::$app->getRequest()
 				->getQueryParam('uuid') : null;
 			
-			if (key_exists('cr_content_filter', $_GET)) {
-				Yii::$app->session->set('cr_content_filter', $_GET['cr_content_filter']);
-			} else {
-				if (!empty(Yii::$app->session->get('cr_content_filter'))) {
-					Yii::$app->request->setQueryParams(['cr_content_filter' => Yii::$app->session->get('cr_content_filter')]);
-				}
-			}
-			
-			if (key_exists('ctype', $_GET)) {
-				Yii::$app->session->set('ctype', $_GET['ctype']);
-			} else {
-				if (!empty(Yii::$app->session->get('ctype'))) {
-					Yii::$app->request->setQueryParams(['ctype' => Yii::$app->session->get('ctype')]);
-				}
-			}
+			$this->handleSessionAndQueryParams('cr_content_filter');
+			$this->handleSessionAndQueryParams('ctype');
 			
 			$this->ctype = Yii::$app->session->get('ctype');
 			
@@ -117,11 +101,20 @@
 			
 			if ($modelInfo->definitions->storage === 'db' && class_exists($modelClass)) {
 				$query = $modelInfo->getQuery($modelClass::find(), $filter);
+
+        if(!empty($modelInfo->definitions->sortDefault)) {
+          $sortKey = key($modelInfo->definitions->sortDefault);
+          $sortDir = $modelInfo->definitions->sortDefault->{$sortKey};
+        }
+
 				$modelProvider = new ActiveDataProvider([
 					'query' => $query,
 					'pagination' => [
 						'pageSize' => 25,
 					],
+          'sort' => [
+            'defaultOrder' => !empty($sortKey) && !empty($sortDir) ? [$sortKey => $sortDir] : null
+          ],
 				]);
 			} elseif ($modelInfo->definitions->storage === 'json') {
 				$modelProvider = $modelInfo->getArrayProvider();
@@ -241,5 +234,14 @@
 			}
 			
 			$this->redirect('/crelish/content/index');
+		}
+		
+		private function handleSessionAndQueryParams($paramName)
+		{
+			if (isset($_GET[$paramName])) {
+				Yii::$app->session->set($paramName, $_GET[$paramName]);
+			} elseif (Yii::$app->session->get($paramName) !== null) {
+				Yii::$app->request->setQueryParams([$paramName => Yii::$app->session->get($paramName)]);
+			}
 		}
 	}

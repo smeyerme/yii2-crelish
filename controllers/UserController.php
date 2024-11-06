@@ -93,6 +93,20 @@
 				return $this->redirect(Url::to(['/crelish/content/index']));
 			}
 			
+			$usersProvider = new CrelishDataProvider('user');
+			$users = $usersProvider->rawAll();
+			
+			if (sizeof($users) == 0) {
+				// Generate default admin.
+				$adminUser = new CrelishDynamicModel(['email', 'password', 'login', 'state', 'role'], ['ctype' => 'user']);
+				$adminUser->email = 'admin@local.host';
+				$adminUser->password = 'basta!';
+				$adminUser->state = 2;
+				$adminUser->authKey = \Yii::$app->security->generateRandomString();
+				$adminUser->role = 9;
+				$adminUser->save();
+			}
+			
 			$model = new CrelishDynamicModel(['email', 'password'], ['ctype' => 'user']);
 			
 			// Validate data and login the user in case of post request.
@@ -366,7 +380,7 @@
 							$company = trim($entry[3]);
 							$mobile = !empty($entry[5]) ? trim($entry[5]) : trim($entry[4]);
 							$email = trim(str_replace(',', '.', $entry[6]));
-							$salutation = trim($entry[7]);
+							$salutation = !empty($entry[7]) ? trim($entry[7]) : '';
 							
 							// Check if user exists before creating new one.
 							$user = \app\workspace\models\User::find()

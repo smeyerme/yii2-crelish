@@ -4,6 +4,7 @@ namespace giantbits\crelish\widgets;
 
 use giantbits\crelish\components\CrelishDataProvider;
 use yii\base\Widget;
+use yii\db\Exception;
 use yii\helpers\Html;
 use yii\helpers\Url;
 
@@ -37,15 +38,18 @@ class ElementNav extends Widget
   {
     parent::init();
   }
-
-  public function run()
+	
+	/**
+	 * @throws Exception
+	 */
+	public function run()
   {
     $nav = '';
     $lastCat = '';
 
     $elements = new CrelishDataProvider('elements', [
       'key' => 'key',
-      'sort' => ['by' => ['category', 'label', 'asc']],
+      'sort' => ['by' => [ 'label', 'asc']],
       'limit' => 99
     ]);
 		

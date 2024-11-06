@@ -28,25 +28,26 @@ class DataIncludeContentProcessor extends CrelishBaseContentProcessor
     }
   }
 
-  public static function processJson($key, $data, &$processedData)
+  public static function processJson($key, $data, &$processedData): void
   {
 	  $transformedData = null;
 		
+		
     if (is_string($data)) {
-	
-	    try {
-		    $transformedData = @Json::decode($data);
-	    } catch (InvalidArgumentException) {
-				// did not work.
+	    
+	    if($transformedData) {
+		    $data = $transformedData;
+	    } else {
+		    try {
+			    $transformedData = @Json::decode($data);
+		    } catch (InvalidArgumentException) {
+			    // did not work.
+		    }
 	    }
-			
-			if($transformedData) {
-				$data = $transformedData;
-			}
     }
 
     if ($data) {
-
+			
       if (empty($processedData[$key])) {
         $processedData[$key] = [];
       }

@@ -53,7 +53,7 @@
 			}
 		}
 		
-		public function actions()
+		public function actions(): array
 		{
 			$actions = parent::actions();
 			$controllerId = $this->id;
@@ -81,246 +81,377 @@
 			}
 		}
 		
-		public function buildForm($action = 'default', $settings = [])
+		public function buildForm($action = 'default', $settings = []): bool|string
 		{
-			$hasI18n = false;
+			$this->initializeFormSettings($settings);
+			$this->initializeModel($action, $settings);
 			
-			$formatter = new Formatter();
-			$formatter->dateFormat = "dd.MM.yyyy";
-			$formatter->nullDisplay = "";
+			if ($this->isPostRequest()) {
+				$this->handleFormSubmission();
+			}
 			
-			//default settings
+			$this->formatModelFields();
+			
+			ob_start();
+			$form = $this->beginForm($settings);
+			
+			echo $this->renderFormStructure($form, $settings);
+			
+			$this->endForm($form);
+			return ob_get_clean();
+		}
+		
+		private function initializeFormSettings(&$settings): void
+		{
 			$defaults = [
 				'id' => 'content-form',
 				'outerClass' => 'gc-ptb--2',
 				'groupClass' => 'c-card',
 				'tabs' => []
 			];
-			
-			$settings = $settings + $defaults;
-			
-			// Build form for type.
+			$settings = array_merge($defaults, $settings);
+		}
+		
+		private function initializeModel($action, $settings): void
+		{
 			$this->model = new CrelishDynamicModel([], [
-				'ctype' => (!empty($settings['ctype'])) ? $settings['ctype'] : $this->ctype,
-				'uuid' => (!empty($settings['uuid'])) ? $settings['uuid'] : $this->uuid
+				'ctype' => $settings['ctype'] ?? $this->ctype,
+				'uuid' => $settings['uuid'] ?? $this->uuid
 			]);
 			
 			if ($action !== 'default') {
 				$this->model->scenario = $action;
 			}
+		}
+		
+		private function isPostRequest(): bool
+		{
+			return !empty(Yii::$app->request->post()) && !Yii::$app->request->isAjax;
+		}
+		
+		private function handleFormSubmission(): void
+		{
+			$oldData = $this->model->uuid ? $this->model->attributes() : [];
+			$attributes = $_POST['CrelishDynamicModel'] + $oldData;
+			$this->model->attributes = $attributes;
 			
-			// Save content if post request.
-			if (!empty(\Yii::$app->request->post())
-				&& !\Yii::$app->request->isAjax) {
-				$oldData = [];
-				
-				// Load old data.
-				if (!empty($this->model->uuid)) {
-					$oldData = $this->model->attributes();
-				}
-				
-				$attributes = $_POST['CrelishDynamicModel'] + $oldData;
-				$this->model->attributes = $attributes;
-				
-				if ($this->model->validate()) {
-					$this->model->save();
-					
-					\Yii::$app->session->setFlash('success', \Yii::t("crelish", 'Content saved successfully...'));
-					
-					if (!empty($_POST['save_n_return']) && $_POST['save_n_return'] == "1") {
-						header('Location: ' . Url::to([
-								\Yii::$app->controller->id . '/index',
-								'ctype' => $this->ctype
-							]));
-						
-						exit(0);
-					}
-					
-					header('Location: ' . Url::to([
-							\Yii::$app->controller->id . '/update',
-							'ctype' => $this->ctype,
-							'uuid' => $this->model->uuid
-						]));
-					exit(0);
-				} else {
-					$message = '';
-					$errors = $this->model->errors;
-					foreach ($errors as $error) {
-						$message .= $error[0];
-					}
-					\Yii::$app->session->setFlash('error', 'Error saving item: ' . $message);
-				}
+			if ($this->model->validate() && $this->model->save()) {
+				$this->handleSuccessfulSave();
+			} else {
+				$this->handleSaveError();
 			}
+		}
+		
+		private function handleSuccessfulSave(): void
+		{
+			Yii::$app->session->setFlash('success', Yii::t("crelish", 'Content saved successfully...'));
 			
-			// Last changes to model before form render. (Format date etc.)
+			$redirectUrl = !empty($_POST['save_n_return']) && $_POST['save_n_return'] == "1"
+				? [Yii::$app->controller->id . '/index', 'ctype' => $this->ctype]
+				: [Yii::$app->controller->id . '/update', 'ctype' => $this->ctype, 'uuid' => $this->model->uuid];
+			
+			Yii::$app->response->redirect(Url::to($redirectUrl))->send();
+			Yii::$app->end();
+		}
+		
+		private function handleSaveError(): void
+		{
+			$errors = $this->model->errors;
+			$message = implode(', ', array_map(function($error) { return $error[0]; }, $errors));
+			Yii::$app->session->setFlash('error', 'Error saving item: ' . $message);
+		}
+		
+		private function formatModelFields(): void
+		{
+			$formatter = new Formatter();
+			$formatter->dateFormat = "dd.MM.yyyy";
+			$formatter->nullDisplay = "";
+			
 			foreach ($this->model->fieldDefinitions->fields as $field) {
-				if (!empty($field->format)) {
-					
-					if ($field->format == 'date') {
-						$this->model->{$field->key} = $formatter->asDate($this->model->{$field->key});
-					}
-					
-					if ($field->format == 'datetime') {
-						$this->model->{$field->key} = $formatter->asDatetime($this->model->{$field->key}, 'dd.MM.yyyy HH:mm');
-					}
-				}
-				
-				if (!empty($field->defaultValue) && empty($this->uuid)) {
-					$this->model->{$field->key} = $field->defaultValue;
+				$this->formatField($field, $formatter);
+			}
+		}
+		
+		private function formatField($field, $formatter): void
+		{
+			if (!empty($field->format)) {
+				if ($field->format == 'date') {
+					$this->model->{$field->key} = $formatter->asDate($this->model->{$field->key});
+				} elseif ($field->format == 'datetime') {
+					$this->model->{$field->key} = $formatter->asDatetime($this->model->{$field->key}, 'dd.MM.yyyy HH:mm');
 				}
 			}
 			
-			ob_start();
-			$form = ActiveForm::begin([
+			if (!empty($field->defaultValue) && empty($this->uuid)) {
+				$this->model->{$field->key} = $field->defaultValue;
+			}
+		}
+		
+		private function beginForm($settings): \yii\base\Widget|ActiveForm
+		{
+			return ActiveForm::begin([
 				'id' => $settings['id'],
 				'options' => [
 					'role' => 'presentation',
 					'autocomplete' => 'off'
 				]
 			]);
-			
-			echo Html::beginTag("div", ['class' => $settings['outerClass']]);
-			
-			if (count(\Yii::$app->params['crelish']['languages']) > 1) {
-				echo Html::beginTag('div', ['class' => 'lang-ui-switch']);
-				echo '<span>' . \Yii::t('crelish', 'Select language to edit:') . '</span><select id="language-select">';
-				foreach (\Yii::$app->params['crelish']['languages'] as $lang) {
-					echo '<option value="' . $lang . '" ' . ($lang == \Yii::$app->language ? 'selected' : '') . '>' . strtoupper($lang) . '</option>';
-				}
-				echo '</select>';
-				echo Html::endTag('div');
+		}
+		
+		private function renderFormStructure($form, $settings): string
+		{
+			$html = Html::beginTag("div", ['class' => $settings['outerClass']]);
+			$html .= $this->renderLanguageSelector();
+			$html .= Html::beginTag("div", ['class' => 'o-grid o-grid--wrap o-grid--small-full']);
+			$html .= $this->renderTabs($form, $settings);
+			$html .= Html::endTag('div');
+			$html .= Html::endTag('div');
+			$html .= Html::hiddenInput('save_n_return', '0', ['id' => 'save_n_return']);
+			return $html;
+		}
+		
+		private function renderLanguageSelector(): string
+		{
+			if (count(Yii::$app->params['crelish']['languages']) <= 1) {
+				return '';
 			}
 			
-			echo Html::beginTag("div", ['class' => 'o-grid o-grid--wrap o-grid--small-full']);
-			
-			// Get the tabs (there has to be at least one).
-			$tabs = $this->model->fieldDefinitions->tabs;
-			
-			foreach ($tabs as $tab) {
-				// Loop through tabs.
-				//check tab overrides
-				if (isset($settings['tabs'][$tab->key])) {
-					foreach ($settings['tabs'][$tab->key] as $key => $val) {
-						$tab->$key = $val;
-					}
-				}
-				
-				if (isset($tab->visible) && $tab->visible === FALSE) {
-					continue;
-				}
-				
-				foreach ($tab->groups as $group) {
-					// Loop through groups.
-					$groupSettings = (property_exists($group, 'settings')) ? $group->settings : NULL;
-					$widthClass = (!empty($groupSettings->width)) ? 'o-grid__cell--width-' . $groupSettings->width : '';
-					
-					echo Html::beginTag('div', ['class' => 'o-grid__cell ' . $widthClass]);
-					echo Html::beginTag('div', ['class' => $settings['groupClass']]);
-					if (empty($groupSettings) || (property_exists($groupSettings, 'showLabel') && $groupSettings->showLabel !== FALSE) || !property_exists($groupSettings, 'showLabel')) {
-						echo Html::tag('div', $group->label, ['class' => 'c-card__item c-card__item--brand']);
-					}
-					echo Html::beginTag('div', ['class' => 'c-card__item']);
-					
-					// Loop through model fields / attributes
-					foreach ($this->model->fieldDefinitions->fields as $field) {
-					
-					if (!in_array($field->key, $group->fields)) {
-							continue;
-						}
-						
-						if (property_exists($field, 'translatable') and $field->translatable === TRUE) {
-							if (count(\Yii::$app->params['crelish']['languages']) > 1) {
-								foreach (\Yii::$app->params['crelish']['languages'] as $lang) {
-									echo $this->buildFormField($field, $form, $lang);
-								}
-							}
-						} else {
-							echo $this->buildFormField($field, $form);
-						}
-					}
-
-					echo Html::endTag('div');
-					echo Html::endTag('div');
-					echo Html::endTag('div');
+			$html = Html::beginTag('div', ['class' => 'lang-ui-switch']);
+			$html .= '<span>' . Yii::t('crelish', 'Select language to edit:') . '</span><select id="language-select">';
+			foreach (Yii::$app->params['crelish']['languages'] as $lang) {
+				$html .= Html::tag('option', strtoupper($lang), [
+					'value' => $lang,
+					'selected' => ($lang == Yii::$app->language)
+				]);
+			}
+			$html .= '</select>';
+			$html .= Html::endTag('div');
+			return $html;
+		}
+		
+		private function renderTabs($form, $settings): string
+		{
+			$html = '';
+			foreach ($this->model->fieldDefinitions->tabs as $tab) {
+				if ($this->isTabVisible($tab)) {
+					$html .= $this->renderTab($tab, $form, $settings);
 				}
 			}
+			return $html;
+		}
+		
+		private function isTabVisible($tab): bool
+		{
+			return !isset($tab->visible) || $tab->visible !== false;
+		}
+		
+		private function renderTab($tab, $form, $settings): string
+		{
+			$html = '';
+			foreach ($tab->groups as $group) {
+				$html .= $this->renderGroup($group, $form, $settings);
+			}
+			return $html;
+		}
+		
+		private function renderGroup($group, $form, $settings): string
+		{
+			$groupSettings = property_exists($group, 'settings') ? $group->settings : [];
+			$widthClass = !empty($groupSettings->width) ? 'o-grid__cell--width-' . $groupSettings->width : '';
 			
-			echo Html::endTag('div');
-			echo Html::endTag('div');
+			$html = Html::beginTag('div', ['class' => 'o-grid__cell ' . $widthClass]);
+			$html .= Html::beginTag('div', ['class' => $settings['groupClass']]);
+			$html .= $this->renderGroupLabel($group, $groupSettings);
+			$html .= Html::beginTag('div', ['class' => 'c-card__item']);
+			$html .= $this->renderGroupFields($group, $form);
+			$html .= Html::endTag('div');
+			$html .= Html::endTag('div');
+			$html .= Html::endTag('div');
 			
-			// handle save and save and return
-			echo Html::hiddenInput('save_n_return', '0', ['id' => 'save_n_return']);
-			
-			\kartik\widgets\ActiveForm::end();
-			
-			return ob_get_clean();
+			return $html;
+		}
+		
+		private function renderGroupLabel($group, $groupSettings): string
+		{
+			if (empty($groupSettings) ||
+				(property_exists($groupSettings, 'showLabel') && $groupSettings->showLabel !== false) ||
+				!property_exists($groupSettings, 'showLabel')) {
+				return Html::tag('div', $group->label, ['class' => 'c-card__item c-card__item--brand']);
+			}
+			return '';
+		}
+		
+		private function renderGroupFields($group, $form): string
+		{
+			$html = '';
+			foreach ($this->model->fieldDefinitions->fields as $field) {
+				if (in_array($field->key, $group->fields)) {
+					$html .= $this->renderField($field, $form);
+				}
+			}
+			return $html;
+		}
+		
+		private function renderField($field, $form)
+		{
+			if (property_exists($field, 'translatable') && $field->translatable === true) {
+				return $this->renderTranslatableField($field, $form);
+			} else {
+				return $this->buildFormField($field, $form);
+			}
+		}
+		
+		private function renderTranslatableField($field, $form): string
+		{
+			$html = '';
+			if (count(Yii::$app->params['crelish']['languages']) > 1) {
+				foreach (Yii::$app->params['crelish']['languages'] as $lang) {
+					$html .= $this->buildFormField($field, $form, $lang);
+				}
+			}
+			return $html;
+		}
+		
+		private function endForm($form): void
+		{
+			ActiveForm::end();
 		}
 		
 		private function buildFormField($field, $form, $lang = null)
 		{
-			// Prepare key for nested models.
-			if (!property_exists($field, 'type')) {
-				$field->type = "textInput";
-			}
+			$field->type = $field->type ?? "textInput";
+			$fieldKey = $this->getFieldKey($field, $lang);
+			$fieldOptions = $this->getFieldOptions($field);
+			$widgetOptions = $this->getWidgetOptions($field);
+			$inputOptions = $this->getInputOptions($field, $lang);
 			
-			// Build form fields.
-			$fieldOptions = !empty($field->options) ? $field->options : [];
-			$widgetOptions = !empty($field->widgetOptions) ? (array)$field->widgetOptions : [];
-			$inputOptions = !empty($field->inputOptions) ? (array)$field->inputOptions : [];
-			
-			$fieldKey = (!empty($lang) &&  $lang != \Yii::$app->params['crelish']['languages'][0]) ? 'i18n[' . $lang . '][' . $field->key . ']' : $field->key;
-			$isTranslation = !empty($lang) && $lang != \Yii::$app->params['crelish']['languages'][0];
-			$currentValue = $this->model->{$field->key};
-			
-			if(!empty($lang)) {
-				$inputOptions['options']['data-language'] = $lang;
-				if($lang != \Yii::$app->params['crelish']['languages'][0]) {
-					$inputOptions['options']['class'] = 'lang-ver';
-					$field->label = $field->label . ' (' . strtoupper($lang) . ')';
-				}
-				if($isTranslation && !empty($this->model->allTranslations[$field->key])) {
-					$currentValue =  ($lang != \Yii::$app->params['crelish']['languages'][0] && !empty($this->model->allTranslations[$field->key][$lang])) ? $this->model->allTranslations[$field->key][$lang] : $this->model->{$field->key};
-					$fieldOptions['value'] = $currentValue;
-					//$widgetOptions['value'] = $currentValue;
-					$widgetOptions['options']['value'] = $currentValue;
-				}
+			if ($this->isTranslation($lang)) {
+				$this->handleTranslationOptions($field, $fieldOptions, $widgetOptions, $lang);
 			}
 			
 			if (str_contains($field->type, 'widget_')) {
-				$widget = str_replace('widget_', '', $field->type);
-				echo $form->field($this->model, $fieldKey, $inputOptions)
-					->widget($widget::className(), $widgetOptions)
-					->label($field->label);
-			} elseif ($field->type == 'dropDownList') {
-				return $form->field($this->model, $fieldKey)
-					->{$field->type}((array)$field->items, (array)$fieldOptions)
-					->label($field->label);
-			} elseif ($field->type == 'checkboxList') {
-				return $form->field($this->model, $fieldKey)
-					->{$field->type}((array)$field->items, (array)$fieldOptions)
-					->label($field->label);
+				return $this->buildWidgetField($form, $field, $fieldKey, $inputOptions, $widgetOptions);
+			} elseif (in_array($field->type, ['dropDownList', 'checkboxList'])) {
+				return $this->buildListField($form, $field, $fieldKey, $fieldOptions);
 			} elseif ($field->type == 'submitButton') {
-				echo Html::submitButton($field->label, array('class' => 'c-button c-button--brand c-button--block'));
+				return $this->buildSubmitButton($field);
 			} elseif ($field->type == 'passwordInput') {
-				unset($this->model[$fieldKey]);
+				return $this->buildPasswordField($form, $field, $fieldKey, $inputOptions, $fieldOptions);
+			} else {
+				return $this->buildDefaultField($form, $field, $fieldKey, $inputOptions, $fieldOptions);
+			}
+		}
+		
+		private function getFieldKey($field, $lang): string
+		{
+			$isTranslation = $this->isTranslation($lang);
+			return $isTranslation ? "i18n[{$lang}][{$field->key}]" : $field->key;
+		}
+		
+		private function getFieldOptions($field): array
+		{
+			if (!isset($field->options)) {
+				return [];
+			}
+			
+			if (is_array($field->options)) {
+				return $field->options;
+			}
+			
+			if (is_object($field->options)) {
+				return (array)$field->options;
+			}
+			
+			return [];
+		}
+		
+		private function getWidgetOptions($field): array
+		{
+			if (!isset($field->widgetOptions)) {
+				return [];
+			}
+			
+			if (is_array($field->widgetOptions)) {
+				return $field->widgetOptions;
+			}
+			
+			if (is_object($field->widgetOptions)) {
+				return (array)$field->widgetOptions;
+			}
+			
+			return [];
+		}
+		
+		private function getInputOptions($field, $lang): array
+		{
+			$inputOptions = isset($field->inputOptions) ? (array)$field->inputOptions : [];
+			if (!empty($lang)) {
+				$inputOptions['options'] = $inputOptions['options'] ?? [];
+				$inputOptions['options']['data-language'] = $lang;
+				if ($this->isTranslation($lang)) {
+					$inputOptions['options']['class'] = ($inputOptions['options']['class'] ?? '') . ' lang-ver';
+				}
+			}
+			return $inputOptions;
+		}
+		
+		private function isTranslation($lang): bool
+		{
+			return !empty($lang) && $lang != \Yii::$app->params['crelish']['languages'][0];
+		}
+		
+		private function handleTranslationOptions(&$field, &$fieldOptions, &$widgetOptions, $lang): void
+		{
+			$field->label .= ' (' . strtoupper($lang) . ')';
+			if (!empty($this->model->allTranslations[$field->key])) {
+				$currentValue = $this->model->allTranslations[$field->key][$lang] ?? $this->model->{$field->key};
+				$fieldOptions['value'] = $currentValue;
+				$widgetOptions['options']['value'] = $currentValue;
+			}
+		}
+		
+		private function buildWidgetField($form, $field, $fieldKey, $inputOptions, $widgetOptions)
+		{
+			$widget = str_replace('widget_', '', $field->type);
+			return $form->field($this->model, $fieldKey, $inputOptions)
+				->widget($widget::className(), $widgetOptions)
+				->label($field->label);
+		}
+		
+		private function buildListField($form, $field, $fieldKey, $fieldOptions)
+		{
+			return $form->field($this->model, $fieldKey)
+				->{$field->type}((array)$field->items, (array)$fieldOptions)
+				->label($field->label);
+		}
+		
+		private function buildSubmitButton($field): string
+		{
+			return Html::submitButton($field->label, ['class' => 'c-button c-button--brand c-button--block']);
+		}
+		
+		private function buildPasswordField($form, $field, $fieldKey, $inputOptions, $fieldOptions)
+		{
+			unset($this->model[$fieldKey]);
+			return $form->field($this->model, $fieldKey, $inputOptions)
+				->{$field->type}((array)$fieldOptions)
+				->label($field->label);
+		}
+		
+		private function buildDefaultField($form, $field, $fieldKey, $inputOptions, $fieldOptions)
+		{
+			$class = 'giantbits\crelish\plugins\\' . strtolower($field->type) . '\\' . ucfirst($field->type);
+			if (class_exists($class)) {
+				return $class::widget([
+					'model' => $this->model,
+					'formKey' => $fieldKey,
+					'data' => $this->model[$fieldKey],
+					'field' => $field
+				]);
+			} else {
 				return $form->field($this->model, $fieldKey, $inputOptions)
 					->{$field->type}((array)$fieldOptions)
 					->label($field->label);
-			} else {
-				$class = 'giantbits\crelish\plugins\\' . strtolower($field->type) . '\\' . ucfirst($field->type);
-				// Check for crelish special fields.
-				if (class_exists($class)) {
-					return $class::widget([
-						'model' => $this->model,
-						'formKey' => $fieldKey,
-						'data' => $this->model[$fieldKey],
-						'field' => $field
-					]);
-				} else {
-					return $form->field($this->model, $fieldKey, $inputOptions)
-						->{$field->type}((array)$fieldOptions)
-						->label($field->label);
-				}
 			}
 		}
 		
@@ -339,6 +470,6 @@
 		 */
 		public function actionError()
 		{
-			throw new \yii\web\NotFoundHttpException('The requested action does not exist.');
+			throw new NotFoundHttpException('The requested action does not exist.');
 		}
 	}

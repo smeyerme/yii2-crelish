@@ -631,14 +631,12 @@ body {
 .crelish-app-root table a.desc:after {
   display: inline-block;
   transform: translate(10px, 2px);
-  content: "\f0d7";
-  font-family: 'Font Awesome 5 Free';
+  content: "↓";
 }
 .crelish-app-root table a.asc:after {
   display: inline-block;
   transform: translate(10px, 2px);
-  content: "\f0d8";
-  font-family: 'Font Awesome 5 Free';
+  content: "↑";
 }
 .crelish-app-root .pull-right {
   float: right;

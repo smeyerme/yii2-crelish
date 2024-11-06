@@ -46,7 +46,10 @@
                 ],
                 'functions' => [
                   't' => 'Yii::t'
-                ]
+                ],
+	              'filters' => [
+		              'clean_html' => '\giantbits\crelish\extensions\HtmlCleaner::cleanHtml',
+	              ],
               ]
             ],
             'theme' => [
@@ -206,6 +209,6 @@
         ]
       ]);
 			
-			\Yii::$app->params['crelish']['version'] = 'V0.4.28';
+			\Yii::$app->params['crelish']['version'] = 'V0.4.29';
     }
   }

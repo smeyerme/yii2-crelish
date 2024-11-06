@@ -36,7 +36,7 @@ class RelationSelect extends CrelishFormWidget
 
     $options = [];
     foreach ($optionProvider as $option) {
-      $options[$option['uuid']] = $option['systitle'];
+      $options[$option['uuid']] = !empty($option['systitle']) ? $option['systitle'] : $option['uuid'];
     }
 	  
 	  asort($options);

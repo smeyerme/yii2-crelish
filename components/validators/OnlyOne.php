@@ -2,9 +2,11 @@
   
   namespace giantbits\crelish\components\validators;
   
+  use Yii;
+  
   class OnlyOne extends \yii\validators\Validator
   {
-    public function init()
+    public function init(): void
     {
       parent::init();
       $this->message = Yii::t('i18n', 'validators.error.onlyone');

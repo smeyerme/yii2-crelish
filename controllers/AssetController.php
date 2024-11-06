@@ -70,7 +70,7 @@
 			parent::init();
 		}
 		
-		public function actions()
+		public function actions(): array
 		{
 			return [
 				'glide' => 'giantbits\crelish\actions\GlideAction'
@@ -98,7 +98,7 @@
 				
 				Yii::$app->response->format = Response::FORMAT_RAW;
 				Yii::$app->response->headers->add('Content-Type', $response->getHeaders()['Content-Type']);
-				Yii::$app->response->headers->set('Cache-Control', 'max-age='.$oneYearInSeconds.', public');
+				Yii::$app->response->headers->set('Cache-Control', 'max-age=' . $oneYearInSeconds . ', public');
 				
 				// Send the image content
 				return $response->getContent();
@@ -143,7 +143,7 @@
 								$preview = Html::img('/crelish/asset/glide?path=' . $model['fileName'] . '&w=160&f=fit', ['style' => 'width: 80px; height: auto;']);
 								break;
 							case 'image/svg+xml':
-								$preview = Html::img( $model['pathName'] . $model['fileName'], ['style' => 'width: 80px; height: auto;']);
+								$preview = Html::img($model['pathName'] . $model['fileName'], ['style' => 'width: 80px; height: auto;']);
 								break;
 							case 'application/pdf':
 								$preview = Html::img('/crelish/asset/glide?path=thumbs/' . $model['thumbnail'] . '&p=small', ['style' => 'width: 80px; height: auto;']);
@@ -229,7 +229,7 @@
 				try {
 					$targetFile = Yii::getAlias('@webroot') . $model->pathName . '/' . $model->src;
 					$domColor = @ColorThief::getColor($targetFile, 20);
-					$palColor = @ColorThief::getPalette( $targetFile);
+					$palColor = @ColorThief::getPalette($targetFile);
 					
 					$colormain_rgb = Json::encode($domColor);
 					$colormain_hex = '#' . sprintf('%02x', $domColor[0]) . sprintf('%02x', $domColor[1]) . sprintf('%02x', $domColor[2]);
@@ -274,7 +274,7 @@
 		
 		public function actionUpload()
 		{
-                        $file = UploadedFile::getInstanceByName('file');
+			$file = UploadedFile::getInstanceByName('file');
 			
 			$slugger = new Slugify();
 			$mimeTypesToExtensions = [
@@ -331,7 +331,7 @@
 				// Add more types as needed
 			];
 			
-			if($file) {
+			if ($file) {
 				$mimeType = mime_content_type($file->tempName);
 				$mimeTypeExt = $mimeTypesToExtensions[$mimeType];
 			}
@@ -348,7 +348,7 @@
 					$model->src = $destName;
 					$model->fileName = $destName;
 					$model->pathName = '/' . 'uploads' . '/';
-				        $model->mime = $mimeType;
+					$model->mime = $mimeType;
 					$model->size = $file->size;
 					$model->state = 2;
 					

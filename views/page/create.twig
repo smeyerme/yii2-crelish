@@ -1,7 +1,9 @@
 <div class="u-letter-box-large">
 	<div class="split">
 		<div>{{ content | raw }}</div>
-		<div><iframe src="{{ app.request.hostInfo }}/{{ app.view.params.model.slug }}" ></iframe></div>
+		<div>
+			<iframe id="page-frame" src="{{ app.request.hostInfo }}/{{ app.view.params.model.slug }}" ></iframe>
+		</div>
 	</div>
 </div>
 <span class="c-badge gc-mt--1">{{ uuid }} : {{ ctype }}</span>
@@ -17,13 +19,16 @@
 }
 
 iframe {
+  cursor: not-allowed;
+	pointer-events: none;
 	background: white;
 	width: 98%;
-	height: 90vh;
 	z-index: 2;
-	border-radius: 0.333rem;
+	border: none;
+	border-radius: 0.666rem;
 	box-shadow: 0 0 0.333rem rgba(0,0,0, 0.333);
 }
+
 #content-form > div > div.o-grid.o-grid--wrap.o-grid--small-full {
   display: flex !important;
   flex-direction: column !important;
@@ -35,4 +40,18 @@ iframe {
 	max-width: unset !important;
 }
 
+{% endapply %}
+
+{% apply registerJs %}
+function adjustIframeHeight() {
+  const iframe = document.getElementById('page-frame');
+  const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+  iframe.style.height = (iframeDoc.body.scrollHeight) + 'px';
+}
+
+// Adjust height when iframe loads
+document.getElementById('page-frame').onload = adjustIframeHeight;
+
+// Optionally, adjust height on window resize
+window.addEventListener('resize', adjustIframeHeight);
 {% endapply %}
