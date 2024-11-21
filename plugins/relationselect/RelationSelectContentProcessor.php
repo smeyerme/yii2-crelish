@@ -18,6 +18,7 @@ class RelationSelectContentProcessor extends Component
       && $fieldConfig->config->autocreate === true
       && (!is_object($data) && !preg_match($UUIDv4, $data))
       && !empty($data)) {
+      
       $model = new CrelishDynamicModel([], ['ctype' => $fieldConfig->config->ctype]);
       $model->systitle = $data;
       $model->state = 2;
