@@ -16,7 +16,8 @@
   use OzdemirBurak\Iris\Color\Hex;
   use MatthiasMullie\Minify\CSS;
   use yii\helpers\Url;
-  
+  use yii\web\JsExpression;
+
   class CrelishBaseHelper
   {
     public static function urlFromSlug($slug, $params = [], $langCode = null)
@@ -171,7 +172,10 @@
 		  return $hex->shade($percent);
 	  }
 	  
-	  
+	  public static function jsExpression($js) {
+      return new JsExpression($js);
+    }
+
 	  public static function registerCustomCss($css, $overwrites = []) {
 		  
 		  foreach ($overwrites as $key => $cssVar) {

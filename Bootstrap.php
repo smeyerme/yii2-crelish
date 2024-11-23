@@ -88,7 +88,7 @@
               'crelish*' => [
                 'class' => 'yii\i18n\PhpMessageSource',
                 'basePath' => '@app/messages',
-                'sourceLanguage' => 'zz',
+                'sourceLanguage' => 'de',
                 'fileMap' => [
                   'crelish' => 'crelish.php'
                 ],
@@ -209,6 +209,6 @@
         ]
       ]);
 			
-			\Yii::$app->params['crelish']['version'] = 'V0.4.32';
+			\Yii::$app->params['crelish']['version'] = 'V0.4.33';
     }
   }

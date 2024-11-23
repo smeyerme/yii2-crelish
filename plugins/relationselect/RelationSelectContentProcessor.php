@@ -50,7 +50,8 @@ class RelationSelectContentProcessor extends Component
 
   public static function processData($key, $data, &$processedData)
   {
-		if (!empty($data)) {
+
+    if (!empty($data)) {
       $sourceData = new CrelishDynamicModel([], ['ctype' => 'asset', 'uuid' => $data['uuid']]);
 
       if ($sourceData) {

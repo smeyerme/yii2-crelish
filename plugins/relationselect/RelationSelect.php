@@ -31,8 +31,7 @@ class RelationSelect extends CrelishFormWidget
     $this->relationDataType = '\app\workspace\models\\' . ucfirst($this->field->config->ctype);
 	  
     // Fetch options.
-    $optionProvider = new CrelishDataProvider($this->relationDataType);
-	  $optionProvider = $this->relationDataType::find()->asArray()->all();
+    $optionProvider = $this->relationDataType::find()->asArray()->all();
 
     $options = [];
     foreach ($optionProvider as $option) {
@@ -102,8 +101,8 @@ class RelationSelect extends CrelishFormWidget
       'field' => $this->field,
       'required' => ($isRequired) ? 'required' : '',
       'selectData' => $this->predefinedOptions,
-      'selectValue' => isset($this->data->uuid) ? $this->data->uuid : '',
-      'hiddenValue' => isset($this->data->uuid) ? $this->data->uuid : '',
+      'selectValue' => $this->data->uuid ?? null,
+      'hiddenValue' => $this->data->uuid ?? null,
       'tagMode' => $tagMode,
       'itemlist' => $itemList,
       'itemlistcolumns' => $itemListColumns
