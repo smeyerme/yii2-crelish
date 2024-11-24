@@ -204,9 +204,13 @@ class CrelishDynamicModel extends DynamicModel
 
             // Do processor based pre processing.
             if (class_exists($processorClass) && method_exists($processorClass, 'processDataPreSave')) {
-              //if ($fieldType !== 'relationSelect') {
+              if ($fieldType !== 'relationSelect') {
                 $model->{$attribute} = $processorClass::processDataPreSave($attribute, $modelArray[$attribute], $this->elementDefinition->fields[$attribute], $model);
-             //}
+             } else {
+                if(!empty($fieldDef->config) && is_object($fieldDef->config) && isset($fieldDef->config->ctype) && isset($fieldDef->config->multiple) && $fieldDef->config->multiple === false) {
+                  @$model->{$attribute} = $modelArray[$attribute];
+                }
+              }
             } else {
               if ($attribute !== 'i18n') {
                 @$model->{$attribute} = $modelArray[$attribute];
