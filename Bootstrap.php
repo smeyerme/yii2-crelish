@@ -209,6 +209,6 @@
         ]
       ]);
 			
-			\Yii::$app->params['crelish']['version'] = 'V0.4.35';
+			\Yii::$app->params['crelish']['version'] = 'V0.4.36';
     }
   }
