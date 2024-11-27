@@ -207,7 +207,7 @@ class CrelishDynamicModel extends DynamicModel
               if ($fieldType !== 'relationSelect') {
                 $model->{$attribute} = $processorClass::processDataPreSave($attribute, $modelArray[$attribute], $this->elementDefinition->fields[$attribute], $model);
              } else {
-                if(!empty($fieldDef->config) && is_object($fieldDef->config) && isset($fieldDef->config->ctype) && isset($fieldDef->config->multiple) && $fieldDef->config->multiple === false) {
+                if(!empty($fieldDef->config) && is_object($fieldDef->config) && isset($fieldDef->config->ctype) && (!isset($fieldDef->config->multiple) || $fieldDef->config->multiple === false)) {
                   @$model->{$attribute} = $modelArray[$attribute];
                 }
               }
