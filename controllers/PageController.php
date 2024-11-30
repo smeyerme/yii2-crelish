@@ -89,7 +89,6 @@ class PageController extends CrelishBaseController
     ];
 
     $columns = array_merge($checkCol, $modelProvider->columns);
-
     $columns = map($columns, function ($item) {
 
       if (key_exists('attribute', $item) && $item['attribute'] === 'state') {

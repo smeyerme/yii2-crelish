@@ -3,7 +3,8 @@
 	namespace giantbits\crelish\plugins\selfselect;
 	
 	use giantbits\crelish\components\CrelishFormWidget;
-	use function _\find;
+  use yii\helpers\VarDumper;
+  use function _\find;
 	
 	
 	class SelfSelect extends CrelishFormWidget
@@ -17,12 +18,14 @@
 		private $selectData = [];
 		private $includeDataType;
 		private $allowMultiple = false;
+		private $allowClear = false;
 		private $hiddenValue = '';
 		private $selectedValue;
 		private $predefinedOptions;
 		
 		public function init()
 		{
+
 			$this->includeDataType = $this->field->config->ctype;
 			$this->allowMultiple = !empty($this->field->config->multiple) ? $this->field->config->multiple : false;
 			$this->predefinedOptions = !empty($this->field->config->options) ? $this->field->config->options : null;
@@ -66,7 +69,8 @@
 				'selectValue' => $this->selectedValue,
 				'hiddenValue' => $this->hiddenValue,
 				'includeDataType' => $this->includeDataType,
-				'allowMultiple' => $this->allowMultiple
+				'allowMultiple' => $this->allowMultiple,
+        'allowClear' => $this->allowClear,
 			]);
 		}
 		

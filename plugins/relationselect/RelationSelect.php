@@ -19,6 +19,7 @@ class RelationSelect extends CrelishFormWidget
   public $field;
   public $value;
   public $attribute;
+  public $allowClear = false;
 
   private $relationDataType;
   private $predefinedOptions;
@@ -27,15 +28,25 @@ class RelationSelect extends CrelishFormWidget
   {
     parent::init();
 
+    $customLabel = null;
+
     // Set related ctype.
     $this->relationDataType = '\app\workspace\models\\' . ucfirst($this->field->config->ctype);
-	  
+
+    if (!empty($this->field->config->dataLabel)) {
+      $customLabel = $this->field->config->dataLabel;
+    }
+
     // Fetch options.
     $optionProvider = $this->relationDataType::find()->asArray()->all();
 
     $options = [];
     foreach ($optionProvider as $option) {
-      $options[$option['uuid']] = !empty($option['systitle']) ? $option['systitle'] : $option['uuid'];
+      if($customLabel) {
+        $options[$option['uuid']] =   $option[$customLabel];
+      } else {
+        $options[$option['uuid']] = !empty($option['systitle']) ? $option['systitle'] : $option['uuid'];
+      }
     }
 	  
 	  asort($options);
@@ -105,7 +116,8 @@ class RelationSelect extends CrelishFormWidget
       'hiddenValue' => $this->data->uuid ?? null,
       'tagMode' => $tagMode,
       'itemlist' => $itemList,
-      'itemlistcolumns' => $itemListColumns
+      'itemlistcolumns' => $itemListColumns,
+      'allowClear' => $this->allowClear,
     ]);
   }
 }

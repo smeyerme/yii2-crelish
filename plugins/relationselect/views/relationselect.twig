@@ -13,7 +13,7 @@
     'value': selectValue,
     'data': selectData,
     'options': {'placeholder': t('crelish', 'Select...')},
-    'pluginOptions': { 'tags': tagMode, 'allowClear': true },
+    'pluginOptions': { 'tags': tagMode, 'allowClear': allowClear },
     'pluginEvents': {
       "select2:select": "function() {
         var select = $(this).val();

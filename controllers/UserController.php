@@ -237,8 +237,7 @@
 					$itemDef = find($modelProvider->definitions->fields, function ($itm) use ($item) {
 						return $itm->key == $item['attribute'];
 					});
-					
-					
+
 					if (is_object($itemDef) && property_exists($itemDef, 'items')) {
 						$item['format'] = 'raw';
 						$item['label'] = $itemDef->label;

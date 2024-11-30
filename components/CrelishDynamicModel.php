@@ -3,14 +3,19 @@
 namespace giantbits\crelish\components;
 
 use Cocur\Slugify\Slugify;
+use giantbits\crelish\plugins\selfselect\SelfSelect;
 use Yii;
 use yii\base\DynamicModel;
 use yii\helpers\FileHelper;
 use yii\helpers\Json;
-use yii\helpers\VarDumper;
 use function _\filter;
 use function _\find;
 
+/**
+ *
+ * @property-read bool $isNewRecord
+ * @property-read mixed $fields
+ */
 class CrelishDynamicModel extends DynamicModel
 {
   public $identifier;
@@ -332,6 +337,14 @@ class CrelishDynamicModel extends DynamicModel
   {
     return $this->fields;
   }
+  public function getField($field): object
+  {
+    $fieldDef = array_filter($this->elementDefinition->fields, function ($def) use ($field) {
+      return $def->key == $field;
+    });
+
+    return array_values($fieldDef)[0];
+  }
 
   public function defineLabel($name, $label)
   {
@@ -415,6 +428,10 @@ class CrelishDynamicModel extends DynamicModel
     $definitionPath = Yii::getAlias('@app/workspace/elements') . DIRECTORY_SEPARATOR . str_replace('db:', '', $ctype) . '.json';
     if (file_exists($definitionPath)) {
       $elementDefinition = Json::decode(file_get_contents($definitionPath), false);
+    }
+
+    if(empty($elementDefinition)) {
+      return null;
     }
 
     $usePublishingMeta = !((!property_exists($elementDefinition, 'usePublishingMeta') || $elementDefinition->usePublishingMeta === false));

@@ -7,7 +7,7 @@
 		public static function cleanHtml($html)
 		{
 			// Allowed tags
-			$allowed_tags = '<p><b><i><ul><li><h1><h2><h3><h4><h5><h6>';
+			$allowed_tags = '<p><b><strong><i><ul><li><h1><h2><h3><h4><h5><h6>';
 			
 			// Force UTF-8 encoding by adding a meta tag and correcting invalid encoding characters
 			$html = mb_convert_encoding($html, 'HTML-ENTITIES', 'UTF-8');

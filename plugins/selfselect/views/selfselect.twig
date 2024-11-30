@@ -9,7 +9,12 @@
     'value': selectValue,
     'data': selectData,
     'options': {'placeholder': t('crelish', 'Select...')},
-    'pluginOptions': { 'tags': true, 'allowClear': true, 'tokenSeparators': [';'], 'multiple': allowMultiple },
+    'pluginOptions': {
+      'tags': true,
+      'allowClear': allowClear,
+      'tokenSeparators': [';'],
+      'multiple': allowMultiple
+    },
     'pluginEvents': {
       "select2:select": "function() {
         console.log($(this).val());

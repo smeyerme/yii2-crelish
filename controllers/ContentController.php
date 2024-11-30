@@ -98,7 +98,6 @@ class ContentController extends CrelishBaseController
     $modelInfo = new CrelishDataProvider($this->ctype, ['filter' => $filter], null, null, true);
     $modelProvider = null;
 
-
     if ($modelInfo->definitions->storage === 'db' && class_exists($modelClass)) {
       $query = $modelInfo->getQuery($modelClass::find(), $filter);
 
