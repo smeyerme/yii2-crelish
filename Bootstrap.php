@@ -190,7 +190,7 @@ class Bootstrap implements BootstrapInterface
         ],
         [
           'class' => 'yii\web\UrlRule',
-          'pattern' => 'api/<action:[\w\-]+>',
+          'pattern' => 'api/<action:[\w\-]+>/<id:[\w\-]+>',
           'route' => 'api/<action>'
         ],
         [
@@ -221,6 +221,6 @@ class Bootstrap implements BootstrapInterface
       ]
     ]);
 
-    \Yii::$app->params['crelish']['version'] = 'V0.4.40';
+    \Yii::$app->params['crelish']['version'] = 'V0.4.41';
   }
 }
