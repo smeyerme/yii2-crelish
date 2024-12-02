@@ -5,8 +5,8 @@
 
 namespace giantbits\crelish\components;
 
+use yii\base\InvalidConfigException;
 use yii\web\UrlRuleInterface;
-use function _\remove;
 
 /**
  *
@@ -45,13 +45,16 @@ class CrelishBaseUrlRule implements UrlRuleInterface
     }
     $paramsExposed = rtrim($paramsExposed, '&');
 
-    if (strpos($params['pathRequested'], ".html") === FALSE) {
+    if (!str_contains($params['pathRequested'], ".html")) {
       return $params['pathRequested'] . $paramsExposed;
     } else {
       return $params['pathRequested'] . $paramsExposed;
     }
   }
 
+  /**
+   * @throws InvalidConfigException
+   */
   public function parseRequest($manager, $request)
   {
     $pathInfo = $request->getPathInfo();
