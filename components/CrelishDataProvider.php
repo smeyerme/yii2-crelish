@@ -228,7 +228,9 @@
 									if ($item->key != 'ctype' && (!property_exists($item, 'virtual') || !$item->virtual)) {
                     if (property_exists($item, 'gridField')) {
                       $fieldItm = explode('.', $item->gridField);
-
+                      if (property_exists($item, 'config')) {
+                        return '`' . $item->config->ctype . '`.`' . $fieldItm[1] . '`';
+                      }
                       return '`' . $item->key . '`.`' . $fieldItm[1] . '`';
                     }
 										return '`' . $this->ctype . '`.`' . $item->key . "`";
