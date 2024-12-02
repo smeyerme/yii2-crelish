@@ -242,9 +242,9 @@
 						$item['format'] = 'raw';
 						$item['label'] = $itemDef->label;
 						$item['value'] = function ($data) use ($itemDef) {
-							
-							$key = $data[$itemDef->key];
-							return $itemDef->items->{$key};
+              if (!empty($itemDef->items) && !empty($itemDef->items->{$data[$itemDef->key]})) {
+                return $itemDef->items->{$data[$itemDef->key]};
+              }
 						};
 					} elseif (is_object($itemDef) && property_exists($itemDef, 'type') && str_contains($itemDef->type, 'SwitchInput')) {
 						$item['format'] = 'raw';
