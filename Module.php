@@ -8,7 +8,8 @@
   namespace giantbits\crelish;
   
   use Yii;
-  
+  use yii\console\Application;
+
   /**
    * The Yii Debug Module provides the debug toolbar and debugger
    *
@@ -53,7 +54,7 @@
     {
 	    parent::init();
 	    
-	    if (\Yii::$app instanceof \yii\console\Application) {
+	    if (\Yii::$app instanceof Application) {
 		    $this->controllerNamespace = 'giantbits\crelish\commands';
 	    }
       
@@ -75,15 +76,10 @@
     
     private function setDependencies()
     {
-      /*\Yii::$container->set('yii\bootstrap\ActiveField', [
-        'options' => ['class' => 'o-form-element'],
-        'hintOptions' => ['class' => 'c-hint'],
-        'inputOptions' => ['class' => 'c-field'],
-        'labelOptions' => ['class' => 'c-label']
-      ]);*/
+
     }
     
-    private function buildControllerMap()
+    private function buildControllerMap(): void
     {
       $this->controllerMap = [];
     }
@@ -92,21 +88,17 @@
      * [processLanguage description]
      * @return [type] [description]
      */
-    private function processLanguage()
+    private function processLanguage(): void
     {
       Yii::$app->sourceLanguage = 'en-US';
       Yii::$app->params['defaultLanguage'] = 'de-CH';
     }
     
-    public function beforeAction($action)
+    public function beforeAction($action): bool
     {
       if (!parent::beforeAction($action)) {
         return false;
       }
-      
-      //if (Yii::$app instanceof \yii\web\Application && !$this->checkAccess()) {
-      //  throw new ForbiddenHttpException('You are not allowed to access this page.');
-      //}
       
       $this->resetGlobalSettings();
       
@@ -116,7 +108,7 @@
     /**
      * Resets potentially incompatible global settings done in app config.
      */
-    protected function resetGlobalSettings()
+    protected function resetGlobalSettings(): void
     {
       if (Yii::$app instanceof \yii\web\Application) {
         Yii::$app->assetManager->bundles = [];
@@ -127,7 +119,7 @@
      * [checkAccess description]
      * @return [type] [description]
      */
-    protected function checkAccess()
+    protected function checkAccess(): bool
     {
       $ip = Yii::$app->getRequest()->getUserIP();
       foreach ($this->allowedIPs as $filter) {
@@ -145,7 +137,7 @@
       return FALSE;
     }
     
-    private function registerTranslations()
+    private function registerTranslations(): void
     {
       Yii::$app->i18n->translations['modules/crelish/*'] = [
         'class' => 'yii\i18n\PhpMessageSource',

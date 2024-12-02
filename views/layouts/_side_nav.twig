@@ -1,4 +1,5 @@
-{{ use('giantbits/crelish/widgets/CrelishGravatar') }}
+{% set sideBarItems = app.get('sideBarManager').items %}
+{% set sideBar = app.get('sideBarManager').filterItems(sideBarItems) %}
 
 <div class="avatar-nav">
 	<div class="c-avatar">
@@ -12,56 +13,13 @@
 	</div>
 </div>
 
-
-<div class="navbar-item {{ app.controller.id == 'dashboard' ? 'active' : '' }}">
-	<a href="{{ url('crelish/dashboard/index') }}">
-		<i class="fas fa-chart-pie"></i> {{ t('crelish', 'Dashboard') }}
-	</a>
-</div>
-<div class="navbar-item {{ app.controller.id == 'page' ? 'active' : '' }}">
-	<a href="{{ url('crelish/page/index') }}">
-		<i class="fa-sharp fa-regular  fa-bookmark"></i> {{ t('crelish', 'Pages') }}
-	</a>
-</div>
-<div class="navbar-item {{ app.controller.id == 'content' ? 'active' : '' }}">
-	<a href="{{ url('crelish/content/index') }}">
-		<i class="fa-sharp fa-regular  fa-edit"></i> {{ t('crelish', 'Content') }}
-	</a>
-</div>
-<div class="navbar-item {{ app.controller.id == 'asset' ? 'active' : '' }}">
-	<a href="{{ url('crelish/asset/index') }}">
-		<i class="fas fa-folder-open"></i> {{ t('crelish', 'Assets') }}
-	</a>
-</div>
-<div class="navbar-item {{ app.controller.id == 'user' ? 'active' : '' }}">
-	<a href="{{ url('crelish/user/index') }}">
-		<i class="fa-sharp fa-regular  fa-users"></i> {{ t('crelish', 'User') }}
-	</a>
-</div>
-
-{% if 'portal' in app.basePath %}
-<div class="navbar-item {{ app.controller.id == 'registrations' ? 'active' : '' }}">
-	<a href="{{ url('crelish/registrations/export') }}">
-		<i class="fa fa-id-card"></i> {{ t('crelish', 'Registrations') }}
-	</a>
-</div>
-{% endif %}
-
-<div class="navbar-item disabled">
-	<a href="#fakelink">
-		<i class="fas fa-globe-africa"></i> Globals
-	</a>
-</div>
-<div class="navbar-item {{ app.controller.id == 'translation' ? 'active' : '' }}">
-	<a href="{{ url('crelish/translation/index') }}">
-		<i class="fa-sharp fa-regular  fa-language"></i> {{ t('crelish', 'Translations') }}
-	</a>
-</div>
-<div class="navbar-item {{ app.controller.id == 'settings' ? 'active' : '' }}">
-	<a href="{{ url('crelish/settings/index') }}">
-		<i class="fa-sharp fa-regular  fa-cogs"></i> {{ t('crelish', 'Settings') }}
-	</a>
-</div>
+{% for item in sideBar %}
+	<div class="navbar-item {{ app.controller.id == item.id ? 'active' : '' }}">
+		<a href="{{ url(item.url) }}">
+			<i class="{{ item.icon }}"></i> {{ t('crelish', item.label) }}
+		</a>
+	</div>
+{% endfor %}
 
 <span class="cr-version">{{ app.params.crelish.version }}</span>
 

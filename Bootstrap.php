@@ -4,11 +4,14 @@ namespace giantbits\crelish;
 
 use giantbits\crelish\components\CrelishI18nEventHandler;
 use \yii\base\BootstrapInterface;
+use yii\base\InvalidConfigException;
 
 class Bootstrap implements BootstrapInterface
 {
-  /** @param \yii\web\Application $app */
-  public function bootstrap($app)
+  /** @param \yii\web\Application $app
+   * @throws InvalidConfigException
+   */
+  public function bootstrap($app): void
   {
     if ($app instanceof \yii\web\Application) {
       // Add components.
@@ -163,6 +166,9 @@ class Bootstrap implements BootstrapInterface
               'fit' => 'crop',
             ]
           ]
+        ],
+        'sideBarManager' => [
+          'class' => 'giantbits\crelish\components\CrelishSidebarManager'
         ]
       ]);
       // Add url rules.
@@ -204,7 +210,7 @@ class Bootstrap implements BootstrapInterface
           'route' => '<controller>/<action>'
         ],
       ], true);
-
+      $app->get('sideBarManager')->init();
     }
 
     // Register crelish.
@@ -215,6 +221,6 @@ class Bootstrap implements BootstrapInterface
       ]
     ]);
 
-    \Yii::$app->params['crelish']['version'] = 'V0.4.38';
+    \Yii::$app->params['crelish']['version'] = 'V0.4.39';
   }
 }
