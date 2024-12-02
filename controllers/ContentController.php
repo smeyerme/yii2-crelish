@@ -10,6 +10,7 @@ use yii\data\ActiveDataProvider;
 use yii\filters\AccessControl;
 use yii\web\View;
 use function _\find;
+use function _\internal\parent;
 use function _\map;
 
 class ContentController extends CrelishBaseController
@@ -36,7 +37,7 @@ class ContentController extends CrelishBaseController
    * [init description]
    * @return [type] [description]
    */
-  public function init()
+  public function init(): void
   {
 
     parent::init();
@@ -100,6 +101,9 @@ class ContentController extends CrelishBaseController
 
     if ($modelInfo->definitions->storage === 'db' && class_exists($modelClass)) {
       $query = $modelInfo->getQuery($modelClass::find(), $filter);
+
+      // Add relations.
+      $modelInfo->setRelations($query);
 
       if (!empty($modelInfo->definitions->sortDefault)) {
         $sortKey = key($modelInfo->definitions->sortDefault);

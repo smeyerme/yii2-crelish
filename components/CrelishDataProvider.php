@@ -143,6 +143,8 @@
 		
 		public function getQuery($query, $filter = null)
 		{
+
+      // Add the actual filtering.
 			if (is_array($filter)) {
 				foreach ($filter as $key => $keyValue) {
 					if (!empty($keyValue)) {
@@ -223,10 +225,16 @@
 								}, $searchFragments));
 								
 								$fieldPattern = implode(', ', array_filter(array_map(function ($item) {
-									if ($item->key != 'ctype' && (!property_exists($item, 'virtual') || !$item->virtual))
-										return '`' . $item->key . "`";
-									else
-										return null;
+									if ($item->key != 'ctype' && (!property_exists($item, 'virtual') || !$item->virtual)) {
+                    if (property_exists($item, 'gridField')) {
+                      $fieldItm = explode('.', $item->gridField);
+
+                      return '`' . $item->key . '`.`' . $fieldItm[1] . '`';
+                    }
+										return '`' . $this->ctype . '`.`' . $item->key . "`";
+                  } else {
+                    return null;
+                  }
 								}, $this->getDefinitions()->fields)));
 								
 								$query->andWhere("CONCAT_WS(' ', $fieldPattern) RLIKE '^$fragmentPattern'");
@@ -740,8 +748,24 @@
 			
 			return $finalArr;
 		}
-		
-		private function array_orderby()
+
+    public function setRelations(&$query)
+    {
+
+      foreach ($this->definitions->fields as $field) {
+        if(property_exists($field, 'gridField') && property_exists($field, 'config')) {
+          $config = $field->config;
+          if(property_exists($config, 'ctype')) {
+            $relation = explode('.', $field->gridField) ;
+            $query->joinWith($relation[0]);
+          }
+        }
+      }
+
+      //die();
+    }
+
+    private function array_orderby()
 		{
 			$args = func_get_args();
 			$data = array_shift($args);
