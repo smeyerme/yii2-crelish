@@ -88,8 +88,8 @@
 		 */
 		public function actionLogin()
 		{
-			// Turn away if logged in.
-			if (!\Yii::$app->user->isGuest && \Yii::$app->user->idendity->role == 9) {
+      			// Turn away if logged in.
+			if (!\Yii::$app->user->isGuest && \Yii::$app->user->identity->role == 9) {
 				return $this->redirect(Url::to(['/crelish/content/index']));
 			}
 			

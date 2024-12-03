@@ -234,8 +234,9 @@ class CrelishDynamicModel extends DynamicModel
         }
 
         if ($model->save(false)) {
+
           if (method_exists('\\app\\workspace\\hooks\\' . ucfirst($this->ctype) . 'Hooks', 'afterSave')) {
-            return call_user_func(['\\app\\workspace\\hooks\\' . ucfirst($this->ctype) . 'Hooks', 'afterSave'], ['data' => $this]);
+             call_user_func(['\\app\\workspace\\hooks\\' . ucfirst($this->ctype) . 'Hooks', 'afterSave'], ['data' => $this]);
           }
 
           // New post save handlers.
