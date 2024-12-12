@@ -1,7 +1,7 @@
 {{ use('kartik/widgets/Select2') }}
 
-<div class="form-group field-crelishdynamicjsonmodel-{{ formKey }} {{ required }}">
-  <label class="control-label" for="crelishdynamicjsonmodel-branch">{{ field.label }}</label>
+<div class="mb-3 highlight-addon field-crelishdynamicjsonmodel-{{ formKey }} {{ required }}">
+  <label class="form-label has-star" for="crelishdynamicjsonmodel-branch">{{ field.label }}</label>
   <input type="hidden" name="CrelishDynamicModel[{{ field.key }}]" value='{{ hiddenValue }}'
          id="select_{{ field.key }}"/>
   {{ Select2_widget({
