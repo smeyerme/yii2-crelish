@@ -444,6 +444,7 @@ class CrelishBaseController extends Controller
   {
     $class = 'giantbits\crelish\plugins\\' . strtolower($field->type) . '\\' . ucfirst($field->type);
     if (class_exists($class)) {
+
       return $class::widget([
         'model' => $this->model,
         'formKey' => $fieldKey,
