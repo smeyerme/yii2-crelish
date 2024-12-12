@@ -24,7 +24,8 @@
 	use PhpOffice\PhpSpreadsheet\Style\Border;
 	use PhpOffice\PhpSpreadsheet\Style\Fill;
 	use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
-	use yii\base\DynamicModel;
+  use Yii;
+  use yii\base\DynamicModel;
   use yii\base\InvalidRouteException;
   use yii\bootstrap5\Html;
 	use yii\data\ActiveDataProvider;
@@ -144,6 +145,10 @@
 			$this->layout = 'crelish.twig';
 			
 			$phoneUtl = PhoneNumberUtil::getInstance();
+
+      if (empty(\Yii::$app->request->get('sort'))) {
+        Yii::$app->request->setQueryParams(['sort' => '-created']);
+      }
 			
 			$modelData = new Registrations();
 			$filterModel = new DynamicModel([
