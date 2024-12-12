@@ -5,12 +5,14 @@
 	use app\workspace\components\RegistrationsExportTransformerBase;
 	use app\workspace\components\RegistrationsExportTransformerBGT;
 	use app\workspace\components\RegistrationsExportTransformerEBH;
-	use app\workspace\components\RegistrationsExportTransformerIHF;
+  use app\workspace\components\RegistrationsExportTransformerHTW;
+  use app\workspace\components\RegistrationsExportTransformerIHF;
 	use app\workspace\components\RegistrationsExportTransformerHTK;
 	use app\workspace\components\RegistrationsExportTransformerDHK;
 	use app\workspace\components\RegistrationsExportTransformerSHK;
 	use app\workspace\components\RegistrationsExportTransformerWBN;
-	use app\workspace\models\Registrations;
+  use app\workspace\components\strategies\HTWFormattingStrategy;
+  use app\workspace\models\Registrations;
 	use giantbits\crelish\components\CrelishBaseController;
 	use giantbits\crelish\components\CrelishJsonModel;
 	use libphonenumber\PhoneNumberFormat;
@@ -23,7 +25,8 @@
 	use PhpOffice\PhpSpreadsheet\Style\Fill;
 	use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 	use yii\base\DynamicModel;
-	use yii\bootstrap5\Html;
+  use yii\base\InvalidRouteException;
+  use yii\bootstrap5\Html;
 	use yii\data\ActiveDataProvider;
 	use yii\filters\AccessControl;
 	use function _\reject;
@@ -129,8 +132,14 @@
 				'rowOptions' => $rowOptions
 			]);
 		}
-		
-		public function actionExport()
+
+    /**
+     * @throws InvalidRouteException
+     * @throws \yii\db\Exception
+     * @throws Exception
+     * @throws \PhpOffice\PhpSpreadsheet\Writer\Exception
+     */
+    public function actionExport()
 		{
 			$this->layout = 'crelish.twig';
 			
@@ -249,6 +258,7 @@
 					'EBH' => new RegistrationsExportTransformerEBH($modelData, $entries),
 					'BGT' => new RegistrationsExportTransformerBGT($modelData, $entries),
 					'HTK' => new RegistrationsExportTransformerHTK($modelData, $entries),
+					'HTW' => new RegistrationsExportTransformerHTW($modelData, $entries),
 					'DHK' => new RegistrationsExportTransformerDHK($modelData, $entries),
 					'SHK' => new RegistrationsExportTransformerSHK($modelData, $entries),
 					default => new RegistrationsExportTransformerWBN($modelData, $entries)
@@ -1125,11 +1135,17 @@
 						->getFont()
 						->setBold(true);
 					break;
+        case 'HTW':
+          $formater = new HTWFormattingStrategy();
+          $formater->format($sheet);
+          break;
 				default:
 					// Default formatting if needed
 					break;
 			}
-			
+
+
+
 			$highestColumnIndex = Coordinate::columnIndexFromString($sheet->getHighestColumn());
 			
 			for ($col = 1; $col <= $highestColumnIndex; $col++) {
