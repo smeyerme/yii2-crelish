@@ -107,13 +107,16 @@ class RelationSelect extends CrelishFormWidget
       $itemListColumns = array_merge($this->field->config->columns, $actionCol);
     }
 
+    // Check for true models
+
+
     return $this->render('relationselect.twig', [
       'formKey' => $this->formKey,
       'field' => $this->field,
       'required' => ($isRequired) ? 'required' : '',
       'selectData' => $this->predefinedOptions,
-      'selectValue' => $this->data ?? null,
-      'hiddenValue' => $this->data ?? null,
+      'selectValue' => is_object($this->data) ? $this->data->uuid : $this->data,
+      'hiddenValue' => is_object($this->data) ? $this->data->uuid : $this->data,
       'tagMode' => $tagMode,
       'itemlist' => $itemList,
       'itemlistcolumns' => $itemListColumns,
