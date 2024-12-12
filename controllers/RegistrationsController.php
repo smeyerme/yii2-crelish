@@ -147,7 +147,7 @@
 			$phoneUtl = PhoneNumberUtil::getInstance();
 
       if (empty(\Yii::$app->request->get('sort'))) {
-        Yii::$app->request->setQueryParams(['sort' => '-created']);
+        $_GET['sort'] = '-created';
       }
 			
 			$modelData = new Registrations();
