@@ -14,14 +14,18 @@ use yii\web\UrlRuleInterface;
 class CrelishBaseUrlRule implements UrlRuleInterface
 {
 
-  public function createUrl($manager, $route, $params)
+  public function createUrl($manager, $route, $params): bool|string
   {
 
-    $url = '';
+    if (str_starts_with($route, 'crelish/') && $route !== 'crelish/frontend/run') {
+      return false;
+    }
 
     if ($route != 'crelish/frontend/run') {
-      return FALSE;
+      return false;
     }
+
+    $url = '';
 
     if (array_key_exists('language', $params) && !empty($params['languages'])) {
       $url .= $params['languages'];
@@ -45,11 +49,7 @@ class CrelishBaseUrlRule implements UrlRuleInterface
     }
     $paramsExposed = rtrim($paramsExposed, '&');
 
-    if (!str_contains($params['pathRequested'], ".html")) {
-      return $params['pathRequested'] . $paramsExposed;
-    } else {
-      return $params['pathRequested'] . $paramsExposed;
-    }
+    return $params['pathRequested'] . $paramsExposed;
   }
 
   /**
@@ -58,6 +58,10 @@ class CrelishBaseUrlRule implements UrlRuleInterface
   public function parseRequest($manager, $request)
   {
     $pathInfo = $request->getPathInfo();
+
+    if (str_starts_with($pathInfo, 'crelish/')) {
+      return false;
+    }
 
     $langFreePath = $pathInfo;
     $langCode = '';
@@ -104,7 +108,7 @@ class CrelishBaseUrlRule implements UrlRuleInterface
     return ['crelish/frontend/run', $params];
   }
 
-  public function urlForSlug($slug, $langCode = null)
+  public function urlForSlug($slug, $langCode = null): string
   {
     $url = '/' . $slug;
     if (isset(\Yii::$app->params['crelish']['langprefix']) && \Yii::$app->params['crelish']['langprefix']) {
