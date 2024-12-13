@@ -173,6 +173,16 @@ class Bootstrap implements BootstrapInterface
       ]);
       // Add url rules.
       $app->getUrlManager()->addRules([
+        [
+          'class' => 'yii\web\UrlRule',
+          'pattern' => 'api/<action:[\w\-]+>/<id:[\w\-]+>',
+          'route' => 'api/<action>'
+        ],
+        [
+          'class' => 'yii\web\UrlRule',
+          'pattern' => 'api/<action:[\w\-]+>',
+          'route' => 'api/<action>'
+        ],
         ['class' => 'giantbits\crelish\components\CrelishBaseUrlRule'],
         [
           'class' => 'yii\web\UrlRule',
@@ -188,16 +198,6 @@ class Bootstrap implements BootstrapInterface
           'class' => 'yii\web\UrlRule',
           'pattern' => 'site/<action:[\w\-]+>',
           'route' => 'site/<action>'
-        ],
-        [
-          'class' => 'yii\web\UrlRule',
-          'pattern' => 'api/<action:[\w\-]+>/<id:[\w\-]+>',
-          'route' => 'api/<action>'
-        ],
-        [
-          'class' => 'yii\web\UrlRule',
-          'pattern' => 'api/<action:[\w\-]+>',
-          'route' => 'api/<action>'
         ],
         [
           'class' => 'yii\web\UrlRule',
@@ -226,6 +226,6 @@ class Bootstrap implements BootstrapInterface
       ]
     ]);
 
-    \Yii::$app->params['crelish']['version'] = 'V0.4.51';
+    \Yii::$app->params['crelish']['version'] = 'V0.4.52';
   }
 }
