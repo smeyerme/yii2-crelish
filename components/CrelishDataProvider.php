@@ -239,7 +239,7 @@
                   }
 								}, $this->getDefinitions()->fields)));
 								
-								$query->andWhere("CONCAT_WS(' ', $fieldPattern) RLIKE '^$fragmentPattern'");
+								$query->andWhere("CONCAT_WS(' ', $fieldPattern) RLIKE '$fragmentPattern'");
 							} else {
 								$this->allModels = filter($this->allModels, function ($value) use ($key, $keyValue) {
 									if (!empty($value[$key]) && is_array($value[$key])) {
@@ -693,8 +693,8 @@
 			return $fileDataSource;
 		}
 		
-		private function parseFolderContent($folder)
-		{
+		private function parseFolderContent($folder): array
+    {
 			$filesArr = [];
 			$allModels = [];
 			$fullFolder = \Yii::getAlias($this->pathAlias) . DIRECTORY_SEPARATOR . $folder;
@@ -751,7 +751,7 @@
 			return $finalArr;
 		}
 
-    public function setRelations(&$query)
+    public function setRelations(&$query): void
     {
 
       foreach ($this->definitions->fields as $field) {

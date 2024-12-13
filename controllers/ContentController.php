@@ -7,6 +7,7 @@ use giantbits\crelish\components\CrelishDynamicModel;
 use giantbits\crelish\components\CrelishBaseController;
 use Yii;
 use yii\data\ActiveDataProvider;
+use yii\db\Exception;
 use yii\filters\AccessControl;
 use yii\web\View;
 use function _\find;
@@ -68,6 +69,7 @@ class ContentController extends CrelishBaseController
   /**
    * [actionIndex description]
    * @return [type] [description]
+   * @throws Exception
    */
   public function actionIndex()
   {
@@ -119,6 +121,7 @@ class ContentController extends CrelishBaseController
           'defaultOrder' => !empty($sortKey) && !empty($sortDir) ? [$sortKey => $sortDir] : null
         ],
       ]);
+
     } elseif ($modelInfo->definitions->storage === 'json') {
       $modelProvider = $modelInfo->getArrayProvider();
     }
