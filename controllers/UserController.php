@@ -10,7 +10,9 @@
 	use giantbits\crelish\components\CrelishDynamicModel;
 	use PhpOffice\PhpSpreadsheet\Spreadsheet;
 	use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
-	use yii\filters\AccessControl;
+  use Yii;
+  use yii\data\ActiveDataProvider;
+  use yii\filters\AccessControl;
 	use yii\helpers\Url;
 	use function _\find;
 	use function _\map;
@@ -130,7 +132,13 @@
 		 */
 		public function actionIndex()
 		{
-			$this->layout = 'crelish.twig';
+      $this->layout = 'crelish.twig';
+      $filter = null;
+      $checkCol = [
+        [
+          'class' => 'giantbits\crelish\components\CrelishCheckboxColumn',
+        ]
+      ];
 			
 			$modelClass = '\app\workspace\models\\' . ucfirst($this->ctype);
 			if (!empty($_POST['selection'])) {
@@ -141,42 +149,57 @@
 					}
 				}
 			}
-			
-			$filter = [];
-			
-			if (!empty($_GET['cr_content_filter'])) {
-				$filter['freesearch'] = $_GET['cr_content_filter'];
-				\Yii::$app->session->set('cr_content_filter', $_GET['cr_content_filter']);
-			} else {
-				if (!empty(\Yii::$app->session->get('cr_content_filter'))) {
-					$filter['freesearch'] = \Yii::$app->session->get('cr_content_filter');
-				}
-			}
-			
-			if (!empty($_GET['cr_status_filter'])) {
-				$filter['state'] = ['strict', $_GET['cr_status_filter']];
-				\Yii::$app->session->set('cr_status_filter', $_GET['cr_status_filter']);
-			} else {
-				if (!empty(\Yii::$app->session->get('cr_status_filter'))) {
-					$filter['state'] = ['strict', \Yii::$app->session->get('cr_status_filter')];
-				}
-			}
-			
-			$modelProvider = new CrelishDataProvider('user', ['filter' => $filter]);
+
+      if (key_exists('cr_content_filter', $_GET)) {
+        $filter = ['freesearch' => $_GET['cr_content_filter']];
+      } else {
+        if (!empty(Yii::$app->session->get('cr_content_filter'))) {
+          $filter = ['freesearch' => Yii::$app->session->get('cr_content_filter')];
+        }
+      }
+
+      if (key_exists('cr_status_filter', $_GET)) {
+        $filter['state'] = ['strict', $_GET['cr_status_filter']];
+      } else {
+        if (!empty(\Yii::$app->session->get('cr_status_filter'))) {
+          $filter['state'] = ['strict', \Yii::$app->session->get('cr_status_filter')];
+        }
+      }
+
+      $modelInfo = new CrelishDataProvider($this->ctype, ['filter' => $filter], null, null, true);
+      $modelProvider = null;
+
+      if ($modelInfo->definitions->storage === 'db' && class_exists($modelClass)) {
+        $query = $modelInfo->getQuery($modelClass::find(), $filter);
+
+        // Add relations.
+        $modelInfo->setRelations($query);
+
+        if (!empty($modelInfo->definitions->sortDefault)) {
+          $sortKey = key($modelInfo->definitions->sortDefault);
+          $sortDir = $modelInfo->definitions->sortDefault->{$sortKey};
+        }
+
+        $modelProvider = new ActiveDataProvider([
+          'query' => $query,
+          'pagination' => [
+            'pageSize' => 25,
+          ],
+          'sort' => [
+            'defaultOrder' => !empty($sortKey) && !empty($sortDir) ? [$sortKey => $sortDir] : null
+          ],
+        ]);
+
+      } elseif ($modelInfo->definitions->storage === 'json') {
+        $modelProvider = $modelInfo->getArrayProvider();
+      }
 			
 			if (!empty(\Yii::$app->request->get('export')) && \Yii::$app->request->get('export')) {
 				$this->doExpot($modelProvider);
 			}
 			
-			$checkCol = [
-				[
-					'class' => 'giantbits\crelish\components\CrelishCheckboxColumn',
-				]
-			];
-			
-			$columns = array_merge($checkCol, $modelProvider->columns);
-			
-			$columns = map($columns, function ($item) use ($modelProvider) {
+			$columns = array_merge($checkCol, $modelInfo->columns);
+			$columns = map($columns, function ($item) use ($modelInfo) {
 				
 				if (key_exists('attribute', $item) && $item['attribute'] === 'state') {
 					$item['format'] = 'raw';
@@ -191,7 +214,6 @@
 						return $state;
 					};
 				}
-				
 				
 				if (key_exists('attribute', $item) && $item['attribute'] === 'role') {
 					$item['format'] = 'raw';
@@ -214,7 +236,6 @@
 					};
 				}
 				
-				
 				if (key_exists('attribute', $item) && $item['attribute'] === 'activationDate') {
 					$item['format'] = 'raw';
 					$item['label'] = 'Datum Aktivierung';
@@ -222,7 +243,6 @@
 						return !empty($data['activationDate']) ? strftime("%d.%m.%Y", $data['activationDate']) : '';
 					};
 				}
-				
 				
 				if (key_exists('attribute', $item) && $item['attribute'] === 'trialEndAt') {
 					$item['format'] = 'raw';
@@ -234,7 +254,7 @@
 				
 				if (key_exists('attribute', $item)) {
 					// Add magic here: get definition for attribute, check for items, use items for label display.
-					$itemDef = find($modelProvider->definitions->fields, function ($itm) use ($item) {
+					$itemDef = find($modelInfo->definitions->fields, function ($itm) use ($item) {
 						return $itm->key == $item['attribute'];
 					});
 
@@ -256,18 +276,16 @@
 					
 				}
 				
-				
 				return $item;
 			});
-			
-			
+
 			$rowOptions = function ($model, $key, $index, $grid) {
 				return ['onclick' => 'location.href="update?uuid=' . $model['uuid'] . '";'];
 			};
 			
 			return $this->render('index.twig', [
-				'dataProvider' => $modelProvider->getProvider(),
-				'filterProvider' => $modelProvider->getFilters(),
+				'dataProvider' => $modelProvider,
+				'filterProvider' => $modelInfo->getFilters(),
 				'columns' => $columns,
 				'ctype' => $this->ctype,
 				'rowOptions' => $rowOptions

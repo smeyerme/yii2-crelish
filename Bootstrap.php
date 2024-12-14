@@ -226,6 +226,6 @@ class Bootstrap implements BootstrapInterface
       ]
     ]);
 
-    \Yii::$app->params['crelish']['version'] = 'V0.4.52';
+    \Yii::$app->params['crelish']['version'] = 'V0.4.53';
   }
 }
