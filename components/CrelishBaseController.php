@@ -23,6 +23,9 @@ class CrelishBaseController extends Controller
 
     parent::init();
 
+    Yii::$app->sourceLanguage = 'en';
+    Yii::$app->language = 'de';
+
     \Yii::$app->view->title = ucfirst($this->id);
 
     if (!Yii::$app->user->isGuest) {
@@ -144,7 +147,7 @@ class CrelishBaseController extends Controller
 
   private function handleSuccessfulSave(): void
   {
-    Yii::$app->session->setFlash('success', Yii::t("crelish", 'Content saved successfully...'));
+    Yii::$app->session->setFlash('success', Yii::t("app", 'Content saved successfully...'));
 
     $redirectUrl = !empty($_POST['save_n_return']) && $_POST['save_n_return'] == "1"
       ? [Yii::$app->controller->id . '/index', 'ctype' => $this->ctype]
@@ -160,7 +163,7 @@ class CrelishBaseController extends Controller
     $message = implode(', ', array_map(function ($error) {
       return $error[0];
     }, $errors));
-    Yii::$app->session->setFlash('error', 'Error saving item: ' . $message);
+    Yii::$app->session->setFlash('error', Yii::t('app', 'Error saving item: ') . $message);
   }
 
   private function formatModelFields(): void
@@ -219,7 +222,7 @@ class CrelishBaseController extends Controller
     }
 
     $html = Html::beginTag('div', ['class' => 'lang-ui-switch']);
-    $html .= '<span>' . Yii::t('crelish', 'Select language to edit:') . '</span><select id="language-select">';
+    $html .= '<span>' . Yii::t('app', 'Select language to edit:') . '</span><select id="language-select">';
     foreach (Yii::$app->params['crelish']['languages'] as $lang) {
       $html .= Html::tag('option', strtoupper($lang), [
         'value' => $lang,

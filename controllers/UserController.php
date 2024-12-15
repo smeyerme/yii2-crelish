@@ -323,17 +323,17 @@
 			$sheet = $spreadSheet->getActiveSheet();
 			$sheet
 				->fromArray([
-					\Yii::t('crelish', 'salutation'),
-					\Yii::t('crelish', 'nameFirst'),
-					\Yii::t('crelish', 'nameLast'),
-					\Yii::t('crelish', 'phone'),
-					\Yii::t('crelish', 'email'),
-					\Yii::t('crelish', 'company'),
-					\Yii::t('crelish', 'code'),
-					\Yii::t('crelish', 'type'),
-					\Yii::t('crelish', 'activationDate'),
-					\Yii::t('crelish', 'trialEndAt'),
-					\Yii::t('crelish', 'state'),
+					\Yii::t('app', 'salutation'),
+					\Yii::t('app', 'nameFirst'),
+					\Yii::t('app', 'nameLast'),
+					\Yii::t('app', 'phone'),
+					\Yii::t('app', 'email'),
+					\Yii::t('app', 'company'),
+					\Yii::t('app', 'code'),
+					\Yii::t('app', 'type'),
+					\Yii::t('app', 'activationDate'),
+					\Yii::t('app', 'trialEndAt'),
+					\Yii::t('app', 'state'),
 				], null, 'A1')
 				->fromArray($data, null, 'A2');
 			

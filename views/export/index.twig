@@ -1,12 +1,12 @@
 <div class="o-grid">
     <div class="o-grid__cell">
-        <h6>{{ t('crelish', 'Export') }}</h6>
+        <h6>{{ t('app', 'Export') }}</h6>
         <table class="table table-striped">
             <tbody>
             {% for type in types %}
                 <tr>
                     <td>{{ type.label }}</td>
-                    <td><a class="c-button" href="{{ url('export/filter',{type:type.key}) }}">{{ t('crelish', 'Export') }}</a></td>
+                    <td><a class="c-button" href="{{ url('export/filter',{type:type.key}) }}">{{ t('app', 'Export') }}</a></td>
                 </tr>
             {% endfor %}
             </tbody>

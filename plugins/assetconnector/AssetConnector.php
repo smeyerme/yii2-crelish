@@ -96,10 +96,10 @@ class AssetConnector extends CrelishFormWidget
 
     $checkCol = [
       [
-        'label' => \Yii::t('crelish', 'Preview'),
+        'label' => \Yii::t('app', 'Preview'),
         'format' => 'raw',
         'value' => function ($model) {
-          $preview = \Yii::t('crelish', 'n/a');
+          $preview = \Yii::t('app', 'n/a');
 
           switch ($model['mime']) {
             case 'image/jpeg':

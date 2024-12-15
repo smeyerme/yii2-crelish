@@ -39,7 +39,7 @@
 		
 		{% if colormain_hex is not empty %}
 			<div class="form-group field-crelishdynamicjsonmodel-state required">
-				<label class="control-label" for="crelishdynamicjsonmodel-state">{{ t('crelish', 'Color palette') }}</label>
+				<label class="control-label" for="crelishdynamicjsonmodel-state">{{ t('app', 'Color palette') }}</label>
 				<ul class="gc-list--inline">
 					{% for color in colorpalette %}
 						<li class="cr-tooltip"  style="background-color: rgb({{ color[0] }}, {{ color[1] }}, {{ color[2] }});">
@@ -50,7 +50,7 @@
 			</div>
 			
 			<div class="form-group field-crelishdynamicjsonmodel-state required">
-				<label class="control-label" for="crelishdynamicjsonmodel-state">{{ t('crelish', 'Main color') }}</label>
+				<label class="control-label" for="crelishdynamicjsonmodel-state">{{ t('app', 'Main color') }}</label>
 				<ul class="gc-list--inline">
 					<li class="cr-tooltip" style="background-color: {{ colormain_hex }}; width: 100%;">
 						<span>{{ colormain_hex }}</span>
@@ -60,7 +60,7 @@
 		{% endif %}
 		
 		{% if model.mime == 'application/pdf' and model.thumbnail %}
-			<label>{{ t('crelish', 'thumbnail') }}</label>
+			<label>{{ t('app', 'thumbnail') }}</label>
 			<img src="/uploads/thumbs/{{ model.thumbnail }}" class="o-image">
 		{% endif %}
 		
@@ -81,7 +81,7 @@
 			{#
 			<div class="c-card">
 				<div class="c-card__item c-card__item--brand">
-					{{ t('crelish', 'extract_pdf_pages') }}
+					{{ t('app', 'extract_pdf_pages') }}
 				</div>
 				<div class="c-card__item">
 					

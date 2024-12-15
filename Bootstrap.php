@@ -91,7 +91,7 @@ class Bootstrap implements BootstrapInterface
             'crelish*' => [
               'class' => 'yii\i18n\PhpMessageSource',
               'basePath' => '@app/messages',
-              'sourceLanguage' => 'de',
+              'sourceLanguage' => 'en',
               'fileMap' => [
                 'crelish' => 'crelish.php'
               ],
@@ -115,7 +115,7 @@ class Bootstrap implements BootstrapInterface
             'app*' => [
               'class' => 'yii\i18n\PhpMessageSource',
               'basePath' => '@app/messages',
-              'sourceLanguage' => 'de',
+              //'sourceLanguage' => 'en',
               'fileMap' => [
                 'app' => 'app.php'
               ],
@@ -226,6 +226,6 @@ class Bootstrap implements BootstrapInterface
       ]
     ]);
 
-    \Yii::$app->params['crelish']['version'] = 'V0.4.53';
+    \Yii::$app->params['crelish']['version'] = 'V0.4.54';
   }
 }
