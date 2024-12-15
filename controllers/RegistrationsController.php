@@ -372,7 +372,7 @@
 					}
 					
 					if($field === 'matriculation') {
-						$value = Html::a(\Yii::t('crelish', 'Download file'), '/uploads/registration/' . $value, ['target' => '_blank']);
+						$value = Html::a(\Yii::t('app', 'Download file'), '/uploads/registration/' . $value, ['target' => '_blank']);
 					}
 					
 					$mailData[\Yii::t('app', $fieldLabel)] = $value;

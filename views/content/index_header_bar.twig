@@ -5,13 +5,13 @@
 	<div class="o-field">
 		<input class="c-field" name="cr_content_filter" id="cr_content_filter"
 		       value="{{ app.session.get('cr_content_filter') }}"
-		       placeholder="{{ t('crelish', 'Type your search phrase here...') }}">
+		       placeholder="{{ t('app', 'Type your search phrase here...') }}">
 	</div>
 </div>
 
 <span class="c-input-group">
   <button class="c-button c-button--error btn-delete-grid hidden">
-    <i class="fa-kit fa-sharp-regular-square-check-circle-exclamation"></i> {{ t('crelish', 'Löschen') }}
+    <i class="fa-kit fa-sharp-regular-square-check-circle-exclamation"></i> {{ t('app', 'Löschen') }}
   </button>
   <div class="c-button" data-bs-toggle="modal"
        data-bs-target="#modal-create-content" style=" overflow: visible;">

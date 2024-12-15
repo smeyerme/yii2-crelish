@@ -73,6 +73,7 @@ class ContentController extends CrelishBaseController
    */
   public function actionIndex()
   {
+
     $filter = null;
     $checkCol = [
       [

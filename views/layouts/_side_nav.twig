@@ -8,7 +8,7 @@
 	<div class="user-info">
 		<h6>{{ app.user.identity.nameFirst }} {{ app.user.identity.nameLast }}</h6>
 		<a href="{{ url('crelish/user/logout') }}">
-			{{ t('crelish', 'Logout') }}
+			{{ t('app', 'Logout') }}
 		</a>
 	</div>
 </div>
@@ -16,7 +16,7 @@
 {% for item in sideBar %}
 	<div class="navbar-item {{ app.controller.id == item.id ? 'active' : '' }}">
 		<a href="{{ url(item.url) }}">
-			<i class="{{ item.icon }}"></i> {{ t('crelish', item.label) }}
+			<i class="{{ item.icon }}"></i> {{ t('app', item.label) }}
 		</a>
 	</div>
 {% endfor %}

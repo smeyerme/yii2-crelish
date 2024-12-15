@@ -13,14 +13,14 @@
       <nav class="modal-header">
         <div class="o-grid">
           <div class="o-grid__cell--width-25">
-            <span class="c-nav__content"><h3 class="c-heading">{{ t('crelish', 'Assets') }}</h3></span>
+            <span class="c-nav__content"><h3 class="c-heading">{{ t('app', 'Assets') }}</h3></span>
           </div>
           <div class="o-grid__cell--width-50 gc-fc--palette-dark-blue">
             <div class="c-input-group c-input-group--rounded" style="margin-top: .5em;">
               <div class="o-field">
                 <input class="c-field" name="cr_asset_filter_{{ formKey }}" id="cr_asset_filter_{{ formKey }}"
                        value="{{ app.request.get.cr_asset_filter }}"
-                       placeholder="{{ t('crelish', 'Type your search phrase here...') }}">
+                       placeholder="{{ t('app', 'Type your search phrase here...') }}">
               </div>
               <button class="c-button c-button--brand do-search" onclick="return false;" style="border: 1px solid grey;
     margin-left: -1px;"><i class="fa-sharp fa-regular  fa-search"></i>
@@ -47,7 +47,7 @@
 
           {{ pjax_begin({'id': 'assetList-' ~ formKey, 'enablePushState': true}) }}
 
-          <h6>{{ t('crelish', 'Asset list') }}</h6>
+          <h6>{{ t('app', 'Asset list') }}</h6>
 
           {{ grid_view_widget({
             'dataProvider': dataProvider,
@@ -77,12 +77,12 @@
       <span class="c-input-group pull-right">
         {% if data.fileName %}
           <a class="c-button c-button--error" href style="margin-top: -6px;" id="rem_{{ field.key }}">
-          <span class="fui-image"></span> <i class="fa-sharp fa-regular  fa-trash"></i> {{ t('crelish', 'Remove media...') }}
+          <span class="fui-image"></span> <i class="fa-sharp fa-regular  fa-trash"></i> {{ t('app', 'Remove media...') }}
         </a>
         {% endif %}
         <a class="c-button c-button--info open-media-modal" data-bs-toggle="modal"
          data-bs-target="#media-modal-{{ formKey }}" href style="margin-top: -6px; margin-right: -6px;">
-          <span class="fui-image"></span> {{ t('crelish', 'Select media...') }}
+          <span class="fui-image"></span> {{ t('app', 'Select media...') }}
       </a>
       </span>
     </div>
@@ -144,7 +144,7 @@
     });
 
     Dropzone.autoDiscover = false;
-    var defMessage = "<span class=\"c-button c-button--ghost\" style=\"border-color: #fff; color: #fff; border-radius: .5rem; pointer-events: none;\">{{ t('crelish', 'Click or drag files here to upload.') }}</span>";
+    var defMessage = "<span class=\"c-button c-button--ghost\" style=\"border-color: #fff; color: #fff; border-radius: .5rem; pointer-events: none;\">{{ t('app', 'Click or drag files here to upload.') }}</span>";
     var dZoneOptions = {
       url: '/crelish/asset/upload',
       paramName: "file", // The name that will be used to transfer the file
@@ -174,7 +174,7 @@
   
     $('#asset-body-{{ field.key }}').removeClass('hidden');
     $('#asset_{{ field.key }}').attr('value', '');
-    $('#asset-info-{{ field.key }}').html('<span style="color: red;">{{ t('crelish', 'Save the entry to remove the media.') }}</span>');
+    $('#asset-info-{{ field.key }}').html('<span style="color: red;">{{ t('app', 'Save the entry to remove the media.') }}</span>');
     $('#asset-media-{{ field.key }}').html('');
   });
 

@@ -56,7 +56,7 @@ class SettingsController extends CrelishBaseController
 
     opcache_reset();
 
-    \Yii::$app->session->setFlash('success', \Yii::t('crelish', 'Caches cleared successfully.'));
+    \Yii::$app->session->setFlash('success', \Yii::t('app', 'Caches cleared successfully.'));
     return $this->redirect('/crelish/settings/index', 302);
   }
 
@@ -79,7 +79,7 @@ class SettingsController extends CrelishBaseController
       $tmp = $dataCache->rawAll();
     }
 
-    \Yii::$app->session->setFlash('success', \Yii::t('crelish', 'Caches rebuild successfully.'));
+    \Yii::$app->session->setFlash('success', \Yii::t('app', 'Caches rebuild successfully.'));
     return $this->redirect('/crelish/settings/index', 302);
   }
 
@@ -92,7 +92,7 @@ class SettingsController extends CrelishBaseController
         FileHelper::removeDirectory($filePath . DIRECTORY_SEPARATOR . $f);
       }
     }
-    \Yii::$app->session->setFlash('success', \Yii::t('crelish', 'WebAssets deleted successfully.'));
+    \Yii::$app->session->setFlash('success', \Yii::t('app', 'WebAssets deleted successfully.'));
     return $this->redirect('/crelish/settings/index', 302);
   }
 

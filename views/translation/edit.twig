@@ -80,7 +80,7 @@
 
 {% if app.params.crelish.languages|length > 1 %}
 	<div class="lang-ui-switch" style="margin-top: 0;">
-		<span>{{ t('crelish', 'Select language to edit:') }}</span>
+		<span>{{ t('app', 'Select language to edit:') }}</span>
 		<select id="language-select" onchange="changeLanguage()">
 			{% for lang in app.params.crelish.languages %}
 				<option value="{{ lang }}"

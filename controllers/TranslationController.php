@@ -30,8 +30,12 @@
 		}
 		
 		
-		public function actionIndex($language = 'fr')
+		public function actionIndex($language = null)
 		{
+      if(!$language) {
+        $language = Yii::$app->language;
+      }
+
 			$translations = $this->getAllTranslations($language);
 			
 			return $this->render('edit.twig', [
