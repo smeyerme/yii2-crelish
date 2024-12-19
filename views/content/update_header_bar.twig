@@ -1,18 +1,16 @@
 <div class="c-input-group group-content-filter">
   {% include('@crelish/views/layouts/base_header_bar.twig') %}
-  <a class="c-button" href="{{ url('crelish/content/index') }}">
+  <a class="c-button" href="{{ url('/crelish/content/index') }}">
     <span class="fui-arrow-left"></span> {{ t('app', 'Back') }}</span>
   </a>
 </div>
 <div class="c-input-group group-content-filter">
-  <span id="submitButton" class="c-button btn-save c-button--success" type="button"
+  <span id="submitButton" class="c-button btn-save c-button--success"
         onclick="$('#content-form').submit();">
           <i class="fa-sharp fa-regular  fa-save"></i></span>
-  </span>
-  <span class="c-button btn-save c-button--success-darker" type="button"
+  <span class="c-button btn-save c-button--success-darker"
         onclick="$('#save_n_return').val(1); $('#content-form').submit();">
             <i class="fa-sharp fa-regular  fa-save"></i> <i class="fa-sharp fa-regular  fa-reply"></i></span>
-  </span>
   <span class="c-button c-button--error" data-bs-toggle="modal"
         data-bs-target="#confirm-delete">
             <i class="fa-sharp fa-regular  fa-trash" aria-hidden="true"></i>
