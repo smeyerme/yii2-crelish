@@ -11,7 +11,6 @@ use yii\db\Exception;
 use yii\filters\AccessControl;
 use yii\web\View;
 use function _\find;
-use function _\internal\parent;
 use function _\map;
 
 class ContentController extends CrelishBaseController
@@ -117,9 +116,13 @@ class ContentController extends CrelishBaseController
         'query' => $query,
         'pagination' => [
           'pageSize' => 25,
+          'route' => Yii::$app->request->pathInfo,
+          'pageParam' => 'list-page'
         ],
         'sort' => [
-          'defaultOrder' => !empty($sortKey) && !empty($sortDir) ? [$sortKey => $sortDir] : null
+          'defaultOrder' => !empty($sortKey) && !empty($sortDir)
+            ? ($sortDir === SORT_ASC ? $sortKey : "-{$sortKey}")
+            : null,
         ],
       ]);
 
@@ -250,7 +253,7 @@ class ContentController extends CrelishBaseController
     if (isset($_GET[$paramName])) {
       Yii::$app->session->set($paramName, $_GET[$paramName]);
     } elseif (Yii::$app->session->get($paramName) !== null) {
-      Yii::$app->request->setQueryParams([$paramName => Yii::$app->session->get($paramName)]);
+      $_GET[$paramName] = Yii::$app->session->get($paramName);
     }
   }
 }

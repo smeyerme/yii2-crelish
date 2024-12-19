@@ -14,45 +14,7 @@ use yii\web\UrlRuleInterface;
 class CrelishBaseUrlRule implements UrlRuleInterface
 {
 
-  public function createUrl($manager, $route, $params): bool|string
-  {
-
-    if (str_starts_with($route, 'crelish/') && $route !== 'crelish/frontend/run') {
-      return false;
-    }
-
-    if ($route != 'crelish/frontend/run') {
-      return false;
-    }
-
-    $url = '';
-
-    if (array_key_exists('language', $params) && !empty($params['languages'])) {
-      $url .= $params['languages'];
-    }
-
-    if (array_key_exists('pathRequested', $params) && !empty($params['pathRequested'])) {
-      if ($url != '') {
-        $url .= '/';
-      }
-
-      $url .= $params['pathRequested'];
-    }
-	  
-	  $paramsClean = $params;
-		unset($params['language']);
-	  unset($paramsClean['pathRequested']);
-	  
-    $paramsExposed = '?';
-    foreach ($paramsClean as $key => $value) {
-      $paramsExposed .= $key . '=' . $value . '&';
-    }
-    $paramsExposed = rtrim($paramsExposed, '&');
-
-    return $params['pathRequested'] . $paramsExposed;
-  }
-
-  /**
+    /**
    * @throws InvalidConfigException
    */
   public function parseRequest($manager, $request)
@@ -108,6 +70,43 @@ class CrelishBaseUrlRule implements UrlRuleInterface
     return ['crelish/frontend/run', $params];
   }
 
+  public function createUrl($manager, $route, $params): bool|string
+  {
+
+    if (str_starts_with($route, 'crelish/') && $route !== 'crelish/frontend/run') {
+      return false;
+    }
+
+    if ($route != 'crelish/frontend/run') {
+      return false;
+    }
+
+    $url = '';
+
+    if (array_key_exists('language', $params) && !empty($params['languages'])) {
+      $url .= $params['languages'];
+    }
+
+    if (array_key_exists('pathRequested', $params) && !empty($params['pathRequested'])) {
+      if ($url != '') {
+        $url .= '/';
+      }
+
+      $url .= $params['pathRequested'];
+    }
+
+    $paramsClean = $params;
+    unset($params['language']);
+    unset($paramsClean['pathRequested']);
+
+    $paramsExposed = '?';
+    foreach ($paramsClean as $key => $value) {
+      $paramsExposed .= $key . '=' . $value . '&';
+    }
+    $paramsExposed = rtrim($paramsExposed, '&');
+
+    return $params['pathRequested'] . $paramsExposed;
+  }
   public function urlForSlug($slug, $langCode = null): string
   {
     $url = '/' . $slug;

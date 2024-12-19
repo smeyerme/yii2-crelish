@@ -13,17 +13,17 @@
 <div class="u-window-box-medium">
   {{ html.beginForm('', 'POST', {'id': 'grid-form'}) | raw }}
   {% if dataProvider %}
-  {{ grid_view_widget({
-    'dataProvider': dataProvider,
-    'columns': columns,
-    'filterSelector': '.cr-content-search',
-    'tableOptions': {'class':'table table-striped table-hover'},
-    'rowOptions': rowOptions ,
-    'formatter': {
-      'class': 'yii\\i18n\\Formatter',
-      'nullDisplay': false,
-      'dateFormat': 'dd.MM.yyyy'
-    }}) | raw }}
+    {{ grid_view_widget({
+      'dataProvider': dataProvider,
+      'columns': columns,
+      'filterSelector': '.cr-content-search',
+      'tableOptions': {'class':'table table-striped table-hover'},
+      'rowOptions': rowOptions ,
+      'formatter': {
+        'class': 'yii\\i18n\\Formatter',
+        'nullDisplay': false,
+        'dateFormat': 'dd.MM.yyyy'
+      }}) | raw }}
   {% endif %}
   {{ html.endForm() | raw }}
 </div>
@@ -87,6 +87,7 @@
     });
   });
 </script>
+
 {{ pjax_end() }}
 
 <div class="modal modal-lg fade" id="modal-create-content" tabindex="-1" role="dialog">
