@@ -35,6 +35,8 @@
 		private $viewTemplate;
 		public $data;
 		public $nonce;
+
+    public $actionParams = [];
 		
 		/**
 		 * [init description]
@@ -63,7 +65,10 @@
 			
 			// Force theming.
 			$this->setViewPath('@app/themes/' . \giantbits\crelish\Module::getInstance()->theme . '/' . $this->id);
-			
+
+      // Canonical handliog.
+      Yii::$app->canonicalHelper->register([], true);
+
 			// Define entry point.
 			$this->resolvePathRequested();
 		}

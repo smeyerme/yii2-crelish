@@ -24,7 +24,7 @@ use yii\web\UploadedFile;
 
 class CrelishBaseHelper
 {
-  public static function urlFromSlug($slug, $params = [], $langCode = null)
+  public static function urlFromSlug($slug, $params = [], $langCode = null, $scheme = false): string
   {
     $url = '/' . $slug;
 
@@ -40,7 +40,7 @@ class CrelishBaseHelper
       $url = '/' . $langCode . $url;
     }
 
-    return Url::to(array_merge([$url], $params));
+    return Url::to(array_merge([$url], $params), $scheme);
   }
 
   public static function currentUrl($params = [])
