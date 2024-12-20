@@ -8,7 +8,13 @@
 
 namespace giantbits\crelish\controllers;
 use giantbits\crelish\components\CrelishFrontendController;
+use Yii;
 
 class FrontendController extends CrelishFrontendController {
+
+  public function init()
+  {
+    parent::init();
+  }
 
 }

@@ -105,7 +105,11 @@ class CrelishBaseUrlRule implements UrlRuleInterface
     }
     $paramsExposed = rtrim($paramsExposed, '&');
 
-    return $params['pathRequested'] . $paramsExposed;
+    if(!empty($params['pathRequested'])) {
+      return $params['pathRequested'] . $paramsExposed;
+    }
+
+    return $paramsExposed;
   }
   public function urlForSlug($slug, $langCode = null): string
   {

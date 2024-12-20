@@ -169,6 +169,11 @@ class Bootstrap implements BootstrapInterface
         ],
         'sideBarManager' => [
           'class' => 'giantbits\crelish\components\CrelishSidebarManager'
+        ],
+        'canonicalHelper' => [
+          'class' => 'giantbits\crelish\helpers\CrelishCanonicalHelper',
+          'globalSignificantParams' => ['filter', 'search', 'uuid', 'ctype', 'id', 'action', 'pathRequested'],
+          'globalExcludedParams' => ['_pjax', 'page', 'sort', 'order', 'filter', 'search', 'uuid', 'ctype', 'id', 'action', 'language'],
         ]
       ]);
       // Add url rules.
@@ -226,6 +231,6 @@ class Bootstrap implements BootstrapInterface
       ]
     ]);
 
-    \Yii::$app->params['crelish']['version'] = 'V0.4.55';
+    \Yii::$app->params['crelish']['version'] = 'V0.4.56';
   }
 }
