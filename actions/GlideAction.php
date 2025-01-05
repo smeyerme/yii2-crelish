@@ -34,12 +34,12 @@
 			}
 			
 			$server = ServerFactory::create([
-				'source' => Yii::getAlias('@app/web/uploads'),
+				'source' => Yii::getAlias('@app/web'),
 				'cache' => Yii::getAlias('@runtime/glide'),
 				'presets' => Yii::$app->params['crelish']['glide_presets']
 			]);
 			
-			$checkFile = Yii::getAlias('@app/web/uploads') . '/' . $path;
+			$checkFile = Yii::getAlias('@app/web') . $path;
 			
 			if(!file_exists($checkFile)) {
 				throw new NotFoundHttpException('Requested media file does not exists.');

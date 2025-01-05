@@ -102,7 +102,7 @@
 				// Generate default admin.
 				$adminUser = new CrelishDynamicModel(['email', 'password', 'login', 'state', 'role'], ['ctype' => 'user']);
 				$adminUser->email = 'admin@local.host';
-				$adminUser->password = 'basta!';
+				$adminUser->password = Yii::$app->security->generatePasswordHash('basta!');
 				$adminUser->state = 2;
 				$adminUser->authKey = \Yii::$app->security->generateRandomString();
 				$adminUser->role = 9;
