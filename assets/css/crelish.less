@@ -1,4 +1,4 @@
-@color-back-base: rgb(238, 242, 245);
+@color-back-base: rgb(248, 250, 252);
 @color-back-lighter: rgb(255, 255, 255);
 @color-back-highlight: rgb(250, 251, 253);
 @color-back-controls: rgb(251, 252, 253);
@@ -7,6 +7,11 @@
 @color-bg-dark: rgb(52, 69, 99);
 @theme-color: rgb(89, 227, 214);
 @theme-color-second: rgb(227, 50, 101);
+
+@color-main: rgb(59, 130, 246);
+@color-nav-text: rgb(100, 116, 139);
+@color-nav-text--active: rgb(159, 194, 255);
+@color-nav-back--active: rgba(59, 130, 246, 0.1);
 
 .pace {
   -webkit-pointer-events: none;
@@ -102,6 +107,14 @@ html, body {
 
   .pagination > li > a span {
 
+  }
+
+  .cr-version {
+    position: absolute;
+    bottom: 1rem;
+    left: 1rem;
+    font-size: 0.8rem;
+    color: @color-nav-text;
   }
 
 
@@ -224,12 +237,12 @@ html, body {
 
   #cr-left-pane {
     position: relative;
-    background-color: #363b51;
+    background-color: rgb(42, 47, 60);
     height: 100vh;
     width: 280px;
 
     .c-avatar {
-      background-color: #7a7992;
+      background-color: @color-main;
       margin-right: 1rem;
       text-align: center;
       line-height: 3rem;
@@ -275,9 +288,8 @@ html, body {
   .logo-head {
     height: 4rem;
     display: flex;
-    justify-content: center;
     align-items: center;
-    background-color: #2c3041;
+    padding-inline: 1.333rem;
   }
 
   .c-button.c-button--brand {
@@ -350,10 +362,12 @@ html, body {
     }
 
     .navbar-item {
-      padding: 1rem 2rem;
+      margin: 0.333rem 1rem;
+      padding: 0.6rem 1rem;
+      border-radius: 0.6rem;
 
       a {
-        color: @color-back-base;
+        color: @color-nav-text;
         display: block;
 
         i {
@@ -361,22 +375,21 @@ html, body {
         }
 
         &:hover {
-          color: white;
+          color: @color-nav-text--active;
         }
       }
 
       &:hover {
-        background-color: #2c3041;
         cursor: pointer;
+        color: @color-nav-text--active;
       }
 
       &.active {
-        background-color: #2c3041;
-        border-left: 6px solid @theme-color;
+        background-color: @color-nav-back--active;
 
         a {
           font-weight: normal;
-          color: @theme-color;
+          color: @color-nav-text--active;
           margin-left: -6px;
         }
       }
@@ -430,7 +443,10 @@ html, body {
   .avatar-nav {
     display: flex;
     color: white;
-    padding: 1rem 2rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    margin: 1rem;
+    border-radius: 1rem;
 
     .c-avatar {
       margin-right: 1rem;
@@ -439,12 +455,12 @@ html, body {
     .user-info {
       h6 {
         margin-bottom: 0;
-        font-size: 1.3rem;
+        font-size: 1.1rem;
       }
 
       a {
         color: #7a8797;
-        font-size: 1rem;
+        font-size: 0.85rem;
 
         &:hover {
           color: #b7c5d8;

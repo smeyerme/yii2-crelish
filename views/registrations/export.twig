@@ -41,7 +41,7 @@
 						{{ form.field(filterModel, 'email').label(t('app', 'Email')) | raw }}
 					</div>
 					<div class="col-sm">
-						{{ form.field(filterModel, 'eventCode').dropDownList({'BGT':'BGT', 'DHK':'DHK', 'EBH':'EBH', 'HTK':'HTK', 'HTW':'HTW', 'IHF':'IHF', 'SHK':'SHK', 'WBN':'WBN'}, {'custom': true,  'prompt': t('app', 'Select ...' )}).label(t('app', 'Event Code')) | raw }}
+						{{ form.field(filterModel, 'eventCode').dropDownList({'BGT':'BGT', 'DHK':'DHK', 'EBH':'EBH', 'FLI':'FLI', 'HTK':'HTK', 'HTW':'HTW', 'IHF':'IHF', 'SHK':'SHK', 'WBE':'WBE', 'WBN':'WBN'}, {'custom': true,  'prompt': t('app', 'Select ...' )}).label(t('app', 'Event Code')) | raw }}
 					</div>
 					<div class="col-sm">
 						{{ form.field(filterModel, 'eventYear').label(t('app', 'Event Year')) | raw }}
