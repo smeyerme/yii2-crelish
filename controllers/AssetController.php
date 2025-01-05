@@ -226,11 +226,12 @@
 			}
 			
 			if (in_array($model->mime, ['image/jpg', 'image/jpeg', 'image/png', 'image/bmp', 'image/gif'])) {
+        $srcName = (str_starts_with($model->pathName, '/') ? $model->pathName : '/' . $model->pathName) . '/' . $model->fileName;
 				try {
-					$targetFile = Yii::getAlias('@webroot') . $model->pathName . '/' . $model->src;
+					$targetFile = Yii::getAlias('@webroot') . $srcName;
 					$domColor = @ColorThief::getColor($targetFile, 20);
 					$palColor = @ColorThief::getPalette($targetFile);
-					
+
 					$colormain_rgb = Json::encode($domColor);
 					$colormain_hex = '#' . sprintf('%02x', $domColor[0]) . sprintf('%02x', $domColor[1]) . sprintf('%02x', $domColor[2]);
 				} catch (\Exception $e) {
