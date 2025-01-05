@@ -38,9 +38,9 @@
 				'cache' => Yii::getAlias('@runtime/glide'),
 				'presets' => Yii::$app->params['crelish']['glide_presets']
 			]);
-			
-			$checkFile = Yii::getAlias('@app/web') . str_starts_with($path, '/') ? $path : '/' . $path;
-			
+
+			$checkFile = Yii::getAlias('@app/web') . (str_starts_with($path, '/') ? $path : '/' . $path);
+
 			if(!file_exists($checkFile)) {
 				throw new NotFoundHttpException('Requested media file does not exists.');
 			}
