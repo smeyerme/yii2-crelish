@@ -13,7 +13,8 @@
 	use app\workspace\models\Document;
 	use ColorThief\ColorThief;
 	use giantbits\crelish\components\CrelishBaseController;
-	use giantbits\crelish\components\CrelishDynamicModel;
+  use giantbits\crelish\components\CrelishBaseHelper;
+  use giantbits\crelish\components\CrelishDynamicModel;
 	use League\Glide\ServerFactory;
 	use Mpdf\MpdfException;
 	use setasign\Fpdi\PdfParser\PdfParserException;
@@ -140,7 +141,7 @@
 							case 'image/jpeg':
 							case 'image/gif':
 							case 'image/png':
-								$preview = Html::img('/crelish/asset/glide?path=/' . $model['src'] . '&w=160&f=fit', ['style' => 'width: 80px; height: auto;']);
+								$preview = Html::img('/crelish/asset/glide?path=' . CrelishBaseHelper::getAssetUrl($model['pathName'], $model['fileName']) . '&w=160&f=fit', ['style' => 'width: 80px; height: auto;']);
 								break;
 							case 'image/svg+xml':
 								$preview = Html::img($model['pathName'] . $model['src'], ['style' => 'width: 80px; height: auto;']);
@@ -226,7 +227,8 @@
 			}
 			
 			if (in_array($model->mime, ['image/jpg', 'image/jpeg', 'image/png', 'image/bmp', 'image/gif'])) {
-        $srcName = (str_starts_with($model->pathName, '/') ? $model->pathName : '/' . $model->pathName) . '/' . $model->fileName;
+        $srcName = CrelishBaseHelper::getAssetUrl($model->pathName, $model->fileName);
+
 				try {
 					$targetFile = Yii::getAlias('@webroot') . $srcName;
 					$domColor = @ColorThief::getColor($targetFile, 20);

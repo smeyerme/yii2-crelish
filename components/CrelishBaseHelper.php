@@ -227,6 +227,10 @@ class CrelishBaseHelper
     \Yii::$app->view->registerCss($minifier->minify());
   }
 
+  public static function getAssetUrl($path, $file) {
+    $cleanPath = str_starts_with($path, '/') ? $path : '/' . $path;
+    return $cleanPath . (str_ends_with($cleanPath, '/') ? $file : '/' . $file);
+  }
   /**
    * @throws RandomException
    */
