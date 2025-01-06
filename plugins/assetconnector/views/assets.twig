@@ -90,7 +90,7 @@
       <div class="o-grid o-grid--wrap">
         <div class="o-gird__cell o-grid__cell--width-25" id="asset-media-{{ field.key }}">
           {% if "image" in data.mime and "svg" not in data.mime %}
-            <img src="/crelish/asset/glide?path={{ data.fileName }}&w=220&f=fit" class="o-image"
+            <img src="/crelish/asset/glide?path={{ data.pathName }}/{{ data.fileName }}&w=220&f=fit" class="o-image"
                  id="asset-icon-{{ field.key }}"/>
           {% endif %}
           {% if "image" in data.mime and "svg" in data.mime %}

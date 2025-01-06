@@ -110,6 +110,12 @@ class ContentController extends CrelishBaseController
       if (!empty($modelInfo->definitions->sortDefault)) {
         $sortKey = key($modelInfo->definitions->sortDefault);
         $sortDir = $modelInfo->definitions->sortDefault->{$sortKey};
+
+        if(empty($_GET['sort'])) {
+          $_GET['sort'] = !(empty($sortKey) && !empty($sortDir))
+            ? ($sortDir === 'SORT_ASC' ? $sortKey : "-{$sortKey}")
+            : null;
+        }
       }
 
       $modelProvider = new ActiveDataProvider([
@@ -118,12 +124,7 @@ class ContentController extends CrelishBaseController
           'pageSize' => 25,
           'route' => Yii::$app->request->pathInfo,
           'pageParam' => 'list-page'
-        ],
-        'sort' => [
-          'defaultOrder' => !empty($sortKey) && !empty($sortDir)
-            ? ($sortDir === SORT_ASC ? $sortKey : "-{$sortKey}")
-            : null,
-        ],
+        ]
       ]);
 
     } elseif ($modelInfo->definitions->storage === 'json') {

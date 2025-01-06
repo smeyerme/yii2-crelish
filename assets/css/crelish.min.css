@@ -1,3 +1,6 @@
+:root {
+  --bs-body-bg: #f8fafc;
+}
 .pace {
   -webkit-pointer-events: none;
   pointer-events: none;
@@ -326,7 +329,6 @@ body {
 .crelish-app-root .navbar--main .navbar-item.active a {
   font-weight: normal;
   color: #9fc2ff;
-  margin-left: -6px;
 }
 .crelish-app-root .navbar--controller {
   height: auto;
@@ -524,13 +526,16 @@ body {
   }
 }
 .crelish-app-root .c-card {
-  border-radius: 0.6rem;
+  box-shadow: rgba(0, 0, 0, 0.1) 0px 1px 3px;
+  background-color: white;
 }
 .crelish-app-root .c-card .c-card__item {
-  background-color: #fafbfd;
+  padding: 1.666rem;
 }
 .crelish-app-root .c-card .c-card__item.c-card__item--brand {
-  background-color: #344563 !important;
+  padding-inline: 1rem;
+  padding-block: 0.666rem;
+  background-color: #44597c !important;
   font-weight: bold;
   text-align: center;
 }
