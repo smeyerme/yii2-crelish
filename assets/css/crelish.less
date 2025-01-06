@@ -4,7 +4,7 @@
 @color-back-controls: rgb(251, 252, 253);
 @color-text: rgb(73, 73, 80);
 @color-text-lighter: lighten(@color-text, 25%);
-@color-bg-dark: rgb(52, 69, 99);
+@color-bg-dark: rgb(68, 89, 124);
 @theme-color: rgb(89, 227, 214);
 @theme-color-second: rgb(227, 50, 101);
 
@@ -12,6 +12,10 @@
 @color-nav-text: rgb(100, 116, 139);
 @color-nav-text--active: rgb(159, 194, 255);
 @color-nav-back--active: rgba(59, 130, 246, 0.1);
+
+:root {
+  --bs-body-bg: rgb(248, 250, 252);
+}
 
 .pace {
   -webkit-pointer-events: none;
@@ -390,7 +394,6 @@ html, body {
         a {
           font-weight: normal;
           color: @color-nav-text--active;
-          margin-left: -6px;
         }
       }
     }
@@ -649,12 +652,15 @@ html, body {
   }
 
   .c-card {
-    border-radius: 0.6rem;
+    box-shadow: rgba(0, 0, 0, 0.1) 0px 1px 3px;
+    background-color: white;
 
     .c-card__item {
-      background-color: @color-back-highlight;
+      padding: 1.666rem;
 
       &.c-card__item--brand {
+        padding-inline: 1rem;
+        padding-block: 0.666rem;
         background-color: @color-bg-dark !important;
         font-weight: bold;
         text-align: center;

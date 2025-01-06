@@ -79,7 +79,11 @@ class PageController extends CrelishBaseController
         $filter = ['freesearch' => \Yii::$app->session->get('cr_content_filter')];
       }
     }
-	
+
+    if(empty($_GET['sort'])) {
+      $_GET['sort'] = 'systitle';
+    }
+
 	  $modelProvider = new CrelishDataProvider($this->ctype, ['filter' => $filter]);
 
     $checkCol = [

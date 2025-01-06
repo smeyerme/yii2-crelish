@@ -4,7 +4,7 @@
 	'layout' : 'default'
 }) %}
 <div class="o-grid u-window-box--medium">
-	<div class="o-grid__cell o-grid__cell--width-75 o-grid__cell--no-gutter">
+	<div class="o-grid__cell o-grid__cell--width-65 o-grid__cell--no-gutter">
 		<div class="">
 			<div class="c-heading u-pillar-box-medium">
 				{{ model.systitle }} ({{ model.mime }})
@@ -31,39 +31,47 @@
 		</div>
 	</div>
 	<div class="o-grid__cell o-grid__cell u-letter-box-medium">
-		{{ form.field(model, 'systitle') | raw }}
-		{{ form.field(model, 'state').dropdownlist({0:'Offline',1:'Draft',2:'Published',3:'Archived'}) | raw }}
-		{{ form.field(model, 'src', { 'inputOptions': { 'class': 'form-control disabled', 'disabled': 'disabled'}}) | raw }}
-		{{ form.field(model, 'src_remote', { 'inputOptions': { 'class': 'form-control'}}) | raw }}
-		{{ form.field(model, 'description', {'options': {'style': 'margin-bottom: 0px;' }}).textarea({'rows':6 }) | raw }}
-		
-		{% if colormain_hex is not empty %}
-			<div class="form-group field-crelishdynamicjsonmodel-state required">
-				<label class="control-label" for="crelishdynamicjsonmodel-state">{{ t('app', 'Color palette') }}</label>
-				<ul class="gc-list--inline">
-					{% for color in colorpalette %}
-						<li class="cr-tooltip"  style="background-color: rgb({{ color[0] }}, {{ color[1] }}, {{ color[2] }});">
-								<span>rgb({{ color[0] }}, {{ color[1] }} , {{ color[2] }})</span>
-						</li>
-					{% endfor %}
-				</ul>
+
+		<div class="c-card">
+			<div class="c-card__item c-card__item--brand">
+				{{ t('app', 'Asset details') }}
 			</div>
-			
-			<div class="form-group field-crelishdynamicjsonmodel-state required">
-				<label class="control-label" for="crelishdynamicjsonmodel-state">{{ t('app', 'Main color') }}</label>
-				<ul class="gc-list--inline">
-					<li class="cr-tooltip" style="background-color: {{ colormain_hex }}; width: 100%;">
-						<span>{{ colormain_hex }}</span>
-					</li>
-				</ul>
+			<div class="c-card__item">
+				{{ form.field(model, 'systitle') | raw }}
+				{{ form.field(model, 'state').dropdownlist({0:'Offline',1:'Draft',2:'Published',3:'Archived'}) | raw }}
+				{{ form.field(model, 'src', { 'inputOptions': { 'class': 'form-control disabled', 'disabled': 'disabled'}}) | raw }}
+				{{ form.field(model, 'src_remote', { 'inputOptions': { 'class': 'form-control'}}) | raw }}
+				{{ form.field(model, 'description', {'options': {'style': 'margin-bottom: 0px;' }}).textarea({'rows':6 }) | raw }}
+
+				{% if colormain_hex is not empty %}
+					<div class="form-group field-crelishdynamicjsonmodel-state required">
+						<label class="control-label" for="crelishdynamicjsonmodel-state">{{ t('app', 'Color palette') }}</label>
+						<ul class="gc-list--inline">
+							{% for color in colorpalette %}
+								<li class="cr-tooltip"  style="background-color: rgb({{ color[0] }}, {{ color[1] }}, {{ color[2] }});">
+										<span>rgb({{ color[0] }}, {{ color[1] }} , {{ color[2] }})</span>
+								</li>
+							{% endfor %}
+						</ul>
+					</div>
+
+					<div class="form-group field-crelishdynamicjsonmodel-state required">
+						<label class="control-label" for="crelishdynamicjsonmodel-state">{{ t('app', 'Main color') }}</label>
+						<ul class="gc-list--inline">
+							<li class="cr-tooltip" style="background-color: {{ colormain_hex }}; width: 100%;">
+								<span>{{ colormain_hex }}</span>
+							</li>
+						</ul>
+					</div>
+				{% endif %}
+
+				{% if model.mime == 'application/pdf' and model.thumbnail %}
+					<label>{{ t('app', 'thumbnail') }}</label>
+					<img src="/uploads/thumbs/{{ model.thumbnail }}" class="o-image">
+				{% endif %}
 			</div>
-		{% endif %}
-		
-		{% if model.mime == 'application/pdf' and model.thumbnail %}
-			<label>{{ t('app', 'thumbnail') }}</label>
-			<img src="/uploads/thumbs/{{ model.thumbnail }}" class="o-image">
-		{% endif %}
-		
+		</div>
+
 		<input type="hidden" name="save_n_return" id="save_n_return" value="0"/>
 	
 	</div>
