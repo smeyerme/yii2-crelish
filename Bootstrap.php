@@ -174,7 +174,15 @@ class Bootstrap implements BootstrapInterface
           'class' => 'giantbits\crelish\helpers\CrelishCanonicalHelper',
           'globalSignificantParams' => ['filter', 'search', 'uuid', 'ctype', 'id', 'action', 'pathRequested'],
           'globalExcludedParams' => ['_pjax', 'page', 'sort', 'order', 'filter', 'search', 'uuid', 'ctype', 'id', 'action', 'language'],
-        ]
+        ],
+        /*
+        'analytics' => [
+          'class' => 'app\components\AnalyticsService',
+          //'measurementId' => 'G-XXXXXXXXXX',
+          //'apiSecret' => 'YOUR_API_SECRET',
+          'debug' => YII_DEBUG,
+        ],
+        */
       ]);
       // Add url rules.
       $app->getUrlManager()->addRules([
@@ -188,6 +196,11 @@ class Bootstrap implements BootstrapInterface
           'pattern' => 'api/<action:[\w\-]+>',
           'route' => 'api/<action>'
         ],
+        [
+          'class' => 'yii\web\UrlRule',
+          'pattern' => 'site/<action:[\w\-]+>',
+          'route' => 'site/<action>'
+        ],
         ['class' => 'giantbits\crelish\components\CrelishBaseUrlRule'],
         [
           'class' => 'yii\web\UrlRule',
@@ -198,11 +211,6 @@ class Bootstrap implements BootstrapInterface
           'class' => 'yii\web\UrlRule',
           'pattern' => 'crelish/<controller:[\w\-]+>/<action:[\w\-]+>',
           'route' => 'crelish/<controller>/<action>'
-        ],
-        [
-          'class' => 'yii\web\UrlRule',
-          'pattern' => 'site/<action:[\w\-]+>',
-          'route' => 'site/<action>'
         ],
         [
           'class' => 'yii\web\UrlRule',
@@ -231,6 +239,6 @@ class Bootstrap implements BootstrapInterface
       ]
     ]);
 
-    \Yii::$app->params['crelish']['version'] = 'V0.4.62';
+    \Yii::$app->params['crelish']['version'] = 'V0.4.63';
   }
 }

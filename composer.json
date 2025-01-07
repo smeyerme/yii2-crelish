@@ -8,6 +8,8 @@
     ],
     "type": "yii2-extension",
     "license": "BSD-3-Clause",
+    "minimum-stability": "dev",
+    "prefer-stable": true,
     "support": {
         "issues": "https://github.com/giantbits/yii2-crelish/issues",
         "forum": "http://www.crelish.io/forum/",
@@ -30,8 +32,8 @@
         "ksubileau/color-thief-php": "^1.3",
         "yiisoft/yii2-twig": "2.2.0",
         "yiisoft/yii2-bootstrap5": "*",
-        "yiisoft/yii2-swiftmailer": "~2.1.3.0",
-        "bower-asset/bootstrap": "v5.2.3",
+        "yiisoft/yii2-queue": "*",
+        "npm-asset/bootstrap": "v5.3.3",
         "league/glide": "2.2.2",
         "league/uri": "*",
         "league/flysystem": "*",
@@ -55,7 +57,9 @@
         "kartik-v/yii2-dynagrid": "dev-master",
         "kartik-v/yii2-grid": "v3.5.3",
         "yiisoft/yii2-httpclient": "^2.0",
-        "scn/deepl-api-connector": "^3.0"
+        "scn/deepl-api-connector": "^3.0",
+        "guzzlehttp/guzzle": "^7.9",
+        "yiisoft/yii2-symfonymailer": "^4.0"
     },
     "autoload": {
         "psr-4": {
@@ -68,6 +72,10 @@
     "config": {
         "platform": {
             "php": "8.1"
+        },
+        "allow-plugins": {
+            "yiisoft/yii2-composer": true,
+            "php-http/discovery": true
         }
     },
     "repositories": [
