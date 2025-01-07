@@ -175,14 +175,10 @@ class Bootstrap implements BootstrapInterface
           'globalSignificantParams' => ['filter', 'search', 'uuid', 'ctype', 'id', 'action', 'pathRequested'],
           'globalExcludedParams' => ['_pjax', 'page', 'sort', 'order', 'filter', 'search', 'uuid', 'ctype', 'id', 'action', 'language'],
         ],
-        /*
         'analytics' => [
-          'class' => 'app\components\AnalyticsService',
-          //'measurementId' => 'G-XXXXXXXXXX',
-          //'apiSecret' => 'YOUR_API_SECRET',
+          'class' => 'giantbits\crelish\components\Analytics\AnalyticsService',
           'debug' => YII_DEBUG,
         ],
-        */
       ]);
       // Add url rules.
       $app->getUrlManager()->addRules([
@@ -239,6 +235,6 @@ class Bootstrap implements BootstrapInterface
       ]
     ]);
 
-    \Yii::$app->params['crelish']['version'] = 'V0.4.63';
+    \Yii::$app->params['crelish']['version'] = 'V0.4.64';
   }
 }
