@@ -8,6 +8,7 @@
 
 namespace giantbits\crelish\controllers;
 use giantbits\crelish\components\CrelishFrontendController;
+use Spatie\SchemaOrg\VacationRental;
 use Yii;
 
 class FrontendController extends CrelishFrontendController {
@@ -15,6 +16,17 @@ class FrontendController extends CrelishFrontendController {
   public function init()
   {
     parent::init();
+
+  }
+
+  public function afterAction($action, $result)
+  {
+
+    if(!Yii::$app->request->isAjax) {
+      Yii::$app->analytics->trackPageView();
+    }
+
+    return parent::afterAction($action, $result);
   }
 
 }
