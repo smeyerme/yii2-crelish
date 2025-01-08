@@ -7,6 +7,7 @@ use Scn\DeeplApiConnector\DeeplClientFactory;
 use Scn\DeeplApiConnector\Enum\LanguageEnum;
 use Scn\DeeplApiConnector\Exception\RequestException;
 use Scn\DeeplApiConnector\Model\TranslationConfig;
+use Yii;
 use yii\i18n\MissingTranslationEvent;
 
 /**
@@ -20,7 +21,7 @@ class CrelishI18nEventHandler
    * @param MissingTranslationEvent $event [description]
    * @return [type]                         [description]
    */
-  public static function handleMissingTranslation(MissingTranslationEvent $event)
+  public static function handleMissingTranslation(MissingTranslationEvent $event): void
   {
     if (empty($event->message)) {
       return;
@@ -48,7 +49,7 @@ class CrelishI18nEventHandler
       $deepTranslation = new TranslationConfig(
         $event->message,
         strtoupper($event->language),
-        LanguageEnum::LANGUAGE_DE,
+        !empty(Yii::$app->sourceLanguage) ? strtoupper(substr(Yii::$app->sourceLanguage, 0, 2)) : LanguageEnum::LANGUAGE_DE,
         ['html']
       );
 
