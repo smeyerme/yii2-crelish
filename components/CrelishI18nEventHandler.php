@@ -55,7 +55,7 @@ class CrelishI18nEventHandler
 
       $translationObject = $deepl->getTranslation($deepTranslation);
     } catch (RequestException $exception) {
-      var_dump('Got an exception: ' . $exception->getMessage());
+      Yii::warning('Got an exception: ' . $exception->getMessage());
     }
 
     if ($translationObject) {
