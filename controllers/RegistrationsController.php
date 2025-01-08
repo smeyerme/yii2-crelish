@@ -10,8 +10,11 @@
 	use app\workspace\components\RegistrationsExportTransformerHTK;
 	use app\workspace\components\RegistrationsExportTransformerDHK;
 	use app\workspace\components\RegistrationsExportTransformerSHK;
-	use app\workspace\components\RegistrationsExportTransformerWBN;
+  use app\workspace\components\RegistrationsExportTransformerWBE;
+  use app\workspace\components\RegistrationsExportTransformerWBN;
+  use app\workspace\components\strategies\HTKFormattingStrategy;
   use app\workspace\components\strategies\HTWFormattingStrategy;
+  use app\workspace\components\strategies\WBEFormattingStrategy;
   use app\workspace\models\Registrations;
 	use giantbits\crelish\components\CrelishBaseController;
 	use giantbits\crelish\components\CrelishJsonModel;
@@ -266,6 +269,7 @@
 					'HTW' => new RegistrationsExportTransformerHTW($modelData, $entries),
 					'DHK' => new RegistrationsExportTransformerDHK($modelData, $entries),
 					'SHK' => new RegistrationsExportTransformerSHK($modelData, $entries),
+					'WBE' => new RegistrationsExportTransformerWBE($modelData, $entries),
 					default => new RegistrationsExportTransformerWBN($modelData, $entries)
 				};
 				
@@ -709,105 +713,14 @@
 						->getFont()
 						->setBold(true);
 					break;
-				case 'HTK':
-					$sheet->getRowDimension(1)
-						->setRowHeight(45);
-					
-					// Fill grey
-					$sheet->getStyle('A1:N1')
-						->getFill()
-						->setFillType(Fill::FILL_SOLID)
-						->getStartColor()
-						->setRGB('96a39c');
-					
-					// fill light orange
-					$sheet->getStyle('O1:Q1')
-						->getFill()
-						->setFillType(Fill::FILL_SOLID)
-						->getStartColor()
-						->setRGB('f6c893');
-					
-					// Fill purple
-					$sheet->getStyle('R1:T1')
-						->getFill()
-						->setFillType(Fill::FILL_SOLID)
-						->getStartColor()
-						->setRGB('c5c5fc');
-					
-					// fill blue
-					$sheet->getStyle('U1:W1')
-						->getFill()
-						->setFillType(Fill::FILL_SOLID)
-						->getStartColor()
-						->setRGB('99c3fb');
-					
-					// fill light green
-					$sheet->getStyle('X1:AF1')
-						->getFill()
-						->setFillType(Fill::FILL_SOLID)
-						->getStartColor()
-						->setRGB('99c22d');
-					
-					// ALIGNMENT START
-					// Vertical top align
-					$sheet->getStyle('A1:' . $sheet->getHighestColumn() . $sheet->getHighestRow())
-						->getAlignment()
-						->setVertical(Alignment::VERTICAL_TOP)
-						->setWrapText(true);
-					
-					$sheet->getStyle('A1:' . $sheet->getHighestColumn() . '1')
-						->getAlignment()
-						->setVertical(Alignment::VERTICAL_CENTER)
-						->setWrapText(true);
-					
-					// Line breaks
-					$sheet->getStyle('X2:Y' . $sheet->getHighestRow())
-						->getAlignment()
-						->setWrapText(true);
-					
-					// Text center align.
-					$sheet->getStyle('O1:Q' . $sheet->getHighestRow())
-						->getAlignment()
-						->setHorizontal(Alignment::HORIZONTAL_CENTER);
-					
-					$sheet->getStyle('AA2:AC' . $sheet->getHighestRow())
-						->getAlignment()
-						->setHorizontal(Alignment::HORIZONTAL_CENTER);
-					
-					$sheet->getStyle('R2:W' . $sheet->getHighestRow())
-						->getAlignment()
-						->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-					
-					
-					// DATA TYPES
-					for ($rowIndex = 1; $rowIndex <= $sheet->getHighestRow(); $rowIndex++) {
-						$sheet->getCell('L' . $rowIndex)
-							->setDataType(\PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
-						
-						$sheet->getCell('Z' . $rowIndex)
-							->setDataType(\PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
-						
-						$sheet->getCell('M' . $rowIndex)
-							->setDataType(\PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
-					}
-					
-					$borderStyle = [
-						'borders' => [
-							'outline' => [
-								'borderStyle' => Border::BORDER_MEDIUM,
-								'color' => ['rgb' => '000000'],
-							],
-						],
-					];
-					
-					// HEADER STYLES (BORDER AND BOLD)
-					$sheet->getStyle('A1:' . $sheet->getHighestColumn() . '1')
-						->applyFromArray($borderStyle);
-					
-					$sheet->getStyle('A1:' . $sheet->getHighestColumn() . '1')
-						->getFont()
-						->setBold(true);
-					break;
+        case 'HTK':
+          $formater = new HTKFormattingStrategy();
+          $formater->format($sheet);
+          break;
+        case 'WBE':
+          $formater = new WBEFormattingStrategy();
+          $formater->format($sheet);
+          break;
 				case 'DHK':
 					
 					$sheet->getRowDimension(1)
