@@ -22,7 +22,7 @@ class FrontendController extends CrelishFrontendController {
   public function afterAction($action, $result)
   {
 
-    if(!Yii::$app->request->isAjax) {
+    if(!Yii::$app->request->isAjax && Yii::$app->has('analytics')) {
       Yii::$app->analytics->trackPageView();
     }
 
