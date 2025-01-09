@@ -23,7 +23,7 @@ class CrelishI18nEventHandler
    */
   public static function handleMissingTranslation(MissingTranslationEvent $event): void
   {
-    if (empty($event->message)) {
+    if (empty($event->message) || !Yii::$app->params['crelish']['enable_autotranslation']) {
       return;
     }
 
