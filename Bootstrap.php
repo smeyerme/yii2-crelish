@@ -15,7 +15,7 @@ class Bootstrap implements BootstrapInterface
   {
     if ($app instanceof \yii\web\Application) {
       // Add components.
-      \Yii::$app->setComponents([
+      $components = [
         'user' => [
           'class' => 'yii\web\User',
           'identityClass' => 'giantbits\crelish\components\CrelishUser',
@@ -172,12 +172,18 @@ class Bootstrap implements BootstrapInterface
           'class' => 'giantbits\crelish\helpers\CrelishCanonicalHelper',
           'globalSignificantParams' => ['filter', 'search', 'uuid', 'ctype', 'id', 'action', 'pathRequested'],
           'globalExcludedParams' => ['_pjax', 'page', 'sort', 'order', 'filter', 'search', 'uuid', 'ctype', 'id', 'action', 'language'],
-        ],
-        'analytics' => [
+        ]
+      ];
+
+      if(\Yii::$app->params['crelish']['ga_sst_enabled'] == TRUE) {
+        $components['analytics'] = [
           'class' => 'giantbits\crelish\components\Analytics\AnalyticsService',
           'debug' => YII_DEBUG,
-        ],
-      ]);
+        ];
+      }
+
+      \Yii::$app->setComponents($components);
+
       // Add url rules.
       $app->getUrlManager()->addRules([
         [
