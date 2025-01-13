@@ -124,6 +124,11 @@
 			if (!empty($_GET['cr_content_filter'])) {
 				$filter = ['freesearch' => $_GET['cr_content_filter']];
 			}
+
+
+      if(empty($_GET['sort'])) {
+        $_GET['sort'] = "-created";
+      }
 			
 			$modelProvider = new CrelishDataProvider('asset', ['filter' => $filter]);
 			$checkCol = [
