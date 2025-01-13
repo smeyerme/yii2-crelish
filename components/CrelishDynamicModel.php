@@ -399,8 +399,8 @@ class CrelishDynamicModel extends DynamicModel
   public function setAttributes($values, $safeOnly = true)
   {
     if (is_array($values)) {
-      if (!empty($values['CrelishDynamicJsonModel'])) {
-        $values = $values['CrelishDynamicJsonModel'];
+      if (!empty($values['CrelishDynamicModel'])) {
+        $values = $values['CrelishDynamicModel'];
       }
       $attributes = array_flip($safeOnly ? $this->safeAttributes() : $this->attributes());
       foreach ($values as $name => $value) {

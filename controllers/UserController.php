@@ -100,7 +100,7 @@
 			
 			if (sizeof($users) == 0) {
 				// Generate default admin.
-				$adminUser = new CrelishDynamicModel(['email', 'password', 'login', 'state', 'role'], ['ctype' => 'user']);
+				$adminUser = new CrelishDynamicModel(['ctype' => 'user']);
 				$adminUser->email = 'admin@local.host';
 				$adminUser->password = Yii::$app->security->generatePasswordHash('basta!');
 				$adminUser->state = 2;
@@ -109,7 +109,7 @@
 				$adminUser->save();
 			}
 			
-			$model = new CrelishDynamicModel(['email', 'password'], ['ctype' => 'user']);
+			$model = new CrelishDynamicModel(['ctype' => 'user']);
 			
 			// Validate data and login the user in case of post request.
 			if (\Yii::$app->request->post()) {
