@@ -27,7 +27,7 @@ class CrelishAsset extends AssetBundle
   ];
   public $js = [
     //'https://cdn.jsdelivr.net/bootstrap/3.3.7/js/bootstrap.min.js',
-    'https://cdn.jsdelivr.net/npm/@shopify/draggable@1.0.0-beta.7/lib/draggable.bundle.min.js',
+    'https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js',
     //'js/pace.min.js',
     //'https://cdn.jsdelivr.net/npm/progressbar.js@1.0.1/dist/progressbar.min.js',
     'https://cdn.jsdelivr.net/dropzone/4.3.0/dropzone.min.js',

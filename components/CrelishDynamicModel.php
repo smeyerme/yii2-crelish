@@ -29,25 +29,45 @@ class CrelishDynamicModel extends DynamicModel
 
   public $i18n = [];
 
+  private $_elementDefinition = null;
+  private $_ctype = null;
+  private $_uuid = null;
+
   public $allTranslations = null;
+
+  public function __construct($attributes = [], $config = [])
+  {
+    if (isset($attributes['ctype'])) {
+      $this->_ctype = $attributes['ctype'];
+      $this->ctype = $attributes['ctype'];
+      $this->_elementDefinition = self::loadElementDefinition($this->_ctype);
+    }
+
+    if(isset($attributes['uuid'])) {
+      $this->_uuid = $attributes['uuid'];
+      $this->uuid = $attributes['uuid'];
+    }
+    parent::__construct($attributes, $config);
+  }
 
   public function init()
   {
-    parent::init();
-
     // Build definitions.
-    if (!empty($this->ctype)) {
-      $this->elementDefinition = CrelishDynamicModel::loadElementDefinition($this->ctype);
+    if (!empty($this->_ctype)) {
 
-      $this->fieldDefinitions = $this->elementDefinition;
+      //$this->_ctype = $this->ctype;
+      $this->_elementDefinition = self::loadElementDefinition($this->_ctype);
+
+      // Rest of your init code...
+      $this->fieldDefinitions = $this->_elementDefinition;
       $fields = [];
 
       // Build field array.
-      foreach ($this->elementDefinition->fields as $field) {
+      foreach ($this->_elementDefinition->fields as $field) {
         $fields[] = $field->key;
       }
 
-      $this->identifier = $this->ctype;
+      $this->identifier = $this->_ctype;
 
       // Populate attributes.
       foreach ($fields as $name => $value) {
@@ -59,7 +79,7 @@ class CrelishDynamicModel extends DynamicModel
       }
 
       // Add validation rules.
-      foreach ($this->elementDefinition->fields as $field) {
+      foreach ($this->_elementDefinition->fields as $field) {
         $this->defineLabel($field->key, Yii::t('app', $field->label));
         if (!empty($field->rules)) {
 
@@ -74,10 +94,28 @@ class CrelishDynamicModel extends DynamicModel
       }
 
       // Load model from file if uuid is set.
-      if (!empty($this->uuid)) {
+      if (!empty($this->_uuid)) {
         $this->loadModelData();
       }
+
     }
+
+    parent::init();
+  }
+
+  public function setCtype($value)
+  {
+    $this->_ctype = $value;
+  }
+
+  public function getElementDefinition()
+  {
+    return $this->_elementDefinition;
+  }
+
+  public function getCtype()
+  {
+    return $this->_ctype;
   }
 
   private function loadModelData(): void
@@ -88,21 +126,21 @@ class CrelishDynamicModel extends DynamicModel
     $finalArr = [];
 
     // Define source.
-    if (!property_exists($this->elementDefinition, 'storage')) {
-      $this->elementDefinition->storage = 'json';
+    if (!property_exists($this->_elementDefinition, 'storage')) {
+      $this->_elementDefinition->storage = 'json';
     }
 
     // Fetch from source.
-    switch ($this->elementDefinition->storage) {
+    switch ($this->_elementDefinition->storage) {
       case 'db':
-        $rawData = call_user_func('app\workspace\models\\' . ucfirst($this->ctype) . '::find')->where(['uuid' => $this->uuid])->one();
+        $rawData = call_user_func('app\workspace\models\\' . ucfirst($this->_ctype) . '::find')->where(['uuid' => $this->_uuid])->one();
 
         if ($rawData && $rawData->hasMethod('loadAllTranslations')) {
           $this->allTranslations = $rawData->loadAllTranslations();
         }
         break;
       default:
-        $this->fileSource = Yii::getAlias('@app/workspace/data/') . DIRECTORY_SEPARATOR . $this->ctype . DIRECTORY_SEPARATOR . $this->uuid . '.json';
+        $this->fileSource = Yii::getAlias('@app/workspace/data/') . DIRECTORY_SEPARATOR . $this->ctype . DIRECTORY_SEPARATOR . $this->_uuid . '.json';
         if (file_exists($this->fileSource)) {
           $rawData = Json::decode(file_get_contents($this->fileSource));
         } else {
@@ -114,7 +152,7 @@ class CrelishDynamicModel extends DynamicModel
     }
 
     // Set data values.
-    foreach ($this->elementDefinition->fields as $field) {
+    foreach ($this->_elementDefinition->fields as $field) {
       if (!empty($rawData[$field->key])) {
         $attributes[$field->key] = $rawData[$field->key];
       }
@@ -122,7 +160,7 @@ class CrelishDynamicModel extends DynamicModel
 
     // Process data values based on field types.
     foreach ($attributes as $attr => $value) {
-      CrelishBaseContentProcessor::processFieldData($this->ctype, $this->elementDefinition, $attr, $value, $finalArr);
+      CrelishBaseContentProcessor::processFieldData($this->_ctype, $this->_elementDefinition, $attr, $value, $finalArr);
     }
 
     // Set it.
@@ -172,25 +210,25 @@ class CrelishDynamicModel extends DynamicModel
       }
     }
 
-    if (!property_exists($this->elementDefinition, 'storage')) {
-      $this->elementDefinition->storage = 'json';
+    if (!property_exists($this->_elementDefinition, 'storage')) {
+      $this->_elementDefinition->storage = 'json';
     }
 
-    switch ($this->elementDefinition->storage) {
+    switch ($this->_elementDefinition->storage) {
       case 'db':
 
         if ($this->isNew) {
-          $class = 'app\workspace\models\\' . ucfirst($this->ctype);
+          $class = 'app\workspace\models\\' . ucfirst($this->_ctype);
           $model = new $class();
         } else {
-          $model = call_user_func('app\workspace\models\\' . ucfirst($this->ctype) . '::find')->where(['uuid' => $this->uuid])->one();
+          $model = call_user_func('app\workspace\models\\' . ucfirst($this->_ctype) . '::find')->where(['uuid' => $this->uuid])->one();
         }
 
         // Process data.
         foreach ($this->attributes() as $attribute) {
           $fieldType = 'textInput';
 
-          $fieldDef = find($this->elementDefinition->fields, function ($def) use ($attribute) {
+          $fieldDef = find($this->_elementDefinition->fields, function ($def) use ($attribute) {
             return $def->key == $attribute;
           });
 
@@ -210,9 +248,9 @@ class CrelishDynamicModel extends DynamicModel
             // Do processor based pre processing.
             if (class_exists($processorClass) && method_exists($processorClass, 'processDataPreSave')) {
               if ($fieldType !== 'relationSelect') {
-                $model->{$attribute} = $processorClass::processDataPreSave($attribute, $modelArray[$attribute], $this->elementDefinition->fields[$attribute], $model);
-             } else {
-                if(!empty($fieldDef->config) && is_object($fieldDef->config) && isset($fieldDef->config->ctype) && (!isset($fieldDef->config->multiple) || $fieldDef->config->multiple === false)) {
+                $model->{$attribute} = $processorClass::processDataPreSave($attribute, $modelArray[$attribute], $this->_elementDefinition->fields[$attribute], $model);
+              } else {
+                if (!empty($fieldDef->config) && is_object($fieldDef->config) && isset($fieldDef->config->ctype) && (!isset($fieldDef->config->multiple) || $fieldDef->config->multiple === false)) {
                   @$model->{$attribute} = $modelArray[$attribute];
                 }
               }
@@ -236,13 +274,13 @@ class CrelishDynamicModel extends DynamicModel
         if ($model->save(false)) {
 
           if (method_exists('\\app\\workspace\\hooks\\' . ucfirst($this->ctype) . 'Hooks', 'afterSave')) {
-             call_user_func(['\\app\\workspace\\hooks\\' . ucfirst($this->ctype) . 'Hooks', 'afterSave'], ['data' => $this]);
+            call_user_func(['\\app\\workspace\\hooks\\' . ucfirst($this->ctype) . 'Hooks', 'afterSave'], ['data' => $this]);
           }
 
           // New post save handlers.
           foreach ($this->attributes() as $attribute) {
 
-            $fieldDef = find($this->elementDefinition->fields, function ($def) use ($attribute) {
+            $fieldDef = find($this->_elementDefinition->fields, function ($def) use ($attribute) {
               return $def->key == $attribute;
             });
             if (!empty($fieldDef) && is_object($fieldDef)) {
@@ -260,9 +298,9 @@ class CrelishDynamicModel extends DynamicModel
               // Do processor based pre processing.
               if (class_exists($processorClass) && method_exists($processorClass, 'processDataPostSave')) {
                 if ($fieldType === 'relationSelect') {
-                  $processorClass::processDataPostSave($attribute, $modelArray[$attribute], $this->elementDefinition->fields[$attribute], $model);
+                  $processorClass::processDataPostSave($attribute, $modelArray[$attribute], $this->_elementDefinition->fields[$attribute], $model);
                 } else {
-                  $model->{$attribute} = $processorClass::processDataPostSave($attribute, $modelArray[$attribute], $this->elementDefinition->fields[$attribute], $model);
+                  $model->{$attribute} = $processorClass::processDataPostSave($attribute, $modelArray[$attribute], $this->_elementDefinition->fields[$attribute], $model);
                 }
               } else {
                 if ($attribute !== 'i18n') {
@@ -326,7 +364,7 @@ class CrelishDynamicModel extends DynamicModel
       unlink($this->fileSource);
     }
 
-    if (is_object($this->elementDefinition) && $this->elementDefinition->storage == 'db') {
+    if (is_object($this->_elementDefinition) && $this->_elementDefinition->storage == 'db') {
       $model = call_user_func('app\workspace\models\\' . ucfirst($this->ctype) . '::find')->where(['uuid' => $this->uuid])->one();
       if ($model) {
         $model->delete();
@@ -338,9 +376,10 @@ class CrelishDynamicModel extends DynamicModel
   {
     return $this->fields;
   }
+
   public function getField($field): object
   {
-    $fieldDef = array_filter($this->elementDefinition->fields, function ($def) use ($field) {
+    $fieldDef = array_filter($this->_elementDefinition->fields, function ($def) use ($field) {
       return $def->key == $field;
     });
 
@@ -381,12 +420,6 @@ class CrelishDynamicModel extends DynamicModel
     if (Yii::$app->cache->exists('crc_' . $this->ctype)) {
       Yii::$app->cache->delete('crc_' . $this->ctype);
     }
-
-    //Yii::$app->cache->flush();
-
-    if (is_a(Yii::$app, 'yii\web\Application')) {
-      Yii::$app->session->set('intellicache', $this->uuid);
-    }
   }
 
   private function GUIDv4($trim = true)
@@ -425,13 +458,14 @@ class CrelishDynamicModel extends DynamicModel
 
   public static function loadElementDefinition($ctype)
   {
+
     $elementDefinition = null;
-    $definitionPath = Yii::getAlias('@app/workspace/elements') . DIRECTORY_SEPARATOR . str_replace('db:', '', $ctype) . '.json';
+    $definitionPath = Yii::getAlias('@app/workspace/elements') . DIRECTORY_SEPARATOR . $ctype . '.json';
     if (file_exists($definitionPath)) {
       $elementDefinition = Json::decode(file_get_contents($definitionPath), false);
     }
 
-    if(empty($elementDefinition)) {
+    if (empty($elementDefinition)) {
       return null;
     }
 

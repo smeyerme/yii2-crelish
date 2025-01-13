@@ -89,7 +89,7 @@ class CrelishBaseContentProcessor extends Component
   public static function processFieldData($ctype, $elementDefinition, $attr, $value, &$finalArr)
   {
     $fieldType = 'textInput';
-		
+
     // Get type of field.
     $field = find($elementDefinition->fields, function ($value) use ($attr) {
       return $value->key == $attr;

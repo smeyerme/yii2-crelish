@@ -19,7 +19,7 @@ class RelationSelectContentProcessor extends Component
       && (!is_object($data) && !preg_match($UUIDv4, $data))
       && !empty($data)) {
       
-      $model = new CrelishDynamicModel([], ['ctype' => $fieldConfig->config->ctype]);
+      $model = new CrelishDynamicModel( ['ctype' => $fieldConfig->config->ctype]);
       $model->systitle = $data;
       $model->state = 2;
       $model->save();
@@ -37,7 +37,7 @@ class RelationSelectContentProcessor extends Component
       $fieldConfig->config->multiple === true &&
       isset($fieldConfig->config->key)
     ) {
-      $relatedModel = new CrelishDynamicModel([], ['ctype' => $fieldConfig->config->ctype, 'uuid' => $data]);
+      $relatedModel = new CrelishDynamicModel( ['ctype' => $fieldConfig->config->ctype, 'uuid' => $data]);
 
       // Link it.
       if($relatedModel) {
@@ -52,7 +52,7 @@ class RelationSelectContentProcessor extends Component
   {
 
     if (!empty($data)) {
-      $sourceData = new CrelishDynamicModel([], ['ctype' => 'asset', 'uuid' => $data['uuid']]);
+      $sourceData = new CrelishDynamicModel(['ctype' => 'asset', 'uuid' => $data['uuid']]);
 
       if ($sourceData) {
         $processedData[$key] = $sourceData;
@@ -66,11 +66,13 @@ class RelationSelectContentProcessor extends Component
 
   public static function processJson($ctype, $key, $data, &$processedData)
   {
+
     $definition = CrelishDynamicModel::loadElementDefinition($ctype);
+
     $relatedCtype = $definition->fields[$key]->config->ctype;
 		
     if ($data && $relatedCtype) {
-      $sourceData = new CrelishDynamicModel([], ['ctype' => $relatedCtype, 'uuid' => $data]);
+      $sourceData = new CrelishDynamicModel( ['ctype' => $relatedCtype, 'uuid' => $data]);
       if ($sourceData) {
         $processedData[$key] = $sourceData;
       }

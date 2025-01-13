@@ -85,9 +85,9 @@
 			// 3. Assemble sub content from parent entry point content.
 			
 			// Add content aka. do the magic.
-			//$this->data = new CrelishDynamicModel([], ['ctype' => $this->entryPoint['ctype'], 'uuid' => $this->entryPoint['uuid']]);
+			//$this->data = new CrelishDynamicModel( ['ctype' => $this->entryPoint['ctype'], 'uuid' => $this->entryPoint['uuid']]);
 			$this->data = call_user_func('app\workspace\models\\' . ucfirst($this->entryPoint['ctype']) . '::find')->where(['uuid' => $this->entryPoint['uuid']])->one();
-			
+
 			// Set layout.
 			$this->setLayout();
 			
@@ -97,7 +97,7 @@
 			// Process data and render.
 			Yii::$app->params['content'] = $this->data;
 			$data = CrelishBaseContentProcessor::processContent($this->entryPoint['ctype'], $this->data);
-			
+
 			if (isset(Yii::$app->params['crelish']['pageTitleAttribute']) && isset($data[Yii::$app->params['crelish']['pageTitleAttribute']])) {
 				if (isset(Yii::$app->params['crelish']['pageTitle'])) {
 					$this->view->title = str_replace('{title}', $data[Yii::$app->params['crelish']['pageTitleAttribute']], Yii::$app->params['crelish']['pageTitle']);
@@ -119,7 +119,7 @@
 					'content' => $data['metadescription']
 				]);
 			}
-			
+
 			return $this->render($this->viewTemplate, ['data' => $data]);
 		}
 		
@@ -145,7 +145,7 @@
 			} else {
 				$entryModel = $entryDataJoint->getProvider()->models[0];
 			}
-			
+
 			// 404 Not found fallback
 			if ($entryModel == null && isset(Yii::$app->params['crelish']['404slug'])) {
 				$slug = Yii::$app->params['crelish']['404slug'];
@@ -154,7 +154,6 @@
 			}
 			
 			$this->entryPoint = ['ctype' => $ctype, 'slug' => $slug, 'path' => $path, 'uuid' => $entryModel['uuid'], 'template' => $entryModel['template']];
-			
 		}
 		
 		/**

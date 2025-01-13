@@ -49,7 +49,7 @@ class AssetConnector extends CrelishFormWidget
 
     if (array_key_exists( 'uuid',(array) $data)) {
 
-      $itemData = new CrelishDynamicModel([], ['ctype' => $this->includeDataType, 'uuid' => $data['uuid']]);
+      $itemData = new CrelishDynamicModel( ['ctype' => $this->includeDataType, 'uuid' => $data['uuid']]);
 
       if (!empty($itemData['uuid'])) {
         $processedData = $itemData;
