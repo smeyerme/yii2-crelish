@@ -237,7 +237,7 @@ class ContentController extends CrelishBaseController
   {
     $ctype = $_GET['ctype'];
     $uuid = $_GET['uuid'];
-    $model = new CrelishDynamicModel([], ['ctype' => $ctype, 'uuid' => $uuid]);
+    $model = new CrelishDynamicModel( ['ctype' => $ctype, 'uuid' => $uuid]);
 
     if ($model) {
       $model->delete();

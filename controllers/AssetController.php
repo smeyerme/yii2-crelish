@@ -196,7 +196,7 @@
 		public function actionUpdate()
 		{
 			$uuid = !empty(Yii::$app->getRequest()->getQueryParam('uuid')) ? Yii::$app->getRequest()->getQueryParam('uuid') : null;
-			$model = new CrelishDynamicModel([], ['uuid' => $uuid, 'ctype' => 'asset']);
+			$model = new CrelishDynamicModel( ['uuid' => $uuid, 'ctype' => 'asset']);
 			
 			// Save content if post request for asset.
 			if (!empty(Yii::$app->request->post('CrelishDynamicModel')) && !Yii::$app->request->isAjax) {
@@ -344,7 +344,7 @@
 				$targetFile = Yii::getAlias('@webroot') . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . $destName;
 				
 				if ($file->saveAs($targetFile)) {
-					$model = new CrelishDynamicModel([], ['ctype' => 'asset']);
+					$model = new CrelishDynamicModel( ['ctype' => 'asset']);
 					$model->systitle = $destName;
 					$model->title = $destName;
 					//$model->src = \Yii::getAlias('@webroot') . '/' . 'uploads' . '/' . $destName;
@@ -378,7 +378,7 @@
 		public function actionDelete()
 		{
 			$uuid = !empty(Yii::$app->getRequest()->getQueryParam('uuid')) ? Yii::$app->getRequest()->getQueryParam('uuid') : null;
-			$modelProvider = new CrelishDynamicModel([], ['ctype' => 'asset', 'uuid' => $uuid]);
+			$modelProvider = new CrelishDynamicModel( ['ctype' => 'asset', 'uuid' => $uuid]);
 			if (@unlink(Yii::getAlias('@webroot') . $modelProvider->src) || !file_exists(Yii::getAlias('@webroot') . $modelProvider->src)) {
 				$modelProvider->delete();
 				Yii::$app->session->setFlash('success', 'Asset deleted successfully...');

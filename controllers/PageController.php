@@ -67,7 +67,7 @@ class PageController extends CrelishBaseController
 
     if (!empty($_POST['selection'])) {
       foreach ($_POST['selection'] as $selection) {
-        $delModel = new CrelishDynamicModel([], ['ctype' => $this->ctype, 'uuid' => $selection]);
+        $delModel = new CrelishDynamicModel( ['ctype' => $this->ctype, 'uuid' => $selection]);
         $delModel->delete();
       }
     }
@@ -174,7 +174,7 @@ class PageController extends CrelishBaseController
     $ctype = \Yii::$app->request->get('ctype');
     $uuid = \Yii::$app->request->get('uuid');
 
-    $model = new CrelishDynamicModel([], ['ctype' => $ctype, 'uuid' => $uuid]);
+    $model = new CrelishDynamicModel( ['ctype' => $ctype, 'uuid' => $uuid]);
     $model->delete();
 
     $this->redirect('/crelish/page/index');

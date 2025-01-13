@@ -99,11 +99,7 @@ class CrelishBaseUrlRule implements UrlRuleInterface
     unset($params['language']);
     unset($paramsClean['pathRequested']);
 
-    $paramsExposed = '?';
-    foreach ($paramsClean as $key => $value) {
-      $paramsExposed .= $key . '=' . $value . '&';
-    }
-    $paramsExposed = rtrim($paramsExposed, '&');
+    $paramsExposed = '?' . http_build_query($paramsClean);
 
     if(!empty($params['pathRequested'])) {
       return $params['pathRequested'] . $paramsExposed;

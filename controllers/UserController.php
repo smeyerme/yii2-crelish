@@ -481,7 +481,7 @@
 			$ctype = 'user';
 			$uuid = \Yii::$app->request->get('uuid');
 			
-			$model = new CrelishDynamicModel([], ['ctype' => $ctype, 'uuid' => $uuid]);
+			$model = new CrelishDynamicModel( ['ctype' => $ctype, 'uuid' => $uuid]);
 			$model->delete();
 			
 			\Yii::$app->cache->flush();

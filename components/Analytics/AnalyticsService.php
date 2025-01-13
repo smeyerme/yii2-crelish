@@ -108,6 +108,7 @@ class AnalyticsService extends Component
       ];
 
       // If using Yii queue component, push to queue for processing
+      /*
       if (Yii::$app->has('queue')) {
         Yii::$app->queue->push(new AnalyticsJob([
           'payload' => $payload,
@@ -115,9 +116,10 @@ class AnalyticsService extends Component
           'apiSecret' => $this->apiSecret
         ]));
       } else {
+      */
         // Direct processing
         $this->sendToGA($payload);
-      }
+      //}
 
       $this->eventQueue = [];
     } catch (\Exception $e) {

@@ -48,7 +48,7 @@ class DataInclude extends Widget
     $typeDefinitions = CrelishDynamicModel::loadElementDefinition($this->includeDataType);
 
     if (array_key_exists('uuid', $data)) {
-      $itemData = new CrelishDynamicModel([], ['ctype' => $this->includeDataType, 'uuid' => $data['uuid']]);
+      $itemData = new CrelishDynamicModel( ['ctype' => $this->includeDataType, 'uuid' => $data['uuid']]);
 
       if (!empty($itemData['uuid'])) {
         $processedData = [

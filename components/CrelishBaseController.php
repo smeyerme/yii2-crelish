@@ -26,7 +26,7 @@ class CrelishBaseController extends Controller
     Yii::$app->sourceLanguage = 'en';
     Yii::$app->language = 'de';
 
-    \Yii::$app->view->title = ucfirst($this->id);
+    Yii::$app->view->title = ucfirst($this->id);
 
     if (!Yii::$app->user->isGuest) {
       $js = 'window.crelish = { "user": { "uuid": "' . Yii::$app->user->identity->uuid . '" }};';
@@ -34,7 +34,7 @@ class CrelishBaseController extends Controller
       Yii::$app->view->registerJs($js, \yii\web\View::POS_HEAD);
     }
 
-    $intelliCache = \Yii::$app->session->get('intellicache');
+    $intelliCache = Yii::$app->session->get('intellicache');
     if (!empty($intelliCache)) {
 
       $js = "$.ajax({
@@ -45,14 +45,14 @@ class CrelishBaseController extends Controller
           },
           success: function(r){ console.info('Intellicache done'); }
       });";
-      \Yii::$app->view->registerJs($js);
-      \Yii::$app->session->remove('intellicache');
+      Yii::$app->view->registerJs($js);
+      Yii::$app->session->remove('intellicache');
     }
 
-    if ((\Yii::$app->user->isGuest || \Yii::$app->user->identity->role < 9)
-      && \Yii::$app->requestedRoute != 'crelish/user/login'
-      && \Yii::$app->requestedRoute != 'crelish/asset/glide') {
-      return \Yii::$app->response->redirect(['/']);
+    if ((Yii::$app->user->isGuest || Yii::$app->user->identity->role < 9)
+      && Yii::$app->requestedRoute != 'crelish/user/login'
+      && Yii::$app->requestedRoute != 'crelish/asset/glide') {
+      return Yii::$app->response->redirect(['/']);
     }
   }
 
@@ -117,7 +117,7 @@ class CrelishBaseController extends Controller
 
   private function initializeModel($action, $settings): void
   {
-    $this->model = new CrelishDynamicModel([], [
+    $this->model = new CrelishDynamicModel( [
       'ctype' => $settings['ctype'] ?? $this->ctype,
       'uuid' => $settings['uuid'] ?? $this->uuid
     ]);
@@ -306,6 +306,7 @@ class CrelishBaseController extends Controller
     }
   }
 
+
   private function renderTranslatableField($field, $form): string
   {
     $html = '';
@@ -402,7 +403,7 @@ class CrelishBaseController extends Controller
 
   private function isTranslation($lang): bool
   {
-    return !empty($lang) && $lang != \Yii::$app->params['crelish']['languages'][0];
+    return !empty($lang) && $lang != Yii::$app->language;
   }
 
   private function handleTranslationOptions(&$field, &$fieldOptions, &$widgetOptions, $lang): void
@@ -464,11 +465,11 @@ class CrelishBaseController extends Controller
   public static function addError($error): void
   {
     $err = '';
-    if (\Yii::$app->session->hasFlash('globalError')) {
-      $err .= \Yii::$app->session->getFlash('globalError') . "\n";
+    if (Yii::$app->session->hasFlash('globalError')) {
+      $err .= Yii::$app->session->getFlash('globalError') . "\n";
     }
     $err .= $error;
-    \Yii::$app->session->setFlash('globalError', $err);
+    Yii::$app->session->setFlash('globalError', $err);
   }
 
   /**

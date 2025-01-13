@@ -21,7 +21,7 @@ class AssetConnectorContentProcessor extends Component
     }
 
     if (!empty($data['uuid'])) {
-      $sourceData = new CrelishDynamicModel([], ['ctype' => 'asset', 'uuid' => $data['uuid']]);
+      $sourceData = new CrelishDynamicModel( ['ctype' => 'asset', 'uuid' => $data['uuid']]);
 
       if ($sourceData) {
         $processedData[$key] = $sourceData;
@@ -39,7 +39,7 @@ class AssetConnectorContentProcessor extends Component
 
     // Get relation ctype.
     if ($data) {
-      $sourceData = new CrelishDynamicModel([], ['ctype' => 'asset', 'uuid' => $data]);
+      $sourceData = new CrelishDynamicModel( ['ctype' => 'asset', 'uuid' => $data]);
 
       if ($sourceData) {
         $processedData[$key] = $sourceData;

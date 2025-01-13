@@ -53,7 +53,7 @@ class DataIncludeContentProcessor extends CrelishBaseContentProcessor
       }
 
       if(!empty($data['uuid'])){
-        $sourceData =  new CrelishDynamicModel([], ['ctype'=>$data['ctype'], 'uuid'=>$data['uuid']]);
+        $sourceData =  new CrelishDynamicModel( ['ctype'=>$data['ctype'], 'uuid'=>$data['uuid']]);
 
         if($sourceData){
           $processedData[$key] = $sourceData;
