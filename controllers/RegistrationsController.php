@@ -5,6 +5,7 @@
 	use app\workspace\components\RegistrationsExportTransformerBase;
 	use app\workspace\components\RegistrationsExportTransformerBGT;
 	use app\workspace\components\RegistrationsExportTransformerEBH;
+  use app\workspace\components\RegistrationsExportTransformerFLI;
   use app\workspace\components\RegistrationsExportTransformerHTW;
   use app\workspace\components\RegistrationsExportTransformerIHF;
 	use app\workspace\components\RegistrationsExportTransformerHTK;
@@ -12,6 +13,7 @@
 	use app\workspace\components\RegistrationsExportTransformerSHK;
   use app\workspace\components\RegistrationsExportTransformerWBE;
   use app\workspace\components\RegistrationsExportTransformerWBN;
+  use app\workspace\components\strategies\FLIFormattingStrategy;
   use app\workspace\components\strategies\HTKFormattingStrategy;
   use app\workspace\components\strategies\HTWFormattingStrategy;
   use app\workspace\components\strategies\WBEFormattingStrategy;
@@ -270,6 +272,7 @@
 					'DHK' => new RegistrationsExportTransformerDHK($modelData, $entries),
 					'SHK' => new RegistrationsExportTransformerSHK($modelData, $entries),
 					'WBE' => new RegistrationsExportTransformerWBE($modelData, $entries),
+					'FLI' => new RegistrationsExportTransformerFLI($modelData, $entries),
 					default => new RegistrationsExportTransformerWBN($modelData, $entries)
 				};
 				
@@ -1055,6 +1058,10 @@
 					break;
         case 'HTW':
           $formater = new HTWFormattingStrategy();
+          $formater->format($sheet);
+          break;
+        case 'FLI':
+          $formater = new FLIFormattingStrategy();
           $formater->format($sheet);
           break;
 				default:
