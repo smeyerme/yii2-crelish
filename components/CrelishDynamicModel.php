@@ -3,7 +3,6 @@
 namespace giantbits\crelish\components;
 
 use Cocur\Slugify\Slugify;
-use giantbits\crelish\plugins\selfselect\SelfSelect;
 use Yii;
 use yii\base\DynamicModel;
 use yii\helpers\FileHelper;
@@ -169,7 +168,6 @@ class CrelishDynamicModel extends DynamicModel
 
   public function save()
   {
-
     $saveSuccess = false;
 
     $modelArray = [];
@@ -216,7 +214,6 @@ class CrelishDynamicModel extends DynamicModel
 
     switch ($this->_elementDefinition->storage) {
       case 'db':
-
         if ($this->isNew) {
           $class = 'app\workspace\models\\' . ucfirst($this->_ctype);
           $model = new $class();
@@ -234,6 +231,11 @@ class CrelishDynamicModel extends DynamicModel
 
           if (!empty($fieldDef) && is_object($fieldDef)) {
             $fieldType = (property_exists($fieldDef, 'type')) ? $fieldDef->type : 'textInput';
+          }
+
+          if ($attribute == 'slug') {
+            $slugger = new Slugify(['regexp' => '([^A-Za-z0-9\/]+)']);
+            $model->{$attribute} = $slugger->slugify($modelArray[$attribute]);
           }
 
           if (!empty($fieldType)) {
@@ -255,15 +257,10 @@ class CrelishDynamicModel extends DynamicModel
                 }
               }
             } else {
-              if ($attribute !== 'i18n') {
+              if ($attribute !== 'i18n' && $model->hasAttribute($attribute)) {
                 @$model->{$attribute} = $modelArray[$attribute];
               }
             }
-          }
-
-          if ($attribute == 'slug') {
-            $slugger = new Slugify(['regexp' => '([^A-Za-z0-9\/]+)']);
-            $model->{$attribute} = $slugger->slugify($modelArray[$attribute]);
           }
         }
 
@@ -272,6 +269,8 @@ class CrelishDynamicModel extends DynamicModel
         }
 
         if ($model->save(false)) {
+
+
 
           if (method_exists('\\app\\workspace\\hooks\\' . ucfirst($this->ctype) . 'Hooks', 'afterSave')) {
             call_user_func(['\\app\\workspace\\hooks\\' . ucfirst($this->ctype) . 'Hooks', 'afterSave'], ['data' => $this]);
@@ -396,13 +395,14 @@ class CrelishDynamicModel extends DynamicModel
     return $this->_attributeLabels;
   }
 
-  public function setAttributes($values, $safeOnly = true)
+  public function setAttributess($values, $safeOnly = true)
   {
     if (is_array($values)) {
       if (!empty($values['CrelishDynamicModel'])) {
         $values = $values['CrelishDynamicModel'];
       }
       $attributes = array_flip($safeOnly ? $this->safeAttributes() : $this->attributes());
+
       foreach ($values as $name => $value) {
         if (isset($attributes[$name])) {
           $this->$name = $value;
@@ -410,6 +410,7 @@ class CrelishDynamicModel extends DynamicModel
           $this->onUnsafeAttribute($name, $value);
         }
       }
+
     }
   }
 
