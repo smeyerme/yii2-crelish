@@ -5,6 +5,7 @@ namespace giantbits\crelish\components;
 use kartik\widgets\ActiveForm;
 use Yii;
 use yii\base\InvalidRouteException;
+use yii\helpers\VarDumper;
 use yii\i18n\Formatter;
 use yii\web\Controller;
 use yii\helpers\Html;
@@ -34,8 +35,8 @@ class CrelishBaseController extends Controller
       Yii::$app->view->registerJs($js, \yii\web\View::POS_HEAD);
     }
 
-    $intelliCache = Yii::$app->session->get('intellicache');
-    if (!empty($intelliCache)) {
+    //$intelliCache = Yii::$app->session->get('intellicache');
+    /*if (!empty($intelliCache)) {
 
       $js = "$.ajax({
           url: '/crelish/settings/intellicache.html',
@@ -47,7 +48,7 @@ class CrelishBaseController extends Controller
       });";
       Yii::$app->view->registerJs($js);
       Yii::$app->session->remove('intellicache');
-    }
+    }*/
 
     if ((Yii::$app->user->isGuest || Yii::$app->user->identity->role < 9)
       && Yii::$app->requestedRoute != 'crelish/user/login'
@@ -134,7 +135,7 @@ class CrelishBaseController extends Controller
 
   private function handleFormSubmission(): void
   {
-    $oldData = $this->model->uuid ? $this->model->attributes() : [];
+    $oldData = $this->model->uuid ? $this->model->attributes : [];
     $attributes = $_POST['CrelishDynamicModel'] + $oldData;
     $this->model->attributes = $attributes;
 

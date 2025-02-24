@@ -43,7 +43,7 @@ class RelationSelect extends CrelishFormWidget
     $options = [];
     foreach ($optionProvider as $option) {
       if($customLabel) {
-        $options[$option['uuid']] =   $option[$customLabel];
+        $options[$option['uuid']] = $option[$customLabel];
       } else {
         $options[$option['uuid']] = !empty($option['systitle']) ? $option['systitle'] : $option['uuid'];
       }
@@ -85,11 +85,15 @@ class RelationSelect extends CrelishFormWidget
       return false;
     });
 
+    if (isset($this->field->config->autocreate) && !$this->field->config->autocreate) {
+      $tagMode = false;
+    }
+
     if (isset($this->field->config->multiple) && $this->field->config->multiple) {
       $tagMode = false;
       // Load related data.
       $ar = call_user_func('app\workspace\models\\' . ucfirst($this->model->ctype) . '::find')->where(['uuid' => $this->model->uuid])->one();
-      $itemList = new ArrayDataProvider();
+      //$itemList = new ArrayDataProvider();
       if ($ar) {
         $itemList = new ArrayDataProvider(['allModels' => $ar->{str_replace('_list', null, $this->field->key)}]);
       }

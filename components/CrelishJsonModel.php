@@ -5,7 +5,7 @@
 	use Yii;
 	use yii\db\ActiveRecord;
 	use yii\helpers\Json;
-	use function _\find;
+  use function _\find;
 
   class CrelishJsonModel extends ActiveRecord
 	{
@@ -29,8 +29,10 @@
 		public function __set($name, $value)
 		{
 			$jsonField = static::$jsonConfig->jsonField;
+
 			if (is_array($this->$jsonField) && array_key_exists($name, $this->$jsonField)) {
 				$this->$jsonField[$name] = $value;
+				$this->$name = $value;
 			} else {
 				parent::__set($name, $value);
 			}
@@ -54,10 +56,6 @@
 
 		public function beforeSave($insert)
 		{
-			if (!parent::beforeSave($insert)) {
-				return false;
-			}
-
 			$jsonField = static::$jsonConfig->jsonField;
 			$jsonData = [];
 
@@ -77,6 +75,11 @@
 			}
 
 			$this->$jsonField = json_encode($this->$jsonField);
+
+      if (!parent::beforeSave($insert)) {
+        return false;
+      }
+
 			return true;
 		}
 
@@ -87,12 +90,12 @@
 			$jsonField = static::$jsonConfig->jsonField;
 			$this->$jsonField = json_decode($this->$jsonField, true);
 
-			foreach ($this->$jsonField as $key => $value) {
-				// Get transformer.
-
-
-				$this->$key = $value;
-			}
+      if(is_array($this->$jsonField)) {
+        foreach ($this->$jsonField as $key => $value) {
+          // Get transformer.
+          $this->$key = $value;
+        }
+      }
 		}
 
 		public static function tableName()
