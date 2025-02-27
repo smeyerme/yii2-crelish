@@ -43,7 +43,7 @@
         "spatie/pdf-to-image": "^1.2",
         "yiisoft/yii2-debug": "2.1.25",
         "yiisoft/yii2-gii": "2.2.6",
-        "oaksoftwaredev/yii2-rollbar": "^1.0",
+        "oaksoftwaredev/yii2-rollbar": "^1",
         "phpoffice/phpspreadsheet": "^1.25",
         "vlucas/phpdotenv": "^3.6",
         "symfony/http-foundation": "^3.0",

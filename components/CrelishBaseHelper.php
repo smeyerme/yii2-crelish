@@ -9,6 +9,7 @@
 namespace giantbits\crelish\components;
 
 
+use app\workspace\models\Asset;
 use app\workspace\models\Download;
 use app\workspace\models\News;
 use app\workspace\models\Product;
@@ -231,6 +232,18 @@ class CrelishBaseHelper
     $cleanPath = str_starts_with($path, '/') ? $path : '/' . $path;
     return $cleanPath . (str_ends_with($cleanPath, '/') ? $file : '/' . $file);
   }
+
+  public static function getAssetUrlById($uuid) {
+    $asset = Asset::findOne($uuid);
+
+    if(!$asset) {
+      return null;
+    }
+
+    $cleanPath = str_starts_with($asset->pathName, '/') ? $asset->pathName : '/' . $asset->pathName;
+    return $cleanPath . (str_ends_with($cleanPath, '/') ? $asset->fileName : '/' . $asset->fileName);
+  }
+
   /**
    * @throws RandomException
    */

@@ -43,27 +43,27 @@
 	{
 		
 		public $layout = 'crelish.twig';
-		
-		public function behaviors()
-		{
-			return [
-				'access' => [
-					'class' => AccessControl::class,
-					'rules' => [
-						[
-							'allow' => true,
-							'actions' => ['login', 'glide'],
-							'roles' => ['?'],
-						],
-						[
-							'allow' => true,
-							'actions' => [],
-							'roles' => ['@'],
-						],
-					],
-				],
-			];
-		}
+
+    public function behaviors()
+    {
+      return [
+        'access' => [
+          'class' => AccessControl::class,
+          'rules' => [
+            [
+              'allow' => true,
+              'actions' => ['login', 'glide', 'api-search', 'api-get', 'api-upload'],
+              'roles' => ['?', '@'], // Allow both guests and authenticated users to access these endpoints
+            ],
+            [
+              'allow' => true,
+              'actions' => [],
+              'roles' => ['@'],
+            ],
+          ],
+        ],
+      ];
+    }
 		
 		public function init()
 		{
@@ -396,4 +396,298 @@
 			header("Location: " . Url::to(['asset/index', ['uuid' => $modelProvider->uuid]]));
 			exit(0);
 		}
+
+    /**
+     * Search assets and return JSON response
+     * This action supports filtering by search term and mime type
+     *
+     * @return array JSON response with assets
+     */
+    public function actionApiSearch()
+    {
+      Yii::$app->response->format = Response::FORMAT_JSON;
+
+      // Get search parameters
+      $searchTerm = Yii::$app->request->get('q', '');
+      $mimeType = Yii::$app->request->get('mime', '');
+      $page = (int)Yii::$app->request->get('page', 1);
+      $limit = (int)Yii::$app->request->get('limit', 20);
+
+      // Calculate offset for pagination
+      $offset = ($page - 1) * $limit;
+
+      // Build the filter for the data provider
+      $filter = [];
+
+      if (!empty($searchTerm)) {
+        $filter['freesearch'] = $searchTerm;
+      }
+
+      if (!empty($mimeType)) {
+        $filter['mime'] = $mimeType;
+      }
+
+      // Create data provider with filters
+      $modelProvider = new CrelishDataProvider('asset', [
+        'filter' => $filter,
+        'pagination' => [
+          'pageSize' => $limit,
+          'page' => $page - 1, // Adjust for 0-based indexing in data provider
+        ],
+        'sort' => ['by' => '-created'] // Default sort by created date (newest first)
+      ]);
+
+      $provider = $modelProvider->getProvider();
+      $totalCount = $provider->getTotalCount();
+      $models = $provider->getModels();
+
+      // Format the data for the response
+      $items = [];
+      foreach ($models as $model) {
+        $previewUrl = '';
+
+        // Generate preview URL based on mime type
+        switch ($model['mime']) {
+          case 'image/jpg':
+          case 'image/jpeg':
+          case 'image/gif':
+          case 'image/png':
+            $previewUrl = '/crelish/asset/glide?path=' . CrelishBaseHelper::getAssetUrl($model['pathName'], $model['fileName']) . '&w=180&h=150&f=fit';
+            break;
+          case 'image/svg+xml':
+            $previewUrl = $model['pathName'] . $model['src'];
+            break;
+          case 'application/pdf':
+            $previewUrl = '/crelish/asset/glide?path=thumbs/' . $model['thumbnail'] . '&p=small';
+            break;
+          default:
+            // Default placeholder for unsupported file types
+            $previewUrl = '/crelish/asset/glide?path=placeholders/file.png&w=180&h=150&f=fit';
+        }
+
+        $items[] = [
+          'uuid' => $model['uuid'],
+          'title' => $model['title'] ?? $model['systitle'] ?? 'Untitled',
+          'mime' => $model['mime'],
+          'preview_url' => $previewUrl,
+          'full_url' => CrelishBaseHelper::getAssetUrl($model['pathName'], $model['fileName']),
+          'created' => $model['created']
+        ];
+      }
+
+      return [
+        'items' => $items,
+        'total' => $totalCount,
+        'page' => $page,
+        'pages' => ceil($totalCount / $limit)
+      ];
+    }
+
+    /**
+     * Get a single asset by UUID
+     *
+     * @return array JSON response with asset details
+     */
+    public function actionApiGet()
+    {
+      Yii::$app->response->format = Response::FORMAT_JSON;
+
+      $uuid = Yii::$app->request->get('uuid');
+      if (empty($uuid)) {
+        return ['error' => 'Missing UUID parameter'];
+      }
+
+      $model = Asset::findOne(['uuid' => $uuid]);
+      if (!$model) {
+        return ['error' => 'Asset not found'];
+      }
+
+      $previewUrl = '';
+
+      // Generate preview URL based on mime type
+      switch ($model->mime) {
+        case 'image/jpg':
+        case 'image/jpeg':
+        case 'image/gif':
+        case 'image/png':
+          $previewUrl = '/crelish/asset/glide?path=' . CrelishBaseHelper::getAssetUrl($model->pathName, $model->fileName) . '&w=180&h=150&f=fit';
+          break;
+        case 'image/svg+xml':
+          $previewUrl = $model->pathName . $model->src;
+          break;
+        case 'application/pdf':
+          $previewUrl = '/crelish/asset/glide?path=thumbs/' . $model->thumbnail . '&p=small';
+          break;
+        default:
+          // Default placeholder for unsupported file types
+          $previewUrl = '/crelish/asset/glide?path=placeholders/file.png&w=180&h=150&f=fit';
+      }
+
+      return [
+        'uuid' => $model->uuid,
+        'title' => $model->title ?? $model->systitle ?? 'Untitled',
+        'mime' => $model->mime,
+        'preview_url' => $previewUrl,
+        'full_url' => CrelishBaseHelper::getAssetUrl($model->pathName, $model->fileName),
+        'created' => $model->created
+      ];
+    }
+
+    /**
+     * Upload files via API and return JSON response
+     *
+     * @return array JSON response with upload status
+     */
+    public function actionApiUpload()
+    {
+      Yii::$app->response->format = Response::FORMAT_JSON;
+
+      $file = UploadedFile::getInstanceByName('file');
+
+      if (!$file) {
+        return [
+          'success' => false,
+          'message' => 'No file uploaded'
+        ];
+      }
+
+      $slugger = new Slugify();
+      $mimeTypesToExtensions = [
+        // Images
+        'image/jpeg' => 'jpg',
+        'image/png' => 'png',
+        'image/gif' => 'gif',
+        'image/webp' => 'webp',
+        'image/svg+xml' => 'svg',
+
+        // Adobe PDF
+        'application/pdf' => 'pdf',
+
+        // Microsoft Office
+        'application/msword' => 'doc',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => 'docx',
+        'application/vnd.ms-excel' => 'xls',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' => 'xlsx',
+        'application/vnd.ms-powerpoint' => 'ppt',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation' => 'pptx',
+
+        // OpenOffice formats
+        'application/vnd.oasis.opendocument.text' => 'odt',
+        'application/vnd.oasis.opendocument.spreadsheet' => 'ods',
+        'application/vnd.oasis.opendocument.presentation' => 'odp',
+
+        // Text files
+        'text/plain' => 'txt',
+        'text/csv' => 'csv',
+        'text/html' => 'html',
+        'text/css' => 'css',
+        'text/javascript' => 'js',
+        'application/json' => 'json',
+        'application/xml' => 'xml',
+
+        // Archives
+        'application/zip' => 'zip',
+        'application/x-rar-compressed' => 'rar',
+        'application/x-tar' => 'tar',
+        'application/gzip' => 'gz',
+
+        // Audio formats
+        'audio/mpeg' => 'mp3',
+        'audio/ogg' => 'ogg',
+        'audio/wav' => 'wav',
+
+        // Video formats
+        'video/mp4' => 'mp4',
+        'video/webm' => 'webm',
+        'video/ogg' => 'ogv',
+
+        // Other formats
+        'application/octet-stream' => 'bin' // General binary file
+      ];
+
+      $mimeType = mime_content_type($file->tempName);
+      $mimeTypeExt = $mimeTypesToExtensions[$mimeType] ?? null;
+
+      if (!$mimeTypeExt) {
+        return [
+          'success' => false,
+          'message' => 'Unsupported file type: ' . $mimeType
+        ];
+      }
+
+      $destName = time() . '_' . $slugger->slugify($file->name) . '.' . $mimeTypeExt;
+      $targetFile = Yii::getAlias('@webroot') . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . $destName;
+
+      if (!$file->saveAs($targetFile)) {
+        return [
+          'success' => false,
+          'message' => 'Failed to save file on server'
+        ];
+      }
+
+      // Create the asset record
+      $model = new CrelishDynamicModel(['ctype' => 'asset']);
+      $model->systitle = $destName;
+      $model->title = $destName;
+      $model->src = $destName;
+      $model->fileName = $destName;
+      $model->pathName = '/' . 'uploads' . '/';
+      $model->mime = $mimeType;
+      $model->size = $file->size;
+      $model->state = 2;
+
+      // Try to get color information for images
+      if (in_array($mimeType, ['image/jpg', 'image/jpeg', 'image/png', 'image/bmp', 'image/gif'])) {
+        try {
+          $domColor = ColorThief::getColor($targetFile, 20);
+          $palColor = ColorThief::getPalette($targetFile);
+
+          $model->colormain_rgb = Json::encode($domColor);
+          $model->colormain_hex = '#' . sprintf('%02x', $domColor[0]) . sprintf('%02x', $domColor[1]) . sprintf('%02x', $domColor[2]);
+          $model->colorpalette = Json::encode($palColor);
+        } catch (Exception $e) {
+          // Silently ignore color extraction errors
+        }
+      }
+
+      if (!$model->save()) {
+        return [
+          'success' => false,
+          'message' => 'Failed to save asset record: ' . implode(', ', $model->getErrorSummary(true))
+        ];
+      }
+
+      // Generate preview URL based on mime type
+      $previewUrl = '';
+      switch ($mimeType) {
+        case 'image/jpg':
+        case 'image/jpeg':
+        case 'image/gif':
+        case 'image/png':
+          $previewUrl = '/crelish/asset/glide?path=' . CrelishBaseHelper::getAssetUrl($model->pathName, $model->fileName) . '&w=180&h=150&f=fit';
+          break;
+        case 'image/svg+xml':
+          $previewUrl = $model->pathName . $model->src;
+          break;
+        case 'application/pdf':
+          $previewUrl = '/crelish/asset/glide?path=thumbs/' . $model->thumbnail . '&p=small';
+          break;
+        default:
+          // Default placeholder for unsupported file types
+          $previewUrl = '/crelish/asset/glide?path=placeholders/file.png&w=180&h=150&f=fit';
+      }
+
+      return [
+        'success' => true,
+        'message' => 'File uploaded successfully',
+        'asset' => [
+          'uuid' => $model->uuid,
+          'title' => $model->title ?? $model->systitle ?? 'Untitled',
+          'mime' => $model->mime,
+          'preview_url' => $previewUrl,
+          'full_url' => CrelishBaseHelper::getAssetUrl($model->pathName, $model->fileName),
+          'created' => $model->created
+        ]
+      ];
+    }
 	}

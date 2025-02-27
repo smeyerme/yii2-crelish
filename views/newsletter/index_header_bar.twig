@@ -1,0 +1,14 @@
+{{ use('/giantbits/crelish/widgets') }}
+<div class="c-input-group group-content-filter">
+  {% include('@crelish/views/layouts/base_header_bar.twig') %}
+  <button class="c-button c-button--brand"><i class="fa-sharp fa-regular  fa-search"></i></button>
+  <div class="o-field">
+    <input class="c-field" name="cr_content_filter" id="cr_content_filter"
+           value="{{ app.session.get('cr_content_filter') }}"
+           placeholder="{{ t('app', 'Type your search phrase here...') }}">
+  </div>
+</div>
+
+<a class="c-button" href="{{ url('crelish/newsletter/create') }}">
+  <i class="fa-sharp fa-regular  fa-plus"></i>&nbsp; Newsletter anlegen
+</a>
