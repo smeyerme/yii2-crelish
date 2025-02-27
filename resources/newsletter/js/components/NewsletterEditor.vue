@@ -37,8 +37,9 @@
     <div class="editor-header">
       <h1></h1>
       <div class="editor-actions">
-        <button @click="saveNewsletter" class="btn btn-primary">Save Draft</button>
-        <button @click="publishNewsletter" class="btn btn-success" :disabled="!newsletter.id">Publish</button>
+        <button v-if="newsletter.id" @click="cloneNewsletter" class="btn btn-outline-primary">Kopie erstellen</button>
+        <button @click="saveNewsletter" class="btn btn-primary">Entwurf speichern</button>
+        <button @click="publishNewsletter" class="btn btn-success" :disabled="!newsletter.id">Veröffentlichen</button>
         <a v-if="publishedUrl" :href="publishedUrl" target="_blank" class="btn btn-view-published">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-icon">
             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
@@ -300,6 +301,45 @@ export default {
       } else {
         // No draft found, load from server
         await this.loadExistingNewsletter(id);
+      }
+    },
+
+    async cloneNewsletter() {
+      if (!this.newsletter.id) {
+        alert('Cannot clone an unsaved newsletter. Please save first.');
+        return;
+      }
+
+      try {
+        const url = '/crelish/newsletter/clone';
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: this.newsletter.id })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+
+          // Navigate to the new cloned newsletter
+          if (data.id) {
+            // Remove any existing autosave for the current newsletter
+            if (this.autosaveId) {
+              localStorage.removeItem(this.autosaveId);
+            }
+
+            // Redirect to the new newsletter
+            window.location.href = `/crelish/newsletter/create?ctype=bulletin&uuid=${data.id}`;
+          } else {
+            alert('Cloned successfully but could not navigate to the new newsletter.');
+          }
+        } else {
+          const error = await response.json();
+          alert(`Error: ${error.message}`);
+        }
+      } catch (error) {
+        console.error('Failed to clone newsletter', error);
+        alert('Failed to clone newsletter');
       }
     },
 

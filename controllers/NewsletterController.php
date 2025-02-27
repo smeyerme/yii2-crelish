@@ -12,7 +12,6 @@ use yii\filters\AccessControl;
 use yii\helpers\Json;
 use yii\helpers\Url;
 use yii\web\BadRequestHttpException;
-use yii\web\Controller;
 use yii\web\Response;
 use function _\map;
 
@@ -25,7 +24,7 @@ class NewsletterController extends CrelishBaseController
     return [
       'access' => [
         'class' => AccessControl::class,
-        'only' => ['create', 'index', 'delete', 'update', 'export', 'draft'],
+        'only' => ['create', 'index', 'delete', 'update', 'export', 'draft', 'clone'],
         'rules' => [
           [
             'allow' => true,
@@ -210,6 +209,39 @@ class NewsletterController extends CrelishBaseController
       ];
     } else {
       return $this->asError('Failed to update newsletter: ' . implode(', ', $newsletter->getErrorSummary(true)));
+    }
+  }
+
+  /**
+   * Clone an existing newsletter
+   * Creates a copy with status=0 and prefix "COPY:" in the title
+   */
+  public function actionClone(): array
+  {
+    Yii::$app->response->format = Response::FORMAT_JSON;
+    $data = Yii::$app->request->getBodyParams();
+
+    // Find the source newsletter to clone
+    $sourceNewsletter = Bulletin::findOne($data['id']);
+    if (!$sourceNewsletter) {
+      return $this->asError('Source newsletter not found', 404);
+    }
+
+    // Create a new newsletter as a clone
+    $clonedNewsletter = new Bulletin();
+    $clonedNewsletter->title = 'COPY: ' . $sourceNewsletter->title;
+    $clonedNewsletter->date = $sourceNewsletter->date;
+    $clonedNewsletter->content = $sourceNewsletter->content; // Copy the JSON content
+    $clonedNewsletter->status = 0; // Set as draft
+
+    if ($clonedNewsletter->save()) {
+      return [
+        'status' => 'success',
+        'message' => 'Newsletter cloned successfully',
+        'id' => $clonedNewsletter->uuid
+      ];
+    } else {
+      return $this->asError('Failed to clone newsletter: ' . implode(', ', $clonedNewsletter->getErrorSummary(true)));
     }
   }
 
