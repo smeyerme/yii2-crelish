@@ -2,7 +2,6 @@
 
 namespace giantbits\crelish\controllers;
 
-use app\models\Newsletter;
 use giantbits\crelish\components\CrelishBaseController;
 use giantbits\crelish\components\MjmlGenerator;
 use giantbits\crelish\components\MjmlService;
@@ -173,7 +172,7 @@ class NewsletterController extends CrelishBaseController
     $newsletter->title = $data['title'];
     $newsletter->date = $data['date'];
     $newsletter->content = Json::encode($data['sections']);
-    $newsletter->status = Newsletter::STATUS_DRAFT;
+    $newsletter->status = 0;
 
     if ($newsletter->save()) {
       return [
@@ -313,7 +312,7 @@ class NewsletterController extends CrelishBaseController
       file_put_contents($filePath, $html);
 
       // Update newsletter status
-      $newsletter->status = Newsletter::STATUS_PUBLISHED;
+      $newsletter->status = 1;
       $newsletter->published_url = $fileUrl;
       $newsletter->save();
 
