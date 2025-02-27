@@ -231,7 +231,7 @@ class NewsletterController extends CrelishBaseController
       // Generate MJML code
       $mjmlGenerator = new MjmlGenerator(
         Yii::$app->assetManager,
-        'https://forum-holzbau.dev.smyr'
+        Url::base(true)
       );
       $mjml = $mjmlGenerator->generateMjml($newsletter);
 
