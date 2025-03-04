@@ -59,7 +59,9 @@
         "yiisoft/yii2-httpclient": "^2.0",
         "scn/deepl-api-connector": "^3.0",
         "guzzlehttp/guzzle": "^7.9",
-        "yiisoft/yii2-symfonymailer": "^4.0"
+        "yiisoft/yii2-symfonymailer": "^4.0",
+        "himiklab/yii2-recaptcha-widget": "^2.1",
+        "baha2odeh/yii2-recaptcha-v3": "*"
     },
     "autoload": {
         "psr-4": {

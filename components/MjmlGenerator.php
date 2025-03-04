@@ -144,13 +144,37 @@ MJML;
    */
   private function getTemplateFooter()
   {
-    return <<<MJML
+    $year = date('Y');
 
+    return <<<MJML
+    <mj-section padding="0" background-color="#000000" css-class="social">    
+        <mj-column padding="0" css-class="section-social">
+          <mj-table width="160px" align="left" padding="20px">
+            <tr>
+              <td style="width: 60px; padding: 0 10px 0;">
+                <a href=https://www.instagram.com/forum_holzbau/" target="_blank"">
+                  <img src="https://forum-holzbau.com/uploads/1741114737_fhb-social-insta-png.png" width="60px" alt="Facebook" />
+                </a>
+              </td>
+              <td style="width: 60px; padding: 0 10px 0;">
+                <a href="https://www.facebook.com/forumholzbau" target="_blank">
+                  <img src="https://forum-holzbau.com/uploads/1741114737_fhb-social-fb-png.png" width="60px" alt="Twitter" />
+                </a>
+              </td>
+              <td style="width: 60px; padding: 0 10px 0;">
+                <a href="https://www.linkedin.com/company/forum-holzbau/" target="_blank">
+                  <img src="https://forum-holzbau.com/uploads/1741114737_fhb-social-lin-png.png" width="60px" alt="Instagram" />
+                </a>
+              </td>
+            </tr>
+          </mj-table>
+        </mj-column>
+    </mj-section>
     <mj-section padding="0 20px" background-color="#000000" css-class="footer">    
         <mj-column padding="0" css-class="section-footer">
             <mj-text color="#ffffff" font-size="16px" line-height="20px" padding="0">
                 <p>
-                    Copyright © 2025 FORUM HOLZBAU | <a href="">Impressum</a> | <a href="">Datenschutz</a>
+                    Copyright © {$year} FORUM HOLZBAU | <a href="">Impressum</a> | <a href="">Datenschutz</a>
                 </p>
                 <p>
                     Wenn Sie sich abmelden möchten, klicken Sie auf folgenden Link:
