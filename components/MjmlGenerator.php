@@ -393,7 +393,7 @@ MJML;
     $layout = $section['content']['layout'] ?? 'single';
     $articles = $section['content']['articles'];
     $articleCount = count($articles);
-    $showDivider = !($section['content']['showDivider'] === "false");
+    $showDivider = ($section['content']['showDivider'] == "false");
     $result = '';
 
     $title = upperCase($title);
