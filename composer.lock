@@ -4,8 +4,58 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "5cafaf25f254a5ee0ed4a038604da071",
+    "content-hash": "1f69f47579ac41cc9016e2f4dd4c41a4",
     "packages": [
+        {
+            "name": "baha2odeh/yii2-recaptcha-v3",
+            "version": "v1.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/Baha2Odeh/yii2-recaptcha-v3.git",
+                "reference": "6b264f557f88f5cbdcc623a0c8d7bd70fadda0e2"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/Baha2Odeh/yii2-recaptcha-v3/zipball/6b264f557f88f5cbdcc623a0c8d7bd70fadda0e2",
+                "reference": "6b264f557f88f5cbdcc623a0c8d7bd70fadda0e2",
+                "shasum": ""
+            },
+            "require": {
+                "yiisoft/yii2": "~2.0.0"
+            },
+            "type": "yii2-extension",
+            "autoload": {
+                "psr-4": {
+                    "Baha2Odeh\\RecaptchaV3\\": ""
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "Apache-2.0"
+            ],
+            "authors": [
+                {
+                    "name": "Bahaa Odeh",
+                    "email": "bw4@hotmail.it"
+                }
+            ],
+            "description": "Yii2 reCAPTCHA v3",
+            "keywords": [
+                "Yii2 recaptcha",
+                "Yii2 recaptcha 3",
+                "Yii2 recaptcha v3",
+                "captcha",
+                "extension",
+                "recaptcha 3",
+                "recaptcha v3",
+                "yii2"
+            ],
+            "support": {
+                "issues": "https://github.com/Baha2Odeh/yii2-recaptcha-v3/issues",
+                "source": "https://github.com/Baha2Odeh/yii2-recaptcha-v3/tree/master"
+            },
+            "time": "2019-06-20T12:29:03+00:00"
+        },
         {
             "name": "bower-asset/bootstrap",
             "version": "v5.3.3",
@@ -829,6 +879,59 @@
                 }
             ],
             "time": "2024-07-18T11:15:46+00:00"
+        },
+        {
+            "name": "himiklab/yii2-recaptcha-widget",
+            "version": "2.1.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/himiklab/yii2-recaptcha-widget.git",
+                "reference": "341ae7e19e12783f3dfd8984a49185e0a44021ea"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/himiklab/yii2-recaptcha-widget/zipball/341ae7e19e12783f3dfd8984a49185e0a44021ea",
+                "reference": "341ae7e19e12783f3dfd8984a49185e0a44021ea",
+                "shasum": ""
+            },
+            "require": {
+                "yiisoft/yii2": "~2.0.11",
+                "yiisoft/yii2-httpclient": "*"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^4.8.34"
+            },
+            "type": "yii2-extension",
+            "autoload": {
+                "psr-4": {
+                    "himiklab\\yii2\\recaptcha\\": "src/",
+                    "himiklab\\yii2\\recaptcha\\tests\\": "tests/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "HimikLab",
+                    "homepage": "https://github.com/himiklab/"
+                }
+            ],
+            "description": "Yii2 Google reCAPTCHA v2 and v3 widget",
+            "keywords": [
+                "captcha",
+                "google",
+                "recaptcha",
+                "widget",
+                "yii2"
+            ],
+            "support": {
+                "issues": "https://github.com/himiklab/yii2-recaptcha-widget/issues",
+                "source": "https://github.com/himiklab/yii2-recaptcha-widget"
+            },
+            "abandoned": true,
+            "time": "2019-05-14T07:40:36+00:00"
         },
         {
             "name": "imagine/imagine",
