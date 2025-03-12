@@ -90,8 +90,8 @@
      */
     private function processLanguage(): void
     {
-      Yii::$app->sourceLanguage = 'en-US';
-      Yii::$app->params['defaultLanguage'] = 'de-CH';
+      //Yii::$app->sourceLanguage = 'en-US';
+      Yii::$app->params['defaultLanguage'] = 'de';
     }
     
     public function beforeAction($action): bool
