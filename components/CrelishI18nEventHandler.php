@@ -37,7 +37,7 @@ class CrelishI18nEventHandler
     $message = $event->message;
     $language = $event->language;
     $sourceLanguage = Yii::$app->sourceLanguage ?? 'en';
-    $apiKey = 'a79c5a35-099a-4650-8884-a674bf93c710';
+    $apiKey = $_ENV['DEEPL_API_KEY'];
 
     // Initialize file system
     $translationObject = null;
