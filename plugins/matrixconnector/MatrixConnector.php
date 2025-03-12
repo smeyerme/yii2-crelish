@@ -5,6 +5,7 @@ namespace giantbits\crelish\plugins\matrixconnector;
 use giantbits\crelish\components\CrelishDataResolver;
 use giantbits\crelish\components\CrelishDynamicModel;
 use giantbits\crelish\components\CrelishDataProvider;
+use Yii;
 use yii\base\Widget;
 use yii\helpers\Html;
 use yii\helpers\Json;
@@ -26,6 +27,21 @@ class MatrixConnector extends Widget
     } else {
       $this->data = Json::encode(['main' => []]);
     }
+
+    // Get the AssetManager instance
+    $assetManager = Yii::$app->assetManager;
+
+    // Define the source path of your JS file
+    $sourcePath = Yii::getAlias('@vendor/giantbits/yii2-crelish/resources/pagebuilder/dist/page-builder.js');
+
+    // Publish the file and get the published URL
+    $publishedUrl = $assetManager->publish($sourcePath, [
+      'forceCopy' => YII_DEBUG,
+      'appendTimestamp' => true,
+    ])[1];
+
+    // Register the script in the view
+    $this->view->registerJsFile($publishedUrl);
   }
 
   public function run()

@@ -52,8 +52,13 @@ class ElementNav extends Widget
       'sort' => ['by' => [ 'label', 'asc']],
       'limit' => 99
     ]);
-		
-    $params[0] = \Yii::$app->controller->id . '/' . $this->action;
+
+    $params[0] = 'content/selector';
+
+    if(!isset($_GET['overlay'])){
+      $params[0] = \Yii::$app->controller->id . '/' . $this->action;
+    }
+
 
     foreach (\Yii::$app->getRequest()->getQueryParams() as $param => $value) {
       $params[$param] = $value;

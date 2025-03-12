@@ -1,0 +1,477 @@
+{{ use('/yii/grid/GridView') }}
+{{ use('/giantbits/crelish/widgets') }}
+{{ use('/yii/widgets/Pjax') }}
+
+<div class="form-group field-crelishdynamicmodel-body required">
+  <label class="control-label" for="crelishdynamicmodel-body">{{ label }}</label>
+  <div class="">
+    <matrix_{{ formKey }}></matrix_{{ formKey }}>
+    <div class="help-block help-block-error "></div>
+  </div>
+</div>
+
+<div class="modal fade modal-xl matrix-modal-{{ formKey }}" tabindex="-1" role="dialog"
+     aria-labelledby="matrix-modal-{{ formKey }}" id="matrix-modal-{{ formKey }}">
+  <div class="modal-dialog" style="height: 80vh;">
+    <div class="modal-content gc-bc--palette-clouds" style="height: 100%;">
+      <div class="modal-header gc-bc--palette-green-sea gc-fc--palette-clouds">
+        <h4 class="modal-title" id="myModalLabel">Content selection</h4>
+        <button type="button" class="c-button close pull-right"  data-bs-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body o-panel-container" style=" height: 90%;">
+        <div class="o-panel">
+
+          {{ pjax_begin({'id':'contentSelect', 'enablePushState': true}) }}
+
+            <div class="o-grid gc-bc--palette-clouds">
+              <div class="o-grid__cell o-grid__cell--width-20">
+                <h6>Type filter</h6>
+                <ul role="menu" class="content-filter">
+                  {{ element_nav_widget({'ctype':'page', 'selector':'cet', 'action': 'update', 'target': '#contentSelector'}) }}
+                </ul>
+                </div>
+                <div class="o-grid__cell">
+                  <h6>{{ t('app', 'Content') }}</h6>
+                    {{ grid_view_widget({
+                      'dataProvider': dataProvider,
+                      'columns': columns,
+                      'tableOptions': {'class':'table table-striped'}
+                    }) | raw }}
+                </div>
+              </div>
+
+            {{ pjax_end() }}
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="riot/tag">
+  <matrix_{{ formKey }}>
+    <input type="hidden" ref="CrelishDynamicModel_{{ formKey }}" name="CrelishDynamicModel[{{ formKey }}]" id="CrelishDynamicModel_{{ formKey }}" value="{ JSON.stringify(data) }" />
+
+
+    <!-- Layout Grid -->
+    <div class="layout-grid">
+      <!-- Each Row -->
+      <div class="o-grid o-grid--no-gutter layout-row" each={ row, rowIndex in layout }>
+        <!-- Row Controls -->
+        <div class="row-controls u-margin-bottom-small">
+          <button onclick={ deleteRow } class="c-button c-button--error u-small" data-row={ rowIndex }>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+              <!-- Outer rectangle representing table -->
+              <rect x="2" y="2" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"/>
+
+              <!-- Horizontal lines representing rows -->
+              <line x1="2" y1="8" x2="22" y2="8" stroke="currentColor" stroke-width="2"/>
+              <line x1="2" y1="14" x2="22" y2="14" stroke="currentColor" stroke-width="2"/>
+
+              <!-- Delete symbol -->
+              <circle cx="12" cy="22" r="8" fill="#DC3545"/>
+              <path d="M9 22l6 0 M9 22l6 0" stroke="white" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </button>
+          <button onclick={ addColumn } class="c-button c-button--info u-small" data-row={ rowIndex }>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+              <!-- Outer rectangle representing table -->
+              <rect x="2" y="2" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"/>
+
+              <!-- Vertical lines representing columns -->
+              <line x1="8" y1="2" x2="8" y2="22" stroke="currentColor" stroke-width="2"/>
+              <line x1="14" y1="2" x2="14" y2="22" stroke="currentColor" stroke-width="2"/>
+
+              <!-- Plus symbol -->
+              <circle cx="22" cy="12" r="8" fill="#4CAF50"/>
+              <path d="M22 8v8M18 12h8" stroke="white" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Columns in Row -->
+        <div class="o-grid__cell layout-column" each={ areaKey, colIndex in row } style="width: { 100/parent.row.length }%">
+          <!-- Column Header -->
+          <div class="column-header u-margin-bottom-small">
+            <input type="text"
+                   class="c-field"
+                   value={ areaKey }
+                   onchange={ updateAreaKey }
+                   data-row={ rowIndex }
+                   data-col={ colIndex }
+                   placeholder="Area name">
+            <button onclick={ deleteColumn }
+                    class="c-button c-button--error u-small"
+                    data-row={ rowIndex }
+                    data-col={ colIndex }>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <!-- Outer rectangle representing table -->
+                <rect x="2" y="2" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"/>
+
+                <!-- Vertical lines representing columns -->
+                <line x1="8" y1="2" x2="8" y2="22" stroke="currentColor" stroke-width="2"/>
+                <line x1="14" y1="2" x2="14" y2="22" stroke="currentColor" stroke-width="2"/>
+
+                <!-- Delete symbol -->
+                <circle cx="22" cy="12" r="8" fill="#DC3545"/>
+                <path d="M19 12l6 0 M19 12l6 0" stroke="white" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </button>
+          </div>
+
+          <span class="c-badge">{ areaKey }</span>
+
+          <!-- Content Area -->
+          <div class="sortable-container" ref="sortable_{ areaKey }">
+            <div class="c-card" ref-area={ areaKey } each={ item in parent.parent.data[areaKey] || [] }>
+              <div role="separator" class="c-card__item c-card__item--divider">
+                <span class="glyphicon glyphicon-move fa-sharp fa-regular fa-arrows-alt" aria-hidden="true"></span>
+                <strong>{ item.info[0].value }</strong>
+                <span class="c-input-group pull-right">
+                  <a class="c-button gc-bc--palette-wetasphalt u-xsmall"
+                     href="/crelish/content/update?ctype={ item.ctype }&uuid={ item.uuid }"
+                     target="_blank">
+                    <i class="fa-sharp fa-regular fa-edit"></i>
+                  </a>
+                  <a class="c-button gc-bc--palette-pomgranate u-xsmall" onclick={ parent.parent.parent.removeItem }>
+                    <i class="fa-sharp fa-regular fa-trash"></i>
+                  </a>
+                </span>
+              </div>
+              <div class="c-card__content u-window-box-small">
+                <dl>
+                  <span each={ infoItem, index in item.info } if={ index > 0 }>
+                    <dt>{ infoItem.label }</dt>
+                    <dd>{ infoItem.value }</dd>
+                  </span>
+                </dl>
+              </div>
+            </div>
+          </div>
+
+          <!-- Add Content Button -->
+          <button type="button"
+                  onclick={ parent.parent.addContent }
+                  class="c-button c-button--ghost-primary c-button--block gc-mt--1"
+                  data-target="#matrix-modal-{{ formKey }}"
+                  data-area={ areaKey }>
+            Add content to { areaKey }
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Layout Management Controls -->
+    <div class="layout-controls u-margin-bottom">
+      <button onclick={ addRow } class="c-button c-button--success">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+          <!-- Outer rectangle representing table -->
+          <rect x="2" y="2" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"/>
+
+          <!-- Horizontal lines representing rows -->
+          <line x1="2" y1="8" x2="22" y2="8" stroke="currentColor" stroke-width="2"/>
+          <line x1="2" y1="14" x2="22" y2="14" stroke="currentColor" stroke-width="2"/>
+
+          <!-- Plus symbol -->
+          <circle cx="12" cy="22" r="8" fill="#4CAF50"/>
+          <path d="M12 18v8M8 22h8" stroke="white" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+
+    // Logic goes here.
+    var app = this
+    var targetArea = null
+
+    // Convert flat data object to 2D layout array
+    this.convertDataToLayout = function(data) {
+      if (Object.keys(data).length === 0) {
+        return [["main"]] // Default layout
+      }
+
+      // If we have saved layout metadata in the data object
+      if (data._layout) {
+        try {
+          return JSON.parse(data._layout)
+        } catch(e) {
+          console.error('Failed to parse layout:', e)
+        }
+      }
+
+      // Fallback: create single row with all areas
+      return [Object.keys(data).filter(key => key !== '_layout')]
+    }
+
+    // Save layout to data object
+    this.saveLayout = function() {
+      this.data._layout = JSON.stringify(this.layout)
+    }
+
+    this.data = opts.data || {}
+    if (Object.keys(this.data).length === 0) {
+      this.data = {"main": []}
+    }
+    this.layout = this.convertDataToLayout(this.data)
+
+    addRow(e) {
+      e.preventDefault()
+      e.stopPropagation()
+      var newRow = ["new_area_" + this.generateUniqueId()]
+
+      this.layout.push(newRow)
+      this.data[newRow[0]] = []
+      this.saveLayout()
+      this.update()
+    }
+
+    addColumn(e) {
+      e.preventDefault()
+      e.stopPropagation()
+      var rowIndex = parseInt(e.target.getAttribute('data-row'))
+      var newArea = "new_area_" + this.generateUniqueId()
+      this.layout[rowIndex].push(newArea)
+      this.data[newArea] = []
+      this.update()
+    }
+
+    deleteRow(e) {
+      e.preventDefault()
+      e.stopPropagation()
+      var rowIndex = parseInt(e.target.getAttribute('data-row'))
+      // Remove data for all areas in this row
+      this.layout[rowIndex].forEach(areaKey => {
+        delete this.data[areaKey]
+      })
+      this.layout.splice(rowIndex, 1)
+      if (this.layout.length === 0) {
+        this.layout = [["main"]]
+        this.data = {"main": []}
+      }
+      this.update()
+    }
+
+    deleteColumn(e) {
+      e.preventDefault()
+      e.stopPropagation()
+      var rowIndex = parseInt(e.target.getAttribute('data-row'))
+      var colIndex = parseInt(e.target.getAttribute('data-col'))
+      var areaKey = this.layout[rowIndex][colIndex]
+
+      // Remove data for this area
+      delete this.data[areaKey]
+      this.layout[rowIndex].splice(colIndex, 1)
+
+      // If row is empty, remove it
+      if (this.layout[rowIndex].length === 0) {
+        this.layout.splice(rowIndex, 1)
+      }
+
+      // If no rows left, reset to default
+      if (this.layout.length === 0) {
+        this.layout = [["main"]]
+        this.data = {"main": []}
+      }
+      this.update()
+    }
+
+    updateAreaKey(e) {
+      e.preventDefault()
+      e.stopPropagation()
+      var rowIndex = parseInt(e.target.getAttribute('data-row'))
+      var colIndex = parseInt(e.target.getAttribute('data-col'))
+      var oldKey = this.layout[rowIndex][colIndex]
+      var newKey = e.target.value.trim()
+
+      // Ensure new key is unique
+      if (this.data.hasOwnProperty(newKey) && newKey !== oldKey) {
+        alert('Area name must be unique!')
+        e.target.value = oldKey
+        return
+      }
+
+      // Update layout
+      this.layout[rowIndex][colIndex] = newKey
+
+      // Update data
+      this.data[newKey] = this.data[oldKey] || []
+      if (oldKey !== newKey) {
+        delete this.data[oldKey]
+      }
+
+      // Save layout changes
+      this.saveLayout()
+      this.update()
+
+      // Reinitialize sortable with new area name
+      this.initializeSortable()
+    }
+
+    generateUniqueId() {
+      return Math.random().toString(36).substr(2, 9)
+    }
+
+    var activateContentMatrix = function() {
+      var wrap = this
+      $("#matrix-modal-{{ formKey }} a.cntAdd").each(function () {
+        $(this).on('click', function (e) {
+          e.preventDefault()
+          var content = $(this).data("content")
+
+          if(content && targetArea) {
+            //content.area = targetArea
+            if (!wrap.data[targetArea]) {
+              wrap.data[targetArea] = []
+            }
+            wrap.data[targetArea].push(content)
+          }
+
+          $('#matrix-modal-{{ formKey }}').modal('hide')
+          wrap.update()
+        })
+      })
+    }.bind(this)
+
+    addContent(e) {
+      e.preventDefault()
+      e.stopPropagation()
+      targetArea = e.target.getAttribute('data-area')
+      $('#matrix-modal-{{ formKey }}').modal('show')
+    }
+
+    removeItem(e) {
+      e.preventDefault()
+      var item = e.item
+      var area = e.target.closest('[ref-area]').getAttribute('ref-area')
+      var index = this.data[area].indexOf(item)
+      if (this.data[area]) {
+        this.data[area].splice(index, 1)
+      }
+    }
+
+    this.on("mount", function() {
+      var that = this
+      var matrixData = app.data
+
+      // Initialize Draggable.Sortable for each area
+      this.initializeSortable()
+
+      $("#matrix-modal-{{ formKey }}").on('pjax:end', function () {
+        activateContentMatrix()
+      })
+
+      $("#matrix-modal-{{ formKey }}").on('shown.bs.modal', function (e) {
+        activateContentMatrix()
+      })
+    })
+
+    // Watch for layout changes and reinitialize sortable
+    this.on('updated', function() {
+      this.initializeSortable()
+    })
+
+    initializeSortable() {
+      if (this.sortableInstances) {
+        this.sortableInstances.forEach(instance => instance.destroy());
+      }
+      this.sortableInstances = [];
+
+      Object.keys(this.data).forEach(area => {
+        const el = this.refs['sortable_' + area];
+        if (el) {
+          const sortable = new Sortable(el, {
+            group: 'shared',           // Set shared group name
+            animation: 150,            // Animation speed in ms
+            handle: '.glyphicon-move', // Drag handle
+            ghostClass: 'sortable-ghost', // Class for the drop placeholder
+            chosenClass: 'sortable-chosen', // Class for the chosen item
+            dragClass: 'sortable-drag', // Class for the dragging item
+            onEnd: (evt) => {
+              const sourceArea = evt.from.querySelector('.c-card')?.getAttribute('ref-area');
+              const destinationArea = evt.to.querySelector('.c-card')?.getAttribute('ref-area') ||
+                                    evt.to.closest('[ref-area]')?.getAttribute('ref-area');
+
+              if (sourceArea && destinationArea) {
+                // Same container
+                if (sourceArea === destinationArea) {
+                  this.data[sourceArea].move(evt.oldIndex, evt.newIndex);
+                }
+                // Different containers
+                else {
+                  const movedItem = this.data[sourceArea][evt.oldIndex];
+                  this.data[sourceArea].splice(evt.oldIndex, 1);
+                  this.data[destinationArea] = this.data[destinationArea] || [];
+                  this.data[destinationArea].splice(evt.newIndex, 0, movedItem);
+                }
+                this.update();
+              }
+            }
+          });
+          this.sortableInstances.push(sortable);
+        }
+      })
+    }
+
+    // Helper function to move array elements
+    Array.prototype.move = function(from, to) {
+      this.splice(to, 0, this.splice(from, 1)[0])
+      return this
+    }
+
+  </matrix_{{ formKey }}>
+
+</script>
+
+<script type="text/javascript">
+  var tags_{{ formKey }} = riot.mount('matrix_{{ formKey }}', {
+    data: {{ processedData | raw }}
+  });
+</script>
+
+{% apply registerCss %}
+#contentSelect {
+  padding-top: 1.333rem;
+}
+
+.layout-grid button > svg,
+.layout-controls button > svg {
+  width: 1.333rem;
+  height: 1.333rem;
+  overflow: visible;
+  color: #494a4b;
+  pointer-events: none;
+}
+
+.layout-grid button:has(svg),
+.layout-controls button:has(svg) {
+  background: lightgrey !important;
+}
+
+.content-filter {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  font-weight: 600;
+  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 0;
+}
+
+.content-filter li {
+  padding: 0;
+}
+
+#contentSelect .content-filter li a {
+  padding: 0;
+}
+
+.layout-row {
+  padding-bottom: 2rem;
+}
+
+.row-controls {
+  flex-basis: min-content;
+}
+{% endapply %}
