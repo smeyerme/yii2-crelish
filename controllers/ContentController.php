@@ -3,12 +3,17 @@
 namespace giantbits\crelish\controllers;
 
 use giantbits\crelish\components\CrelishDataProvider;
+use giantbits\crelish\components\CrelishDataResolver;
 use giantbits\crelish\components\CrelishDynamicModel;
 use giantbits\crelish\components\CrelishBaseController;
+use giantbits\crelish\components\MatrixBuilderHelper;
 use Yii;
 use yii\data\ActiveDataProvider;
 use yii\db\Exception;
 use yii\filters\AccessControl;
+use yii\grid\ActionColumn;
+use yii\helpers\Html;
+use yii\helpers\Json;
 use yii\web\View;
 use function _\find;
 use function _\map;
@@ -62,7 +67,6 @@ class ContentController extends CrelishBaseController
 		    }
       });
     ', View::POS_LOAD);
-
   }
 
   /**
@@ -220,6 +224,8 @@ class ContentController extends CrelishBaseController
    */
   public function actionUpdate()
   {
+    MatrixBuilderHelper::registerOverlayMode($this->view);
+
     $content = $this->buildForm();
 
     return $this->render('create.twig', [
@@ -247,6 +253,97 @@ class ContentController extends CrelishBaseController
     }
 
     $this->redirect('/crelish/content/index');
+  }
+
+  public function actionApiGet($uuid, $ctype)
+  {
+    \Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+
+    try {
+
+      $elementDefinition = CrelishDynamicModel::loadElementDefinition($ctype);
+
+      $model = new CrelishDynamicModel( [
+        'ctype' => $ctype,
+        'uuid' => $uuid
+      ]);
+
+
+      if (!$model) {
+        return ['error' => 'Content not found'];
+      }
+
+      // Format the response using our helper
+      return MatrixBuilderHelper::createContentApiResponse($model);
+    } catch (\Exception $e) {
+      return ['error' => $e->getMessage()];
+    }
+  }
+
+  public function actionSelector($target = '')
+  {
+    // Register the content selector overlay mode
+    MatrixBuilderHelper::registerContentSelector($this->view, [
+      'target' => $target
+    ]);
+
+    // Get default content type or from parameter
+    $elementType = \Yii::$app->request->get('cet', 'page');
+
+    // Create data provider for this content type
+    $modelProvider = CrelishDataResolver::resolveProvider($elementType, []);
+    $attributes = ['ctype' => $elementType];
+    $filterModel = new CrelishDynamicModel($attributes);
+
+    $elementType = !empty($_GET['cet']) ? $_GET['cet'] : 'page';
+    $modelProvider = CrelishDataResolver::resolveProvider($elementType, []);
+    $attributes = ['ctype' => $elementType];
+    $filterModel = new CrelishDynamicModel($attributes);
+
+    return $this->render('selector.twig', [
+      'dataProvider' => method_exists($modelProvider, 'getProvider') ? $modelProvider->getProvider() : $modelProvider,
+      'filterModel ' => $filterModel,
+      'columns' => [
+        'systitle',
+        [
+          'class' => ActionColumn::class,
+          'template' => '{update}',
+          'buttons' => [
+            'update' => function ($url, $model, $elementType) {
+              if (!is_array($model)) {
+                $ctype = explode('\\', strtolower($model::class));
+                $ctype = end($ctype);
+              } else {
+                $ctype = $elementType;
+              }
+
+              return Html::a('<span class="fa-sharp fa-regular fa-plus"></span>', '', [
+                'title' => \Yii::t('app', 'Add'),
+                'data-pjax' => '0',
+                'data-content' => Json::encode(
+                  [
+                    'uuid' => is_array($model) ? $model['uuid'] : $model->uuid,
+                    'ctype' => is_array($model) ? $model['ctype'] : $model->ctype,
+                    'info' => [
+                      [
+                        'label' => \Yii::t('app', 'Titel intern'),
+                        'value' => is_array($model) ? $model['systitle'] : $model->systitle
+                      ],
+                      [
+                        'label' => \Yii::t('app', 'Status'),
+                        'value' => is_array($model) ? $model['state'] : $model->state
+                      ]
+                    ]
+                  ]),
+                'class' => 'cntAdd'
+              ]);
+            }
+          ]
+        ]
+      ],
+      'currentType' => $elementType,
+      'target' => $target
+    ]);
   }
 
   private function handleSessionAndQueryParams($paramName)

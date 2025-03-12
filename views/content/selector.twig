@@ -1,0 +1,76 @@
+{{ use('/yii/grid/GridView') }}
+{{ use('/giantbits/crelish/widgets') }}
+{{ use('/yii/widgets/Pjax') }}
+
+{{ pjax_begin({'id':'contentSelect', 'enablePushState': false}) }}
+
+<div class="o-grid gc-bc--palette-clouds">
+  <div class="o-grid__cell o-grid__cell--width-20">
+    <h6>Type filter</h6>
+    <ul role="menu" class="content-filter">
+      {{ element_nav_widget({'ctype':'page', 'selector':'cet', 'action': 'update', 'target': '#contentSelector'}) }}
+    </ul>
+  </div>
+  <div class="o-grid__cell">
+    <h6>{{ t('app', 'Content') }}</h6>
+    {{ grid_view_widget({
+      'dataProvider': dataProvider,
+      'columns': columns,
+      'tableOptions': {'class':'table table-striped'}
+    }) | raw }}
+  </div>
+</div>
+
+  {{ pjax_end() }}
+
+
+{% apply registerCss %}
+#cr-left-pane {
+  display: none;
+}
+
+#contentSelect {
+  padding-top: 1.333rem;
+}
+
+.layout-grid button > svg,
+.layout-controls button > svg {
+  width: 1.333rem;
+  height: 1.333rem;
+  overflow: visible;
+  color: #494a4b;
+  pointer-events: none;
+}
+
+.layout-grid button:has(svg),
+.layout-controls button:has(svg) {
+  background: lightgrey !important;
+}
+
+.content-filter {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  font-weight: 600;
+  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 0;
+}
+
+.content-filter li {
+  padding: 0;
+}
+
+#contentSelect .content-filter li a {
+  padding: 0;
+}
+
+.layout-row {
+  padding-bottom: 2rem;
+}
+
+.row-controls {
+  flex-basis: min-content;
+}
+{% endapply %}

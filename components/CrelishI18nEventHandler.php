@@ -46,6 +46,7 @@ class CrelishI18nEventHandler
     $deepl = DeeplClientFactory::create('81e2ffda-aa5a-e813-52e8-b416fd65f4ec:fx');
 
     if(Yii::$app->params['crelish']['enable_autotranslation']) {
+
       try {
         $deepTranslation = new TranslationConfig(
           $event->message,
