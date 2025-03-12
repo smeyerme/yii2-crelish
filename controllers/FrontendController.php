@@ -17,6 +17,8 @@ class FrontendController extends CrelishFrontendController {
   {
     parent::init();
 
+    Yii::$app->canonicalHelper->registerAll();
+
   }
 
   public function afterAction($action, $result)
