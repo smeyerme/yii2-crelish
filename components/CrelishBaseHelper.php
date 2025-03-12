@@ -44,6 +44,42 @@ class CrelishBaseHelper
     return Url::to(array_merge([$url], $params), $scheme);
   }
 
+  /**
+   * Generates a URL for the current page in a different language
+   *
+   * @param string $langCode The language code to generate the URL for (e.g., 'en', 'de', 'fr', 'it')
+   * @param array $params Additional URL parameters to include
+   * @param bool $scheme Whether to include the schema/host info in the URL
+   * @return string The URL for the current page in the requested language
+   */
+  public static function getLanguageUrl($langCode, $params = [], $scheme = false): string
+  {
+    // Get the current request path
+    $pathInfo = \Yii::$app->request->getPathInfo();
+
+    // If we have a language prefix enabled, we need to remove the current language prefix
+    if (isset(\Yii::$app->params['crelish']['langprefix']) && \Yii::$app->params['crelish']['langprefix']) {
+      $pathParts = explode('/', $pathInfo, 2);
+
+      // Check if the first part is a language code (exactly 2 characters)
+      if (isset($pathParts[0]) && strlen($pathParts[0]) === 2) {
+        // Remove the language part to get the slug
+        $pathInfo = isset($pathParts[1]) ? $pathParts[1] : '';
+      }
+    }
+
+    // Now we have the slug without language prefix
+    $slug = $pathInfo;
+
+    // If it's empty, use the entry point slug
+    if (empty($slug)) {
+      $slug = \Yii::$app->params['crelish']['entryPoint']['slug'];
+    }
+
+    // Generate URL with the new language using urlFromSlug
+    return self::urlFromSlug($slug, $params, $langCode, $scheme);
+  }
+
   public static function currentUrl($params = [])
   {
     return Url::to(array_merge(['/' . \Yii::$app->controller->entryPoint['slug']], $params));
