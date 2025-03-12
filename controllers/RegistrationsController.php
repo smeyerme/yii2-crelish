@@ -13,6 +13,7 @@
 	use app\workspace\components\RegistrationsExportTransformerSHK;
   use app\workspace\components\RegistrationsExportTransformerWBE;
   use app\workspace\components\RegistrationsExportTransformerWBN;
+  use app\workspace\components\strategies\DHKFormattingStrategy;
   use app\workspace\components\strategies\FLIFormattingStrategy;
   use app\workspace\components\strategies\HTKFormattingStrategy;
   use app\workspace\components\strategies\HTWFormattingStrategy;
@@ -725,131 +726,9 @@
           $formater->format($sheet);
           break;
 				case 'DHK':
-					
-					$sheet->getRowDimension(1)
-						->setRowHeight(45);
-					
-					// Fill grey
-					$sheet->getStyle('A1:N1')
-						->getFill()
-						->setFillType(Fill::FILL_SOLID)
-						->getStartColor()
-						->setRGB('d9eaf1');
-					
-					// fill light orange
-					$sheet->getStyle('O1:R1')
-						->getFill()
-						->setFillType(Fill::FILL_SOLID)
-						->getStartColor()
-						->setRGB('94c4d5');
-					
-					// Fill purple
-					$sheet->getStyle('S1:T1')
-						->getFill()
-						->setFillType(Fill::FILL_SOLID)
-						->getStartColor()
-						->setRGB('ffff98');
-					
-					// fill blue
-					$sheet->getStyle('U1:Z1')
-						->getFill()
-						->setFillType(Fill::FILL_SOLID)
-						->getStartColor()
-						->setRGB('d9eaf1');
-					
-					// fill light green
-					$sheet->getStyle('AA1:AC1')
-						->getFill()
-						->setFillType(Fill::FILL_SOLID)
-						->getStartColor()
-						->setRGB('c5c5fc');
-					
-					$sheet->getStyle('AD1:AF1')
-						->getFill()
-						->setFillType(Fill::FILL_SOLID)
-						->getStartColor()
-						->setRGB('99c3fb');
-					
-					$sheet->getStyle('AG1:AN1')
-						->getFill()
-						->setFillType(Fill::FILL_SOLID)
-						->getStartColor()
-						->setRGB('99c22d');
-					
-					// ALIGNMENT START
-					$sheet->getStyle('A1:' . $sheet->getHighestColumn() . '1')
-						->getAlignment()
-						->setVertical(Alignment::VERTICAL_CENTER)
-						->setWrapText(true);
-					
-					// Vertical top align
-					$sheet->getStyle('A2:' . $sheet->getHighestColumn() . $sheet->getHighestRow())
-						->getAlignment()
-						->setVertical(Alignment::VERTICAL_TOP)
-						->setWrapText(true);
-					
-					// Line breaks
-					$sheet->getStyle('O1:AF1')
-						->getAlignment()
-						->setWrapText(true);
-					
-					$sheet->getStyle('AG2:AH' . $sheet->getHighestRow())
-						->getAlignment()
-						->setWrapText(true);
-					
-					// Text center align.
-					$sheet->getStyle('O1:AF' . $sheet->getHighestRow())
-						->getAlignment()
-						->setHorizontal(Alignment::HORIZONTAL_CENTER);
-					
-					$sheet->getStyle('AJ2:AL' . $sheet->getHighestRow())
-						->getAlignment()
-						->setHorizontal(Alignment::HORIZONTAL_CENTER);
-					
-					// DATA TYPES
-					for ($rowIndex = 2; $rowIndex <= $sheet->getHighestRow(); $rowIndex++) {
-						
-						$sheet->getCell('N' . $rowIndex)
-							->setDataType(\PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
-						
-						$sheet->getCell('AI' . $rowIndex)
-							->setDataType(\PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
-						
-						
-						// Correct phone numbers.
-						if ($rowIndex > 1) {
-							
-							$phoneNumber = $sheet->getCell('L' . $rowIndex)->getValue();
-							$mobileNumber = $sheet->getCell('M' . $rowIndex)->getValue();
-							
-							$phoneCompiled = !empty($phoneNumber) ? " +" . $phoneNumber : '';
-							$mobileCompiled = !empty($mobileNumber) ? " +" . $mobileNumber : '';
-							
-							if (!empty($phoneNumber))
-								$sheet->getCell('L' . $rowIndex)->setDataType(\PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING)->setValue(str_replace("++", "+", $phoneCompiled));
-							if (!empty($mobileNumber))
-								$sheet->getCell('M' . $rowIndex)->setDataType(\PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING)->setValue(str_replace("++", "+", $mobileCompiled));
-						}
-						
-					}
-					
-					$borderStyle = [
-						'borders' => [
-							'outline' => [
-								'borderStyle' => Border::BORDER_MEDIUM,
-								'color' => ['rgb' => '000000'],
-							],
-						],
-					];
-					
-					// HEADER STYLES (BORDER AND BOLD)
-					$sheet->getStyle('A1:' . $sheet->getHighestColumn() . '1')
-						->applyFromArray($borderStyle);
-					
-					$sheet->getStyle('A1:' . $sheet->getHighestColumn() . '1')
-						->getFont()
-						->setBold(true);
-					
+          $formater = new DHKFormattingStrategy();
+          $formater->format($sheet);
+
 					break;
 				case 'SHK':
 					
