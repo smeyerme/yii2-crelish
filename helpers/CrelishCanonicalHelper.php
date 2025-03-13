@@ -44,6 +44,9 @@ class CrelishCanonicalHelper extends Component
   /**
    * Initialize the component with default global configurations
    */
+  /**
+   * Initialize the component with default global configurations
+   */
   public function init(): void
   {
     parent::init();
@@ -75,14 +78,31 @@ class CrelishCanonicalHelper extends Component
       ];
     }
 
-    // Set available languages from params.php or use defaults
+    // Set available languages with domains from params.php or use defaults
     $this->availableLanguages = $paramsConfig['availableLanguages'] ?? $this->availableLanguages;
     if (empty($this->availableLanguages)) {
+      // Default configuration with separate domains
       $this->availableLanguages = [
-        'de' => ['name' => 'Deutsch', 'hreflang' => 'de'],
-        'fr' => ['name' => 'Français', 'hreflang' => 'fr'],
-        'it' => ['name' => 'Italiano', 'hreflang' => 'it'],
-        'en' => ['name' => 'English', 'hreflang' => 'en']
+        'de' => [
+          'name' => 'Deutsch',
+          'hreflang' => 'de',
+          'domain' => 'https://spielegesellschaft.ch'
+        ],
+        'fr' => [
+          'name' => 'Français',
+          'hreflang' => 'fr',
+          'domain' => 'https://societe-des-jeux.ch'
+        ],
+        'it' => [
+          'name' => 'Italiano',
+          'hreflang' => 'it',
+          'domain' => 'https://societa-dei-giochi.ch'
+        ],
+        'en' => [
+          'name' => 'English',
+          'hreflang' => 'en',
+          'domain' => 'https://gaming-society.ch'
+        ]
       ];
     }
   }
@@ -201,13 +221,30 @@ class CrelishCanonicalHelper extends Component
     // Merge with additional parameters
     $canonicalParams = array_merge($canonicalParams, $params);
 
-    // Use current language for canonical URL
+    // Get current language code
     $currentLang = Yii::$app->language;
     if (preg_match('/([a-z]{2})-[A-Z]{2}/', $currentLang, $sub)) {
       $currentLang = $sub[1];
     }
 
-    return CrelishBaseHelper::urlFromSlug($currentPath, $canonicalParams, $currentLang, true);
+    // Get the base path for this language (without language prefix)
+    $slug = $currentPath ?: (\Yii::$app->params['crelish']['entryPoint']['slug'] ?? '');
+
+    // Determine if we need to include language in path (depends on domain structure)
+    $includeLangInPath = \Yii::$app->params['crelish']['langprefix'] ?? false;
+
+    // If we're using domain-per-language approach, path doesn't need language prefix
+    if (isset($this->availableLanguages[$currentLang]['domain'])) {
+      $domain = $this->availableLanguages[$currentLang]['domain'];
+      $langCode = $includeLangInPath ? $currentLang : null;
+
+      // Generate URL with domain-per-language approach
+      $path = CrelishBaseHelper::urlFromSlug($slug, $canonicalParams, $langCode, false);
+      return rtrim($domain, '/') . $path;
+    }
+
+    // Fallback to standard URL generation
+    return CrelishBaseHelper::urlFromSlug($slug, $canonicalParams, $currentLang, true);
   }
 
   /**
@@ -222,11 +259,10 @@ class CrelishCanonicalHelper extends Component
     $view = Yii::$app->view;
     $canonical = $this->getCanonicalUrl($params, $includePagination, $config);
 
-    // Use a unique key for canonical link to prevent duplication
     $view->registerLinkTag([
       'rel' => 'canonical',
       'href' => $canonical
-    ], 'canonical'); // Added key 'canonical'
+    ], 'canonical');
   }
 
   /**
@@ -248,26 +284,9 @@ class CrelishCanonicalHelper extends Component
    * @param bool $includePagination Whether to include pagination
    * @param array $config Override configuration for this specific call
    */
-  /**
-   * Registers both canonical and hreflang tags
-   *
-   * @param array $params Additional parameters
-   * @param bool $includePagination Whether to include pagination
-   * @param array $config Override configuration for this specific call
-   */
   public function registerAll(array $params = [], bool $includePagination = false, array $config = []): void
   {
-    // Generate the canonical URL once
-    $view = Yii::$app->view;
-    $canonical = $this->getCanonicalUrl($params, $includePagination, $config);
-
-    // Register canonical tag with key to prevent duplication
-    $view->registerLinkTag([
-      'rel' => 'canonical',
-      'href' => $canonical
-    ], 'canonical'); // Added key 'canonical'
-
-    // Register hreflang tags
+    $this->register($params, $includePagination, $config);
     $this->registerHreflangOnly($params, $includePagination, $config);
   }
 
@@ -322,15 +341,48 @@ class CrelishCanonicalHelper extends Component
     // Merge with additional parameters
     $canonicalParams = array_merge($canonicalParams, $params);
 
-    foreach ($this->availableLanguages as $langCode => $language) {
-      $langUrl = CrelishBaseHelper::urlFromSlug($currentPath, $canonicalParams, $langCode, true);
+    // Get the base path for the current page (without language prefix)
+    $slug = $currentPath ?: (\Yii::$app->params['crelish']['entryPoint']['slug'] ?? '');
 
-      // Use unique key for each hreflang tag based on language
+    // Determine if we need to include language in path (depends on domain structure)
+    $includeLangInPath = \Yii::$app->params['crelish']['langprefix'] ?? false;
+
+    foreach ($this->availableLanguages as $langCode => $language) {
+      if (isset($language['domain'])) {
+        // For domain per language approach - no language in path
+        $path = CrelishBaseHelper::urlFromSlug($slug, $canonicalParams,
+          $includeLangInPath ? $langCode : null, false);
+        $langUrl = rtrim($language['domain'], '/') . $path;
+      } else {
+        // Fallback to standard URL with language in path
+        $langUrl = CrelishBaseHelper::urlFromSlug($slug, $canonicalParams, $langCode, true);
+      }
+
       $view->registerLinkTag([
         'rel' => 'alternate',
         'hreflang' => $language['hreflang'],
         'href' => $langUrl
-      ], 'hreflang-' . $langCode); // Added unique key
+      ], 'hreflang-' . $langCode);
+    }
+
+    // Register x-default hreflang (typically points to your primary/default language)
+    $defaultLangCode = Yii::$app->params['defaultLanguage'] ?? 'en';
+    if (isset($this->availableLanguages[$defaultLangCode])) {
+      $defaultLanguage = $this->availableLanguages[$defaultLangCode];
+
+      if (isset($defaultLanguage['domain'])) {
+        $path = CrelishBaseHelper::urlFromSlug($slug, $canonicalParams,
+          $includeLangInPath ? $defaultLangCode : null, false);
+        $defaultUrl = rtrim($defaultLanguage['domain'], '/') . $path;
+      } else {
+        $defaultUrl = CrelishBaseHelper::urlFromSlug($slug, $canonicalParams, $defaultLangCode, true);
+      }
+
+      $view->registerLinkTag([
+        'rel' => 'alternate',
+        'hreflang' => 'x-default',
+        'href' => $defaultUrl
+      ], 'hreflang-x-default');
     }
   }
 }
