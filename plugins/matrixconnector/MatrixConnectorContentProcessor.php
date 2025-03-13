@@ -15,6 +15,9 @@ class MatrixConnectorContentProcessor extends Component
 {
   public $data;
 
+  // Cache for processed elements to avoid redundant processing
+  private static $processedElements = [];
+
   public static function processData($key, $data, &$processedData): void
   {
     $layout = null;
@@ -85,7 +88,6 @@ class MatrixConnectorContentProcessor extends Component
 
     // Render elements in this area
     if (isset($data[$areaKey]) && is_array($data[$areaKey])) {
-
       foreach ($data[$areaKey] as $element) {
         $html .= $this->renderElement($element);
       }
@@ -97,18 +99,48 @@ class MatrixConnectorContentProcessor extends Component
 
   private function renderElement($element)
   {
-
-    if ($element && !empty($element['ctype']) && !empty($element['uuid'])) {
-      $sourceData = new CrelishDynamicModel( ['ctype' => $element['ctype'], 'uuid' => $element['uuid']]);
+    // Skip processing if element is not valid
+    if (empty($element) || empty($element['ctype']) || empty($element['uuid'])) {
+      return '';
     }
 
+    // Create a unique cache key for this element
+    $cacheKey = $element['ctype'] . '_' . $element['uuid'];
+
+    // Check if we've already processed this element in this request
+    if (isset(self::$processedElements[$cacheKey])) {
+      return self::$processedElements[$cacheKey];
+    }
+
+    // Create the source data model
+    $sourceData = new CrelishDynamicModel(['ctype' => $element['ctype'], 'uuid' => $element['uuid']]);
+
+    // Process the content
     $sourceDataOut = CrelishBaseContentProcessor::processContent($element['ctype'], $sourceData);
 
     if (!empty($processedData['uuid'])) {
       $sourceDataOut['parentUuid'] = $processedData['uuid'];
     }
 
-    $view = file_exists(\Yii::$app->view->theme->basePath . '/frontend/elements/' . $element['ctype'] . '.twig') ? 'elements/' . $element['ctype'] . '.twig' : $element['ctype'] . '.twig';
-    return \Yii::$app->controller->renderPartial($view, ['data' => $sourceDataOut]);
+    // Determine which view file to use
+    $view = file_exists(\Yii::$app->view->theme->basePath . '/frontend/elements/' . $element['ctype'] . '.twig')
+      ? 'elements/' . $element['ctype'] . '.twig'
+      : $element['ctype'] . '.twig';
+
+    // Render the view
+    $renderedContent = \Yii::$app->controller->renderPartial($view, ['data' => $sourceDataOut]);
+
+    // Cache the rendered content for this request
+    self::$processedElements[$cacheKey] = $renderedContent;
+
+    return $renderedContent;
+  }
+
+  /**
+   * Clear the element cache - useful to call at the beginning of a request
+   */
+  public static function clearElementCache()
+  {
+    self::$processedElements = [];
   }
 }
