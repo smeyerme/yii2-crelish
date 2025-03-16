@@ -69,12 +69,31 @@ class Bootstrap implements BootstrapInterface
           'enableStrictParsing' => TRUE,
           'showScriptName' => FALSE,
           'rules' => [
+            // Sitemap rules
+            [
+              'class' => 'yii\web\UrlRule',
+              'pattern' => 'sitemap-<lang:\w+>',
+              'route' => 'sitemap/language',
+              'suffix' => '.xml',
+            ],
             [
               'class' => 'yii\web\UrlRule',
               'pattern' => 'sitemap',
               'route' => 'sitemap/index',
               'suffix' => '.xml',
             ],
+            [
+              'class' => 'yii\web\UrlRule',
+              'pattern' => 'sitemap-style',
+              'route' => 'sitemap/style',
+              'suffix' => '.xsl',
+            ],
+            [
+              'class' => 'yii\web\UrlRule',
+              'pattern' => 'sitemap-ping',
+              'route' => 'sitemap/ping',
+            ],
+            // Other rules
             [
               'class' => 'yii\web\UrlRule',
               'pattern' => 'document/secure/<id:[\w\-]+>',
@@ -239,6 +258,6 @@ class Bootstrap implements BootstrapInterface
       ]
     ]);
 
-    \Yii::$app->params['crelish']['version'] = 'V0.7.7';
+    \Yii::$app->params['crelish']['version'] = 'V0.7.8';
   }
 }
