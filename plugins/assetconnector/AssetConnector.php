@@ -57,7 +57,7 @@ class AssetConnector extends CrelishFormWidget
     }
 
     // Load datasource.
-    $dataSource = new CrelishDataProvider('asset', ['sort' => ['by' => ['created', 'desc']]]);
+    $dataSource = new CrelishDataProvider('asset', ['sort' => ['defaultOrder' => ['created' => SORT_DESC]]]);
     $dataSource = $dataSource->rawAll();
 
     foreach ($dataSource as $entry) {
@@ -91,7 +91,10 @@ class AssetConnector extends CrelishFormWidget
       $filter = ['freesearch' => $_GET['cr_asset_filter']];
     }
 
-    $modelProvider = new CrelishDataProvider('asset', ['filter' => $filter], NULL);
+    $modelProvider = new CrelishDataProvider('asset', [
+      'filter' => $filter,
+      'sort' => ['defaultOrder' => ['created' => SORT_DESC]]
+    ], NULL);
     $modelColumns = $modelProvider->columns;
 
     $checkCol = [

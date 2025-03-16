@@ -1,1 +1,288 @@
-<?php	/**	 * Created by PhpStorm.	 * User: devop	 * Date: 03.02.16	 * Time: 20:57	 */		namespace giantbits\crelish\components;		use yii\base\Component;	use yii\data\ArrayDataProvider;	use yii\helpers\FileHelper;	use yii\helpers\Json;	use yii\widgets\LinkPager;	use function _\filter;	use function _\flatten;	use function _\get;		/**	 *	 * @property-read \yii\data\ArrayDataProvider $provider	 * @property-read mixed $columns	 * @property-read array $sorting	 * @property-read \giantbits\crelish\components\CrelishDynamicJsonModel $filters	 */	class CrelishJsonDataProvider extends Component	{		private $ctype;		private $allModels;		private $definitions;		private $key = 'uuid';		private $uuid;		private $pathAlias;		private $pageSize = 30;				public function __construct($ctype, $settings = [], $uuid = NULL, $forceFull = FALSE)		{			$this->ctype = $ctype;			$this->pathAlias = ($this->ctype == 'elements') ? '@app/workspace' : '@app/workspace/data';						if (!empty($uuid)) {				$this->uuid = $uuid;				if ($theFile = @file_get_contents($this->resolveDataSource($uuid))) {					$this->allModels[] = $this->processSingle(\yii\helpers\Json::decode($theFile), TRUE);				} else {					$this->allModels[] = [];				}							} else {				$dataModels = \Yii::$app->cache->get('crc_' . $ctype);								if ($dataModels === FALSE || $forceFull) {					// $data is not found in cache, calculate it from scratch					$dataModels = $this->parseFolderContent($this->ctype);					// store $data in cache so that it can be retrieved next time					\Yii::$app->cache->set('crc_' . $ctype, $dataModels);				}								$this->allModels = $dataModels;								if (array_key_exists('filter', $settings,)) {					if (!empty($settings['filter'])) {						$this->filterModels($settings['filter']);					}				}								if (array_key_exists('sort', $settings)) {					if (!empty($settings['sort'])) {						$this->sortModels($settings['sort']);					}				}								if (array_key_exists('limit', $settings)) {					if (!empty($settings['limit'])) {						$this->pageSize = $settings['limit'];					}				}			}						parent::__construct();		}				public function filterModels($filter)		{						if (is_array($filter)) {				foreach ($filter as $key => $keyValue) {										if (!empty($keyValue)) {						if (is_array($keyValue)) {							if ($keyValue[0] == 'noempty') {								$this->allModels = array_values(filter($this->allModels, function ($value) use ($key, $keyValue) {									return $value[$key] != '';								}));							}														if ($keyValue[0] == 'strict') {								$this->allModels = array_values(filter($this->allModels, function ($value) use ($key, $keyValue) {									return $value[$key] == $keyValue[1];								}));							}														if ($keyValue[0] == 'lt') {								$this->allModels = filter($this->allModels, function ($value) use ($key, $keyValue) {									return $value[$key] < $keyValue[1];								});							}														if ($keyValue[0] == 'gt') {								$this->allModels = filter($this->allModels, function ($value) use ($key, $keyValue) {									return $value[$key] > $keyValue[1];								});							}							if ($keyValue[0] == 'between') {								$this->allModels = filter($this->allModels, function ($value) use ($key, $keyValue) {									return (										($value[$key] >= $keyValue[1] && $value[$key] <= $keyValue[2]) ||										($value[$key] >= $keyValue[2] && $value[$key] <= $keyValue[1])									);								});							}						} elseif (is_bool($keyValue)) {							$this->allModels = filter($this->allModels, function ($value) use ($key, $keyValue) {								return $value[$key] === $keyValue;							});						} else {														// todo: Optimize filter with param for "like" and "equal" filtering							if ($key === 'slug') {								$this->allModels = filter($this->allModels, function ($value) use ($key, $keyValue) {									return $value[$key] === $keyValue;								});							} elseif ($key === 'state') {								$this->allModels = filter($this->allModels, function ($value) use ($key, $keyValue) {									return $value[$key] === $keyValue;								});							} elseif ($key === 'freesearch') {								$this->allModels = filter($this->allModels, function ($value) use ($keyValue) {									$isMatch = TRUE;																		$itemString = strtolower(implode("#", flatten($value)));									$searchFragments = explode(" ", trim($keyValue));																		foreach ($searchFragments as $fragment) {										if (strpos($itemString, strtolower($fragment)) === FALSE) {											$isMatch = FALSE;										}									}									return $isMatch;								});							} else {																$this->allModels = filter($this->allModels, function ($model) use ($key, $keyValue) {									// Handle complex key with '|'									if (strpos($key, "|") !== false) {										$key = str_replace("|", ".", $key);									}																		// Handle array values and flatten them to a string									if (!empty($model[$key]) && is_array($model[$key])) {										$model[$key] = implode("||", $model[$key]);									}																		// Retrieve the value at the key, handling nested paths									$valueToCheck = get($model, $key);																		// Explode the keyValue into final filters									$finalFilters = explode(";", $keyValue);																		// Multifilter - Check for matches									$isMatch = false;									foreach ($finalFilters as $subFilter) {										if (stripos(html_entity_decode($valueToCheck), html_entity_decode($subFilter)) !== false) {											$isMatch = true;											break; // stop checking once a match is found										}									}																		return $isMatch;								});							}						}					}				}			}		}				public function sortModels($sort)		{						$sortparams[] = $this->allModels;      if (is_array($sort['by'])) {				foreach ($sort['by'] as $item) {					switch ($item) {						case 'asc':							$sortparams[] = SORT_ASC;							break;						case 'desc':							$sortparams[] = SORT_DESC;							break;						default:							$sortparams[] = $item;					}				}			}						$this->allModels = call_user_func_array([				$this,				'array_orderby',			], $sortparams);		}				public function all()		{			$provider = new ArrayDataProvider([								'key' => 'id',								'allModels' => $this->allModels,								'pagination' => [										'totalCount' => count($this->allModels),										'pageSize' => $this->pageSize,										'forcePageParam' => TRUE,								],						]);			$models = $provider->getModels();			$pager = LinkPager::widget([								'pagination' => $provider->getPagination(),								'maxButtonCount' => 10,						]);			$result = ['models' => array_values($models), 'pager' => $pager];						return $result;		}				public function one()		{						if (!empty($this->allModels[0])) {				return $this->allModels[0];			}			return NULL;		}				public function raw()		{			$getParams = $_GET;						$provider = new ArrayDataProvider([				'key' => $this->key,				'allModels' => $this->allModels,				'sort' => $this->getSorting(),				'pagination' => [					'totalCount' => count($this->allModels),					'pageSize' => $this->pageSize,					'forcePageParam' => TRUE,					'route' => (!empty(\Yii::$app->getRequest()						->getQueryParam('pathRequested'))) ? '/' . \Yii::$app->getRequest()							->getQueryParam('pathRequested') : NULL,					'params' => array_merge([						'page' => !empty($_GET['page']) ? $_GET['page'] : '',						'category' => !empty($_GET['category']) ? $_GET['category'] : '',						'branch' => !empty($_GET['branch']) ? $_GET['branch'] : '',						'title' => !empty($_GET['title']) ? $_GET['title'] : '',						'sort' => !empty($_GET['sort']) ? $_GET['sort'] : '',						'per-page' => !empty($_GET['per-page']) ? $_GET['per-page'] : '',						'kind' => !empty($_GET['kind']) ? $_GET['kind'] : '',						'ctype' => !empty($_GET['ctype']) ? $_GET['ctype'] : '',					], $getParams),				],			]);						return $provider;		}				public function getProvider()		{			return $this->raw();		}				public function rawAll()		{						return $this->allModels;					}				public function delete()		{						$ds = DIRECTORY_SEPARATOR;						if (@unlink(\Yii::getAlias($this->pathAlias) . $ds . $this->type . $ds . $this->uuid . '.json')) {								\Yii::$app->cache->flush();							}									return;					}				public function getDefinitions()		{									$this->definitions = new \stdClass();						$this->definitions->fields = [];									if ($this->ctype !== 'elements') {								$filePath = \Yii::getAlias('@app/workspace/elements') . DIRECTORY_SEPARATOR . $this->ctype . '.json';								if (file_exists($filePath)) {										$elementStructure = Json::decode(file_get_contents($filePath), FALSE);									}												// Add core fields.								$this->definitions->fields[] = Json::decode('{ "label": "UUID", "key": "uuid", "type": "textInput", "visibleInGrid": false, "rules": [["string", {"max": 128}]], "options": {"disabled":true}}', FALSE);								$this->definitions->fields[] = Json::decode('{ "label": "ctype", "key": "ctype", "type": "textInput", "visibleInGrid": false, "rules": [["string", {"max": 128}]], "options": {"disabled":true}}', FALSE);								if (!empty($elementStructure) && property_exists($elementStructure, 'fields')) {										$this->definitions->fields = array_merge($this->definitions->fields, $elementStructure->fields);										$this->definitions->fields[] = Json::decode('{ "label": "State", "key": "state", "type": "textInput", "visibleInGrid": true, "transform": "state", "rules": [["string", {"max": 128}]], "options": {"disabled":true}}', FALSE);															if (!empty($elementStructure) && property_exists($elementStructure, 'sortDefault')) {												$this->definitions->sortDefault = $elementStructure->sortDefault;											}									}							}									return $this->definitions;					}				public function getSorting()		{			$sorting = [];			$attributes = [];						if (!empty($this->definitions)) {				foreach ($this->definitions->fields as $field) {					if (property_exists($field, 'sortable') && $field->sortable == TRUE) {						if (!is_array($field->sortable)) {							$attributes[] = (property_exists($field, 'gridField') && !empty($field->gridField)) ? $field->gridField : $field->key;						} else {							$attributes[$field->key] = [];														if (property_exists($field, 'sortDefault')) {								$attributes[$field->key]['default'] = constant($field->sortDefault);							}						}					}				}								$sorting['attributes'] = $attributes;								if (property_exists($this->definitions, "sortDefault")) {					foreach ($this->definitions->sortDefault as $key => $value) {						$sorting['defaultOrder'] = [$key => constant($value)];					}				}			}						return $sorting;		}				public function getFilters()		{			$model = new CrelishDynamicJsonModel(['systitle'], [				'ctype' => $this->ctype,			]);						if (!empty($_GET['CrelishDynamicJsonModel'])) {				foreach ($_GET['CrelishDynamicJsonModel'] as $filter => $value) {					if (!empty($value)) {						$filters[$filter] = $value;						$_GET[$filter] = $value;					}				}			}						if (!empty($_GET['CrelishDynamicJsonModel'])) {				$model->attributes = $_GET['CrelishDynamicJsonModel'];			}						return $model;		}				public function getColumns()		{			$columns = [];						foreach ($this->getDefinitions()->fields as $field) {				if (!empty($field->visibleInGrid) && $field->visibleInGrid) {					$label = (property_exists($field, 'label') && !empty($field->label)) ? $field->label : NULL;					$format = (property_exists($field, 'format') && !empty($field->format)) ? $field->format : 'text';					$columns[] = (property_exists($field, 'gridField') && !empty($field->gridField)) ? [						'attribute' => $field->gridField,						'label' => $label,						'format' => $format,					] : [						'attribute' => $field->key,						'label' => $label,						'format' => $format,					];				}			}						/*$columns[] = [					'class' => ActionColumn::class,					'template' => '{update}',					'buttons' => [							'update' => function ($url, $model) {									return Html::a('<span class="glyphicon glyphicon-edit"></span>', $url, [											'title' => \Yii::t('app', 'Edit'),											'data-pjax' => '0'									]);							}					],					'urlCreator' => function ($action, $model, $key, $index) {							if ($action === 'update') {									$url = Url::to([											'content/update',											'ctype' => $this->ctype,											'uuid' => $model['uuid']									]);									return $url;							}					}			];*/						return array_values($columns);		}				private function resolveDataSource($uuid = '')		{			$ds = DIRECTORY_SEPARATOR;			$fileDataSource = '';						$langDataFolder = (\Yii::$app->params['defaultLanguage'] != \Yii::$app->language) ? $ds . \Yii::$app->language : '';			$fileDataSource = \Yii::getAlias($this->pathAlias) . $ds . $this->ctype . $langDataFolder . $ds . $uuid . '.json';						if (!file_exists(\Yii::getAlias($this->pathAlias) . $ds . $this->ctype . $langDataFolder . $ds . $uuid . '.json')) {				$fileDataSource = \Yii::getAlias($this->pathAlias) . $ds . $this->ctype . $ds . $uuid . '.json';			}						return $fileDataSource;		}				private function parseFolderContent($folder)		{			$filesArr = [];			$allModels = [];			$fullFolder = \Yii::getAlias($this->pathAlias) . DIRECTORY_SEPARATOR . $folder;						if (!file_exists($fullFolder)) {				FileHelper::createDirectory($fullFolder);			}						$files = FileHelper::findFiles($fullFolder, ['recursive' => FALSE]);			if (isset($files[0])) {				foreach ($files as $file) {					$filesArr[] = $file;				}			}						foreach ($filesArr as $file) {				$finalArr = [];				$content = file_get_contents($file);				$modelArr = json_decode($content, TRUE);								if (is_null($modelArr)) {					$segments = explode(DIRECTORY_SEPARATOR, $file);					CrelishBaseController::addError("Invalid JSON in " . array_pop($segments));					continue;				}								$modelArr['id'] = $file;				$modelArr['ctype'] = $this->ctype;								// Handle specials like in frontend.				$elementDefinition = $this->getDefinitions();								foreach ($modelArr as $attr => $value) {					CrelishBaseContentProcessor::processFieldData($this->ctype, $elementDefinition, $attr, $value, $finalArr);				}								$allModels[] = $finalArr;			}						return $allModels;		}				private function processSingle($data)		{						$finalArr = [];						$modelArr = (array)$data;						// Handle specials like in frontend.			$elementDefinition = $this->getDefinitions();						// todo: Handle special fields... uncertain about this.			foreach ($modelArr as $attr => $value) {				CrelishBaseContentProcessor::processFieldData($this->ctype, $elementDefinition, $attr, $value, $finalArr);			}						return $finalArr;		}				private function array_orderby()		{						$args = func_get_args();			$data = array_shift($args);						foreach ($args as $n => $field) {								if (is_string($field)) {										$tmp = [];										foreach ($data as $key => $row) {												if (strpos($field, ".") !== FALSE) {							$tmp[$key] = \_\get($row, $field);						} else {							$tmp[$key] = $row[$field];						}					}					$args[$n] = $tmp;				}			}      $args[] = &$data;			@call_user_func_array('array_multisort', $args);			return array_pop($args);		}	}
+<?php
+	/**
+	 * Created by PhpStorm.
+	 * User: devop
+	 * Date: 03.02.16
+	 * Time: 20:57
+	 */
+	
+	namespace giantbits\crelish\components;
+	
+	use yii\base\Component;
+	use yii\data\ArrayDataProvider;
+	use yii\data\DataProviderInterface;
+	use yii\helpers\FileHelper;
+	use yii\helpers\Json;
+	use yii\widgets\LinkPager;
+	use function _\filter;
+	use function _\flatten;
+	use function _\get;
+	
+	/**
+	 * @deprecated since version 2.0.0, use CrelishDataManager instead.
+	 * This class is maintained for backward compatibility and will be removed in a future version.
+	 *
+	 * @property-read \yii\data\ArrayDataProvider $provider
+	 * @property-read mixed $columns
+	 * @property-read array $sorting
+	 * @property-read \giantbits\crelish\components\CrelishDynamicJsonModel $filters
+	 */
+	class CrelishJsonDataProvider extends Component
+	{
+		private $ctype;
+		private $allModels;
+		private $definitions;
+		private $key = 'uuid';
+		private $uuid;
+		private $pathAlias;
+		private $pageSize = 30;
+		private $dataManager;
+		
+		/**
+		 * Constructor
+		 * 
+		 * @param string $ctype Content type
+		 * @param array $settings Settings
+		 * @param string|null $uuid UUID
+		 * @param bool $forceFull Force full load
+		 */
+		public function __construct($ctype, $settings = [], $uuid = NULL, $forceFull = FALSE)
+		{
+			$this->ctype = $ctype;
+			$this->uuid = $uuid;
+			
+			// Use the new data manager
+			$this->dataManager = new CrelishDataManager($ctype, $settings, $uuid);
+			$this->definitions = $this->dataManager->getDefinitions();
+			
+			if (!empty($uuid)) {
+				$this->allModels = [$this->dataManager->one()];
+			} else {
+				$this->allModels = $this->dataManager->rawAll();
+			}
+			
+			parent::__construct();
+		}
+		
+		/**
+		 * Filter models
+		 * 
+		 * @param array $filter Filter
+		 * @return void
+		 */
+		public function filterModels($filter)
+		{
+			// This is now handled by the data manager
+			$this->allModels = $this->dataManager->rawAll();
+		}
+		
+		/**
+		 * Sort models
+		 * 
+		 * @param array $sort Sort
+		 * @return void
+		 */
+		public function sortModels($sort)
+		{
+			// This is now handled by the data manager
+			$this->allModels = $this->dataManager->rawAll();
+		}
+		
+		/**
+		 * Get all records
+		 * 
+		 * @return array Records and pagination
+		 */
+		public function all()
+		{
+			return $this->dataManager->all();
+		}
+		
+		/**
+		 * Get a single record
+		 * 
+		 * @return array|null Record
+		 */
+		public function one()
+		{
+			return $this->dataManager->one();
+		}
+		
+		/**
+		 * Get a data provider
+		 * 
+		 * @return DataProviderInterface Data provider
+		 */
+		public function getProvider(): DataProviderInterface
+		{
+			return $this->dataManager->getProvider();
+		}
+		
+		/**
+		 * Get all records as raw data
+		 * 
+		 * @return array Records
+		 */
+		public function rawAll()
+		{
+			return $this->dataManager->rawAll();
+		}
+		
+		/**
+		 * Delete a record
+		 * 
+		 * @return bool Whether the deletion was successful
+		 */
+		public function delete()
+		{
+			return $this->dataManager->delete();
+		}
+		
+		/**
+		 * Get element definitions
+		 * 
+		 * @return \stdClass Element definitions
+		 */
+		public function getDefinitions(): \stdClass
+		{
+			return $this->dataManager->getDefinitions();
+		}
+		
+		/**
+		 * Get sorting configuration
+		 * 
+		 * @return array Sorting configuration
+		 */
+		public function getSorting()
+		{
+			return $this->dataManager->getSorting();
+		}
+		
+		/**
+		 * Get filters
+		 * 
+		 * @return CrelishDynamicJsonModel Filters
+		 */
+		public function getFilters(): CrelishDynamicJsonModel
+		{
+			return $this->dataManager->getFilters();
+		}
+		
+		/**
+		 * Get columns configuration
+		 * 
+		 * @return array Columns configuration
+		 */
+		public function getColumns()
+		{
+			return $this->dataManager->getColumns();
+		}
+		
+		private function resolveDataSource($uuid = '')
+		{
+			$ds = DIRECTORY_SEPARATOR;
+			$fileDataSource = '';
+			
+			$langDataFolder = (\Yii::$app->params['defaultLanguage'] != \Yii::$app->language) ? $ds . \Yii::$app->language : '';
+			$fileDataSource = \Yii::getAlias($this->pathAlias) . $ds . $this->ctype . $langDataFolder . $ds . $uuid . '.json';
+			
+			if (!file_exists(\Yii::getAlias($this->pathAlias) . $ds . $this->ctype . $langDataFolder . $ds . $uuid . '.json')) {
+				$fileDataSource = \Yii::getAlias($this->pathAlias) . $ds . $this->ctype . $ds . $uuid . '.json';
+			}
+			
+			return $fileDataSource;
+		}
+		
+		private function parseFolderContent($folder)
+		{
+			$filesArr = [];
+			$allModels = [];
+			$fullFolder = \Yii::getAlias($this->pathAlias) . DIRECTORY_SEPARATOR . $folder;
+			
+			if (!file_exists($fullFolder)) {
+				FileHelper::createDirectory($fullFolder);
+			}
+			
+			$files = FileHelper::findFiles($fullFolder, ['recursive' => FALSE]);
+			if (isset($files[0])) {
+				foreach ($files as $file) {
+					$filesArr[] = $file;
+				}
+			}
+			
+			foreach ($filesArr as $file) {
+				$finalArr = [];
+				$content = file_get_contents($file);
+				$modelArr = json_decode($content, TRUE);
+				
+				if (is_null($modelArr)) {
+					$segments = explode(DIRECTORY_SEPARATOR, $file);
+					CrelishBaseController::addError("Invalid JSON in " . array_pop($segments));
+					continue;
+				}
+				
+				$modelArr['id'] = $file;
+				$modelArr['ctype'] = $this->ctype;
+				
+				// Handle specials like in frontend.
+				$elementDefinition = $this->getDefinitions();
+				
+				foreach ($modelArr as $attr => $value) {
+					CrelishBaseContentProcessor::processFieldData($this->ctype, $elementDefinition, $attr, $value, $finalArr);
+				}
+				
+				$allModels[] = $finalArr;
+			}
+			
+			return $allModels;
+		}
+		
+		private function processSingle($data)
+		{
+			
+			$finalArr = [];
+			
+			$modelArr = (array)$data;
+			
+			// Handle specials like in frontend.
+			$elementDefinition = $this->getDefinitions();
+			
+			// todo: Handle special fields... uncertain about this.
+			foreach ($modelArr as $attr => $value) {
+				CrelishBaseContentProcessor::processFieldData($this->ctype, $elementDefinition, $attr, $value, $finalArr);
+			}
+			
+			return $finalArr;
+		}
+		
+		private function array_orderby()
+		{
+			
+			$args = func_get_args();
+			$data = array_shift($args);
+			
+			foreach ($args as $n => $field) {
+				
+				if (is_string($field)) {
+					
+					$tmp = [];
+					
+					foreach ($data as $key => $row) {
+						
+						if (strpos($field, ".") !== FALSE) {
+							$tmp[$key] = \_\get($row, $field);
+						} else {
+							$tmp[$key] = $row[$field];
+						}
+					}
+					$args[$n] = $tmp;
+				}
+			}
+
+      $args[] = &$data;
+			@call_user_func_array('array_multisort', $args);
+
+			return array_pop($args);
+		}
+	}
+
