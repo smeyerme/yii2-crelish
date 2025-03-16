@@ -1,0 +1,159 @@
+{
+  "key": "landing_page",
+  "storage": "db",
+  "label": "Landing Pages",
+  "category": "Marketing",
+  "selectable": true,
+  "tabs": [
+    {
+      "label": "Content",
+      "key": "content",
+      "groups": [
+        {
+          "label": "Basic Information",
+          "key": "basic",
+          "settings": {
+            "width": 60
+          },
+          "fields": [
+            "systitle",
+            "displaytitle",
+            "description"
+          ]
+        },
+        {
+          "label": "Layout",
+          "key": "layout",
+          "settings": {
+            "width": 40
+          },
+          "fields": [
+            "template",
+            "headerImage"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Widgets",
+      "key": "widgets",
+      "groups": [
+        {
+          "label": "Page Widgets",
+          "key": "widgets",
+          "fields": [
+            "pageWidgets"
+          ]
+        },
+        {
+          "label": "SEO",
+          "key": "seo",
+          "fields": [
+            "metadescription",
+            "metakeywords",
+            "slug"
+          ]
+        }
+      ]
+    }
+  ],
+  "fields": [
+    {
+      "label": "Title (Internal)",
+      "key": "systitle",
+      "type": "textInput",
+      "visibleInGrid": true,
+      "rules": [
+        ["required"],
+        ["string", {"max": 128}]
+      ],
+      "sortable": true
+    },
+    {
+      "label": "Title (Display)",
+      "key": "displaytitle",
+      "type": "textInput",
+      "visibleInGrid": true,
+      "rules": [
+        ["required"],
+        ["string", {"max": 128}]
+      ]
+    },
+    {
+      "label": "Description",
+      "key": "description",
+      "type": "textarea",
+      "visibleInGrid": false,
+      "rules": [
+        ["string", {"max": 1000}]
+      ]
+    },
+    {
+      "label": "Template",
+      "key": "template",
+      "type": "dropDownList",
+      "visibleInGrid": true,
+      "items": {
+        "standard": "Standard Layout",
+        "fullwidth": "Full Width Layout",
+        "sidebar": "With Sidebar"
+      },
+      "rules": [
+        ["required"]
+      ]
+    },
+    {
+      "label": "Header Image",
+      "key": "headerImage",
+      "type": "assetConnector",
+      "visibleInGrid": false,
+      "rules": [
+        ["safe"]
+      ]
+    },
+    {
+      "label": "Page Widgets",
+      "key": "pageWidgets",
+      "type": "widgetConnector",
+      "visibleInGrid": false,
+      "config": {
+        "allowedWidgets": ["hero", "textBlock", "imageGallery", "contactForm", "testimonials"]
+      },
+      "rules": [
+        ["safe"]
+      ]
+    },
+    {
+      "label": "Meta Description",
+      "key": "metadescription",
+      "type": "textInput",
+      "visibleInGrid": false,
+      "rules": [
+        ["string", {"max": 200}]
+      ]
+    },
+    {
+      "label": "Meta Keywords",
+      "key": "metakeywords",
+      "type": "textInput",
+      "visibleInGrid": false,
+      "rules": [
+        ["string", {"max": 200}]
+      ]
+    },
+    {
+      "label": "Slug",
+      "key": "slug",
+      "type": "textInput",
+      "visibleInGrid": true,
+      "rules": [
+        ["required"],
+        ["string", {"max": 128}]
+      ],
+      "sortable": true
+    }
+  ],
+  "sortDefault": {
+    "systitle": "SORT_ASC"
+  }
+} 

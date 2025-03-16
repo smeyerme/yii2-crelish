@@ -4,8 +4,9 @@ namespace giantbits\crelish\components;
 
 use Yii;
 use yii\data\ActiveDataProvider;
-use yii\db\ActiveQuery;
-use yii\db\Expression;
+use yii\data\DataProviderInterface;
+use yii\db\ActiveRecord;
+use yii\helpers\Inflector;
 use yii\helpers\Json;
 
 /**
@@ -14,31 +15,59 @@ use yii\helpers\Json;
 class CrelishDbStorage implements CrelishDataStorage
 {
     /**
-     * {@inheritdoc}
+     * Find a single record by UUID
+     * 
+     * @param string $ctype Content type
+     * @param string $uuid UUID of the record
+     * @return array|null The record data or null if not found
      */
     public function findOne(string $ctype, string $uuid): ?array
     {
-        $modelClass = $this->getModelClass($ctype);
-        $model = $modelClass::findOne(['uuid' => $uuid]);
+        $model = $this->getModelClass($ctype)::findOne($uuid);
         
-        if (!$model) {
+        if ($model === null) {
             return null;
         }
         
-        return $this->modelToArray($model, $ctype);
+        return $model->attributes;
     }
     
     /**
-     * {@inheritdoc}
+     * Find all records of a given content type
+     * 
+     * @param string $ctype Content type
+     * @param array $filter Optional filter criteria
+     * @param array $sort Optional sorting criteria
+     * @param int $limit Optional limit
+     * @return array Array of records
      */
     public function findAll(string $ctype, array $filter = [], array $sort = [], int $limit = 0): array
     {
-        $modelClass = $this->getModelClass($ctype);
-        $query = $modelClass::find();
+        $query = $this->getModelClass($ctype)::find();
         
-        $this->applyFilter($query, $filter, $ctype);
-        $this->applySort($query, $sort);
+        // Apply filters
+        if (!empty($filter)) {
+            foreach ($filter as $attribute => $value) {
+                if (is_array($value) && isset($value[0]) && $value[0] === 'strict') {
+                    $query->andWhere([$attribute => $value[1]]);
+                } else {
+                    $query->andWhere(['like', $attribute, $value]);
+                }
+            }
+        }
         
+        // Apply sorting - handle both array format and defaultOrder format
+        if (!empty($sort)) {
+            if (isset($sort['defaultOrder'])) {
+                // If defaultOrder is provided, use it directly
+                $query->orderBy($sort['defaultOrder']);
+            } else {
+                // Otherwise use the sort array as is
+                $query->orderBy($sort);
+            }
+        }
+        
+        // Apply limit
         if ($limit > 0) {
             $query->limit($limit);
         }
@@ -47,14 +76,19 @@ class CrelishDbStorage implements CrelishDataStorage
         $result = [];
         
         foreach ($models as $model) {
-            $result[] = $this->modelToArray($model, $ctype);
+            $result[] = $model->attributes;
         }
         
         return $result;
     }
     
     /**
-     * {@inheritdoc}
+     * Save a record
+     * 
+     * @param string $ctype Content type
+     * @param array $data Record data
+     * @param bool $isNew Whether this is a new record
+     * @return bool Whether the save was successful
      */
     public function save(string $ctype, array $data, bool $isNew = true): bool
     {
@@ -80,10 +114,48 @@ class CrelishDbStorage implements CrelishDataStorage
             $data['updated'] = time();
         }
         
+        // Get element definition to check field types
+        $elementDefinition = CrelishDynamicModel::loadElementDefinition($ctype);
+        
         // Set model attributes
         foreach ($data as $key => $value) {
-            // Handle JSON fields
-            if (is_array($value) && $model->hasAttribute($key)) {
+            // Skip if the model doesn't have this attribute
+            if (!$model->hasAttribute($key)) {
+                continue;
+            }
+            
+            // Handle special field types
+            if ($elementDefinition && property_exists($elementDefinition, 'fields')) {
+                $fieldDef = null;
+                
+                // Find the field definition
+                foreach ($elementDefinition->fields as $field) {
+                    if (property_exists($field, 'key') && $field->key === $key) {
+                        $fieldDef = $field;
+                        break;
+                    }
+                }
+                
+                if ($fieldDef && property_exists($fieldDef, 'type')) {
+                    // Handle assetConnector - store only the UUID
+                    if ($fieldDef->type === 'assetConnector' && is_array($value) && isset($value['uuid'])) {
+                        $model->$key = $value['uuid'];
+                        continue;
+                    }
+                    
+                    // Handle JSON fields
+                    if ((property_exists($fieldDef, 'transform') && $fieldDef->transform === 'json') || 
+                        in_array($fieldDef->type, ['checkboxList', 'matrixConnector', 'widgetConnector'])) {
+                        if (is_array($value)) {
+                            $model->$key = Json::encode($value);
+                            continue;
+                        }
+                    }
+                }
+            }
+            
+            // Default handling
+            if (is_array($value)) {
                 $model->$key = Json::encode($value);
             } else {
                 $model->$key = $value;
@@ -91,8 +163,6 @@ class CrelishDbStorage implements CrelishDataStorage
         }
         
         // Process special fields using field processors
-        $elementDefinition = CrelishDynamicModel::loadElementDefinition($ctype);
-        
         if ($elementDefinition) {
             foreach ($elementDefinition->fields as $field) {
                 if (property_exists($field, 'type') && isset($data[$field->key])) {
@@ -126,14 +196,17 @@ class CrelishDbStorage implements CrelishDataStorage
     }
     
     /**
-     * {@inheritdoc}
+     * Delete a record
+     * 
+     * @param string $ctype Content type
+     * @param string $uuid UUID of the record to delete
+     * @return bool Whether the deletion was successful
      */
     public function delete(string $ctype, string $uuid): bool
     {
-        $modelClass = $this->getModelClass($ctype);
-        $model = $modelClass::findOne(['uuid' => $uuid]);
+        $model = $this->getModelClass($ctype)::findOne($uuid);
         
-        if (!$model) {
+        if ($model === null) {
             return false;
         }
         
@@ -141,16 +214,38 @@ class CrelishDbStorage implements CrelishDataStorage
     }
     
     /**
-     * {@inheritdoc}
+     * Get a data provider for the given content type
+     * 
+     * @param string $ctype Content type
+     * @param array $filter Optional filter criteria
+     * @param array $sort Optional sorting criteria
+     * @param int $pageSize Optional page size for pagination
+     * @return DataProviderInterface Data provider
      */
-    public function getDataProvider(string $ctype, array $filter = [], array $sort = [], int $pageSize = 30): \yii\data\DataProviderInterface
+    public function getDataProvider(string $ctype, array $filter = [], array $sort = [], int $pageSize = 30): DataProviderInterface
     {
-        $modelClass = $this->getModelClass($ctype);
-        $query = $modelClass::find();
+        $query = $this->getModelClass($ctype)::find();
         
-        $this->applyFilter($query, $filter, $ctype);
+        // Apply filters
+        if (!empty($filter)) {
+            foreach ($filter as $attribute => $value) {
+                if (is_array($value) && isset($value[0]) && $value[0] === 'strict') {
+                    $query->andWhere([$attribute => $value[1]]);
+                } else {
+                    $query->andWhere(['like', $attribute, $value]);
+                }
+            }
+        }
         
-        $sortConfig = $this->buildSortConfig($ctype);
+        // Prepare sort configuration
+        $sortConfig = [];
+        if (!empty($sort)) {
+            if (isset($sort['defaultOrder'])) {
+                $sortConfig['defaultOrder'] = $sort['defaultOrder'];
+            } else {
+                $sortConfig['defaultOrder'] = $sort;
+            }
+        }
         
         return new ActiveDataProvider([
             'query' => $query,
@@ -162,192 +257,21 @@ class CrelishDbStorage implements CrelishDataStorage
     }
     
     /**
-     * Apply filters to a query
-     * 
-     * @param ActiveQuery $query Query to filter
-     * @param array $filter Filter criteria
-     * @param string $ctype Content type
-     */
-    private function applyFilter(ActiveQuery $query, array $filter, string $ctype): void
-    {
-        $elementDefinition = CrelishDynamicModel::loadElementDefinition($ctype);
-        
-        foreach ($filter as $key => $value) {
-            if (empty($value)) {
-                continue;
-            }
-            
-            if (is_array($value)) {
-                if ($value[0] === 'strict') {
-                    $query->andWhere([$key => $value[1]]);
-                } elseif ($value[0] === 'noempty') {
-                    $query->andWhere(['!=', $key, '']);
-                    $query->andWhere(['IS NOT', $key, null]);
-                } elseif ($value[0] === 'lt') {
-                    $query->andWhere(['<', $key, $value[1]]);
-                } elseif ($value[0] === 'gt') {
-                    $query->andWhere(['>', $key, $value[1]]);
-                } elseif ($value[0] === 'between') {
-                    $query->andWhere(['between', $key, min($value[1], $value[2]), max($value[1], $value[2])]);
-                }
-            } elseif ($key === 'freesearch') {
-                $searchFragments = explode(" ", trim($value));
-                $searchableFields = [];
-                
-                // Determine which fields to search in
-                if ($elementDefinition) {
-                    foreach ($elementDefinition->fields as $field) {
-                        if (!property_exists($field, 'virtual') || !$field->virtual) {
-                            $searchableFields[] = $field->key;
-                        }
-                    }
-                }
-                
-                if (empty($searchableFields)) {
-                    continue;
-                }
-                
-                $orConditions = ['or'];
-                
-                foreach ($searchFragments as $fragment) {
-                    foreach ($searchableFields as $field) {
-                        $orConditions[] = ['like', $field, $fragment];
-                    }
-                }
-                
-                $query->andWhere($orConditions);
-            } elseif (is_bool($value)) {
-                $query->andWhere([$key => $value]);
-            } else {
-                if ($key === 'slug' || $key === 'state') {
-                    $query->andWhere([$key => $value]);
-                } else {
-                    $query->andWhere(['like', $key, $value]);
-                }
-            }
-        }
-    }
-    
-    /**
-     * Apply sorting to a query
-     * 
-     * @param ActiveQuery $query Query to sort
-     * @param array $sort Sort criteria
-     */
-    private function applySort(ActiveQuery $query, array $sort): void
-    {
-        if (empty($sort['by']) || !is_array($sort['by'])) {
-            return;
-        }
-        
-        $orderBy = [];
-        
-        foreach ($sort['by'] as $index => $field) {
-            if (isset($sort['by'][$index + 1])) {
-                $direction = $sort['by'][$index + 1];
-                
-                if ($direction === 'asc' || $direction === 'desc') {
-                    $orderBy[$field] = $direction === 'asc' ? SORT_ASC : SORT_DESC;
-                    $index++; // Skip the direction in the next iteration
-                } else {
-                    $orderBy[$field] = SORT_ASC; // Default to ascending
-                }
-            } else {
-                $orderBy[$field] = SORT_ASC; // Default to ascending for the last field
-            }
-        }
-        
-        if (!empty($orderBy)) {
-            $query->orderBy($orderBy);
-        }
-    }
-    
-    /**
-     * Build sort configuration for ActiveDataProvider
-     * 
-     * @param string $ctype Content type
-     * @return array Sort configuration
-     */
-    private function buildSortConfig(string $ctype): array
-    {
-        $elementDefinition = CrelishDynamicModel::loadElementDefinition($ctype);
-        $attributes = [];
-        $defaultOrder = [];
-        
-        if ($elementDefinition) {
-            foreach ($elementDefinition->fields as $field) {
-                if (property_exists($field, 'sortable') && $field->sortable) {
-                    $attributes[$field->key] = [
-                        'asc' => [$field->key => SORT_ASC],
-                        'desc' => [$field->key => SORT_DESC],
-                    ];
-                }
-            }
-            
-            if (property_exists($elementDefinition, 'sortDefault')) {
-                foreach ($elementDefinition->sortDefault as $key => $value) {
-                    $defaultOrder[$key] = constant($value);
-                }
-            }
-        }
-        
-        return [
-            'attributes' => $attributes,
-            'defaultOrder' => $defaultOrder,
-        ];
-    }
-    
-    /**
-     * Convert a model to an array
-     * 
-     * @param object $model Model to convert
-     * @param string $ctype Content type
-     * @return array Model as array
-     */
-    private function modelToArray(object $model, string $ctype): array
-    {
-        $data = $model->toArray();
-        $data['ctype'] = $ctype;
-        
-        // Process JSON fields
-        foreach ($data as $key => $value) {
-            if (is_string($value) && $this->isJson($value)) {
-                $data[$key] = Json::decode($value);
-            }
-        }
-        
-        // Process the data through field processors
-        $elementDefinition = CrelishDynamicModel::loadElementDefinition($ctype);
-        $processedData = [];
-        
-        foreach ($data as $key => $value) {
-            CrelishBaseContentProcessor::processFieldData($ctype, $elementDefinition, $key, $value, $processedData);
-        }
-        
-        return $processedData;
-    }
-    
-    /**
-     * Check if a string is valid JSON
-     * 
-     * @param string $string String to check
-     * @return bool Whether the string is valid JSON
-     */
-    private function isJson(string $string): bool
-    {
-        json_decode($string);
-        return json_last_error() === JSON_ERROR_NONE;
-    }
-    
-    /**
      * Get the model class for a content type
      * 
      * @param string $ctype Content type
-     * @return string Model class
+     * @return string Fully qualified class name
      */
-    private function getModelClass(string $ctype): string
+    protected function getModelClass(string $ctype): string
     {
-        return 'app\workspace\models\\' . ucfirst($ctype);
+        $className = Inflector::id2camel($ctype, '_');
+        $modelClass = "app\\workspace\\models\\$className";
+        
+        if (!class_exists($modelClass)) {
+            throw new \Exception("Model class not found for content type '$ctype': $modelClass");
+        }
+        
+        return $modelClass;
     }
     
     /**

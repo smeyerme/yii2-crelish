@@ -3,6 +3,7 @@
 namespace giantbits\crelish\components;
 
 use Yii;
+use yii\base\InvalidArgumentException;
 
 /**
  * Factory class for creating storage implementations
@@ -15,20 +16,29 @@ class CrelishStorageFactory
     private static $instances = [];
     
     /**
-     * Get a storage implementation for a content type
+     * Get a storage implementation for the given content type
      * 
      * @param string $ctype Content type
      * @return CrelishDataStorage Storage implementation
+     * @throws InvalidArgumentException If the storage type is invalid
      */
     public static function getStorage(string $ctype): CrelishDataStorage
     {
-        $storageType = self::getStorageType($ctype);
+        // Get the element definition
+        $definition = CrelishDynamicModel::loadElementDefinition($ctype);
         
-        if (!isset(self::$instances[$storageType])) {
-            self::$instances[$storageType] = self::createStorage($storageType);
+        // Determine the storage type
+        $storageType = $definition->storage ?? 'json';
+        
+        // Create the appropriate storage implementation
+        switch ($storageType) {
+            case 'db':
+                return new CrelishDbStorage();
+            case 'json':
+                return new CrelishJsonStorage();
+            default:
+                throw new InvalidArgumentException("Invalid storage type: $storageType");
         }
-        
-        return self::$instances[$storageType];
     }
     
     /**

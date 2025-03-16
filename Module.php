@@ -11,7 +11,7 @@
   use yii\console\Application;
 
   /**
-   * The Yii Debug Module provides the debug toolbar and debugger
+   * Crelish CMS Module for Yii2
    *
    * @author Qiang Xue <qiang.xue@gmail.com>
    * @since 2.0
@@ -20,28 +20,28 @@
   {
     
     /**
-     * [$dataPath description]
-     * @var [type]
-     */
-    private $dataPath;
-    
-    /**
-     * [$defaultLanguage description]
-     * @var [type]
-     */
-    public $defaultLanguage;
-    
-    /**
-     * [$theme description]
+     * Path to data storage
      * @var string
      */
-    public $theme = 'default';
+    private string $dataPath;
     
     /**
-     * [$entryPoint description]
+     * Default language for the application
      * @var string
      */
-    public $entryPoint = [
+    public string $defaultLanguage;
+    
+    /**
+     * Theme name
+     * @var string
+     */
+    public string $theme = 'default';
+    
+    /**
+     * Default entry point configuration
+     * @var array
+     */
+    public array $entryPoint = [
       'ctype' => 'page',
       'path' => 'home',
       'slug' => 'home'
@@ -50,11 +50,11 @@
     /**
      * @inheritdoc
      */
-    public function init()
+    public function init(): void
     {
 	    parent::init();
 	    
-	    if (\Yii::$app instanceof Application) {
+	    if (Yii::$app instanceof Application) {
 		    $this->controllerNamespace = 'giantbits\crelish\commands';
 	    }
       
@@ -74,19 +74,24 @@
       $this->registerTranslations();
     }
     
-    private function setDependencies()
+    /**
+     * Set module dependencies
+     */
+    private function setDependencies(): void
     {
-
+      // Implementation needed
     }
     
+    /**
+     * Build the controller map
+     */
     private function buildControllerMap(): void
     {
       $this->controllerMap = [];
     }
     
     /**
-     * [processLanguage description]
-     * @return [type] [description]
+     * Process language settings
      */
     private function processLanguage(): void
     {
@@ -94,6 +99,9 @@
       Yii::$app->params['defaultLanguage'] = 'de';
     }
     
+    /**
+     * @inheritdoc
+     */
     public function beforeAction($action): bool
     {
       if (!parent::beforeAction($action)) {
@@ -116,27 +124,30 @@
     }
     
     /**
-     * [checkAccess description]
-     * @return [type] [description]
+     * Check if current IP has access to the module
+     * @return bool Whether access is allowed
      */
     protected function checkAccess(): bool
     {
       $ip = Yii::$app->getRequest()->getUserIP();
       foreach ($this->allowedIPs as $filter) {
-        if ($filter === '*' || $filter === $ip || (($pos = strpos($filter, '*')) !== FALSE && !strncmp($ip, $filter, $pos))) {
-          return TRUE;
+        if ($filter === '*' || $filter === $ip || (($pos = strpos($filter, '*')) !== false && !strncmp($ip, $filter, $pos))) {
+          return true;
         }
       }
       foreach ($this->allowedHosts as $hostname) {
         $filter = gethostbyname($hostname);
         if ($filter === $ip) {
-          return TRUE;
+          return true;
         }
       }
       Yii::warning('Access to debugger is denied due to IP address restriction. The requesting IP address is ' . $ip, __METHOD__);
-      return FALSE;
+      return false;
     }
     
+    /**
+     * Register module translations
+     */
     private function registerTranslations(): void
     {
       Yii::$app->i18n->translations['modules/crelish/*'] = [

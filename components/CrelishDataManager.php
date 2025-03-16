@@ -82,6 +82,11 @@ class CrelishDataManager extends Component
         $sort = $this->settings['sort'] ?? [];
         $pageSize = $this->settings['pageSize'] ?? 30;
         
+        // Ensure sort is in the correct format
+        if (!empty($sort) && !isset($sort['defaultOrder'])) {
+            $sort = ['defaultOrder' => $sort];
+        }
+        
         $dataProvider = $this->storage->getDataProvider($this->ctype, $filter, $sort, $pageSize);
         
         return [
@@ -101,6 +106,11 @@ class CrelishDataManager extends Component
         $sort = $this->settings['sort'] ?? [];
         $pageSize = $this->settings['pageSize'] ?? 30;
         
+        // Ensure sort is in the correct format
+        if (!empty($sort) && !isset($sort['defaultOrder'])) {
+            $sort = ['defaultOrder' => $sort];
+        }
+        
         return $this->storage->getDataProvider($this->ctype, $filter, $sort, $pageSize);
     }
     
@@ -113,6 +123,11 @@ class CrelishDataManager extends Component
     {
         $filter = $this->settings['filter'] ?? [];
         $sort = $this->settings['sort'] ?? [];
+        
+        // Ensure sort is in the correct format
+        if (!empty($sort) && !isset($sort['defaultOrder'])) {
+            $sort = ['defaultOrder' => $sort];
+        }
         
         return $this->storage->findAll($this->ctype, $filter, $sort);
     }
