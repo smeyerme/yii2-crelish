@@ -36,7 +36,41 @@ class Bootstrap implements BootstrapInterface
       ]
     ]);
 
-    Yii::$app->params['crelish']['version'] = 'V0.8.0';
+    // Get version from Composer's installed packages data
+    try {
+      // Try to get version from Composer's installed.json
+      $installedJsonPath = Yii::getAlias('@vendor/composer/installed.json');
+      if (file_exists($installedJsonPath)) {
+        $installedData = json_decode(file_get_contents($installedJsonPath), true);
+        $packages = $installedData['packages'] ?? $installedData;
+        
+        foreach ($packages as $package) {
+          if (isset($package['name']) && $package['name'] === 'giantbits/yii2-crelish') {
+            Yii::$app->params['crelish']['version'] = 'V' . $package['version'];
+            break;
+          }
+        }
+      }
+      
+      // If version not found in installed.json, try composer.json directly
+      if (!isset(Yii::$app->params['crelish']['version'])) {
+        $composerFile = dirname(__FILE__) . '/composer.json';
+        if (file_exists($composerFile)) {
+          $composerData = json_decode(file_get_contents($composerFile), true);
+          if (isset($composerData['version'])) {
+            Yii::$app->params['crelish']['version'] = 'V' . $composerData['version'];
+          }
+        }
+      }
+    } catch (\Exception $e) {
+      // Log error but continue execution
+      Yii::warning('Failed to determine package version: ' . $e->getMessage());
+    }
+    
+    // Set fallback version if not found
+    if (!isset(Yii::$app->params['crelish']['version'])) {
+      Yii::$app->params['crelish']['version'] = 'V0.9.0'; // Fallback version
+    }
   }
 
   /**
