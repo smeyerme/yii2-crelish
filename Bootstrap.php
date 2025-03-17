@@ -120,6 +120,7 @@ class Bootstrap implements BootstrapInterface
               \giantbits\crelish\extensions\RegisterJsExtension::class,
               \giantbits\crelish\extensions\TruncateWords::class,
               \giantbits\crelish\extensions\ExtractFirstTagExtension::class,
+              \giantbits\crelish\extensions\HtmlAttributesExtension::class,
             ],
             'options' => YII_ENV_DEV ? [
               'debug' => true,

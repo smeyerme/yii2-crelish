@@ -1,0 +1,14 @@
+{#
+ # @var string leftComponents
+ # @var string rightComponents
+ # @var array options
+ #}
+
+<nav {{ html_attributes(options) }}>
+    <div class="c-input-group group-content-filter">
+        {{ leftComponents|raw }}
+    </div>
+    <div class="c-input-group">
+        {{ rightComponents|raw }}
+    </div>
+</nav> 

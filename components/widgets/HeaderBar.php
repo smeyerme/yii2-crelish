@@ -61,11 +61,45 @@ class HeaderBar extends Widget
         // Register search functionality
         $this->registerSearchJs();
         
-        return $this->render('header-bar', [
-            'leftComponents' => $this->renderComponents($this->leftComponents),
-            'rightComponents' => $this->renderComponents($this->rightComponents),
-            'options' => $this->options,
-        ]);
+        // Register CSS
+        $this->registerCss();
+        
+        // Check if Twig view renderer is available
+        if (isset(Yii::$app->view->renderers['twig'])) {
+            // Use Twig template
+            return Yii::$app->view->renderFile(
+                '@giantbits/crelish/components/widgets/views/header-bar.twig',
+                [
+                    'leftComponents' => $this->renderComponents($this->leftComponents),
+                    'rightComponents' => $this->renderComponents($this->rightComponents),
+                    'options' => $this->options,
+                ]
+            );
+        } else {
+            // Fallback to PHP template
+            return $this->render('header-bar', [
+                'leftComponents' => $this->renderComponents($this->leftComponents),
+                'rightComponents' => $this->renderComponents($this->rightComponents),
+                'options' => $this->options,
+            ]);
+        }
+    }
+    
+    /**
+     * Register CSS for the header bar
+     */
+    protected function registerCss()
+    {
+        $css = <<<CSS
+        .navbar--controller .c-input-group .o-field:last-child .c-field {
+            border-top-right-radius: 4px;
+            border-bottom-right-radius: 4px;
+            height: 100%;
+            border: none;
+        }
+        CSS;
+        
+        Yii::$app->view->registerCss($css);
     }
     
     /**
@@ -88,25 +122,8 @@ class HeaderBar extends Widget
         
         $js = <<<JS
         $(document).ready(function() {
-            // Handle search input
-            $('.header-search-input').on('keypress', function(e) {
-                if (e.which === 13) { // Enter key
-                    e.preventDefault();
-                    if (window.location.href.indexOf('cr_content_filter') >= 0) {
-                        $.pjax({
-                            url: window.location.href.replace(/(cr_content_filter=).*?(&|$)/, '$1' + $(this).val() + '$2'),
-                            container: '{$containerId}'
-                        });
-                    } else {
-                        var preFix = (window.location.href.indexOf("?") >= 0) ? '&' : '?';
-                        $.pjax({url: window.location.href + preFix + "cr_content_filter=" + $(this).val(), container: '{$containerId}'});
-                    }
-                }
-            });
-            
-            // Handle search button click
-            $('.c-button--brand').on('click', function() {
-                var searchTerm = $('.header-search-input').val();
+            // Function to submit search
+            function submitSearch(searchTerm) {
                 if (window.location.href.indexOf('cr_content_filter') >= 0) {
                     $.pjax({
                         url: window.location.href.replace(/(cr_content_filter=).*?(&|$)/, '$1' + searchTerm + '$2'),
@@ -116,6 +133,31 @@ class HeaderBar extends Widget
                     var preFix = (window.location.href.indexOf("?") >= 0) ? '&' : '?';
                     $.pjax({url: window.location.href + preFix + "cr_content_filter=" + searchTerm, container: '{$containerId}'});
                 }
+            }
+            
+            // Handle search input
+            $('.header-search-input').on('keypress', function(e) {
+                if (e.which === 13) { // Enter key
+                    e.preventDefault();
+                    submitSearch($(this).val());
+                }
+            });
+            
+            // Handle blur event on search input
+            $('.header-search-input').on('blur', function() {
+                submitSearch($(this).val());
+            });
+            
+            // Handle search button click
+            $('.c-button--brand').on('click', function() {
+                var searchTerm = $('.header-search-input').val();
+                submitSearch(searchTerm);
+            });
+            
+            // Handle clear button click
+            $(document).on('click', '.search-clear-btn', function() {
+                $('.header-search-input').val('');
+                submitSearch('');
             });
             
             // Handle status filter change
@@ -247,50 +289,104 @@ class HeaderBar extends Widget
             },
             'search' => function() {
                 $searchValue = \Yii::$app->request->get('cr_content_filter', '');
-                $html = '<button class="c-button c-button--brand"><i class="fa-sharp fa-regular fa-search"></i></button>';
-                $html .= '<div class="o-field">';
-                $html .= Html::textInput('cr_content_filter', $searchValue, [
-                    'class' => 'c-field header-search-input',
-                    'placeholder' => \Yii::t('app', 'Type your search phrase here...'),
-                ]);
-                $html .= '</div>';
-                return $html;
+                
+                // Check if Twig view renderer is available
+                if (isset(Yii::$app->view->renderers['twig'])) {
+                    // Use Twig template
+                    return Yii::$app->view->renderFile(
+                        '@giantbits/crelish/components/widgets/views/_search.twig',
+                        [
+                            'filterValue' => $searchValue,
+                        ]
+                    );
+                } else {
+                    // Fallback to PHP template or direct HTML
+                    $html = '<button class="c-button c-button--brand"><i class="fa-sharp fa-regular fa-search"></i></button>';
+                    $html .= '<div class="o-field" style="position: relative;">';
+                    $html .= Html::textInput('cr_content_filter', $searchValue, [
+                        'class' => 'c-field header-search-input',
+                        'placeholder' => \Yii::t('app', 'Type your search phrase here...'),
+                    ]);
+                    if (!empty($searchValue)) {
+                        $html .= '<span class="search-clear-btn" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer;"><i class="fa-sharp fa-regular fa-times"></i></span>';
+                    }
+                    $html .= '</div>';
+                    return $html;
+                }
             },
             'user-search' => function() {
                 $searchValue = \Yii::$app->request->get('cr_content_filter', '');
                 $statusValue = \Yii::$app->request->get('cr_status_filter', '');
                 
-                $html = '<button class="c-button c-button--brand"><i class="fa-sharp fa-regular fa-search"></i></button>';
-                $html .= '<div class="o-field">';
-                $html .= Html::textInput('cr_content_filter', $searchValue, [
-                    'class' => 'c-field header-search-input',
-                    'placeholder' => \Yii::t('app', 'Search users...'),
-                ]);
-                $html .= '</div>';
-                
-                // Add status filter dropdown
-                $html .= Html::dropDownList('cr_status_filter', $statusValue, [
-                    '' => \Yii::t('app', 'All statuses'),
-                    '1' => \Yii::t('app', 'Inactive'),
-                    '2' => \Yii::t('app', 'Online'),
-                    '3' => \Yii::t('app', 'Archived'),
-                ], [
-                    'class' => 'c-field header-status-filter',
-                    'style' => 'margin-left: 10px;'
-                ]);
-                
-                return $html;
+                // Check if Twig view renderer is available
+                if (isset(Yii::$app->view->renderers['twig'])) {
+                    // Use Twig template
+                    return Yii::$app->view->renderFile(
+                        '@giantbits/crelish/components/widgets/views/_user_search.twig',
+                        [
+                            'filterValue' => $searchValue,
+                            'statusValue' => $statusValue,
+                        ]
+                    );
+                } else {
+                    // Fallback to PHP template or direct HTML
+                    $html = '<button class="c-button c-button--brand"><i class="fa-sharp fa-regular fa-search"></i></button>';
+                    $html .= '<div class="o-field" style="position: relative;">';
+                    $html .= Html::textInput('cr_content_filter', $searchValue, [
+                        'class' => 'c-field header-search-input',
+                        'placeholder' => \Yii::t('app', 'Search users...'),
+                    ]);
+                    if (!empty($searchValue)) {
+                        $html .= '<span class="search-clear-btn" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer;"><i class="fa-sharp fa-regular fa-times"></i></span>';
+                    }
+                    $html .= '</div>';
+                    
+                    // Add status filter dropdown
+                    $html .= Html::dropDownList('cr_status_filter', $statusValue, [
+                        '' => \Yii::t('app', 'All statuses'),
+                        '1' => \Yii::t('app', 'Inactive'),
+                        '2' => \Yii::t('app', 'Online'),
+                        '3' => \Yii::t('app', 'Archived'),
+                    ], [
+                        'class' => 'c-field header-status-filter',
+                        'style' => 'margin-left: 10px;'
+                    ]);
+                    
+                    return $html;
+                }
             },
             'save' => function() {
-                $html = '<div class="c-input-group group-content-filter">';
-                $html .= '<span class="c-button btn-save c-button--success" type="button" onclick="$(\'#content-form\').submit();">';
-                $html .= \Yii::t('app', 'Save');
-                $html .= '</span>';
-                $html .= '<span class="c-button btn-save c-button--success-darker" type="button" onclick="$(\'#save_n_return\').val(\'1\'); $(\'#content-form\').submit();">';
-                $html .= \Yii::t('app', 'Save & Return');
-                $html .= '</span>';
-                $html .= '</div>';
-                return $html;
+                // Check if Twig view renderer is available
+                if (isset(Yii::$app->view->renderers['twig'])) {
+                    // Use Twig template
+                    return Yii::$app->view->renderFile(
+                        '@giantbits/crelish/components/widgets/views/_save_buttons.twig',
+                        []
+                    );
+                } else {
+                    // Fallback to PHP template or direct HTML
+                    $html = '<div class="c-input-group group-content-filter">';
+                    $html .= '<span class="c-button btn-save c-button--success" type="button" onclick="$(\'#content-form\').submit();">';
+                    $html .= '<i class="fa-sharp fa-regular fa-save"></i> ' . \Yii::t('app', 'Save');
+                    $html .= '</span>';
+                    $html .= '<span class="c-button btn-save c-button--success-darker" type="button" onclick="$(\'#save_n_return\').val(\'1\'); $(\'#content-form\').submit();">';
+                    $html .= '<i class="fa-sharp fa-regular fa-save"></i> <i class="fa-sharp fa-regular fa-reply"></i> ' . \Yii::t('app', 'Save & Return');
+                    $html .= '</span>';
+                    $html .= '</div>';
+                    
+                    // Register keyboard shortcut
+                    $js = <<<JS
+                    document.addEventListener('keydown', function (event) {
+                      if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+                        event.preventDefault();
+                        $('#content-form').submit();
+                      }
+                    });
+                    JS;
+                    \Yii::$app->view->registerJs($js);
+                    
+                    return $html;
+                }
             },
             'create' => function() {
                 $ctype = \Yii::$app->session->get('ctype');
