@@ -7,6 +7,7 @@ use giantbits\crelish\components\CrelishDynamicModel;
 use giantbits\crelish\components\CrelishBaseController;
 use yii\filters\AccessControl;
 use function _\map;
+use Yii;
 
 class PageController extends CrelishBaseController
 {
@@ -90,10 +91,15 @@ class PageController extends CrelishBaseController
         break;
         
       case 'create':
-      case 'update':
-        // For create/update actions, add back button and save buttons
+        // For create actions, add back button and save buttons (without delete)
         $this->view->params['headerBarLeft'][] = 'back-button';
-        $this->view->params['headerBarRight'] = ['save'];
+        $this->view->params['headerBarRight'] = [['save', true, false]]; // Show save and return, no delete
+        break;
+        
+      case 'update':
+        // For update actions, add back button and save buttons (with delete)
+        $this->view->params['headerBarLeft'][] = 'back-button';
+        $this->view->params['headerBarRight'] = [['save', true, true]]; // Show save and return, with delete
         break;
         
       default:
@@ -218,8 +224,15 @@ class PageController extends CrelishBaseController
     $uuid = \Yii::$app->request->get('uuid');
 
     $model = new CrelishDynamicModel( ['ctype' => $ctype, 'uuid' => $uuid]);
-    $model->delete();
+    
+    if ($model) {
+      $model->delete();
+      Yii::$app->session->setFlash('success', Yii::t("crelish", 'Page was deleted successfully...'));
+    } else {
+      Yii::$app->session->setFlash('warning', Yii::t("crelish", 'Page could not be deleted.'));
+    }
 
-    $this->redirect('/crelish/page/index');
+    // Redirect back to index with the ctype parameter
+    $this->redirect(['/crelish/page/index', 'ctype' => $ctype]);
   }
 }

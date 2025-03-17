@@ -102,7 +102,7 @@ class AssetController extends CrelishBaseController
       case 'update':
         // For update actions, add back button and save buttons
         $this->view->params['headerBarLeft'][] = 'back-button';
-        $this->view->params['headerBarRight'] = ['save'];
+        $this->view->params['headerBarRight'] = [['save', true, true]];
         break;
 
       default:
@@ -266,6 +266,14 @@ class AssetController extends CrelishBaseController
       $alerts .= '<div class="c-alerts__alert c-alerts__alert--' . $key . '">' . $message . '</div>';
     }
 
+    // Check if this is an image asset that can be edited
+    $showImageEditor = false;
+    $editableImageTypes = ['image/jpg', 'image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    
+    if (in_array($model->mime, $editableImageTypes)) {
+      $showImageEditor = true;
+    }
+
     if (in_array($model->mime, ['image/jpg', 'image/jpeg', 'image/png', 'image/bmp', 'image/gif'])) {
       $srcName = CrelishBaseHelper::getAssetUrl($model->pathName, $model->fileName);
 
@@ -283,12 +291,30 @@ class AssetController extends CrelishBaseController
 
     $extractedDoc = new Asset();
 
+    // Register the image editor assets if needed
+    if ($showImageEditor) {
+      $assetManager = Yii::$app->assetManager;
+
+      // Define the source path of your JS file
+      $sourcePath = Yii::getAlias('@vendor/giantbits/yii2-crelish/resources/image-editor/dist/image-editor.js');
+
+      // Publish the file and get the published URL
+      $publishedUrl = $assetManager->publish($sourcePath, [
+        'forceCopy' => YII_DEBUG,
+        'appendTimestamp' => true,
+      ])[1];
+
+      // Register the script in the view
+      $this->view->registerJsFile($publishedUrl);    
+    }
+
     return $this->render('update.twig', [
       'model' => $model,
       'extractModel' => $extractedDoc,
       'colormain_hex' => $colormain_hex ?? null,
       'colorpalette' => $palColor ?? null,
-      'alerts' => $alerts
+      'alerts' => $alerts,
+      'showImageEditor' => $showImageEditor
     ]);
   }
 

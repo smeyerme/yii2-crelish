@@ -1,19 +1,23 @@
 import { createApp } from 'vue';
 import AssetConnector from './components/AssetConnector.vue';
 
-console.log('Asset connector script loading...');
-
 // Initialize all asset connector instances on the page
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('DOM loaded, looking for asset connector containers');
-  
   // Find all asset connector containers
   const containers = document.querySelectorAll('.asset-connector-container');
-  console.log(`Found ${containers.length} asset connector containers`);
+  
+  // Get global translations if available
+  let globalTranslations = {};
+  try {
+    // Check if translations are available from a global variable
+    if (window.assetConnectorTranslations) {
+      globalTranslations = window.assetConnectorTranslations;
+    }
+  } catch (error) {
+    // Ignore errors
+  }
   
   containers.forEach((container, index) => {
-    console.log(`Initializing asset connector container ${index}:`, container);
-    
     // Get the configuration from the data attributes
     const config = {
       value: container.dataset.value || null,
@@ -23,23 +27,55 @@ document.addEventListener('DOMContentLoaded', () => {
       required: container.dataset.required === 'true'
     };
     
-    console.log(`Container ${index} config:`, config);
+    // Check for container-specific translations as JSON in a data attribute
+    let translations = { ...globalTranslations };
+    if (container.dataset.translations) {
+      try {
+        const containerTranslations = JSON.parse(container.dataset.translations);
+        // Merge with any global translations, with container translations taking precedence
+        translations = { ...translations, ...containerTranslations };
+      } catch (error) {
+        // If JSON parsing fails, continue with global translations
+        console.warn('Failed to parse translations JSON', error);
+      }
+    }
     
     try {
+      // Find the hidden input element
+      const hiddenInput = document.getElementById(`asset_${config.fieldKey}`);
+      
       // Create a Vue app for this container
       const app = createApp(AssetConnector, {
-        value: config.value,
-        selectedId: config.value,
+        modelValue: config.value,
         fieldKey: config.fieldKey,
         label: config.label,
         inputName: config.inputName,
         required: config.required,
-        onUpdateValue: (value) => {
-          console.log(`Asset selected in container ${index}:`, value);
+        translations: translations,
+        'onUpdate:modelValue': (newValue) => {
           // Update the hidden input if it exists
-          const hiddenInput = document.getElementById(`asset_${config.fieldKey}`);
           if (hiddenInput) {
-            hiddenInput.value = value;
+            hiddenInput.value = newValue || '';
+            
+            // Trigger a change event on the hidden input
+            const event = new Event('change', { bubbles: true });
+            hiddenInput.dispatchEvent(event);
+            
+            // Also update the data attribute on the container
+            container.dataset.value = newValue || '';
+          }
+        },
+        onUpdateValue: (value) => {
+          // Update the hidden input if it exists
+          if (hiddenInput) {
+            hiddenInput.value = value || '';
+            
+            // Trigger a change event on the hidden input
+            const event = new Event('change', { bubbles: true });
+            hiddenInput.dispatchEvent(event);
+            
+            // Also update the data attribute on the container
+            container.dataset.value = value || '';
           }
           
           // Dispatch a custom event
@@ -49,11 +85,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       });
       
-      console.log(`Mounting Vue app to container ${index}`);
       app.mount(container);
-      console.log(`Vue app mounted successfully to container ${index}`);
     } catch (error) {
-      console.error(`Error creating/mounting Vue app for container ${index}:`, error);
+      // Handle error silently
+      console.error('Error mounting asset connector', error);
     }
   });
-}); 
+});

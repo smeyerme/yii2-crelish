@@ -30,7 +30,7 @@
 			switch ($action) {
 				case 'index':
 					// For translation index, add save button
-					$this->view->params['headerBarRight'] = ['save'];
+					$this->view->params['headerBarRight'][] = ['save', false];
 					break;
 					
 				default:

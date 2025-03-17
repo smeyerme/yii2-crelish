@@ -1,0 +1,125 @@
+{# Delete confirmation dialog template #}
+
+<div id="delete-confirmation-dialog" class="c-modal" style="display: none;">
+    <div class="c-modal__dialog">
+        <div class="c-modal__header">
+            <h3 class="c-modal__title">{{ t('app', 'Confirm Delete') }}</h3>
+            <button class="c-modal__close" id="close-delete-dialog">&times;</button>
+        </div>
+        <div class="c-modal__body">
+            <p>{{ t('app', 'Are you sure you want to delete this item? This action cannot be undone.') }}</p>
+        </div>
+        <div class="c-modal__footer">
+            <button class="c-button c-button--error" id="confirm-delete-btn">{{ t('app', 'Delete') }}</button>
+            <button class="c-button" id="cancel-delete-btn">{{ t('app', 'Cancel') }}</button>
+        </div>
+    </div>
+</div>
+
+{% set js %}
+document.addEventListener('DOMContentLoaded', function() {
+    // Get dialog elements
+    const dialog = document.getElementById('delete-confirmation-dialog');
+    const closeBtn = document.getElementById('close-delete-dialog');
+    const cancelBtn = document.getElementById('cancel-delete-btn');
+    const confirmBtn = document.getElementById('confirm-delete-btn');
+    let deleteUrl = '';
+    
+    // Function to open the dialog
+    window.openDeleteDialog = function(url) {
+        deleteUrl = url;
+        dialog.style.display = 'flex';
+        document.body.classList.add('c-modal-open');
+    };
+    
+    // Function to close the dialog
+    function closeDialog() {
+        dialog.style.display = 'none';
+        document.body.classList.remove('c-modal-open');
+    }
+    
+    // Close dialog when clicking close button
+    closeBtn.addEventListener('click', closeDialog);
+    
+    // Close dialog when clicking cancel button
+    cancelBtn.addEventListener('click', closeDialog);
+    
+    // Handle confirm delete button click
+    confirmBtn.addEventListener('click', function() {
+        if (deleteUrl) {
+            window.location.href = deleteUrl;
+        }
+        closeDialog();
+    });
+    
+    // Close dialog when clicking outside the modal content
+    window.addEventListener('click', function(event) {
+        if (event.target === dialog) {
+            closeDialog();
+        }
+    });
+});
+{% endset %}
+{{ js|registerJs }}
+
+{% set css %}
+.c-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1050;
+}
+
+.c-modal__dialog {
+    background-color: #fff;
+    border-radius: 4px;
+    max-width: 500px;
+    width: 100%;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+}
+
+.c-modal__header {
+    padding: 15px;
+    border-bottom: 1px solid #e5e5e5;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.c-modal__title {
+    margin: 0;
+    font-size: 18px;
+}
+
+.c-modal__close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+}
+
+.c-modal__body {
+    padding: 15px;
+}
+
+.c-modal__footer {
+    padding: 15px;
+    border-top: 1px solid #e5e5e5;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+body.c-modal-open {
+    overflow: hidden;
+}
+{% endset %}
+{{ css|registerCss }} 

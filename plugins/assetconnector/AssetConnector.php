@@ -89,7 +89,6 @@ class AssetConnector extends CrelishFormWidget
     $inputName = "CrelishDynamicModel[{$this->field->key}]";
     
     $html = '<div class="form-group field-crelishdynamicmodel-' . $this->formKey . ($isRequired ? ' required' : '') . '">';
-    $html .= '<label class="control-label" for="asset_' . $this->formKey . '">' . Html::encode($this->field->label) . '</label>';
     $html .= '<div class="asset-connector-container" ';
     $html .= 'data-field-key="' . htmlspecialchars($this->field->key) . '" ';
     $html .= 'data-label="' . htmlspecialchars($this->field->label) . '" ';
@@ -100,7 +99,34 @@ class AssetConnector extends CrelishFormWidget
     $html .= '<input type="hidden" id="asset_' . $this->formKey . '" name="' . $inputName . '" value="' . htmlspecialchars($assetValue) . '">';
     $html .= '<div class="help-block help-block-error"></div>';
     $html .= '</div>';
-    
+
+    $translations = [
+      'labelSelectImage' => Yii::t('app', 'Select Media'),
+      'labelChangeImage' => Yii::t('app', 'Change Media'),
+      'labelClear' => Yii::t('app', 'Entfernen'),
+      'labelUploadNewImage' => Yii::t('app', 'Upload New Media'),
+      'labelSearchImages' => Yii::t('app', 'Search medias...'),
+      'labelAllFileTypes' => Yii::t('app', 'All file types'),
+      'labelJpegImages' => Yii::t('app', 'JPEG images'),
+      'labelPngImages' => Yii::t('app', 'PNG images'),
+      'labelGifImages' => Yii::t('app', 'GIF images'),
+      'labelSvgImages' => Yii::t('app', 'SVG images'),
+      'labelPdfDocuments' => Yii::t('app', 'PDF documents'),
+      'labelLoadingImages' => Yii::t('app', 'Loading medias...'),
+      'labelNoImagesFound' => Yii::t('app', 'No images found. Try adjusting your search or upload a new image.'),
+      'labelLoadMore' => Yii::t('app', 'Load More'),
+      'labelCancel' => Yii::t('app', 'Cancel'),
+      'labelSelect' => Yii::t('app', 'Select'),
+      'labelUploadingStatus' => Yii::t('app', 'Uploading...'),
+      'labelUploadSuccessful' => Yii::t('app', 'Upload successful!'),
+      'labelUploadFailed' => Yii::t('app', 'Upload failed. Please try again.'),
+      'titleSelectImage' => Yii::t('app', 'Select Media')
+    ];
+
+    $js = "window.assetConnectorTranslations = " . json_encode($translations) . ";";
+
+    Yii::$app->view->registerJs($js, View::POS_HEAD);
+
     return $html;
   }
 } 

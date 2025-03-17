@@ -78,7 +78,7 @@ class ContentController extends CrelishBaseController
   public function actionIndex()
   {
     $filter = null;
-    
+
     // Setup checkbox column for bulk actions
     $checkCol = [
       [
@@ -102,22 +102,27 @@ class ContentController extends CrelishBaseController
     if (!empty($searchTerm)) {
       $filter = ['freesearch' => $searchTerm];
     }
-    
+
+
+    if (empty($this->ctype)) {
+      return $this->render('content.twig', []);
+    }
+
     // Create a data manager for the content type
     $dataManager = new CrelishDataManager($this->ctype, [
       'filter' => $filter,
       'pageSize' => 25
     ]);
-    
+
     // Get the element definition
     $elementDefinition = $dataManager->getDefinitions();
-    
+
     // Get the data provider
     $dataProvider = null;
 
     if ($elementDefinition->storage === 'db' && class_exists($modelClass)) {
       $query = $modelClass::find();
-      
+
       // Apply filters
       if ($filter) {
         foreach ($filter as $key => $value) {
@@ -126,7 +131,7 @@ class ContentController extends CrelishBaseController
           } elseif ($key === 'freesearch') {
             $searchFragments = explode(" ", trim($value));
             $orConditions = ['or'];
-            
+
             foreach ($elementDefinition->fields as $field) {
               if (!property_exists($field, 'virtual') || !$field->virtual) {
                 foreach ($searchFragments as $fragment) {
@@ -134,7 +139,7 @@ class ContentController extends CrelishBaseController
                 }
               }
             }
-            
+
             $query->andWhere($orConditions);
           } else {
             $query->andWhere(['like', $key, $value]);
@@ -149,7 +154,7 @@ class ContentController extends CrelishBaseController
         $sortKey = key($elementDefinition->sortDefault);
         $sortDir = $elementDefinition->sortDefault->{$sortKey};
 
-        if(empty($_GET['sort'])) {
+        if (empty($_GET['sort'])) {
           $_GET['sort'] = !(empty($sortKey) && !empty($sortDir))
             ? ($sortDir === 'SORT_ASC' ? $sortKey : "-{$sortKey}")
             : null;
@@ -171,10 +176,10 @@ class ContentController extends CrelishBaseController
 
     // Build columns based on visibleInGrid attribute
     $columns = [];
-    
+
     // Add checkbox column for bulk actions
     $columns = array_merge($columns, $checkCol);
-    
+
     // Add columns for fields with visibleInGrid = true
     if (isset($elementDefinition->fields)) {
       foreach ($elementDefinition->fields as $field) {
@@ -185,7 +190,7 @@ class ContentController extends CrelishBaseController
             'label' => property_exists($field, 'label') ? $field->label : null,
             'format' => property_exists($field, 'format') ? $field->format : 'text'
           ];
-          
+
           // Special handling for state field
           if ($field->key === 'state') {
             $column['format'] = 'raw';
@@ -202,8 +207,7 @@ class ContentController extends CrelishBaseController
                   return Yii::t('i18n', 'Offline');
               }
             };
-          }
-          // Special handling for dropdown fields
+          } // Special handling for dropdown fields
           elseif (property_exists($field, 'items')) {
             $column['format'] = 'raw';
             $column['value'] = function ($data) use ($field) {
@@ -212,15 +216,13 @@ class ContentController extends CrelishBaseController
               }
               return $data[$field->key];
             };
-          }
-          // Special handling for switch inputs
+          } // Special handling for switch inputs
           elseif (property_exists($field, 'type') && str_contains($field->type, 'SwitchInput')) {
             $column['format'] = 'raw';
             $column['value'] = function ($data) use ($field) {
               return $data[$field->key] == 0 ? 'Nein' : 'Ja';
             };
-          }
-          // Special handling for value overwrites
+          } // Special handling for value overwrites
           elseif (property_exists($field, 'valueOverwrite')) {
             $column['format'] = 'raw';
             $column['value'] = function ($data) use ($field) {
@@ -231,7 +233,7 @@ class ContentController extends CrelishBaseController
           if (property_exists($field, 'gridField') && !empty($field->gridField)) {
             $column['attribute'] = $field->gridField;
           }
-          
+
           $columns[] = $column;
         }
       }
@@ -256,7 +258,7 @@ class ContentController extends CrelishBaseController
    */
   public function actionCreate()
   {
-    $content = $this->buildForm('admin');
+    $content = $this->buildForm();
 
     return $this->render('create.twig', [
       'content' => $content,
@@ -271,7 +273,7 @@ class ContentController extends CrelishBaseController
    */
   public function actionUpdate()
   {
-    $content = $this->buildForm('admin');
+    $content = $this->buildForm();
 
     return $this->render('update.twig', [
       'content' => $content,
@@ -286,9 +288,9 @@ class ContentController extends CrelishBaseController
    */
   public function actionDelete()
   {
-    $ctype = $_GET['ctype'];
-    $uuid = $_GET['uuid'];
-    $model = new CrelishDynamicModel( ['ctype' => $ctype, 'uuid' => $uuid]);
+    $ctype = \Yii::$app->request->get('ctype');
+    $uuid = \Yii::$app->request->get('uuid');
+    $model = new CrelishDynamicModel(['ctype' => $ctype, 'uuid' => $uuid]);
 
     if ($model) {
       $model->delete();
@@ -297,7 +299,8 @@ class ContentController extends CrelishBaseController
       Yii::$app->session->setFlash('warning', Yii::t("crelish", 'Content could not be deleted.'));
     }
 
-    $this->redirect('/crelish/content/index');
+    // Redirect back to index with the ctype parameter
+    $this->redirect(['/crelish/content/index', 'ctype' => $ctype]);
   }
 
   public function actionApiGet($uuid, $ctype)
@@ -308,7 +311,7 @@ class ContentController extends CrelishBaseController
 
       $elementDefinition = CrelishDynamicModel::loadElementDefinition($ctype);
 
-      $model = new CrelishDynamicModel( [
+      $model = new CrelishDynamicModel([
         'ctype' => $ctype,
         'uuid' => $uuid
       ]);
@@ -398,27 +401,32 @@ class ContentController extends CrelishBaseController
   {
     // Default left components for all actions
     $this->view->params['headerBarLeft'] = ['toggle-sidebar'];
-    
+
     // Default right components (empty by default)
     $this->view->params['headerBarRight'] = [];
-    
+
     // Set specific components based on action
     $action = $this->action ? $this->action->id : null;
-    
+
     switch ($action) {
       case 'index':
         // For content index, add search and create buttons
         $this->view->params['headerBarLeft'][] = 'search';
         $this->view->params['headerBarRight'] = ['delete', 'create'];
         break;
-        
+
       case 'create':
-      case 'update':
-        // For create/update actions, add back button and save buttons
+        // For create actions, add back button and save buttons (without delete)
         $this->view->params['headerBarLeft'][] = 'back-button';
-        $this->view->params['headerBarRight'] = ['save'];
+        $this->view->params['headerBarRight'] = [['save', true, false]]; // Show save and return, no delete
         break;
         
+      case 'update':
+        // For update actions, add back button and save buttons (with delete)
+        $this->view->params['headerBarLeft'][] = 'back-button';
+        $this->view->params['headerBarRight'] = [['save', true, true]]; // Show save and return, with delete
+        break;
+
       default:
         // For other actions, just keep the defaults
         break;

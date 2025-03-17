@@ -1,22 +1,25 @@
 <!-- components/common/ImageSelector.vue -->
 <template>
-  <div class="image-selector">
-    <div v-if="getImageUrl(selectedId)" class="selected-image">
-      <img :src="getImageUrl(selectedId)" alt="Selected image" class="preview-img">
+  <div class="image-selector" :class="{'required': required}">
+    <div v-if="label" class="image-selector-label">
+      {{ label }}
+    </div>
+    <div v-if="currentImageUrl" class="selected-image">
+      <img :src="currentImageUrl" :key="'img-'+modelValue" alt="Selected image" class="preview-img">
       <div class="image-details">
-        <button @click="openImageSelector" class="btn btn-sm btn-primary" type="button">Change Image</button>
-        <button @click="clearImage" class="btn btn-sm btn-outline-danger" type="button">Clear</button>
+        <button @click="openImageSelector" class="btn btn-sm btn-primary" type="button">{{ t('labelChangeImage') }}</button>
+        <button @click="clearImage" class="btn btn-sm btn-outline-danger" type="button">{{ t('labelClear') }}</button>
       </div>
     </div>
     <button v-else @click="openImageSelector" class="btn btn-outline-primary" type="button">
-      Select Image
+      {{ t('labelSelectImage') }} <span v-if="required" class="required-indicator">*</span>
     </button>
 
     <!-- Image selector modal -->
     <div v-if="selectorOpen" class="image-selector-modal">
       <div class="image-selector-content">
         <div class="image-selector-header">
-          <h3>Select Image</h3>
+          <h3>{{ t('titleSelectImage') }}</h3>
           <button @click="cancelImageSelection" class="close-btn">&times;</button>
         </div>
 
@@ -26,26 +29,26 @@
               <input
                   v-model="searchTerm"
                   type="text"
-                  placeholder="Search images..."
+                  :placeholder="t('labelSearchImages')"
                   class="form-control"
                   @input="debounceSearch"
               >
             </div>
             <div class="filter-box">
               <select v-model="mimeFilter" class="form-control" @change="searchImages">
-                <option value="">All file types</option>
-                <option value="image/jpeg">JPEG images</option>
-                <option value="image/png">PNG images</option>
-                <option value="image/gif">GIF images</option>
-                <option value="image/svg+xml">SVG images</option>
-                <option value="application/pdf">PDF documents</option>
+                <option value="">{{ t('labelAllFileTypes') }}</option>
+                <option value="image/jpeg">{{ t('labelJpegImages') }}</option>
+                <option value="image/png">{{ t('labelPngImages') }}</option>
+                <option value="image/gif">{{ t('labelGifImages') }}</option>
+                <option value="image/svg+xml">{{ t('labelSvgImages') }}</option>
+                <option value="application/pdf">{{ t('labelPdfDocuments') }}</option>
               </select>
             </div>
           </div>
 
           <div class="upload-container">
             <label for="file-upload" class="btn btn-success upload-btn">
-              <span>Upload New Image</span>
+              <span>{{ t('labelUploadNewImage') }}</span>
             </label>
             <input
                 id="file-upload"
@@ -61,7 +64,7 @@
 
           <div v-if="loading" class="loading-indicator">
             <div class="spinner"></div>
-            <p>Loading images...</p>
+            <p>{{ t('labelLoadingImages') }}</p>
           </div>
 
           <div v-else class="image-grid">
@@ -78,17 +81,17 @@
           </div>
 
           <div v-if="!loading && filteredImages.length === 0" class="no-results">
-            <p>No images found. Try adjusting your search or upload a new image.</p>
+            <p>{{ t('labelNoImagesFound') }}</p>
           </div>
 
           <div v-if="hasMoreImages && !loading" class="load-more">
-            <button @click="loadMoreImages" class="btn btn-outline-primary" type="button">Load More</button>
+            <button @click="loadMoreImages" class="btn btn-outline-primary" type="button">{{ t('labelLoadMore') }}</button>
           </div>
         </div>
 
         <div class="image-selector-footer">
-          <button @click="cancelImageSelection" class="btn btn-secondary" type="button">Cancel</button>
-          <button @click="confirmImageSelection" class="btn btn-primary" :disabled="!tempSelectedId" type="button">Select</button>
+          <button @click="cancelImageSelection" class="btn btn-secondary" type="button">{{ t('labelCancel') }}</button>
+          <button @click="confirmImageSelection" class="btn btn-primary" :disabled="!tempSelectedId" type="button">{{ t('labelSelect') }}</button>
         </div>
       </div>
     </div>
@@ -98,13 +101,37 @@
 <script>
 export default {
   props: {
-    selectedId: {
+    modelValue: {
       type: [Number, String],
       default: null
+    },
+    fieldKey: {
+      type: String,
+      default: ''
+    },
+    label: {
+      type: String,
+      default: ''
+    },
+    inputName: {
+      type: String,
+      default: ''
+    },
+    required: {
+      type: Boolean,
+      default: false
+    },
+    onUpdateValue: {
+      type: Function,
+      default: null
+    },
+    translations: {
+      type: Object,
+      default: () => ({})
     }
   },
 
-  emits: ['select'],
+  emits: ['update:modelValue'],
 
   data() {
     return {
@@ -121,20 +148,67 @@ export default {
       uploadStatus: '',
       uploadSuccess: false,
       searchTimeout: null,
-      imageCache: {}
+      imageCache: {},
+      currentImageUrl: null,
+      // Default translations as fallbacks
+      defaultTranslations: {
+        labelSelectImage: 'Select Image',
+        labelChangeImage: 'Change Image',
+        labelClear: 'Clear',
+        labelUploadNewImage: 'Upload New Image',
+        labelSearchImages: 'Search images...',
+        labelAllFileTypes: 'All file types',
+        labelJpegImages: 'JPEG images',
+        labelPngImages: 'PNG images',
+        labelGifImages: 'GIF images',
+        labelSvgImages: 'SVG images',
+        labelPdfDocuments: 'PDF documents',
+        labelLoadingImages: 'Loading images...',
+        labelNoImagesFound: 'No images found. Try adjusting your search or upload a new image.',
+        labelLoadMore: 'Load More',
+        labelCancel: 'Cancel',
+        labelSelect: 'Select',
+        labelUploadingStatus: 'Uploading...',
+        labelUploadSuccessful: 'Upload successful!',
+        labelUploadFailed: 'Upload failed. Please try again.',
+        titleSelectImage: 'Select Image'
+      }
     };
   },
 
   computed: {
     hasMoreImages() {
       return this.filteredImages.length < this.total;
+    },
+    
+    // Computed property to get translations with fallbacks
+    t() {
+      return key => {
+        // Return the translation from props if it exists, otherwise use default
+        return (this.translations && this.translations[key]) || this.defaultTranslations[key] || key;
+      };
     }
   },
 
   watch: {
-    selectedId(newId) {
-      if (newId) {
-        this.fetchImageUrl(newId);
+    modelValue: {
+      immediate: true,
+      handler(newVal, oldVal) {
+        // Reset the currentImageUrl when modelValue changes
+        if (!newVal) {
+          this.currentImageUrl = null;
+          this.tempSelectedId = null;
+        } else {
+          this.fetchImageUrl(newVal).then(url => {
+            this.currentImageUrl = url;
+          });
+          this.tempSelectedId = newVal;
+        }
+        
+        // If the value is cleared, make sure to clear the cache for the old value
+        if (!newVal && oldVal && this.imageCache[oldVal]) {
+          delete this.imageCache[oldVal];
+        }
       }
     }
   },
@@ -142,6 +216,14 @@ export default {
   created() {
     // Prefetch the selected image if available
     this.prefetchImages();
+    
+    // Initialize tempSelectedId with modelValue
+    this.tempSelectedId = this.modelValue;
+    
+    // If we have an initial value, make sure to call onUpdateValue
+    if (this.modelValue && typeof this.onUpdateValue === 'function') {
+      this.onUpdateValue(this.modelValue);
+    }
   },
 
   methods: {
@@ -164,7 +246,7 @@ export default {
           return this.imageCache[imageId];
         }
       } catch (error) {
-        console.error('Error fetching selected image:', error);
+        // Handle error silently
       }
 
       return null;
@@ -182,17 +264,20 @@ export default {
       this.fetchImageUrl(imageId);
 
       // Return a loading placeholder or null
-      return 'https://via.placeholder.com/150x80?text=Loading...';
+      return null;
     },
 
     prefetchImages() {
-      if (this.selectedId) {
-        this.fetchImageUrl(this.selectedId);
+      if (this.modelValue) {
+        this.fetchImageUrl(this.modelValue).then(url => {
+          this.currentImageUrl = url;
+        });
+        this.tempSelectedId = this.modelValue;
       }
     },
 
     openImageSelector() {
-      this.tempSelectedId = this.selectedId;
+      this.tempSelectedId = this.modelValue;
       this.searchTerm = '';
       this.mimeFilter = '';
       this.page = 1;
@@ -202,12 +287,30 @@ export default {
 
     cancelImageSelection() {
       this.selectorOpen = false;
-      this.tempSelectedId = null;
+      this.tempSelectedId = this.modelValue; // Reset to the current selection
       this.uploadStatus = '';
     },
 
     clearImage() {
-      this.$emit('select', null);
+      // Store the old value to clear from cache if needed
+      const oldValue = this.modelValue;
+      
+      // Reset state first to ensure UI changes
+      this.currentImageUrl = null;
+      this.tempSelectedId = null;
+      
+      // Update the model value
+      this.$emit('update:modelValue', null);
+      
+      // Call the onUpdateValue callback to ensure the hidden input is updated
+      if (typeof this.onUpdateValue === 'function') {
+        this.onUpdateValue(null);
+      }
+      
+      // Clear the cached image
+      if (oldValue && this.imageCache[oldValue]) {
+        delete this.imageCache[oldValue];
+      }
     },
 
     selectImage(imageId) {
@@ -216,8 +319,31 @@ export default {
 
     confirmImageSelection() {
       if (this.tempSelectedId) {
-        this.$emit('select', this.tempSelectedId);
+        // Get the selected image from the filtered images
+        const selectedImage = this.filteredImages.find(img => img.uuid === this.tempSelectedId);
+        
+        // If we have the image data, update the cache immediately
+        if (selectedImage && selectedImage.preview_url) {
+          this.imageCache[this.tempSelectedId] = selectedImage.preview_url;
+          this.currentImageUrl = selectedImage.preview_url;
+        }
+        
+        // Update the model value
+        this.$emit('update:modelValue', this.tempSelectedId);
+        
+        // Call the onUpdateValue callback to ensure the hidden input is updated
+        if (typeof this.onUpdateValue === 'function') {
+          this.onUpdateValue(this.tempSelectedId);
+        }
+        
+        // If we don't have the image preview yet, fetch it
+        if (!this.currentImageUrl) {
+          this.fetchImageUrl(this.tempSelectedId).then(url => {
+            this.currentImageUrl = url;
+          });
+        }
       }
+      
       this.selectorOpen = false;
       this.uploadStatus = '';
     },
@@ -262,11 +388,9 @@ export default {
           if (this.tempSelectedId && !this.filteredImages.find(img => img.uuid === this.tempSelectedId)) {
             await this.fetchSelectedImage();
           }
-        } else {
-          console.error('Failed to fetch images:', response.statusText);
         }
       } catch (error) {
-        console.error('Error searching images:', error);
+        // Handle error silently
       } finally {
         this.loading = false;
       }
@@ -283,10 +407,11 @@ export default {
           // Add this image to the start of our images array if it's not already there
           if (data && !this.images.find(img => img.uuid === data.uuid)) {
             this.images.unshift(data);
+            this.filteredImages.unshift(data);
           }
         }
       } catch (error) {
-        console.error('Error fetching selected image:', error);
+        // Handle error silently
       }
     },
 
@@ -312,11 +437,9 @@ export default {
           this.images = [...this.images, ...data.items];
           this.filteredImages = [...this.filteredImages, ...data.items];
           this.total = data.total;
-        } else {
-          console.error('Failed to load more images:', response.statusText);
         }
       } catch (error) {
-        console.error('Error loading more images:', error);
+        // Handle error silently
       } finally {
         this.loading = false;
       }
@@ -326,7 +449,7 @@ export default {
       const file = event.target.files[0];
       if (!file) return;
 
-      this.uploadStatus = 'Uploading...';
+      this.uploadStatus = this.t('labelUploadingStatus');
       this.uploadSuccess = false;
       this.loading = true;
 
@@ -343,7 +466,7 @@ export default {
           const data = await response.json();
 
           if (data.success) {
-            this.uploadStatus = 'Upload successful!';
+            this.uploadStatus = this.t('labelUploadSuccessful');
             this.uploadSuccess = true;
 
             // Select the newly uploaded image
@@ -362,12 +485,11 @@ export default {
             this.uploadSuccess = false;
           }
         } else {
-          this.uploadStatus = 'Upload failed. Please try again.';
+          this.uploadStatus = this.t('labelUploadFailed');
           this.uploadSuccess = false;
         }
       } catch (error) {
-        console.error('Error uploading file:', error);
-        this.uploadStatus = 'Upload failed. Please try again.';
+        this.uploadStatus = this.t('labelUploadFailed');
         this.uploadSuccess = false;
       } finally {
         this.loading = false;
@@ -380,6 +502,16 @@ export default {
 <style scoped>
 .image-selector {
   width: 100%;
+}
+
+.image-selector-label {
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.required-indicator {
+  color: #dc3545;
+  margin-left: 2px;
 }
 
 .selected-image {
@@ -649,5 +781,11 @@ export default {
 .btn:disabled {
   opacity: 0.65;
   cursor: not-allowed;
+}
+
+.image-selector.required .image-selector-label::after {
+  content: "*";
+  color: #dc3545;
+  margin-left: 2px;
 }
 </style>
