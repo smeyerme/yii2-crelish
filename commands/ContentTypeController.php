@@ -1,6 +1,6 @@
 <?php
 
-namespace app\commands;
+namespace giantbits\crelish\commands;
 
 use Yii;
 use yii\console\Controller;
@@ -82,15 +82,18 @@ class ContentTypeController extends Controller
         $tableName = $elementType;
         $columns = [
             'uuid' => Schema::TYPE_STRING . '(36) NOT NULL PRIMARY KEY',
-            'created_at' => Schema::TYPE_DATETIME . ' NOT NULL',
-            'updated_at' => Schema::TYPE_DATETIME . ' NOT NULL',
+            'created' => Schema::TYPE_TIMESTAMP . ' NULL DEFAULT CURRENT_TIMESTAMP',
+            'updated' => Schema::TYPE_TIMESTAMP . ' NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+            'created_by' => Schema::TYPE_STRING . '(36) DEFAULT NULL',
+            'updated_by' => Schema::TYPE_STRING . '(36) DEFAULT NULL',
             'state' => Schema::TYPE_SMALLINT . ' NOT NULL DEFAULT 1',
         ];
         
         // Add columns for each field in the definition
         foreach ($definition['fields'] as $field) {
-            if (isset($field['key']) && $field['key'] !== 'uuid' && $field['key'] !== 'created_at' && 
-                $field['key'] !== 'updated_at' && $field['key'] !== 'state') {
+            if (isset($field['key']) && $field['key'] !== 'uuid' && $field['key'] !== 'created' && 
+                $field['key'] !== 'updated' && $field['key'] !== 'state' && 
+                $field['key'] !== 'created_by' && $field['key'] !== 'updated_by') {
                 
                 $columnType = $this->mapFieldTypeToColumnType($field);
                 $columns[$field['key']] = $columnType;
@@ -153,7 +156,7 @@ class ContentTypeController extends Controller
                 return Schema::TYPE_STRING . "($maxLength)";
                 
             case 'widget_\\brussens\\yii2\\extensions\\trumbowyg\\TrumbowygWidget':
-            case 'textarea':
+            case 'textArea':
                 return Schema::TYPE_TEXT;
                 
             case 'numberInput':
@@ -165,7 +168,8 @@ class ContentTypeController extends Controller
             case 'checkboxList':
             case 'matrixConnector':
             case 'widgetConnector':
-                return Schema::TYPE_JSON;
+            case 'jsonEditor':
+                return 'longtext';
                 
             case 'relationSelect':
             case 'assetConnector':
@@ -200,16 +204,10 @@ class ContentTypeController extends Controller
         // Ensure the models directory exists
         FileHelper::createDirectory(dirname($modelFile));
         
-        // Collect JSON fields
-        $jsonFields = [];
+        // Collect relation fields
         $relationFields = [];
         
         foreach ($definition['fields'] as $field) {
-            // Fields with transform=json
-            if (isset($field['transform']) && $field['transform'] === 'json') {
-                $jsonFields[] = $field['key'];
-            }
-            
             if (isset($field['type'])) {
                 // Handle relationSelect fields
                 if ($field['type'] === 'relationSelect' && isset($field['config']['ctype'])) {
@@ -220,16 +218,11 @@ class ContentTypeController extends Controller
                 if ($field['type'] === 'assetConnector') {
                     $relationFields[$field['key']] = 'asset';
                 }
-                
-                // Handle fields that should be treated as JSON
-                if (in_array($field['type'], ['matrixConnector', 'checkboxList', 'widgetConnector']) && !in_array($field['key'], $jsonFields)) {
-                    $jsonFields[] = $field['key'];
-                }
             }
         }
         
         // Generate the model class content
-        $content = $this->generateModelContent($className, $elementType, $jsonFields, $relationFields);
+        $content = $this->generateModelContent($className, $elementType, $relationFields);
         
         try {
             file_put_contents($modelFile, $content);
@@ -246,54 +239,13 @@ class ContentTypeController extends Controller
      * 
      * @param string $className The name of the model class
      * @param string $elementType The name of the element type
-     * @param array $jsonFields Array of field names that should be treated as JSON
      * @param array $relationFields Array of relation fields with their target content types
      * @return string The content of the model class
      */
-    protected function generateModelContent($className, $elementType, $jsonFields, $relationFields)
+    protected function generateModelContent($className, $elementType, $relationFields)
     {
         $namespace = $this->modelsNamespace;
-        $jsonFieldsCode = '';
-        $gettersSettersCode = '';
         $relationsCode = '';
-        $rulesCode = '';
-        
-        // Generate private properties for JSON fields
-        foreach ($jsonFields as $field) {
-            $propertyName = '_' . $field;
-            $jsonFieldsCode .= "    private $propertyName;\n";
-        }
-        
-        // Generate getters and setters for JSON fields
-        foreach ($jsonFields as $field) {
-            $propertyName = '_' . $field;
-            $methodName = Inflector::id2camel($field, '_');
-            
-            $gettersSettersCode .= <<<EOT
-    
-    /**
-     * Get $field
-     * @return array
-     */
-    public function get$methodName()
-    {
-        if (\$this->$propertyName === null) {
-            \$this->$propertyName = is_string(\$this->$field) ? json_decode(\$this->$field, true) : (is_array(\$this->$field) ? \$this->$field : []);
-        }
-        return \$this->$propertyName;
-    }
-    
-    /**
-     * Set $field
-     * @param mixed \$value
-     */
-    public function set$methodName(\$value)
-    {
-        \$this->$propertyName = \$value;
-        \$this->$field = \$value ? json_encode(\$value) : null;
-    }
-EOT;
-        }
         
         // Generate relation methods
         foreach ($relationFields as $field => $targetType) {
@@ -313,42 +265,18 @@ EOT;
 EOT;
         }
         
-        // Generate rules for JSON fields
-        if (!empty($jsonFields)) {
-            $jsonFieldsStr = "'" . implode("', '", $jsonFields) . "'";
-            $rulesCode = <<<EOT
-    
-    /**
-     * {@inheritdoc}
-     */
-    public function rules()
-    {
-        return [
-            [[$jsonFieldsStr], 'safe'],
-        ];
-    }
-EOT;
-        }
-        
         // Generate the complete model class
         return <<<EOT
 <?php
 
 namespace $namespace;
 
-use yii\db\Expression;
-use yii\behaviors\TimestampBehavior;
-
-/**
- * This is the model class for table "$elementType".
- */
 class $className extends \yii\db\ActiveRecord
 {
     /**
      * @var string Content type
      */
     public \$ctype = '$elementType';
-$jsonFieldsCode
     
     /**
      * {@inheritdoc}
@@ -361,17 +289,12 @@ $jsonFieldsCode
     /**
      * {@inheritdoc}
      */
-    public function behaviors()
+    public function behaviors(): array
     {
         return [
-            [
-                'class' => TimestampBehavior::class,
-                'createdAtAttribute' => 'created_at',
-                'updatedAtAttribute' => 'updated_at',
-                'value' => new Expression('NOW()'),
-            ],
+            \giantbits\crelish\components\CrelishTranslationBehavior::class
         ];
-    }$rulesCode$gettersSettersCode$relationsCode
+    }$relationsCode
 }
 EOT;
     }

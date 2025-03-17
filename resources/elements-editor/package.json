@@ -1,0 +1,24 @@
+{
+  "name": "crelish-elements-editor",
+  "version": "1.0.0",
+  "description": "Vue3-based editor for Crelish element types",
+  "main": "js/elements-editor.js",
+  "scripts": {
+    "build": "webpack --mode production",
+    "dev": "webpack --mode development --watch"
+  },
+  "dependencies": {
+    "vue": "^3.3.4"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.22.9",
+    "@babel/preset-env": "^7.22.9",
+    "@vue/compiler-sfc": "^3.3.4",
+    "babel-loader": "^9.1.3",
+    "css-loader": "^6.8.1",
+    "style-loader": "^3.3.3",
+    "vue-loader": "^17.2.2",
+    "webpack": "^5.88.2",
+    "webpack-cli": "^5.1.4"
+  }
+} 

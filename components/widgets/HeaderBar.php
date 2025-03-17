@@ -389,7 +389,7 @@ class HeaderBar extends Widget
                 }
             },
             'create' => function() {
-                $ctype = \Yii::$app->session->get('ctype');
+                $ctype = \Yii::$app->request->get('ctype');
                 return '<a href="' . \Yii::$app->urlManager->createUrl(['/crelish/content/create', 'ctype' => $ctype]) . '" class="c-button"><i class="fa-sharp fa-regular fa-plus"></i></a>';
             },
             'user-create' => function() {

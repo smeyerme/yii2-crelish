@@ -1,34 +1,9 @@
-{{ register_asset_bundle('giantbits/crelish/CrelishElementsEditAsset') }}
-{{ html.beginForm('', 'POST', {'id': 'grid-form'}) | raw }}
-<div class="o-grid">
-  <div class="o-grid__cell">
-    <h6>{{ element.label }}</h6>
-    <table class="table table-striped">
-      <tr>
-        <td>Key</td>
-        <td>{{ element.key }}</td>
-      </tr>
-      <tr>
-        <td>Label</td>
-        <td>{{ html.textInput('label',element.label,{'class':'form-control'}) | raw }}</td>
-      </tr>
-      <tr>
-        <td></td>
-        <td>{{ html.submitButton() | raw }}</td>
-      </tr>
-      <tr>
-        <th colspan="2">Fields</th>
-      </tr>
-      <tbody id="c-element-edit--fields">
-      {% for field in element.fields %}
-        <tr>
-          <td></td>
-          {% include "inc/field.twig" with {fielddata:field} %}
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</div>
 
-{{ html.endForm() | raw }}
+
+
+{{ register_asset_bundle('giantbits\\crelish\\CrelishElementsEditorAsset') }}
+
+<div id="elements-editor" data-element-key="{{ element.key }}"></div>
+
+<!-- Hidden input to pass initial element data to Vue -->
+<input type="hidden" id="element-json-input" value="{{ element|json_encode|e }}">

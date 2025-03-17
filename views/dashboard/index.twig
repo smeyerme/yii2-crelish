@@ -40,8 +40,8 @@
                                                     <p>items</p>
                                                 </div>
                                                 <div class="c-card__footer">
-                                                    <a href="{{ url('crelish/content/index', {'ctype': type}) }}" class="c-button c-button--brand u-small">View All</a>
-                                                    <a href="{{ url('crelish/content/create', {'ctype': type}) }}" class="c-button c-button--info u-small">Create New</a>
+                                                    <a href="{{ url('/crelish/content/index', {'ctype': type}) }}" class="c-button c-button--brand u-small">View All</a>
+                                                    <a href="{{ url('/crelish/content/create', {'ctype': type}) }}" class="c-button c-button--info u-small">Create New</a>
                                                 </div>
                                             </div>
                                         </div>
@@ -49,7 +49,7 @@
                                 {% endfor %}
                             </div>
                         {% else %}
-                            <p>No content types found. <a href="{{ url('crelish/content/index') }}">Create your first content type</a>.</p>
+                            <p>No content types found. <a href="{{ url('/crelish/content/index') }}">Create your first content type</a>.</p>
                         {% endif %}
                     </div>
                 </div>
