@@ -59,7 +59,7 @@ class DataInclude extends Widget
     }
 
     // Load datasource.
-    $dataSource = new CrelishDataProvider($this->includeDataType, ['sort' => ['by' => ['systitle', 'asc']]]);
+    $dataSource = new CrelishDataProvider($this->includeDataType, ['sort' => ['defaultOrder' => ['systitle' => SORT_ASC]]]);
     $dataSource = $dataSource->rawAll();
 
     foreach ($dataSource as $entry) {

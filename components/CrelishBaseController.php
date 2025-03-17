@@ -18,6 +18,7 @@ class CrelishBaseController extends Controller
   public $ctype;
   public $model;
   public $nonce;
+  public $layout = 'crelish.twig';
 
   public function init()
   {
@@ -28,6 +29,11 @@ class CrelishBaseController extends Controller
     Yii::$app->language = 'de';
 
     Yii::$app->view->title = ucfirst($this->id);
+    
+    // Handle common session and query parameters
+    $this->handleSessionAndQueryParams('cr_content_filter');
+    $this->handleSessionAndQueryParams('cr_status_filter');
+    $this->handleSessionAndQueryParams('ctype');
 
     if (!Yii::$app->user->isGuest) {
       $js = 'window.crelish = { "user": { "uuid": "' . Yii::$app->user->identity->uuid . '" }};';
@@ -54,6 +60,84 @@ class CrelishBaseController extends Controller
       && Yii::$app->requestedRoute != 'crelish/user/login'
       && Yii::$app->requestedRoute != 'crelish/asset/glide') {
       return Yii::$app->response->redirect(['/']);
+    }
+  }
+
+  /**
+   * Called before the action is executed
+   * 
+   * @param \yii\base\Action $action the action to be executed
+   * @return bool whether the action should continue to be executed
+   */
+  public function beforeAction($action)
+  {
+    if (!parent::beforeAction($action)) {
+      return false;
+    }
+    
+    // Set default header bar components based on the current action
+    $this->setupHeaderBar();
+    
+    return true;
+  }
+
+  /**
+   * Handle session and query parameters
+   * 
+   * @param string $paramName The parameter name to handle
+   * @return mixed The parameter value or null
+   */
+  protected function handleSessionAndQueryParams($paramName)
+  {
+    $value = null;
+    
+    if (isset($_GET[$paramName])) {
+      Yii::$app->session->set($paramName, $_GET[$paramName]);
+      $value = $_GET[$paramName];
+    } elseif (Yii::$app->session->get($paramName) !== null) {
+      $_GET[$paramName] = Yii::$app->session->get($paramName);
+      $value = Yii::$app->session->get($paramName);
+    }
+    
+    return $value;
+  }
+
+  /**
+   * Set up the header bar components based on the current action
+   */
+  protected function setupHeaderBar()
+  {
+    // Default left components for all actions
+    $this->view->params['headerBarLeft'] = ['toggle-sidebar'];
+    
+    // Default right components (empty by default)
+    $this->view->params['headerBarRight'] = [];
+    
+    // Set specific components based on action
+    $action = $this->action ? $this->action->id : null;
+    
+    switch ($action) {
+      case 'index':
+        // For index actions, add search and create/delete buttons
+        $this->view->params['headerBarLeft'][] = 'search';
+        $this->view->params['headerBarRight'] = ['delete', 'create'];
+        break;
+        
+      case 'create':
+        // For create actions, add back button and save buttons (without delete)
+        $this->view->params['headerBarLeft'][] = 'back-button';
+        $this->view->params['headerBarRight'] = [['save', true, false]]; // Show save and return, no delete
+        break;
+        
+      case 'update':
+        // For update actions, add back button and save buttons (with delete)
+        $this->view->params['headerBarLeft'][] = 'back-button';
+        $this->view->params['headerBarRight'] = [['save', true, true]]; // Show save and return, with delete
+        break;
+        
+      default:
+        // For other actions, just keep the defaults
+        break;
     }
   }
 

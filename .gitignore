@@ -5,3 +5,7 @@ protected/data/*.db
 themes/classic/views/
 vendor/
 .idea
+/__example_models/
+
+.DS_Store
+/workspace/

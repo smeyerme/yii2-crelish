@@ -1,0 +1,106 @@
+{
+  "name": "page",
+  "label": "Page",
+  "description": "Basic page content type",
+  "fields": {
+    "id": {
+      "type": "string",
+      "label": "ID",
+      "description": "Unique identifier",
+      "required": true
+    },
+    "title": {
+      "type": "string",
+      "label": "Title",
+      "description": "Page title",
+      "required": true,
+      "minLength": 3,
+      "maxLength": 255
+    },
+    "slug": {
+      "type": "string",
+      "label": "Slug",
+      "description": "URL-friendly version of the title",
+      "required": true,
+      "minLength": 3,
+      "maxLength": 255
+    },
+    "content": {
+      "type": "string",
+      "label": "Content",
+      "description": "Page content in HTML format",
+      "required": true
+    },
+    "meta_title": {
+      "type": "string",
+      "label": "Meta Title",
+      "description": "SEO meta title",
+      "required": false,
+      "maxLength": 60
+    },
+    "meta_description": {
+      "type": "string",
+      "label": "Meta Description",
+      "description": "SEO meta description",
+      "required": false,
+      "maxLength": 160
+    },
+    "status": {
+      "type": "enum",
+      "label": "Status",
+      "description": "Publication status",
+      "required": true,
+      "values": ["draft", "published", "archived"],
+      "default": "draft"
+    },
+    "featured_image": {
+      "type": "string",
+      "label": "Featured Image",
+      "description": "URL to the featured image",
+      "required": false
+    },
+    "parent_id": {
+      "type": "string",
+      "label": "Parent Page",
+      "description": "ID of the parent page",
+      "required": false
+    },
+    "order": {
+      "type": "integer",
+      "label": "Order",
+      "description": "Display order",
+      "required": false,
+      "default": 0
+    },
+    "created_at": {
+      "type": "date",
+      "label": "Created At",
+      "description": "Creation timestamp",
+      "required": true
+    },
+    "updated_at": {
+      "type": "date",
+      "label": "Updated At",
+      "description": "Last update timestamp",
+      "required": true
+    },
+    "published_at": {
+      "type": "date",
+      "label": "Published At",
+      "description": "Publication timestamp",
+      "required": false
+    },
+    "author_id": {
+      "type": "string",
+      "label": "Author",
+      "description": "ID of the author",
+      "required": false
+    },
+    "tags": {
+      "type": "array",
+      "label": "Tags",
+      "description": "List of tags",
+      "required": false
+    }
+  }
+} 

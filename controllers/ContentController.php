@@ -7,6 +7,7 @@ use giantbits\crelish\components\CrelishDataResolver;
 use giantbits\crelish\components\CrelishDynamicModel;
 use giantbits\crelish\components\CrelishBaseController;
 use giantbits\crelish\components\MatrixBuilderHelper;
+use giantbits\crelish\components\CrelishDataManager;
 use Yii;
 use yii\data\ActiveDataProvider;
 use yii\db\Exception;
@@ -76,14 +77,16 @@ class ContentController extends CrelishBaseController
    */
   public function actionIndex()
   {
-
     $filter = null;
+
+    // Setup checkbox column for bulk actions
     $checkCol = [
       [
         'class' => 'giantbits\crelish\components\CrelishCheckboxColumn',
       ]
     ];
 
+    // Handle bulk delete actions
     $modelClass = '\app\workspace\models\\' . ucfirst($this->ctype);
     if (!empty($_POST['selection'])) {
       if (class_exists($modelClass)) {
@@ -94,35 +97,71 @@ class ContentController extends CrelishBaseController
       }
     }
 
-    if (key_exists('cr_content_filter', $_GET)) {
-      $filter = ['freesearch' => $_GET['cr_content_filter']];
-    } else {
-      if (!empty(Yii::$app->session->get('cr_content_filter'))) {
-        $filter = ['freesearch' => Yii::$app->session->get('cr_content_filter')];
-      }
+    // Handle content filtering
+    $searchTerm = $this->handleSessionAndQueryParams('cr_content_filter');
+
+    if (!empty($searchTerm)) {
+      $filter = ['freesearch' => $searchTerm];
     }
 
-    $modelInfo = new CrelishDataProvider($this->ctype, ['filter' => $filter], null, null, true);
-    $modelProvider = null;
+    if (empty($this->ctype)) {
+      return $this->render('content.twig', []);
+    }
 
-    if ($modelInfo->definitions->storage === 'db' && class_exists($modelClass)) {
-      $query = $modelInfo->getQuery($modelClass::find(), $filter);
+    // Create a data manager for the content type
+    $dataManager = new CrelishDataManager($this->ctype, [
+      'filter' => $filter,
+      'pageSize' => 25
+    ]);
 
-      // Add relations.
-      $modelInfo->setRelations($query);
+    // Get the element definition
+    $elementDefinition = $dataManager->getDefinitions();
 
-      if (!empty($modelInfo->definitions->sortDefault)) {
-        $sortKey = key($modelInfo->definitions->sortDefault);
-        $sortDir = $modelInfo->definitions->sortDefault->{$sortKey};
+    // Get the data provider
+    $dataProvider = null;
 
-        if(empty($_GET['sort'])) {
+    if ($elementDefinition->storage === 'db' && class_exists($modelClass)) {
+      $query = $modelClass::find();
+
+      // Apply filters
+      if ($filter) {
+        foreach ($filter as $key => $value) {
+          if (is_array($value) && $value[0] === 'strict') {
+            $query->andWhere([$key => $value[1]]);
+          } elseif ($key === 'freesearch') {
+            $searchFragments = explode(" ", trim($value));
+            $orConditions = ['or'];
+
+            foreach ($elementDefinition->fields as $field) {
+              if (!property_exists($field, 'virtual') || !$field->virtual) {
+                foreach ($searchFragments as $fragment) {
+                  $orConditions[] = ['like', $this->ctype . '.' . $field->key, $fragment];
+                }
+              }
+            }
+
+            $query->andWhere($orConditions);
+          } else {
+            $query->andWhere(['like', $this->ctype . '.' . $key, $value]);
+          }
+        }
+      }
+
+      // Add relations
+      $dataManager->setRelations($query);
+
+      if (!empty($elementDefinition->sortDefault)) {
+        $sortKey = key($elementDefinition->sortDefault);
+        $sortDir = $elementDefinition->sortDefault->{$sortKey};
+
+        if (empty($_GET['sort'])) {
           $_GET['sort'] = !(empty($sortKey) && !empty($sortDir))
             ? ($sortDir === 'SORT_ASC' ? $sortKey : "-{$sortKey}")
             : null;
         }
       }
 
-      $modelProvider = new ActiveDataProvider([
+      $dataProvider = new ActiveDataProvider([
         'query' => $query,
         'pagination' => [
           'pageSize' => 25,
@@ -131,72 +170,82 @@ class ContentController extends CrelishBaseController
         ]
       ]);
 
-    } elseif ($modelInfo->definitions->storage === 'json') {
-      $modelProvider = $modelInfo->getArrayProvider();
+    } elseif ($elementDefinition->storage === 'json') {
+      $dataProvider = $dataManager->getProvider();
     }
 
-    $columns = array_merge($checkCol, $modelInfo->columns);
-    $columns = map($columns, function ($item) use ($modelInfo) {
+    // Build columns based on visibleInGrid attribute
+    $columns = [];
 
-      if (key_exists('attribute', $item) && $item['attribute'] === 'state') {
-        $item['format'] = 'raw';
-        $item['label'] = 'Status';
-        $item['value'] = function ($data) {
-          switch ($data['state']) {
-            case 1:
-              $state = Yii::t('i18n', 'Entwurf');
-              break;
-            case 2:
-              $state = Yii::t('i18n', 'Online');
-              break;
-            case 3:
-              $state = Yii::t('i18n', 'Archiviert');
-              break;
-            default:
-              $state = Yii::t('i18n', 'Offline');
-          };
+    // Add checkbox column for bulk actions
+    $columns = array_merge($columns, $checkCol);
 
-          return $state;
-        };
-      }
-      if (key_exists('attribute', $item)) {
-        // Add magic here: get definition for attribute, check for items, use items for label display.
-        $itemDef = find($modelInfo->definitions->fields, function ($itm) use ($item) {
-          return $itm->key == $item['attribute'];
-        });
+    // Add columns for fields with visibleInGrid = true
+    if (isset($elementDefinition->fields)) {
+      foreach ($elementDefinition->fields as $field) {
+        // Only include fields that have visibleInGrid = true and exclude UUID
+        if (property_exists($field, 'visibleInGrid') && $field->visibleInGrid === true && $field->key !== 'uuid') {
+          $column = [
+            'attribute' => $field->key,
+            'label' => property_exists($field, 'label') ? $field->label : null,
+            'format' => property_exists($field, 'format') ? $field->format : 'text'
+          ];
 
-        if (is_object($itemDef) && property_exists($itemDef, 'items')) {
-          $item['format'] = 'raw';
-          $item['label'] = $itemDef->label;
-          $item['value'] = function ($data) use ($itemDef) {
-            if (!empty($itemDef->items) && !empty($itemDef->items->{$data[$itemDef->key]})) {
-              return $itemDef->items->{$data[$itemDef->key]};
-            }
-          };
-        } elseif (is_object($itemDef) && property_exists($itemDef, 'type') && str_contains($itemDef->type, 'SwitchInput')) {
-          $item['format'] = 'raw';
-          $item['label'] = $itemDef->label;
-          $item['value'] = function ($data) use ($itemDef) {
-            return $data[$itemDef->key] == 0 ? 'Nein' : 'Ja';
-          };
-        } elseif (is_object($itemDef) && property_exists($itemDef, 'valueOverwrite')) {
-          $item['format'] = 'raw';
-          $item['value'] = function ($data) use ($itemDef) {
-            return Arrays::get($data, $itemDef->valueOverwrite);
-          };
+          // Special handling for state field
+          if ($field->key === 'state') {
+            $column['format'] = 'raw';
+            $column['label'] = Yii::t('i18n', 'Status');
+            $column['value'] = function ($data) {
+              switch ($data['state']) {
+                case 1:
+                  return Yii::t('i18n', 'Entwurf');
+                case 2:
+                  return Yii::t('i18n', 'Online');
+                case 3:
+                  return Yii::t('i18n', 'Archiviert');
+                default:
+                  return Yii::t('i18n', 'Offline');
+              }
+            };
+          } // Special handling for dropdown fields
+          elseif (property_exists($field, 'items')) {
+            $column['format'] = 'raw';
+            $column['value'] = function ($data) use ($field) {
+              if (!empty($field->items) && !empty($field->items->{$data[$field->key]})) {
+                return $field->items->{$data[$field->key]};
+              }
+              return $data[$field->key];
+            };
+          } // Special handling for switch inputs
+          elseif (property_exists($field, 'type') && str_contains($field->type, 'SwitchInput')) {
+            $column['format'] = 'raw';
+            $column['value'] = function ($data) use ($field) {
+              return $data[$field->key] == 0 ? 'Nein' : 'Ja';
+            };
+          } // Special handling for value overwrites
+          elseif (property_exists($field, 'valueOverwrite')) {
+            $column['format'] = 'raw';
+            $column['value'] = function ($data) use ($field) {
+              return Arrays::get($data, $field->valueOverwrite);
+            };
+          }
+          // Use gridField if specified
+          if (property_exists($field, 'gridField') && !empty($field->gridField)) {
+            $column['attribute'] = $field->gridField;
+          }
+
+          $columns[] = $column;
         }
       }
-
-      return $item;
-    });
+    }
 
     $rowOptions = function ($model, $key, $index, $grid) {
       return ['onclick' => 'location.href="update?ctype=' . $this->ctype . '&uuid=' . $model['uuid'] . '";'];
     };
 
     return $this->render('content.twig', [
-      'dataProvider' => $modelProvider,
-      'filterProvider' => $modelInfo->getFilters(),
+      'dataProvider' => $dataProvider,
+      'filterProvider' => $dataManager->getFilters(),
       'columns' => $columns,
       'ctype' => $this->ctype,
       'rowOptions' => $rowOptions
@@ -214,7 +263,7 @@ class ContentController extends CrelishBaseController
     return $this->render('create.twig', [
       'content' => $content,
       'ctype' => $this->ctype,
-      'uuid' => $this->uuid,
+      'uuid' => $this->uuid
     ]);
   }
 
@@ -224,14 +273,12 @@ class ContentController extends CrelishBaseController
    */
   public function actionUpdate()
   {
-    MatrixBuilderHelper::registerOverlayMode($this->view);
-
     $content = $this->buildForm();
 
-    return $this->render('create.twig', [
+    return $this->render('update.twig', [
       'content' => $content,
       'ctype' => $this->ctype,
-      'uuid' => $this->uuid,
+      'uuid' => $this->uuid
     ]);
   }
 
@@ -241,9 +288,9 @@ class ContentController extends CrelishBaseController
    */
   public function actionDelete()
   {
-    $ctype = $_GET['ctype'];
-    $uuid = $_GET['uuid'];
-    $model = new CrelishDynamicModel( ['ctype' => $ctype, 'uuid' => $uuid]);
+    $ctype = \Yii::$app->request->get('ctype');
+    $uuid = \Yii::$app->request->get('uuid');
+    $model = new CrelishDynamicModel(['ctype' => $ctype, 'uuid' => $uuid]);
 
     if ($model) {
       $model->delete();
@@ -252,7 +299,8 @@ class ContentController extends CrelishBaseController
       Yii::$app->session->setFlash('warning', Yii::t("crelish", 'Content could not be deleted.'));
     }
 
-    $this->redirect('/crelish/content/index');
+    // Redirect back to index with the ctype parameter
+    $this->redirect(['/crelish/content/index', 'ctype' => $ctype]);
   }
 
   public function actionApiGet($uuid, $ctype)
@@ -263,7 +311,7 @@ class ContentController extends CrelishBaseController
 
       $elementDefinition = CrelishDynamicModel::loadElementDefinition($ctype);
 
-      $model = new CrelishDynamicModel( [
+      $model = new CrelishDynamicModel([
         'ctype' => $ctype,
         'uuid' => $uuid
       ]);
@@ -346,12 +394,42 @@ class ContentController extends CrelishBaseController
     ]);
   }
 
-  private function handleSessionAndQueryParams($paramName)
+  /**
+   * Override the setupHeaderBar method for content-specific components
+   */
+  protected function setupHeaderBar()
   {
-    if (isset($_GET[$paramName])) {
-      Yii::$app->session->set($paramName, $_GET[$paramName]);
-    } elseif (Yii::$app->session->get($paramName) !== null) {
-      $_GET[$paramName] = Yii::$app->session->get($paramName);
+    // Default left components for all actions
+    $this->view->params['headerBarLeft'] = ['toggle-sidebar'];
+
+    // Default right components (empty by default)
+    $this->view->params['headerBarRight'] = [];
+
+    // Set specific components based on action
+    $action = $this->action ? $this->action->id : null;
+
+    switch ($action) {
+      case 'index':
+        // For content index, add search and create buttons
+        $this->view->params['headerBarLeft'][] = 'search';
+        $this->view->params['headerBarRight'] = ['delete', 'create'];
+        break;
+
+      case 'create':
+        // For create actions, add back button and save buttons (without delete)
+        $this->view->params['headerBarLeft'][] = 'back-button';
+        $this->view->params['headerBarRight'] = [['save', true, false]]; // Show save and return, no delete
+        break;
+        
+      case 'update':
+        // For update actions, add back button and save buttons (with delete)
+        $this->view->params['headerBarLeft'][] = 'back-button';
+        $this->view->params['headerBarRight'] = [['save', true, true]]; // Show save and return, with delete
+        break;
+
+      default:
+        // For other actions, just keep the defaults
+        break;
     }
   }
 }

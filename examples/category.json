@@ -1,0 +1,106 @@
+{
+  "key": "category",
+  "storage": "db",
+  "label": "Categories",
+  "category": "E-Commerce",
+  "selectable": true,
+  "tabs": [
+    {
+      "label": "Content",
+      "key": "content",
+      "groups": [
+        {
+          "label": "Basic Information",
+          "key": "basic",
+          "settings": {
+            "width": 60
+          },
+          "fields": [
+            "systitle",
+            "displaytitle",
+            "description"
+          ]
+        },
+        {
+          "label": "Settings",
+          "key": "settings",
+          "settings": {
+            "width": 40
+          },
+          "fields": [
+            "parentCategory",
+            "icon",
+            "slug"
+          ]
+        }
+      ]
+    }
+  ],
+  "fields": [
+    {
+      "label": "Title (Internal)",
+      "key": "systitle",
+      "type": "textInput",
+      "visibleInGrid": true,
+      "rules": [
+        ["required"],
+        ["string", {"max": 128}]
+      ],
+      "sortable": true
+    },
+    {
+      "label": "Title (Display)",
+      "key": "displaytitle",
+      "type": "textInput",
+      "visibleInGrid": true,
+      "rules": [
+        ["required"],
+        ["string", {"max": 128}]
+      ]
+    },
+    {
+      "label": "Description",
+      "key": "description",
+      "type": "textarea",
+      "visibleInGrid": false,
+      "rules": [
+        ["string", {"max": 1000}]
+      ]
+    },
+    {
+      "label": "Parent Category",
+      "key": "parentCategory",
+      "type": "relationSelect",
+      "config": {
+        "ctype": "category"
+      },
+      "visibleInGrid": false,
+      "rules": [
+        ["safe"]
+      ]
+    },
+    {
+      "label": "Icon",
+      "key": "icon",
+      "type": "assetConnector",
+      "visibleInGrid": false,
+      "rules": [
+        ["safe"]
+      ]
+    },
+    {
+      "label": "Slug",
+      "key": "slug",
+      "type": "textInput",
+      "visibleInGrid": true,
+      "rules": [
+        ["required"],
+        ["string", {"max": 128}]
+      ],
+      "sortable": true
+    }
+  ],
+  "sortDefault": {
+    "systitle": "SORT_ASC"
+  }
+} 

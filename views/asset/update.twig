@@ -11,14 +11,18 @@
 			</div>
 			<div class="c-card__content">
 				<div class="u-pillar-box-medium">
-					{% if model.mime =='image/jpeg' %}
-						<img src="/crelish/asset/glide?path={{ chelper.getAssetUrl(model.pathName, model.fileName) }}" class="o-image">
-					{% elseif model.mime =='image/jpg' %}
-						<img src="/crelish/asset/glide?path={{ chelper.getAssetUrl(model.pathName, model.fileName) }}&" class="o-image">
-					{% elseif model.mime =='image/png' %}
-						<img src="/crelish/asset/glide?path={{ chelper.getAssetUrl(model.pathName, model.fileName) }}" class="o-image">
-					{% elseif model.mime =='image/gif' %}
-						<img src="/crelish/asset/glide?path={{ chelper.getAssetUrl(model.pathName, model.fileName) }}" class="o-image">
+					{% if model.mime =='image/jpeg' or model.mime =='image/jpg' or model.mime =='image/webp' or model.mime =='image/png' or model.mime =='image/gif' %}
+						{% if showImageEditor %}
+							<!-- Image Editor Component -->
+							<div class="image-editor-container" 
+								data-asset-uuid="{{ model.uuid }}" 
+								data-field-key="asset_{{ model.uuid }}" 
+								data-input-name="CrelishDynamicModel[asset]">
+							</div>
+							<input type="hidden" id="CrelishDynamicModel[asset]" name="CrelishDynamicModel[asset]" value="{{ model.uuid }}">
+						{% else %}
+							<img src="/crelish/asset/glide?path={{ chelper.getAssetUrl(model.pathName, model.fileName) }}" class="o-image">
+						{% endif %}
 					{% elseif model.mime =='application/pdf' %}
 						<embed src="{{ chelper.getAssetUrl(model.pathName, model.fileName) }}" width="100%" height="800"
 						       type="application/pdf" style="height: 80vh;">

@@ -1,5 +1,5 @@
 {% set preview = '' %}
-{% if model.mime == 'image/jpg' or model.mime == 'image/jpeg' or model.mime == 'image/gif' or model.mime == 'image/png' %}
+{% if model.mime == 'image/jpg' or model.mime == 'image/jpeg' or model.mime == 'image/webp' or model.mime == 'image/gif' or model.mime == 'image/png' %}
 	{% set preview = '<img src="/crelish/asset/glide?path=' ~ chelper.getAssetUrl(model.pathName, model.fileName) ~ '&w=340&f=fit" onerror="this.style.display=\'none\';" />' %}
 {% elseif model.mime == 'image/svg+xml' %}
 	{% set preview = '<img src="' ~ chelper.getAssetUrl(model.pathName, model.fileName) ~ '" onerror="this.style.display=\'none\';" />' %}

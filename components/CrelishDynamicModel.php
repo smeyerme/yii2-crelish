@@ -169,10 +169,11 @@ class CrelishDynamicModel extends DynamicModel
   public function save()
   {
     $saveSuccess = false;
-
     $modelArray = [];
+    
     if (empty($this->uuid)) {
       $this->uuid = $this->GUIDv4();
+      $this->isNew = true;
     } else {
       $this->isNew = false;
     }
@@ -183,11 +184,11 @@ class CrelishDynamicModel extends DynamicModel
       $this->defineAttribute('password', \Yii::$app->getSecurity()->generatePasswordHash($this->new_password));
     }
 
-    // Transform and set data, detect json.
+    // Transform and set data
     foreach ($this->attributes() as $attribute) {
       $modelArray[$attribute] = $this->{$attribute};
 
-      // Check for transformer.
+      // Check for transformer
       $fieldDefinitionLook = filter($this->fieldDefinitions->fields, function ($value) use ($attribute) {
         return $value->key == $attribute;
       });
@@ -208,131 +209,19 @@ class CrelishDynamicModel extends DynamicModel
       }
     }
 
-    if (!property_exists($this->_elementDefinition, 'storage')) {
-      $this->_elementDefinition->storage = 'json';
+    // Use the storage factory to get the appropriate storage implementation
+    $storage = CrelishStorageFactory::getStorage($this->ctype);
+    $saveSuccess = $storage->save($this->ctype, $modelArray, $this->isNew);
+
+    // Handle hooks
+    if ($saveSuccess) {
+      if (method_exists('\\app\\workspace\\hooks\\' . ucfirst($this->ctype) . 'Hooks', 'afterSave')) {
+        call_user_func(['\\app\\workspace\\hooks\\' . ucfirst($this->ctype) . 'Hooks', 'afterSave'], ['data' => $this]);
+      }
     }
 
-    switch ($this->_elementDefinition->storage) {
-      case 'db':
-        if ($this->isNew) {
-          $class = 'app\workspace\models\\' . ucfirst($this->_ctype);
-          $model = new $class();
-        } else {
-          $model = call_user_func('app\workspace\models\\' . ucfirst($this->_ctype) . '::find')->where(['uuid' => $this->uuid])->one();
-        }
-
-        // Process data.
-        foreach ($this->attributes() as $attribute) {
-          $fieldType = 'textInput';
-
-          $fieldDef = find($this->_elementDefinition->fields, function ($def) use ($attribute) {
-            return $def->key == $attribute;
-          });
-
-          if (!empty($fieldDef) && is_object($fieldDef)) {
-            $fieldType = (property_exists($fieldDef, 'type')) ? $fieldDef->type : 'textInput';
-          }
-
-          if ($attribute == 'slug') {
-            $slugger = new Slugify(['regexp' => '([^A-Za-z0-9\/]+)']);
-            $model->{$attribute} = $slugger->slugify($modelArray[$attribute]);
-          }
-
-          if (!empty($fieldType)) {
-
-            // Get processor class.
-            $processorClass = 'giantbits\crelish\plugins\\' . strtolower($fieldType) . '\\' . ucfirst($fieldType) . 'ContentProcessor';
-
-            if (strpos($fieldType, "widget_") !== false) {
-              $processorClass = str_replace("widget_", "", $fieldType) . 'ContentProcessor';
-            }
-
-            // Do processor based pre processing.
-            if (class_exists($processorClass) && method_exists($processorClass, 'processDataPreSave')) {
-              if ($fieldType !== 'relationSelect') {
-                $model->{$attribute} = $processorClass::processDataPreSave($attribute, $modelArray[$attribute], $this->_elementDefinition->fields[$attribute], $model);
-              } else {
-                if (!empty($fieldDef->config) && is_object($fieldDef->config) && isset($fieldDef->config->ctype) && (!isset($fieldDef->config->multiple) || $fieldDef->config->multiple === false)) {
-                  @$model->{$attribute} = $modelArray[$attribute];
-                }
-              }
-            } else {
-              if ($attribute !== 'i18n' && $model->hasAttribute($attribute)) {
-                @$model->{$attribute} = $modelArray[$attribute];
-              }
-            }
-          }
-        }
-
-        if (method_exists('\\app\\workspace\\hooks\\' . ucfirst($this->ctype) . 'Hooks', 'beforeSave')) {
-          return call_user_func(['\\app\\workspace\\hooks\\' . ucfirst($this->ctype) . 'Hooks', 'afterSave'], ['data' => $this]);
-        }
-
-        if ($model->save(false)) {
-
-
-
-          if (method_exists('\\app\\workspace\\hooks\\' . ucfirst($this->ctype) . 'Hooks', 'afterSave')) {
-            call_user_func(['\\app\\workspace\\hooks\\' . ucfirst($this->ctype) . 'Hooks', 'afterSave'], ['data' => $this]);
-          }
-
-          // New post save handlers.
-          foreach ($this->attributes() as $attribute) {
-
-            $fieldDef = find($this->_elementDefinition->fields, function ($def) use ($attribute) {
-              return $def->key == $attribute;
-            });
-            if (!empty($fieldDef) && is_object($fieldDef)) {
-              $fieldType = (property_exists($fieldDef, 'type')) ? $fieldDef->type : 'textInput';
-            }
-            if (!empty($fieldType)) {
-
-              // Get processor class.
-              $processorClass = 'giantbits\crelish\plugins\\' . strtolower($fieldType) . '\\' . ucfirst($fieldType) . 'ContentProcessor';
-
-              if (strpos($fieldType, "widget_") !== false) {
-                $processorClass = str_replace("widget_", "", $fieldType) . 'ContentProcessor';
-              }
-
-              // Do processor based pre processing.
-              if (class_exists($processorClass) && method_exists($processorClass, 'processDataPostSave')) {
-                if ($fieldType === 'relationSelect') {
-                  $processorClass::processDataPostSave($attribute, $modelArray[$attribute], $this->_elementDefinition->fields[$attribute], $model);
-                } else {
-                  $model->{$attribute} = $processorClass::processDataPostSave($attribute, $modelArray[$attribute], $this->_elementDefinition->fields[$attribute], $model);
-                }
-              } else {
-                if ($attribute !== 'i18n') {
-                  $model->{$attribute} = $modelArray[$attribute];
-                }
-              }
-            }
-          }
-
-          $saveSuccess = true;
-        }
-
-        break;
-      default:
-        $outModel = Json::encode($modelArray);
-        $path = Yii::getAlias('@app') . DIRECTORY_SEPARATOR . 'workspace' . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . $this->identifier;
-        // Create folder if not present.
-        FileHelper::createDirectory($path, 0775, true);
-
-        // Set full filename.
-        $path .= DIRECTORY_SEPARATOR . $this->uuid . '.json';
-
-        // Save the file.
-        file_put_contents($path, $outModel);
-        @chmod($path, 0777);
-        $saveSuccess = true;
-    }
-
-    // Update cache
-    $this->updateCache(($this->isNew) ? 'create' : 'update', CrelishBaseContentProcessor::processElement($this->ctype, $modelArray));
-
-    // Todo: Create entry in slug storage.
-    if (!empty($this->slug)) {
+    // Handle slug storage
+    if ($saveSuccess && !empty($this->slug)) {
       $ds = DIRECTORY_SEPARATOR;
       $slugStore = [];
       $slugStoreFolder = Yii::getAlias('@runtime') . $ds . 'slugstore';
@@ -346,9 +235,8 @@ class CrelishDynamicModel extends DynamicModel
         $slugStore = Json::decode(file_get_contents($slugStoreFolder . $ds . $slugStoreFile), true);
       }
 
-      // Update store.
+      // Update store
       $slugStore[$this->slug] = ['ctype' => $this->ctype, 'uuid' => $this->uuid];
-
       file_put_contents($slugStoreFolder . $ds . $slugStoreFile, Json::encode($slugStore));
     }
 
@@ -357,18 +245,22 @@ class CrelishDynamicModel extends DynamicModel
 
   public function delete()
   {
-    $this->updateCache('delete', $this->uuid);
-
-    if (file_exists($this->fileSource)) {
-      unlink($this->fileSource);
+    // Use the storage factory to get the appropriate storage implementation
+    $storage = CrelishStorageFactory::getStorage($this->ctype);
+    
+    // Call hooks before deletion
+    if (method_exists('\\app\\workspace\\hooks\\' . ucfirst($this->ctype) . 'Hooks', 'beforeDelete')) {
+      call_user_func(['\\app\\workspace\\hooks\\' . ucfirst($this->ctype) . 'Hooks', 'beforeDelete'], ['data' => $this]);
     }
-
-    if (is_object($this->_elementDefinition) && $this->_elementDefinition->storage == 'db') {
-      $model = call_user_func('app\workspace\models\\' . ucfirst($this->ctype) . '::find')->where(['uuid' => $this->uuid])->one();
-      if ($model) {
-        $model->delete();
-      }
+    
+    $result = $storage->delete($this->ctype, $this->uuid);
+    
+    // Call hooks after deletion
+    if ($result && method_exists('\\app\\workspace\\hooks\\' . ucfirst($this->ctype) . 'Hooks', 'afterDelete')) {
+      call_user_func(['\\app\\workspace\\hooks\\' . ucfirst($this->ctype) . 'Hooks', 'afterDelete'], ['data' => $this]);
     }
+    
+    return $result;
   }
 
   public function getFields()

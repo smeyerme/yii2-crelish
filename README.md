@@ -286,3 +286,87 @@ Currently the system relies on two cintent types to b epresent. Paste the follow
 
 
 ```
+
+## Content Type Generator
+
+Crelish now provides a command-line tool to streamline the process of creating new content types. This tool automatically generates both the database table and the model class based on a JSON element definition.
+
+### Usage
+
+1. Create a JSON element definition file in `@app/workspace/elements/` (e.g., `boardgame.json`)
+2. Run the generator command:
+
+```bash
+./yii content-type/generate boardgame
+```
+
+This will:
+- Create a database table for the content type
+- Generate a model class with appropriate getters/setters for JSON fields
+- Set up relations based on the element definition
+
+### Listing Available Element Definitions
+
+To see all available element definitions:
+
+```bash
+./yii content-type/list
+```
+
+### Element Definition Format
+
+The element definition should follow the standard Crelish format, with the addition of a `storage` property to specify whether to use database or JSON storage:
+
+```json
+{
+  "key": "boardgame",
+  "storage": "db",
+  "label": "Board Games",
+  "category": "Content",
+  "fields": [
+    {
+      "label": "Title",
+      "key": "systitle",
+      "type": "textInput",
+      "visibleInGrid": true,
+      "rules": [
+        ["required"],
+        ["string", {"max": 128}]
+      ],
+      "sortable": true
+    },
+    {
+      "label": "Mechanics",
+      "key": "mechanics",
+      "type": "checkboxList",
+      "transform": "json",
+      "visibleInGrid": false,
+      "rules": [
+        ["safe"]
+      ]
+    },
+    {
+      "label": "Cover Image",
+      "key": "coverImage",
+      "type": "assetConnector",
+      "visibleInGrid": false,
+      "rules": [
+        ["safe"]
+      ]
+    }
+  ]
+}
+```
+
+The generator will automatically:
+- Map field types to appropriate database column types
+- Create getters and setters for JSON fields
+- Set up relations for fields of type `relationSelect` and `assetConnector`
+
+#### Special Field Types
+
+- **relationSelect**: Creates a relation to another content type. Requires a `config.ctype` property to specify the target content type.
+- **assetConnector**: Creates a relation to the asset content type. This is automatically handled without additional configuration.
+- **matrixConnector**: Stored as JSON data for complex structured content.
+- **widgetConnector**: Stored as JSON data for connecting widgets to content items.
+- Fields with `"transform": "json"`: Automatically handled with getters and setters for working with JSON data.

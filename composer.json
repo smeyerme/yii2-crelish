@@ -8,6 +8,7 @@
     ],
     "type": "yii2-extension",
     "license": "BSD-3-Clause",
+    "version": "0.9.3",
     "minimum-stability": "dev",
     "prefer-stable": true,
     "support": {
@@ -26,12 +27,13 @@
         }
     ],
     "require": {
-        "yiisoft/yii2": "2.0.51",
+        "php": ">=7.4.0",
+        "yiisoft/yii2": "~2.0.14",
         "symfony/yaml": "v6.3.12",
         "lodash-php/lodash-php": "0.0.9",
         "ksubileau/color-thief-php": "^1.3",
         "yiisoft/yii2-twig": "2.2.0",
-        "yiisoft/yii2-bootstrap5": "*",
+        "yiisoft/yii2-bootstrap5": "~2.0.2",
         "yiisoft/yii2-queue": "*",
         "npm-asset/bootstrap": "v5.3.3",
         "league/glide": "2.2.2",
@@ -61,7 +63,9 @@
         "yiisoft/yii2-symfonymailer": "^4.0",
         "himiklab/yii2-recaptcha-widget": "^2.1",
         "baha2odeh/yii2-recaptcha-v3": "*",
-        "deeplcom/deepl-php": "^1.11"
+        "deeplcom/deepl-php": "^1.11",
+        "yiisoft/yii2-swiftmailer": "~2.0.0 || ~2.1.0",
+        "firebase/php-jwt": "^6.11"
     },
     "autoload": {
         "psr-4": {
