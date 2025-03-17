@@ -124,4 +124,30 @@ class SettingsController extends CrelishBaseController
     }
     die();
   }
+
+  /**
+   * Override the setupHeaderBar method for settings-specific components
+   */
+  protected function setupHeaderBar()
+  {
+    // Default left components for all actions
+    $this->view->params['headerBarLeft'] = ['toggle-sidebar'];
+    
+    // Default right components (empty by default)
+    $this->view->params['headerBarRight'] = [];
+    
+    // Set specific components based on action
+    $action = $this->action ? $this->action->id : null;
+    
+    switch ($action) {
+      case 'index':
+        // For settings index, add a title
+        $this->view->params['headerBarLeft'][] = ['title', 'Settings'];
+        break;
+        
+      default:
+        // For other actions, just keep the defaults
+        break;
+    }
+  }
 }

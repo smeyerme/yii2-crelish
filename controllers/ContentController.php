@@ -98,14 +98,11 @@ class ContentController extends CrelishBaseController
     }
 
     // Handle content filtering
-    if (key_exists('cr_content_filter', $_GET)) {
-      $filter = ['freesearch' => $_GET['cr_content_filter']];
-    } else {
-      if (!empty(Yii::$app->session->get('cr_content_filter'))) {
-        $filter = ['freesearch' => Yii::$app->session->get('cr_content_filter')];
-      }
+    $searchTerm = $this->handleSessionAndQueryParams('cr_content_filter');
+    if (!empty($searchTerm)) {
+      $filter = ['freesearch' => $searchTerm];
     }
-
+    
     // Create a data manager for the content type
     $dataManager = new CrelishDataManager($this->ctype, [
       'filter' => $filter,
@@ -259,12 +256,12 @@ class ContentController extends CrelishBaseController
    */
   public function actionCreate()
   {
-    $content = $this->buildForm();
+    $content = $this->buildForm('admin');
 
     return $this->render('create.twig', [
       'content' => $content,
       'ctype' => $this->ctype,
-      'uuid' => $this->uuid,
+      'uuid' => $this->uuid
     ]);
   }
 
@@ -274,14 +271,12 @@ class ContentController extends CrelishBaseController
    */
   public function actionUpdate()
   {
-    MatrixBuilderHelper::registerOverlayMode($this->view);
+    $content = $this->buildForm('admin');
 
-    $content = $this->buildForm();
-
-    return $this->render('create.twig', [
+    return $this->render('update.twig', [
       'content' => $content,
       'ctype' => $this->ctype,
-      'uuid' => $this->uuid,
+      'uuid' => $this->uuid
     ]);
   }
 
@@ -396,12 +391,37 @@ class ContentController extends CrelishBaseController
     ]);
   }
 
-  private function handleSessionAndQueryParams($paramName)
+  /**
+   * Override the setupHeaderBar method for content-specific components
+   */
+  protected function setupHeaderBar()
   {
-    if (isset($_GET[$paramName])) {
-      Yii::$app->session->set($paramName, $_GET[$paramName]);
-    } elseif (Yii::$app->session->get($paramName) !== null) {
-      $_GET[$paramName] = Yii::$app->session->get($paramName);
+    // Default left components for all actions
+    $this->view->params['headerBarLeft'] = ['toggle-sidebar'];
+    
+    // Default right components (empty by default)
+    $this->view->params['headerBarRight'] = [];
+    
+    // Set specific components based on action
+    $action = $this->action ? $this->action->id : null;
+    
+    switch ($action) {
+      case 'index':
+        // For content index, add search and create buttons
+        $this->view->params['headerBarLeft'][] = 'search';
+        $this->view->params['headerBarRight'] = ['delete', 'create'];
+        break;
+        
+      case 'create':
+      case 'update':
+        // For create/update actions, add back button and save buttons
+        $this->view->params['headerBarLeft'][] = 'back-button';
+        $this->view->params['headerBarRight'] = ['save'];
+        break;
+        
+      default:
+        // For other actions, just keep the defaults
+        break;
     }
   }
 }

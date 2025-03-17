@@ -45,6 +45,40 @@ class NewsletterController extends CrelishBaseController
     return parent::beforeAction($action);
   }
 
+  /**
+   * Override the setupHeaderBar method for newsletter-specific components
+   */
+  protected function setupHeaderBar()
+  {
+    // Default left components for all actions
+    $this->view->params['headerBarLeft'] = ['toggle-sidebar'];
+    
+    // Default right components (empty by default)
+    $this->view->params['headerBarRight'] = [];
+    
+    // Set specific components based on action
+    $action = $this->action ? $this->action->id : null;
+    
+    switch ($action) {
+      case 'index':
+        // For newsletter index, add search and create buttons
+        $this->view->params['headerBarLeft'][] = 'search';
+        $this->view->params['headerBarRight'] = ['delete', 'create'];
+        break;
+        
+      case 'create':
+      case 'update':
+        // For create/update actions, add back button and save buttons
+        $this->view->params['headerBarLeft'][] = 'back-button';
+        $this->view->params['headerBarRight'] = ['save'];
+        break;
+        
+      default:
+        // For other actions, just keep the defaults
+        break;
+    }
+  }
+
   public function actionIndex(): string
   {
     $this->view->title = 'Newsletters';

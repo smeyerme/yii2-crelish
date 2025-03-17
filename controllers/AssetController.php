@@ -67,8 +67,8 @@
 		
 		public function init()
 		{
-			$this->enableCsrfValidation = false;
 			parent::init();
+			$this->enableCsrfValidation = false;
 		}
 		
 		public function actions(): array
@@ -76,6 +76,39 @@
 			return [
 				'glide' => 'giantbits\crelish\actions\GlideAction'
 			];
+		}
+		
+		/**
+		 * Override the setupHeaderBar method to use asset-specific components
+		 */
+		protected function setupHeaderBar()
+		{
+			// Default left components for all actions
+			$this->view->params['headerBarLeft'] = ['toggle-sidebar'];
+			
+			// Default right components (empty by default)
+			$this->view->params['headerBarRight'] = [];
+			
+			// Set specific components based on action
+			$action = $this->action ? $this->action->id : null;
+			
+			switch ($action) {
+				case 'index':
+					// For asset index, use search and view controls
+					$this->view->params['headerBarLeft'][] = 'search';
+					$this->view->params['headerBarRight'] = ['delete', 'asset-view-controls'];
+					break;
+					
+				case 'update':
+					// For update actions, add back button and save buttons
+					$this->view->params['headerBarLeft'][] = 'back-button';
+					$this->view->params['headerBarRight'] = ['save'];
+					break;
+					
+				default:
+					// For other actions, just keep the defaults
+					break;
+			}
 		}
 		
 		public function actionGlideInt()
@@ -121,10 +154,11 @@
 				}
 			}
 			
-			if (!empty($_GET['cr_content_filter'])) {
-				$filter = ['freesearch' => $_GET['cr_content_filter']];
+			// Handle content filtering
+			$searchTerm = $this->handleSessionAndQueryParams('cr_content_filter');
+			if (!empty($searchTerm)) {
+				$filter = ['freesearch' => $searchTerm];
 			}
-
 
       if(empty($_GET['sort'])) {
         $_GET['sort'] = "-created";
@@ -144,6 +178,7 @@
 						switch ($model['mime']) {
 							case 'image/jpg':
 							case 'image/jpeg':
+							case 'image/webp':
 							case 'image/gif':
 							case 'image/png':
 								$preview = Html::img('/crelish/asset/glide?path=' . CrelishBaseHelper::getAssetUrl($model['pathName'], $model['fileName']) . '&w=160&f=fit', ['style' => 'width: 80px; height: auto;']);

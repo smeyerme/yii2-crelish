@@ -41,6 +41,33 @@ class ExportController extends CrelishBaseController
     parent::init();
   }
 
+  /**
+   * Override the setupHeaderBar method for export-specific components
+   */
+  protected function setupHeaderBar()
+  {
+    // Default left components for all actions
+    $this->view->params['headerBarLeft'] = ['toggle-sidebar'];
+    
+    // Default right components (empty by default)
+    $this->view->params['headerBarRight'] = [];
+    
+    // Set specific components based on action
+    $action = $this->action ? $this->action->id : null;
+    
+    switch ($action) {
+      case 'index':
+      case 'filter':
+      case 'run':
+        // For export actions, just show the toggle sidebar
+        break;
+        
+      default:
+        // For other actions, just keep the defaults
+        break;
+    }
+  }
+
   public function actionIndex()
   {
     $elements = new CrelishJsonDataProvider('elements', [

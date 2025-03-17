@@ -57,9 +57,10 @@ class Bootstrap implements BootstrapInterface
         $composerFile = dirname(__FILE__) . '/composer.json';
         if (file_exists($composerFile)) {
           $composerData = json_decode(file_get_contents($composerFile), true);
-          if (isset($composerData['version'])) {
-            Yii::$app->params['crelish']['version'] = 'V' . $composerData['version'];
-          }
+          $version = isset($composerData['version']) ? 'V' . $composerData['version'] : 'V0.9.0';
+          Yii::$app->params['crelish']['version'] = $version;
+        } else {
+          Yii::$app->params['crelish']['version'] = 'V0.9.0'; // Fallback version
         }
       }
     } catch (\Exception $e) {
@@ -67,9 +68,11 @@ class Bootstrap implements BootstrapInterface
       Yii::warning('Failed to determine package version: ' . $e->getMessage());
     }
     
-    // Set fallback version if not found
-    if (!isset(Yii::$app->params['crelish']['version'])) {
-      Yii::$app->params['crelish']['version'] = 'V0.9.0'; // Fallback version
+    // Register Twig functions
+    if (isset(Yii::$app->view->renderers['twig'])) {
+      Yii::$app->view->renderers['twig']['globals']['header_bar_widget'] = function($config = []) {
+        return \giantbits\crelish\components\widgets\HeaderBar::widget($config);
+      };
     }
   }
 

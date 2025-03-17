@@ -74,16 +74,48 @@
 		 */
 		public function init()
 		{
+			parent::init();
+			
 			$this->registerClientScripts();
 			$this->ctype = 'registrations';
 			$this->uuid = (!empty(\Yii::$app->getRequest()->getQueryParam('uuid'))) ? \Yii::$app->getRequest()->getQueryParam('uuid') : null;
-			parent::init();
+		}
+		
+		/**
+		 * Override the setupHeaderBar method for registrations-specific components
+		 */
+		protected function setupHeaderBar()
+		{
+			// Default left components for all actions
+			$this->view->params['headerBarLeft'] = ['toggle-sidebar'];
+			
+			// Default right components (empty by default)
+			$this->view->params['headerBarRight'] = [];
+			
+			// Set specific components based on action
+			$action = $this->action ? $this->action->id : null;
+			
+			switch ($action) {
+				case 'index':
+					// For registrations index, add search and export buttons
+					$this->view->params['headerBarLeft'][] = 'search';
+					$this->view->params['headerBarRight'] = ['delete', 'export'];
+					break;
+					
+				case 'update':
+					// For update actions, add back button and save buttons
+					$this->view->params['headerBarLeft'][] = 'back-button';
+					$this->view->params['headerBarRight'] = ['save'];
+					break;
+					
+				default:
+					// For other actions, just keep the defaults
+					break;
+			}
 		}
 		
 		public function actionIndex()
 		{
-			$this->layout = 'crelish.twig';
-			
 			if (!empty(\Yii::$app->request->post('selection'))) {
 				foreach (\Yii::$app->request->post('selection') as $entry) {
 					Registrations::find()->where(['uuid' => $entry])->one()->delete();
@@ -148,8 +180,6 @@
      */
     public function actionExport()
 		{
-			$this->layout = 'crelish.twig';
-			
 			$phoneUtl = PhoneNumberUtil::getInstance();
 
       if (empty(\Yii::$app->request->get('sort'))) {
@@ -317,25 +347,24 @@
 		
 		public function actionUpdate()
 		{
-			$this->layout = 'crelish.twig';
-			
-			$cleanModel = Registrations::find()->where(['=', 'uuid', $this->uuid])->one();
+			$uuid = \Yii::$app->request->get('uuid');
+			$model = Registrations::findOne(['uuid' => $uuid]);
 			$mailData = [];
 			
 			//$content = $this->buildForm('admin', [], true, 'export');
 			
-			foreach ($cleanModel->getMailProfile($cleanModel->type) as $field) {
-				if (!empty($cleanModel->{$field})) {
+			foreach ($model->getMailProfile($model->type) as $field) {
+				if (!empty($model->{$field})) {
 					$fieldLabel = match ($field) {
 						'uuid' => \Yii::t('app', 'Registrations Nr.'),
 						'type' => \Yii::t('app', 'Registriert als'),
 						'created' => \Yii::t('app', 'Registrationsdatum'),
-						default => $cleanModel->getAttributeLabel($field),
+						default => $model->getAttributeLabel($field),
 					};
 					
-					$value = nl2br($cleanModel->getTransformedValue($field));
+					$value = nl2br($model->getTransformedValue($field));
 					
-					if ($field === 'participation' && $cleanModel->eventCode == 'EBH') {
+					if ($field === 'participation' && $model->eventCode == 'EBH') {
 						switch ($value) {
 							case 'WHOLEEVENT':
 								$value = 'Ganze Veranstaltung';
@@ -358,7 +387,7 @@
 						}
 					}
 					
-					if ($field === 'type' && $cleanModel->eventCode == 'EBH') {
+					if ($field === 'type' && $model->eventCode == 'EBH') {
 						switch ($value) {
 							case 'Regular':
 								$value = 'Teilnehmer';
@@ -372,7 +401,7 @@
 						}
 					}
 					
-					if ($field === 'dinner' && $cleanModel->eventCode == 'EBH') {
+					if ($field === 'dinner' && $model->eventCode == 'EBH') {
 						$value = match ($value) {
 							'1' => 'Ja',
 							default => 'Nein',
@@ -389,7 +418,7 @@
 			
 			
 			return $this->render('update.twig', [
-				'content' => $cleanModel,
+				'content' => $model,
 				'ctype' => 'registration',
 				'uuid' => $this->uuid,
 				'data' => $mailData

@@ -48,7 +48,26 @@ class CrelishDbStorage implements CrelishDataStorage
         // Apply filters
         if (!empty($filter)) {
             foreach ($filter as $attribute => $value) {
-                if (is_array($value) && isset($value[0]) && $value[0] === 'strict') {
+                if ($attribute === 'freesearch') {
+                    // Handle freesearch by searching across all fields
+                    $searchFragments = explode(" ", trim($value));
+                    $orConditions = ['or'];
+                    
+                    // Get the table schema to find all searchable columns
+                    $modelClass = $this->getModelClass($ctype);
+                    $tableSchema = $modelClass::getTableSchema();
+                    
+                    foreach ($tableSchema->columns as $column) {
+                        // Only search in string/text columns
+                        if (in_array($column->type, ['string', 'text', 'char'])) {
+                            foreach ($searchFragments as $fragment) {
+                                $orConditions[] = ['like', $column->name, $fragment];
+                            }
+                        }
+                    }
+                    
+                    $query->andWhere($orConditions);
+                } elseif (is_array($value) && isset($value[0]) && $value[0] === 'strict') {
                     $query->andWhere([$attribute => $value[1]]);
                 } else {
                     $query->andWhere(['like', $attribute, $value]);
@@ -229,7 +248,26 @@ class CrelishDbStorage implements CrelishDataStorage
         // Apply filters
         if (!empty($filter)) {
             foreach ($filter as $attribute => $value) {
-                if (is_array($value) && isset($value[0]) && $value[0] === 'strict') {
+                if ($attribute === 'freesearch') {
+                    // Handle freesearch by searching across all fields
+                    $searchFragments = explode(" ", trim($value));
+                    $orConditions = ['or'];
+                    
+                    // Get the table schema to find all searchable columns
+                    $modelClass = $this->getModelClass($ctype);
+                    $tableSchema = $modelClass::getTableSchema();
+                    
+                    foreach ($tableSchema->columns as $column) {
+                        // Only search in string/text columns
+                        if (in_array($column->type, ['string', 'text', 'char'])) {
+                            foreach ($searchFragments as $fragment) {
+                                $orConditions[] = ['like', $column->name, $fragment];
+                            }
+                        }
+                    }
+                    
+                    $query->andWhere($orConditions);
+                } elseif (is_array($value) && isset($value[0]) && $value[0] === 'strict') {
                     $query->andWhere([$attribute => $value[1]]);
                 } else {
                     $query->andWhere(['like', $attribute, $value]);

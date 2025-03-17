@@ -24,7 +24,7 @@
 		 *
 		 * @var string
 		 */
-		public $layout = 'simple.twig';
+		public $layout = 'crelish.twig';
 		
 		public function behaviors()
 		{
@@ -90,7 +90,9 @@
 		 */
 		public function actionLogin()
 		{
-      			// Turn away if logged in.
+			$this->layout = 'simple.twig';
+			
+      		// Turn away if logged in.
 			if (!\Yii::$app->user->isGuest && \Yii::$app->user->identity->role == 9) {
 				return $this->redirect(Url::to(['/crelish/content/index']));
 			}
@@ -132,7 +134,6 @@
 		 */
 		public function actionIndex()
 		{
-      $this->layout = 'crelish.twig';
       $filter = null;
       $checkCol = [
         [
@@ -150,20 +151,16 @@
 				}
 			}
 
-      if (key_exists('cr_content_filter', $_GET)) {
-        $filter = ['freesearch' => $_GET['cr_content_filter']];
-      } else {
-        if (!empty(Yii::$app->session->get('cr_content_filter'))) {
-          $filter = ['freesearch' => Yii::$app->session->get('cr_content_filter')];
-        }
+      // Handle content filtering
+      $searchTerm = $this->handleSessionAndQueryParams('cr_content_filter');
+      if (!empty($searchTerm)) {
+        $filter = ['freesearch' => $searchTerm];
       }
 
-      if (key_exists('cr_status_filter', $_GET)) {
-        $filter['state'] = ['strict', $_GET['cr_status_filter']];
-      } else {
-        if (!empty(\Yii::$app->session->get('cr_status_filter'))) {
-          $filter['state'] = ['strict', \Yii::$app->session->get('cr_status_filter')];
-        }
+      // Handle status filtering
+      $statusFilter = $this->handleSessionAndQueryParams('cr_status_filter');
+      if (!empty($statusFilter)) {
+        $filter['state'] = ['strict', $statusFilter];
       }
 
       $modelInfo = new CrelishDataProvider($this->ctype, ['filter' => $filter], null, null, true);
@@ -365,7 +362,6 @@
 		
 		public function actionImport()
 		{
-			$this->layout = 'crelish.twig';
 			$creationTime = null;
 			
 			if (\Yii::$app->request->isPost) {
@@ -452,8 +448,6 @@
 		
 		public function actionUpdate()
 		{
-			$this->layout = 'crelish.twig';
-			
 			$content = $this->buildForm('admin');
 			
 			return $this->render('update.twig', [
@@ -465,8 +459,6 @@
 		
 		public function actionCreate()
 		{
-			$this->layout = 'crelish.twig';
-			
 			$content = $this->buildForm('admin');
 			
 			return $this->render('create.twig', [
@@ -498,6 +490,45 @@
 		{
 			\Yii::$app->user->logout();
 			
-			return $this->goHome();
+			return $this->redirect(Url::to(['/crelish/user/login']));
+		}
+		
+		/**
+		 * Override the setupHeaderBar method to use user-specific components
+		 */
+		protected function setupHeaderBar()
+		{
+			// Default left components for all actions
+			$this->view->params['headerBarLeft'] = ['toggle-sidebar'];
+			
+			// Default right components (empty by default)
+			$this->view->params['headerBarRight'] = [];
+			
+			// Set specific components based on action
+			$action = $this->action ? $this->action->id : null;
+			
+			switch ($action) {
+				case 'index':
+					// For user index, use the user-specific search and create buttons
+					$this->view->params['headerBarLeft'][] = 'user-search';
+					$this->view->params['headerBarRight'] = ['delete', 'user-create'];
+					break;
+					
+				case 'create':
+				case 'update':
+					// For create/update actions, add back button and save buttons
+					$this->view->params['headerBarLeft'][] = 'back-button';
+					$this->view->params['headerBarRight'] = ['save'];
+					break;
+					
+				case 'login':
+					// For login, use simple layout
+					$this->layout = 'simple.twig';
+					break;
+					
+				default:
+					// For other actions, just keep the defaults
+					break;
+			}
 		}
 	}

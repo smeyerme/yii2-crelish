@@ -34,17 +34,11 @@ class PageController extends CrelishBaseController
    */
   public function init()
   {
+    parent::init();
+    
     $this->uuid = (!empty(\Yii::$app->getRequest()
       ->getQueryParam('uuid'))) ? \Yii::$app->getRequest()
       ->getQueryParam('uuid') : null;
-
-    if (key_exists('cr_content_filter', $_GET)) {
-      \Yii::$app->session->set('cr_content_filter', $_GET['cr_content_filter']);
-    } else {
-      if (!empty(\Yii::$app->session->get('cr_content_filter'))) {
-        \Yii::$app->request->setQueryParams(['cr_content_filter' => \Yii::$app->session->get('cr_content_filter')]);
-      }
-    }
 
     $this->ctype = 'page';
 
@@ -53,8 +47,59 @@ class PageController extends CrelishBaseController
         $(".scrollable").animate({ scrollTop: "0" });
       });
     ', \yii\web\View::POS_LOAD);
+  }
+  
+  /**
+   * Called before the action is executed
+   * 
+   * @param \yii\base\Action $action the action to be executed
+   * @return bool whether the action should continue to be executed
+   */
+  public function beforeAction($action)
+  {
+    if (!parent::beforeAction($action)) {
+      return false;
+    }
+    
+    // Set up the header bar components now that we know the action
+    $this->setupHeaderBar();
+    
+    return true;
+  }
 
-    return parent::init();
+  /**
+   * Override the setupHeaderBar method to use page-specific components
+   */
+  protected function setupHeaderBar()
+  {
+    // Default left components for all actions
+    $this->view->params['headerBarLeft'] = ['toggle-sidebar'];
+    
+    // Default right components (empty by default)
+    $this->view->params['headerBarRight'] = [];
+    
+    // Set specific components based on action
+    $action = $this->action ? $this->action->id : null;
+
+    
+    switch ($action) {
+      case 'index':
+        // For page index, use search and create buttons
+        $this->view->params['headerBarLeft'][] = 'search';
+        $this->view->params['headerBarRight'] = ['delete', 'create'];
+        break;
+        
+      case 'create':
+      case 'update':
+        // For create/update actions, add back button and save buttons
+        $this->view->params['headerBarLeft'][] = 'back-button';
+        $this->view->params['headerBarRight'] = ['save'];
+        break;
+        
+      default:
+        // For other actions, just keep the defaults
+        break;
+    }
   }
 
   /**
@@ -71,13 +116,11 @@ class PageController extends CrelishBaseController
         $delModel->delete();
       }
     }
-
-    if (key_exists('cr_content_filter', $_GET)) {
-      $filter = ['freesearch' => $_GET['cr_content_filter']];
-    } else {
-      if (!empty(\Yii::$app->session->get('cr_content_filter'))) {
-        $filter = ['freesearch' => \Yii::$app->session->get('cr_content_filter')];
-      }
+    
+    // Handle content filtering
+    $searchTerm = $this->handleSessionAndQueryParams('cr_content_filter');
+    if (!empty($searchTerm)) {
+      $filter = ['freesearch' => $searchTerm];
     }
 
     if(empty($_GET['sort'])) {

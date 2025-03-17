@@ -65,4 +65,36 @@ class ElementsController extends CrelishBaseController
       return $this->render('edit.twig',['element'=>$data]);
   }
 
+	/**
+	 * Override the setupHeaderBar method to use elements-specific components
+	 */
+	protected function setupHeaderBar()
+	{
+		// Default left components for all actions
+		$this->view->params['headerBarLeft'] = ['toggle-sidebar'];
+		
+		// Default right components (empty by default)
+		$this->view->params['headerBarRight'] = [];
+		
+		// Set specific components based on action
+		$action = $this->action ? $this->action->id : null;
+		
+		switch ($action) {
+			case 'index':
+				// For elements index, just show the title
+				$this->view->params['headerBarLeft'][] = 'elements-title';
+				break;
+				
+			case 'edit':
+				// For edit actions, add back button and save buttons
+				$this->view->params['headerBarLeft'][] = 'back-button';
+				$this->view->params['headerBarRight'] = ['save'];
+				break;
+				
+			default:
+				// For other actions, just keep the defaults
+				break;
+		}
+	}
+
 }

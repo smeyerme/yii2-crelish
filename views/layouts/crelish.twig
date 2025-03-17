@@ -1,4 +1,5 @@
 {{ use('giantbits/crelish/widgets/FlashMessages') }}
+{{ use('giantbits/crelish/components/widgets/HeaderBar') }}
 {% set crelishBundle = register_asset_bundle('giantbits/crelish/CrelishAsset', true) %}
 {{ void(this.beginPage()) }}
 <!DOCTYPE html>
@@ -26,16 +27,10 @@
 	</div>
 	<div id="cr-right-pane" class="scrollable">
 		
-		<nav class="navbar--controller">
-			{% include  [
-				('@workspace/actions/' ~ app.controller.id ~ '/views/' ~ app.controller.action.id ~ "_header_bar.twig"),
-				('@workspace/actions/' ~ app.controller.id ~ '/views/default_header_bar.twig'),
-				('@workspace/actions/default/default_header_bar.twig'),
-				('@crelish/views/' ~ app.controller.id ~ '/' ~ app.controller.action.id ~ "_header_bar.twig"),
-				('@crelish/views/' ~ app.controller.id ~ '/default_header_bar.twig'),
-				('@crelish/views/default/default_header_bar.twig'),
-			] ignore missing %}
-		</nav>
+		{{ header_bar_widget({
+			'leftComponents': this.params['headerBarLeft'] ?? ['toggle-sidebar'],
+			'rightComponents': this.params['headerBarRight'] ?? []
+		}) | raw }}
 		
 		{{ flash_messages_widget() }}
 		
@@ -74,30 +69,24 @@
 	</div>
 </div>
 
-{# <!-- Modal definitions -->
-<div class="modal fade" id="confirm-cancel" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
-     aria-hidden="true">
-  <div class="modal-dialog gc-no-border-radius">
-    <div class="modal-content gc-no-border-radius gc-bc--palette-clouds">
-      <div class="modal-header gc-no-border">
-        <button type="button" class="close" data-bs-dismiss="modal" aria-hidden="true">×</button>
-        <h4 class="modal-title" id="myModalLabel">{{ t('app', 'Confirm cancel') }}</h4>
+<!-- Delete confirmation modal -->
+<div class="modal fade" id="confirm-delete-selected" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="deleteModalLabel">{{ t('app', 'Confirm Deletion') }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <p>{{ t('app', 'You are about to cancel your current action.') }}
-          <br/>{{ t('app', 'Unsaved changes might get lost.') }}</br>
-        <p>{{ t('app', 'Do you want to proceed?') }}</p>
+        {{ t('app', 'Are you sure you want to delete the selected items? This action cannot be undone.') }}
       </div>
-      <div class="modal-footer gc-no-border">
-        <button type="button" class="btn btn-default" data-bs-dismiss="modal">{{ t('app', 'Cancel') }}</button>
-        <button type="button" class="btn btn-danger btn-cancel-proceed"
-                data-href="">{{ t('app', 'Proceed') }}
-        </button>
+      <div class="modal-footer">
+        <button type="button" class="c-button c-button--ghost" data-bs-dismiss="modal">{{ t('app', 'Cancel') }}</button>
+        <button type="button" class="c-button c-button--error" id="confirm-delete-btn">{{ t('app', 'Delete') }}</button>
       </div>
     </div>
   </div>
 </div>
-#}
 
 {% apply registerCss %}
 
@@ -135,10 +124,16 @@ $(document).ready(function() {
 	
 	// Initial display on page load
 	$('#language-select').trigger('change');
+
+	// Handle confirm delete button click
+	$('#confirm-delete-btn').on('click', function() {
+		$('form[id$="-grid-form"]').submit();
+	});
 });
 {% endapply %}
 
 {{ void(this.endBody()) }}
+
 </body>
 </html>
 {{ void(this.endPage()) }}
