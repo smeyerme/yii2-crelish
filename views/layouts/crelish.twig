@@ -1,6 +1,7 @@
 {{ use('giantbits/crelish/widgets/FlashMessages') }}
 {{ use('giantbits/crelish/components/widgets/HeaderBar') }}
 {% set crelishBundle = register_asset_bundle('giantbits/crelish/CrelishAsset', true) %}
+{{ register_asset_bundle('giantbits/crelish/CrelishModernAsset') }}
 {{ void(this.beginPage()) }}
 <!DOCTYPE html>
 <html lang="{{ app.language }}">
