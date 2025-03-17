@@ -99,10 +99,10 @@ class ContentController extends CrelishBaseController
 
     // Handle content filtering
     $searchTerm = $this->handleSessionAndQueryParams('cr_content_filter');
+
     if (!empty($searchTerm)) {
       $filter = ['freesearch' => $searchTerm];
     }
-
 
     if (empty($this->ctype)) {
       return $this->render('content.twig', []);
@@ -135,14 +135,14 @@ class ContentController extends CrelishBaseController
             foreach ($elementDefinition->fields as $field) {
               if (!property_exists($field, 'virtual') || !$field->virtual) {
                 foreach ($searchFragments as $fragment) {
-                  $orConditions[] = ['like', $field->key, $fragment];
+                  $orConditions[] = ['like', $this->ctype . '.' . $field->key, $fragment];
                 }
               }
             }
 
             $query->andWhere($orConditions);
           } else {
-            $query->andWhere(['like', $key, $value]);
+            $query->andWhere(['like', $this->ctype . '.' . $key, $value]);
           }
         }
       }
