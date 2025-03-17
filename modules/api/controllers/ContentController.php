@@ -38,6 +38,7 @@ class ContentController extends BaseController
             
             // Validate content type
             if (!$contentService->contentTypeExists($type)) {
+                Yii::error("Content type '{$type}' does not exist", __METHOD__);
                 return $this->createResponse(
                     null, 
                     false, 
@@ -46,49 +47,62 @@ class ContentController extends BaseController
                 );
             }
             
-            // Build query
-            $query = $contentService->getQuery($type);
-            
-            // Apply filter if provided
-            if ($filter !== null) {
-                $query = $contentService->applyFilter($query, $filter);
-            }
-            
-            // Apply sorting
-            if ($sort !== null) {
-                $query = $query->orderBy([$sort => $order === 'asc' ? SORT_ASC : SORT_DESC]);
-            }
-            
-            // Create pagination
-            $pagination = new Pagination([
-                'totalCount' => $query->count(),
-                'page' => $page - 1, // Convert to 0-based
+            // Use CrelishDataManager directly for better performance
+            $settings = [
                 'pageSize' => $pageSize,
-            ]);
+            ];
             
-            // Get paginated results
-            $items = $query->offset($pagination->offset)
-                ->limit($pagination->limit)
-                ->all();
+            // Add sort settings if provided
+            if ($sort !== null) {
+                $settings['sort'] = [$sort => $order === 'asc' ? SORT_ASC : SORT_DESC];
+            }
+            
+            // Add filter settings if provided
+            if ($filter !== null) {
+                $filterArray = [];
+                $filterParts = explode(',', $filter);
+                
+                foreach ($filterParts as $part) {
+                    $criteria = explode(':', $part);
+                    
+                    if (count($criteria) === 3) {
+                        [$field, $operator, $value] = $criteria;
+                        
+                        if ($operator === 'eq') {
+                            $filterArray[$field] = $value;
+                        }
+                    }
+                }
+                
+                if (!empty($filterArray)) {
+                    $settings['filter'] = $filterArray;
+                }
+            }
+            
+            // Create data manager
+            $dataManager = new \giantbits\crelish\components\CrelishDataManager($type, $settings);
+            
+            // Get data
+            $result = $dataManager->all();
             
             // Prepare response
             $response = [
-                'items' => $items,
+                'items' => $result['models'],
                 'pagination' => [
-                    'totalItems' => $pagination->totalCount,
-                    'pageSize' => $pagination->pageSize,
-                    'currentPage' => $pagination->page + 1, // Convert back to 1-based
-                    'totalPages' => ceil($pagination->totalCount / $pagination->pageSize),
+                    'totalItems' => $result['pagination']->totalCount,
+                    'pageSize' => $result['pagination']->pageSize,
+                    'currentPage' => $result['pagination']->page + 1, // Convert to 1-based
+                    'totalPages' => ceil($result['pagination']->totalCount / $result['pagination']->pageSize),
                 ],
             ];
             
             return $this->createResponse($response);
         } catch (\Exception $e) {
-            Yii::error($e->getMessage(), __METHOD__);
+            Yii::error("Error in ContentController::actionIndex: " . $e->getMessage() . "\n" . $e->getTraceAsString(), __METHOD__);
             return $this->createResponse(
                 null, 
                 false, 
-                'An error occurred while fetching content items', 
+                'An error occurred while fetching content items: ' . $e->getMessage(), 
                 500
             );
         }
@@ -110,6 +124,7 @@ class ContentController extends BaseController
             
             // Validate content type
             if (!$contentService->contentTypeExists($type)) {
+                Yii::error("Content type '{$type}' does not exist", __METHOD__);
                 return $this->createResponse(
                     null, 
                     false, 
@@ -118,10 +133,14 @@ class ContentController extends BaseController
                 );
             }
             
+            // Use CrelishDataManager directly
+            $dataManager = new \giantbits\crelish\components\CrelishDataManager($type, [], $id);
+            
             // Get content item
-            $item = $contentService->getContentById($type, $id);
+            $item = $dataManager->one();
             
             if ($item === null) {
+                Yii::error("Content item with ID '{$id}' not found", __METHOD__);
                 return $this->createResponse(
                     null, 
                     false, 
@@ -132,11 +151,11 @@ class ContentController extends BaseController
             
             return $this->createResponse($item);
         } catch (\Exception $e) {
-            Yii::error($e->getMessage(), __METHOD__);
+            Yii::error("Error in ContentController::actionView: " . $e->getMessage() . "\n" . $e->getTraceAsString(), __METHOD__);
             return $this->createResponse(
                 null, 
                 false, 
-                'An error occurred while fetching the content item', 
+                'An error occurred while fetching the content item: ' . $e->getMessage(), 
                 500
             );
         }

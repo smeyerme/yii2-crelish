@@ -2,61 +2,67 @@
 
 namespace giantbits\crelish\components;
 
+use yii\data\DataProviderInterface;
+use yii\db\Query;
+
 /**
- * Interface for data storage implementations in Crelish CMS
- * 
- * This interface defines the contract that all storage implementations must follow,
- * allowing for consistent data access regardless of the underlying storage mechanism.
+ * Interface for Crelish data storage implementations
  */
 interface CrelishDataStorage
 {
     /**
-     * Find a single record by UUID
+     * Find a single record by ID
      * 
      * @param string $ctype Content type
-     * @param string $uuid UUID of the record
-     * @return array|null The record data or null if not found
+     * @param string $uuid UUID
+     * @return array|null Record data or null if not found
      */
     public function findOne(string $ctype, string $uuid): ?array;
     
     /**
-     * Find all records of a given content type
+     * Find all records matching the filter
      * 
      * @param string $ctype Content type
-     * @param array $filter Optional filter criteria
-     * @param array $sort Optional sorting criteria
-     * @param int $limit Optional limit
+     * @param array $filter Filter criteria
+     * @param array $sort Sort criteria
      * @return array Array of records
      */
-    public function findAll(string $ctype, array $filter = [], array $sort = [], int $limit = 0): array;
+    public function findAll(string $ctype, array $filter = [], array $sort = []): array;
+    
+    /**
+     * Get a data provider for the content type
+     * 
+     * @param string $ctype Content type
+     * @param array $filter Filter criteria
+     * @param array $sort Sort criteria
+     * @param int $pageSize Page size
+     * @return DataProviderInterface Data provider
+     */
+    public function getDataProvider(string $ctype, array $filter = [], array $sort = [], int $pageSize = 20): DataProviderInterface;
     
     /**
      * Save a record
      * 
      * @param string $ctype Content type
      * @param array $data Record data
-     * @param bool $isNew Whether this is a new record
      * @return bool Whether the save was successful
      */
-    public function save(string $ctype, array $data, bool $isNew = true): bool;
+    public function save(string $ctype, array $data): bool;
     
     /**
      * Delete a record
      * 
      * @param string $ctype Content type
-     * @param string $uuid UUID of the record to delete
+     * @param string $uuid UUID
      * @return bool Whether the deletion was successful
      */
     public function delete(string $ctype, string $uuid): bool;
     
     /**
-     * Get a data provider for the given content type
+     * Create a query for the content type
      * 
      * @param string $ctype Content type
-     * @param array $filter Optional filter criteria
-     * @param array $sort Optional sorting criteria
-     * @param int $pageSize Optional page size for pagination
-     * @return \yii\data\DataProviderInterface Data provider
+     * @return Query Query object
      */
-    public function getDataProvider(string $ctype, array $filter = [], array $sort = [], int $pageSize = 30): \yii\data\DataProviderInterface;
+    public function createQuery(string $ctype): Query;
 } 

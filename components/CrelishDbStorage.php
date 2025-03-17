@@ -300,4 +300,18 @@ class CrelishDbStorage implements CrelishDataStorage
             substr($charid, 20, 12);
         return strtolower($uuid);
     }
+    
+    /**
+     * Create a query for the content type
+     * 
+     * @param string $ctype Content type
+     * @return \yii\db\Query Query object
+     */
+    public function createQuery(string $ctype): \yii\db\Query
+    {
+        $query = new \yii\db\Query();
+        $query->from("{{%{$ctype}}}");
+        
+        return $query;
+    }
 } 

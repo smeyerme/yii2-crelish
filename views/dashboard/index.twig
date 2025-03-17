@@ -1,5 +1,208 @@
 {{ use('/giantbits/crelish/widgets') }}
 
 <div class="u-pillar-box-xlarge u-window-box-xlarge">
+    <div class="o-grid o-grid--small-full o-grid--medium-full o-grid--large-fit">
+        <!-- Welcome Section -->
+        <div class="o-grid__cell">
+            <div class="c-card">
+                <div class="c-card__content">
+                    <div class="c-card__header">
+                        <h2 class="c-heading">Welcome to Crelish CMS</h2>
+                    </div>
+                    <div class="c-card__body">
+                        <p>Manage your content, users, and settings from this dashboard.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
+    <!-- Content Statistics -->
+    <div class="o-grid o-grid--small-full o-grid--medium-full o-grid--large-fit u-letter-box-medium">
+        <div class="o-grid__cell">
+            <div class="c-card">
+                <div class="c-card__content">
+                    <div class="c-card__header">
+                        <h3 class="c-heading">Content Statistics</h3>
+                    </div>
+                    <div class="c-card__body">
+                        {% if contentStats|length > 0 %}
+                            <div class="content-stats-grid">
+                                {% for type, stats in contentStats %}
+                                    <div class="content-stats-item">
+                                        <div class="c-card c-card--high">
+                                            <div class="c-card__content">
+                                                <div class="c-card__header">
+                                                    <h4 class="c-heading">{{ stats.label }}</h4>
+                                                </div>
+                                                <div class="c-card__body u-centered">
+                                                    <span class="c-text--loud" style="font-size: 2rem;">{{ stats.count }}</span>
+                                                    <p>items</p>
+                                                </div>
+                                                <div class="c-card__footer">
+                                                    <a href="{{ url('crelish/content/index', {'ctype': type}) }}" class="c-button c-button--brand u-small">View All</a>
+                                                    <a href="{{ url('crelish/content/create', {'ctype': type}) }}" class="c-button c-button--info u-small">Create New</a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <p>No content types found. <a href="{{ url('crelish/content/index') }}">Create your first content type</a>.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Content and System Info -->
+    <div class="o-grid o-grid--small-full o-grid--medium-full o-grid--large-fit">
+        <!-- Recent Content -->
+        <div class="o-grid__cell u-2of3">
+            <div class="c-card">
+                <div class="c-card__content">
+                    <div class="c-card__header">
+                        <h3 class="c-heading">Recently Updated Content</h3>
+                    </div>
+                    <div class="c-card__body">
+                        {% if recentContent|length > 0 %}
+                            <table class="c-table c-table--striped">
+                                <thead class="c-table__head">
+                                    <tr class="c-table__row c-table__row--heading">
+                                        <th class="c-table__cell">Title</th>
+                                        <th class="c-table__cell">Type</th>
+                                        <th class="c-table__cell">Updated</th>
+                                        <th class="c-table__cell">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="c-table__body">
+                                    {% for item in recentContent %}
+                                        <tr class="c-table__row">
+                                            <td class="c-table__cell">{{ item.title }}</td>
+                                            <td class="c-table__cell">{{ item.typeLabel }}</td>
+                                            <td class="c-table__cell">{{ item.updated|date('Y-m-d H:i') }}</td>
+                                            <td class="c-table__cell">
+                                                <a href="{{ url('crelish/content/update', {'ctype': item.type, 'uuid': item.id}) }}" class="c-button c-button--info u-xsmall">Edit</a>
+                                                <a href="{{ url('crelish/content/view', {'ctype': item.type, 'uuid': item.id}) }}" class="c-button c-button--brand u-xsmall">View</a>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        {% else %}
+                            <p>No recent content found.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Information -->
+        <div class="o-grid__cell u-1of3">
+            <div class="c-card">
+                <div class="c-card__content">
+                    <div class="c-card__header">
+                        <h3 class="c-heading">System Information</h3>
+                    </div>
+                    <div class="c-card__body">
+                        <table class="c-table">
+                            <tbody>
+                                <tr>
+                                    <td><strong>Crelish Version</strong></td>
+                                    <td>{{ systemInfo.version }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>PHP Version</strong></td>
+                                    <td>{{ systemInfo.php_version }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Yii Version</strong></td>
+                                    <td>{{ systemInfo.yii_version }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Environment</strong></td>
+                                    <td>{{ systemInfo.environment }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Debug Mode</strong></td>
+                                    <td>{{ systemInfo.debug_mode }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Links -->
+            <div class="c-card u-letter-box-medium">
+                <div class="c-card__content">
+                    <div class="c-card__header">
+                        <h3 class="c-heading">Quick Links</h3>
+                    </div>
+                    <div class="c-card__body">
+                        <ul class="c-list c-list--unstyled">
+                            <li><a href="{{ url('crelish/content/index') }}" class="c-link">Content Management</a></li>
+                            <li><a href="{{ url('crelish/user/index') }}" class="c-link">User Management</a></li>
+                            <li><a href="{{ url('crelish/asset/index') }}" class="c-link">Media Library</a></li>
+                            <li><a href="{{ url('crelish/settings/index') }}" class="c-link">System Settings</a></li>
+                            <li><a href="/docs/API.md" target="_blank" class="c-link">API Documentation</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+{% apply registerCss %}
+.content-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+/* Responsive adjustments */
+@media (min-width: 768px) {
+    .content-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 992px) {
+    .content-stats-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (min-width: 1200px) {
+    .content-stats-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+.content-stats-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.content-stats-item .c-card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.content-stats-item .c-card__content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.content-stats-item .c-card__body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+{% endapply %}

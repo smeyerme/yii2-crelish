@@ -33,9 +33,10 @@ class ContentService extends Component
     public function contentTypeExists(string $type): bool
     {
         try {
-            $this->getContentTypeDefinition($type);
-            return true;
-        } catch (NotFoundHttpException $e) {
+            $definition = CrelishDynamicModel::loadElementDefinition($type);
+            return $definition !== null;
+        } catch (\Exception $e) {
+            Yii::error("Content type check failed: " . $e->getMessage(), __METHOD__);
             return false;
         }
     }
@@ -54,20 +55,18 @@ class ContentService extends Component
             return $this->contentTypeCache[$type];
         }
         
-        // Get content type definition file path
-        $filePath = Yii::getAlias($this->contentTypesPath . "/{$type}.json");
+        // Get content type definition using CrelishDynamicModel
+        $definition = CrelishDynamicModel::loadElementDefinition($type);
         
-        if (!file_exists($filePath)) {
+        if (!$definition) {
             throw new NotFoundHttpException("Content type '{$type}' not found");
         }
         
-        // Parse content type definition
-        $definition = Json::decode(file_get_contents($filePath), true);
+        // Convert to array and cache
+        $definitionArray = json_decode(json_encode($definition), true);
+        $this->contentTypeCache[$type] = $definitionArray;
         
-        // Cache definition
-        $this->contentTypeCache[$type] = $definition;
-        
-        return $definition;
+        return $definitionArray;
     }
     
     /**
@@ -78,11 +77,14 @@ class ContentService extends Component
      */
     public function getQuery(string $type): Query
     {
-        // Create base query
-        $query = new Query();
-        $query->from("{{%{$type}}}");
+        // Create a data manager for this content type
+        $dataManager = new CrelishDataManager($type);
         
-        return $query;
+        // Get the storage implementation
+        $storage = CrelishStorageFactory::getStorage($type);
+        
+        // Return the query
+        return $storage->createQuery($type);
     }
     
     /**
@@ -96,6 +98,7 @@ class ContentService extends Component
     {
         // Parse filter string (format: field:operator:value,field2:operator2:value2)
         $filterParts = explode(',', $filter);
+        $filterArray = [];
         
         foreach ($filterParts as $part) {
             $criteria = explode(':', $part);
@@ -108,7 +111,7 @@ class ContentService extends Component
             
             switch ($operator) {
                 case 'eq':
-                    $query->andWhere([$field => $value]);
+                    $filterArray[$field] = $value;
                     break;
                 case 'neq':
                     $query->andWhere(['!=', $field, $value]);
@@ -147,10 +150,11 @@ class ContentService extends Component
      */
     public function getContentById(string $type, string $id): ?array
     {
-        $query = $this->getQuery($type);
-        $query->where(['id' => $id]);
+        // Create a data manager for this content type and ID
+        $dataManager = new CrelishDataManager($type, [], $id);
         
-        return $query->one();
+        // Get the item
+        return $dataManager->one();
     }
     
     /**
@@ -183,11 +187,18 @@ class ContentService extends Component
             $data['created_at'] = $now;
             $data['updated_at'] = $now;
             
-            // Insert data
-            $db = Yii::$app->db;
-            $db->createCommand()
-                ->insert("{{%{$type}}}", $data)
-                ->execute();
+            // Get storage implementation
+            $storage = CrelishStorageFactory::getStorage($type);
+            
+            // Save the data
+            $result = $storage->save($type, $data);
+            
+            if (!$result) {
+                return [
+                    'success' => false,
+                    'message' => 'Failed to create content item',
+                ];
+            }
             
             return [
                 'success' => true,
@@ -230,6 +241,7 @@ class ContentService extends Component
             
             // Merge existing data with new data
             $mergedData = array_merge($existingItem, $data);
+            $mergedData['id'] = $id; // Ensure ID is preserved
             
             // Validate merged data against definition
             $validationResult = $this->validateData($mergedData, $definition);
@@ -241,11 +253,18 @@ class ContentService extends Component
             // Update timestamp
             $mergedData['updated_at'] = date('Y-m-d H:i:s');
             
-            // Update data
-            $db = Yii::$app->db;
-            $db->createCommand()
-                ->update("{{%{$type}}}", $mergedData, ['id' => $id])
-                ->execute();
+            // Get storage implementation
+            $storage = CrelishStorageFactory::getStorage($type);
+            
+            // Save the data
+            $result = $storage->save($type, $mergedData);
+            
+            if (!$result) {
+                return [
+                    'success' => false,
+                    'message' => 'Failed to update content item',
+                ];
+            }
             
             return [
                 'success' => true,
@@ -272,12 +291,11 @@ class ContentService extends Component
     public function deleteContent(string $type, string $id): bool
     {
         try {
-            $db = Yii::$app->db;
-            $result = $db->createCommand()
-                ->delete("{{%{$type}}}", ['id' => $id])
-                ->execute();
+            // Create a data manager for this content type and ID
+            $dataManager = new CrelishDataManager($type, [], $id);
             
-            return $result > 0;
+            // Delete the item
+            return $dataManager->delete();
         } catch (\Exception $e) {
             Yii::error($e->getMessage(), __METHOD__);
             return false;

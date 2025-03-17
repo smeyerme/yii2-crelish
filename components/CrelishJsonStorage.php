@@ -342,4 +342,20 @@ class CrelishJsonStorage implements CrelishDataStorage
             mt_rand(0, 0xffff)
         );
     }
+    
+    /**
+     * Create a query for the content type
+     * 
+     * @param string $ctype Content type
+     * @return \yii\db\Query Query object
+     */
+    public function createQuery(string $ctype): \yii\db\Query
+    {
+        // For JSON storage, we'll create a query that works with the ArrayDataProvider
+        // This is a simple implementation that will be replaced with actual data in getDataProvider
+        $query = new \yii\db\Query();
+        $query->from($ctype);
+        
+        return $query;
+    }
 } 

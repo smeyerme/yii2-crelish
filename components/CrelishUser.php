@@ -208,6 +208,29 @@
 		}
 		
 		/**
+		 * Find a user by username
+		 * 
+		 * @param string $username The username to search for
+		 * @return static|null The user identity instance or null if not found
+		 */
+		public static function findByUsername(string $username)
+		{
+			// First try to find by username
+			$user = User::findOne(['username' => $username]);
+			
+			// If not found, try by email (which is often used as username)
+			if (!$user) {
+				$user = User::findOne(['email' => $username]);
+			}
+			
+			if ($user) {
+				return new static($user);
+			}
+			
+			return null;
+		}
+		
+		/**
 		 * Validates password.
 		 *
 		 * @param string $password password to validate
@@ -216,7 +239,7 @@
 		 */
 		public function validatePassword($password)
 		{
-			return true; //$this->getPassword() === $password;
+			return \Yii::$app->security->validatePassword($password, $this->password);
 		}
 		
 		public function __get($name)

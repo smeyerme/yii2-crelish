@@ -266,6 +266,12 @@ class Bootstrap implements BootstrapInterface
       // API routes
       [
         'class' => 'yii\web\UrlRule',
+        'pattern' => 'api/auth/login',
+        'route' => 'api/auth/login',
+        'verb' => 'POST',
+      ],
+      [
+        'class' => 'yii\web\UrlRule',
         'pattern' => 'api/content/<type:[\w\-]+>',
         'route' => 'api/content/index',
       ],
