@@ -4,11 +4,11 @@ namespace giantbits\crelish\modules\api\controllers;
 
 use Yii;
 use yii\filters\auth\CompositeAuth;
-use yii\filters\auth\HttpBearerAuth;
 use yii\filters\auth\QueryParamAuth;
 use yii\filters\Cors;
 use yii\rest\Controller;
 use yii\web\Response;
+use giantbits\crelish\modules\api\components\JwtHttpBearerAuth;
 
 /**
  * Base API controller for Crelish CMS
@@ -38,7 +38,7 @@ class BaseController extends Controller
         $behaviors['authenticator'] = [
             'class' => CompositeAuth::class,
             'authMethods' => [
-                HttpBearerAuth::class,
+                JwtHttpBearerAuth::class,
                 QueryParamAuth::class,
             ],
             'except' => ['options'],

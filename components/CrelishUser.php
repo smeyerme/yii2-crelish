@@ -173,16 +173,44 @@
 		}
 		
 		/**
-		 * [findIdentityByAccessToken description].
+		 * Finds an identity by the given access token.
 		 *
-		 * @param [type] $token [description]
-		 * @param [type] $type  [description]
-		 *
-		 * @return [type] [description]
+		 * @param string $token the access token to be looked for
+		 * @param mixed $type the type of the token. The value of this parameter depends on the implementation.
+		 * @return static|null the identity object that matches the given token.
 		 */
 		public static function findIdentityByAccessToken($token, $type = null)
 		{
-			throw new NotSupportedException('"findIdentityByAccessToken" is not implemented.');
+			// Use authKey field for API authentication
+			$user = User::findOne(['authKey' => $token]);
+			
+			if ($user) {
+				return new static($user);
+			}
+			
+			return null;
+		}
+		
+		/**
+		 * Generates a new access token for this user and saves it to the database.
+		 * 
+		 * @return string The generated access token
+		 */
+		public function generateAccessToken()
+		{
+			$token = \Yii::$app->security->generateRandomString(32);
+			
+			// Find the user model and update the authKey
+			$user = User::findOne(['uuid' => $this->uuid]);
+			if ($user) {
+				$user->authKey = $token;
+				if ($user->save(false)) {
+					$this->authKey = $token;
+					return $token;
+				}
+			}
+			
+			return null;
 		}
 		
 		/**
@@ -208,17 +236,25 @@
 		}
 		
 		/**
-		 * Find a user by username
+		 * Find a user by username or email
 		 * 
-		 * @param string $username The username to search for
+		 * @param string $username The username or email to search for
 		 * @return static|null The user identity instance or null if not found
 		 */
 		public static function findByUsername(string $username)
 		{
-			// First try to find by username
-			$user = User::findOne(['username' => $username]);
+			$user = null;
 			
-			// If not found, try by email (which is often used as username)
+			// Check if username column exists in the User model
+			$userSchema = User::getTableSchema();
+			$hasUsernameColumn = $userSchema && isset($userSchema->columns['username']);
+			
+			// Try to find by username if the column exists
+			if ($hasUsernameColumn) {
+				$user = User::findOne(['username' => $username]);
+			}
+			
+			// If not found by username or if username column doesn't exist, try by email
 			if (!$user) {
 				$user = User::findOne(['email' => $username]);
 			}

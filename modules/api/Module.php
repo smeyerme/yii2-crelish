@@ -70,7 +70,7 @@ class Module extends \yii\base\Module
                 'authenticator' => [
                     'class' => CompositeAuth::class,
                     'authMethods' => [
-                        HttpBearerAuth::class,
+                        ['class' => 'giantbits\crelish\modules\api\components\JwtHttpBearerAuth'],
                         QueryParamAuth::class,
                     ],
                     'except' => ['options'],
@@ -84,5 +84,11 @@ class Module extends \yii\base\Module
                 ],
             ],
         ];
+        
+        // Set a default JWT secret key if not defined
+        if (!isset(Yii::$app->params['jwtSecretKey'])) {
+            Yii::$app->params['jwtSecretKey'] = 'your-secret-key-here';
+            Yii::warning('Using default JWT secret key. Please set a secure key in your application parameters.', __METHOD__);
+        }
     }
 } 

@@ -115,41 +115,7 @@ class Bootstrap implements BootstrapInterface
         'enablePrettyUrl' => true,
         'enableStrictParsing' => true,
         'showScriptName' => false,
-        'rules' => [
-          // Sitemap rules
-          [
-            'class' => 'yii\web\UrlRule',
-            'pattern' => 'sitemap-<lang:\w+>',
-            'route' => 'sitemap/language',
-            'suffix' => '.xml',
-          ],
-          [
-            'class' => 'yii\web\UrlRule',
-            'pattern' => 'sitemap',
-            'route' => 'sitemap/index',
-            'suffix' => '.xml',
-          ],
-          [
-            'class' => 'yii\web\UrlRule',
-            'pattern' => 'sitemap-style',
-            'route' => 'sitemap/style',
-            'suffix' => '.xsl',
-          ],
-          [
-            'class' => 'yii\web\UrlRule',
-            'pattern' => 'sitemap-ping',
-            'route' => 'sitemap/ping',
-          ],
-          // Other rules
-          [
-            'class' => 'yii\web\UrlRule',
-            'pattern' => 'document/secure/<id:[\w\-]+>',
-            'route' => 'document/secure'
-          ],
-          ['class' => 'yii\rest\UrlRule', 'controller' => 'user', 'tokens' => ['{uuid}' => '<uuid:\\d[\\d,]*>']],
-          ['class' => 'yii\rest\UrlRule', 'controller' => 'company', 'tokens' => ['{uuid}' => '<uuid:\\d[\\d,]*>']],
-          ['class' => 'yii\rest\UrlRule', 'controller' => 'product', 'tokens' => ['{uuid}' => '<uuid:\\d[\\d,]*>']],
-        ],
+        'rules' => [], // Rules moved to configureUrlRules method
       ],
       'i18n' => [
         'class' => 'yii\i18n\I18N',
@@ -263,6 +229,38 @@ class Bootstrap implements BootstrapInterface
   private function configureUrlRules(Application $app): void
   {
     $app->getUrlManager()->addRules([
+      // Sitemap rules
+      [
+        'class' => 'yii\web\UrlRule',
+        'pattern' => 'sitemap-<lang:\w+>',
+        'route' => 'sitemap/language',
+        'suffix' => '.xml',
+      ],
+      [
+        'class' => 'yii\web\UrlRule',
+        'pattern' => 'sitemap',
+        'route' => 'sitemap/index',
+        'suffix' => '.xml',
+      ],
+      [
+        'class' => 'yii\web\UrlRule',
+        'pattern' => 'sitemap-style',
+        'route' => 'sitemap/style',
+        'suffix' => '.xsl',
+      ],
+      [
+        'class' => 'yii\web\UrlRule',
+        'pattern' => 'sitemap-ping',
+        'route' => 'sitemap/ping',
+      ],
+      // Document rules
+      [
+        'class' => 'yii\web\UrlRule',
+        'pattern' => 'document/secure/<id:[\w\-]+>',
+        'route' => 'document/secure'
+      ],
+      // REST API rules
+      ['class' => 'yii\rest\UrlRule', 'controller' => 'user', 'tokens' => ['{uuid}' => '<uuid:\\d[\\d,]*>']],
       // API routes
       [
         'class' => 'yii\web\UrlRule',
@@ -298,18 +296,21 @@ class Bootstrap implements BootstrapInterface
         'route' => 'api/content/delete',
         'verb' => 'DELETE',
       ],
-      // Existing routes
+      // Other API routes
       [
         'class' => 'yii\web\UrlRule',
         'pattern' => 'api/<action:[\w\-]+>/<id:[\w\-]+>',
         'route' => 'api/<action>'
       ],
+      // Site routes
       [
         'class' => 'yii\web\UrlRule',
         'pattern' => 'site/<action:[\w\-]+>',
         'route' => 'site/<action>'
       ],
+      // Crelish base rule
       ['class' => 'giantbits\crelish\components\CrelishBaseUrlRule'],
+      // Crelish admin routes
       [
         'class' => 'yii\web\UrlRule',
         'pattern' => 'crelish',
@@ -320,16 +321,19 @@ class Bootstrap implements BootstrapInterface
         'pattern' => 'crelish/<controller:[\w\-]+>/<action:[\w\-]+>',
         'route' => 'crelish/<controller>/<action>'
       ],
+      // User routes
       [
         'class' => 'yii\web\UrlRule',
         'pattern' => 'user/<action:[\w\-]+>',
         'route' => 'user/<action>'
       ],
+      // Generic routes
       [
         'class' => 'yii\web\UrlRule',
         'pattern' => '<controller:[\w\-]+>/<action:[\w\-]+>/<id:[\w\-]+>',
         'route' => '<controller>/<action>'
       ],
+      // Localized routes
       [
         'class' => 'yii\web\UrlRule',
         'pattern' => '<lang:[\w\-]+>/<controller:[\w\-]+>/<action:[\w\-]+>/<id:[\w\-]+>',

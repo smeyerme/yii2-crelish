@@ -40,6 +40,7 @@ class AuthController extends Controller
             'actions' => [
                 'login' => ['post'],
                 'refresh' => ['post'],
+                'validate-token' => ['post', 'get'],
             ],
         ];
         
@@ -94,13 +95,26 @@ class AuthController extends Controller
             );
         }
         
-        // Generate token
-        $token = $this->generateToken($user);
+        // Generate and store access token in the database
+        $accessToken = $user->generateAccessToken();
         
-        // Return token
+        if (!$accessToken) {
+            return $this->createResponse(
+                null,
+                false,
+                'Failed to generate access token',
+                500
+            );
+        }
+        
+        // Generate JWT token
+        $jwtToken = $this->generateJwtToken($user, $accessToken);
+        
+        // Return both tokens
         return $this->createResponse([
-            'token' => $token,
-            'expires_at' => time() + 3600, // 1 hour expiration
+            'access_token' => $accessToken,  // The token stored in the database (authKey)
+            'jwt_token' => $jwtToken,        // The JWT token for Bearer authentication
+            'expires_at' => time() + 3600,   // 1 hour expiration for JWT
         ]);
     }
     
@@ -127,19 +141,21 @@ class AuthController extends Controller
      * Generate JWT token
      * 
      * @param object $user User model
+     * @param string $accessToken The database access token
      * @return string JWT token
      */
-    private function generateToken($user): string
+    private function generateJwtToken($user, string $accessToken): string
     {
         $time = time();
         
         // Token payload
         $payload = [
-            'iat' => $time, // Issued at
-            'exp' => $time + 3600, // Expires in 1 hour
-            'sub' => $user->getId(), // Subject (user ID)
-            'username' => $user->username,
+            'iat' => $time,                          // Issued at
+            'exp' => $time + 3600,                   // Expires in 1 hour
+            'sub' => $user->getId(),                 // Subject (user ID)
+            'username' => $user->username ?? $user->email,
             'role' => $user->role ?? 'user',
+            'access_token' => $accessToken,          // Include the database token in the JWT
         ];
         
         // Secret key - should be stored in configuration
@@ -170,5 +186,83 @@ class AuthController extends Controller
             'message' => $message,
             'data' => $data,
         ];
+    }
+    
+    /**
+     * Validate token action
+     * 
+     * @return array Response data
+     */
+    public function actionValidateToken(): array
+    {
+        // Get request headers
+        $headers = Yii::$app->request->headers;
+        $authHeader = $headers->get('Authorization');
+        
+        // Check if Authorization header exists and has Bearer token
+        if (!$authHeader || !preg_match('/^Bearer\s+(.*?)$/', $authHeader, $matches)) {
+            return $this->createResponse(
+                null,
+                false,
+                'Authorization header with Bearer token is required',
+                401
+            );
+        }
+        
+        $token = $matches[1];
+        
+        try {
+            // Decode JWT token
+            $key = Yii::$app->params['jwtSecretKey'] ?? 'your-secret-key-here';
+            $decoded = JWT::decode($token, $key, ['HS256']);
+            
+            // Verify token hasn't expired
+            if ($decoded->exp < time()) {
+                return $this->createResponse(
+                    null,
+                    false,
+                    'Token has expired',
+                    401
+                );
+            }
+            
+            // Verify the access token exists in the JWT payload
+            if (empty($decoded->access_token)) {
+                return $this->createResponse(
+                    null,
+                    false,
+                    'Invalid token format',
+                    401
+                );
+            }
+            
+            // Find user by the stored access token
+            $identityClass = Yii::$app->user->identityClass;
+            $user = $identityClass::findIdentityByAccessToken($decoded->access_token);
+            
+            if (!$user) {
+                return $this->createResponse(
+                    null,
+                    false,
+                    'Invalid token',
+                    401
+                );
+            }
+            
+            // Return user information
+            return $this->createResponse([
+                'user_id' => $user->getId(),
+                'username' => $user->username ?? $user->email,
+                'role' => $user->role ?? 'user',
+            ]);
+            
+        } catch (\Exception $e) {
+            return $this->createResponse(
+                null,
+                false,
+                'Invalid token: ' . $e->getMessage(),
+                401
+            );
+        }
     }
 } 
