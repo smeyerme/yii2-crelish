@@ -33,10 +33,16 @@
                                         <div class="c-card c-card--high">
                                             <div class="c-card__content">
                                                 <div class="c-card__header">
-                                                    <h4 class="c-heading">{{ stats.label }}</h4>
+                                                    <h4 class="c-heading">
+                                                        <i class="fa-solid fa-database header-icon"></i>
+                                                        {{ stats.label }}
+                                                    </h4>
                                                 </div>
                                                 <div class="c-card__body u-centered">
-                                                    <span class="c-text--loud" style="font-size: 2rem;">{{ stats.count }}</span>
+                                                    <div class="stats-icon">
+                                                        <i class="fa-solid fa-file-lines"></i>
+                                                    </div>
+                                                    <span class="c-text--loud">{{ stats.count }}</span>
                                                     <p>items</p>
                                                 </div>
                                                 <div class="c-card__footer">
@@ -160,7 +166,7 @@
 .content-stats-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 1rem;
+    gap: 1.5rem;
 }
 
 /* Responsive adjustments */
@@ -191,6 +197,15 @@
     height: 100%;
     display: flex;
     flex-direction: column;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.07), 0 4px 6px -2px rgba(0,0,0,0.05);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.content-stats-item .c-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
 }
 
 .content-stats-item .c-card__content {
@@ -199,10 +214,150 @@
     flex-direction: column;
 }
 
+.content-stats-item .c-card.c-card--high .c-card__header {
+    background: linear-gradient(135deg, #1a2b4a 0%, #00766c 100%) !important;
+    padding: 1.5rem;
+    border-bottom: none;
+}
+
+.content-stats-item .c-card.c-card--high .c-card__header .c-heading {
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.3) !important;
+}
+
+.content-stats-item .c-card.c-card--high .c-card__header .header-icon {
+    color: #ffffff !important;
+}
+
+.header-icon {
+    margin-right: 0.5rem;
+    font-size: 0.9em;
+}
+
 .content-stats-item .c-card__body {
     flex: 1;
     display: flex;
     flex-direction: column;
     justify-content: center;
+    align-items: center;
+    padding: 2rem 1.5rem;
+    background-color: white;
+}
+
+.content-stats-item .c-card__body .c-text--loud {
+    font-size: 2.5rem !important;
+    font-weight: 700;
+    color: #2d3e5c;
+    margin-bottom: 0.5rem;
+}
+
+.content-stats-item .c-card__body p {
+    color: #475569;
+    font-size: 1rem;
+    font-weight: 500;
+    margin-top: 0;
+}
+
+.stats-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    height: 60px;
+    background-color: rgba(0, 169, 157, 0.15);
+    border-radius: 50%;
+    margin-bottom: 1rem;
+}
+
+.stats-icon i {
+    font-size: 1.75rem;
+    color: #00a99d;
+}
+
+/* Add pulse animation for icons */
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.content-stats-item:hover .stats-icon i {
+    animation: pulse 1.5s infinite;
+}
+
+/* Counter animation effect */
+.c-text--loud {
+    display: inline-block;
+    transition: transform 0.3s ease;
+}
+
+.content-stats-item:hover .c-text--loud {
+    transform: scale(1.1);
+}
+
+.content-stats-item .c-card__footer {
+    padding: 1.25rem;
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    background-color: #f8fafc;
+    border-top: 1px solid rgba(0,0,0,0.05);
+}
+
+.content-stats-item .c-card__footer .c-button {
+    flex: 1;
+    text-align: center;
+    border-radius: 6px;
+    padding: 0.5rem 0.75rem;
+    transition: all 0.15s ease;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.content-stats-item .c-card__footer .c-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+}
+
+.content-stats-item .c-card__footer .c-button--brand {
+    background-color: #2d3e5c;
+    color: white;
+}
+
+.content-stats-item .c-card__footer .c-button--info {
+    background-color: #00a99d;
+    color: white;
+}
+
+/* Make other cards on the dashboard consistent with the new style */
+.c-card {
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+}
+
+/* Default card styles */
+.c-card .c-card__header {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    background-color: #f8fafc;
+}
+
+.c-card .c-card__header .c-heading {
+    margin: 0;
+    font-weight: 600;
+    color: #2d3748;
+}
+
+.c-card .c-card__body {
+    padding: 1.5rem;
 }
 {% endapply %}

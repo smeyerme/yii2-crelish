@@ -1,17 +1,55 @@
 {% set preview = '' %}
+{% set fileType = 'file' %}
+{% set mimeIcon = 'fa-file' %}
+
 {% if model.mime == 'image/jpg' or model.mime == 'image/jpeg' or model.mime == 'image/webp' or model.mime == 'image/gif' or model.mime == 'image/png' %}
 	{% set preview = '<img src="/crelish/asset/glide?path=' ~ chelper.getAssetUrl(model.pathName, model.fileName) ~ '&w=340&f=fit" onerror="this.style.display=\'none\';" />' %}
+	{% set fileType = 'image' %}
+	{% set mimeIcon = 'fa-image' %}
 {% elseif model.mime == 'image/svg+xml' %}
 	{% set preview = '<img src="' ~ chelper.getAssetUrl(model.pathName, model.fileName) ~ '" onerror="this.style.display=\'none\';" />' %}
+	{% set fileType = 'svg' %}
+	{% set mimeIcon = 'fa-image' %}
 {% elseif model.mime == 'application/pdf' %}
 	{% set preview = '<img src="/crelish/asset/glide?path=thumbs/' ~ model.thumbnail ~ '&p=small" onerror="this.style.display=\'none\';" />' %}
+	{% set fileType = 'pdf' %}
+	{% set mimeIcon = 'fa-file-pdf' %}
+{% elseif model.mime starts with 'audio/' %}
+	{% set fileType = 'audio' %}
+	{% set mimeIcon = 'fa-file-audio' %}
+{% elseif model.mime starts with 'video/' %}
+	{% set fileType = 'video' %}
+	{% set mimeIcon = 'fa-file-video' %}
+{% elseif model.mime == 'application/zip' or model.mime == 'application/x-zip-compressed' %}
+	{% set fileType = 'archive' %}
+	{% set mimeIcon = 'fa-file-zipper' %}
+{% elseif model.mime == 'text/plain' %}
+	{% set fileType = 'text' %}
+	{% set mimeIcon = 'fa-file-lines' %}
+{% elseif model.mime == 'text/csv' %}
+	{% set fileType = 'csv' %}
+	{% set mimeIcon = 'fa-file-csv' %}
 {% endif %}
 
-
-	<a href="{{ url('asset/update', {uuid: model.uuid}) }}">
-		{{ preview|raw }}
-		<div class="description">
-			<h3>{{ model.systitle }}</h3>
-			{{ model.description | raw }}
+<a href="{{ url('asset/update', {uuid: model.uuid}) }}">
+	<div class="asset-preview">
+		{% if preview %}
+			{{ preview|raw }}
+		{% else %}
+			<div class="asset-placeholder">
+				<i class="fa-solid {{ mimeIcon }}"></i>
+			</div>
+		{% endif %}
+		<div class="asset-type">
+			<span>{{ fileType|upper }}</span>
 		</div>
-	</a>
+	</div>
+	<div class="description">
+		<h3>{{ model.systitle }}</h3>
+		{% if model.fileName %}
+			<div class="asset-info">
+				<i class="fa-solid fa-paperclip"></i> {{ model.fileName }}
+			</div>
+		{% endif %}
+	</div>
+</a>

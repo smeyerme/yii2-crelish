@@ -17,13 +17,17 @@
 		
 		public function registerJsFilter($js)
 		{
-			
-			$nonceArray = null;
+			// Fix the nonce handling
+			$key = null; // Use default key (md5 of js)
+			$options = [];
 			
 			if(!empty(\Yii::$app->controller->nonce)) {
-				$nonceArray =  ['nonce' => \Yii::$app->controller->nonce];
+				$options['nonce'] = \Yii::$app->controller->nonce;
 			}
 			
-			\Yii::$app->view->registerJs($js, View::POS_END, $nonceArray);
+			// Register the JS with proper parameters: js content, position, key, options
+			\Yii::$app->view->registerJs($js, View::POS_END, $key, $options);
+			
+			return '';
 		}
 	}

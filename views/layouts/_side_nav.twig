@@ -1,6 +1,7 @@
 {% set sideBarItems = app.get('sideBarManager').items %}
 {% set sideBar = app.get('sideBarManager').filterItems(sideBarItems) %}
 
+{% if this.params['isDocumentationMode'] is not defined or this.params['isDocumentationMode'] == false %}
 <div class="avatar-nav">
 	<div class="c-avatar">
 		{{ app.user.identity.getInitials() }}
@@ -20,8 +21,34 @@
 		</a>
 	</div>
 {% endfor %}
+{% else %}
+<div class="navbar-item">
+    <a href="{{ url('/crelish/dashboard/index') }}">
+        <i class="fas fa-arrow-left"></i> {{ t('app', 'Back to Crelish') }}
+    </a>
+</div>
 
-<span class="cr-version">{{ app.params.crelish.version }}</span>
+<div class="navbar-heading">
+    {{ t('app', 'Documentation') }}
+</div>
+
+{% if this.params['documentationFiles'] is defined %}
+    {% for file in this.params['documentationFiles'] %}
+        <div class="navbar-item {% if this.params['currentDocPage'] is defined and this.params['currentDocPage'] == file.filename %}active{% endif %}">
+            <a href="{{ url('/crelish/documentation/read', {'page': file.filename}) }}">
+                <i class="fas fa-file-alt"></i> {{ file.title }}
+            </a>
+        </div>
+    {% endfor %}
+{% endif %}
+{% endif %}
+
+<div class="version-container">
+    <a href="{{ url('/crelish/documentation/index') }}" class="documentation-link" title="{{ t('app', 'View Documentation') }}">
+        <span class="cr-version">{{ app.params.crelish.version }}</span>
+        <i class="fas fa-book-open docs-icon"></i>
+    </a>
+</div>
 
 {% apply registerCss %}
 
@@ -29,5 +56,48 @@
 .select2-container--krajee-bs5 .select2-selection--multiple .select2-selection__clear {
   margin-right: 1rem;
 	cursor: pointer;
+}
+
+.version-container {
+    margin-top: auto;
+    padding: 1rem;
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.documentation-link {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.3s ease;
+}
+
+.documentation-link:hover {
+    opacity: 0.8;
+}
+
+.cr-version {
+    font-size: 0.75rem;
+    opacity: 0.7;
+    margin-right: 0.5rem;
+}
+
+.docs-icon {
+    font-size: 0.9rem;
+    opacity: 0.7;
+}
+
+.navbar-heading {
+    color: #888;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 0.75rem 1rem 0.5rem;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    margin-bottom: 0.5rem;
 }
 {% endapply %}
