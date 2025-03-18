@@ -805,6 +805,7 @@
   transition: var(--transition-standard);
   border-radius: 0 var(--border-radius-lg) var(--border-radius-lg) 0;
   margin-right: 0.75rem;
+  gap: 1rem;
 }
 
 #cr-left-pane .navbar-item a:hover {

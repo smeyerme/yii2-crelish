@@ -31,7 +31,7 @@ class Bootstrap implements BootstrapInterface
         'class' => 'giantbits\crelish\Module',
         'theme' => Yii::$app->params['crelish']['theme']
       ],
-      'api' => [
+      'crelish-api' => [
         'class' => 'giantbits\crelish\modules\api\Module',
       ]
     ]);
@@ -297,48 +297,48 @@ class Bootstrap implements BootstrapInterface
         'pattern' => 'document/secure/<id:[\w\-]+>',
         'route' => 'document/secure'
       ],
+      // Other API routes
+      [
+        'class' => 'yii\web\UrlRule',
+        'pattern' => 'api/<action:[\w\-]+>',
+        'route' => 'api/<action>'
+      ],
       // REST API rules
       ['class' => 'yii\rest\UrlRule', 'controller' => 'user', 'tokens' => ['{uuid}' => '<uuid:\\d[\\d,]*>']],
       // API routes
       [
         'class' => 'yii\web\UrlRule',
-        'pattern' => 'api/auth/login',
-        'route' => 'api/auth/login',
+        'pattern' => 'crelish-api/auth/login',
+        'route' => 'crelish-api/auth/login',
         'verb' => 'POST',
       ],
       [
         'class' => 'yii\web\UrlRule',
-        'pattern' => 'api/content/<type:[\w\-]+>',
-        'route' => 'api/content/index',
+        'pattern' => 'crelish-api/content/<type:[\w\-]+>',
+        'route' => 'crelish-api/content/index',
       ],
       [
         'class' => 'yii\web\UrlRule',
-        'pattern' => 'api/content/<type:[\w\-]+>/<id:[\w\-]+>',
-        'route' => 'api/content/view',
+        'pattern' => 'crelish-api/content/<type:[\w\-]+>/<id:[\w\-]+>',
+        'route' => 'crelish-api/content/view',
       ],
       [
         'class' => 'yii\web\UrlRule',
-        'pattern' => 'api/content/<type:[\w\-]+>',
-        'route' => 'api/content/create',
+        'pattern' => 'crelish-api/content/<type:[\w\-]+>',
+        'route' => 'crelish-api/content/create',
         'verb' => 'POST',
       ],
       [
         'class' => 'yii\web\UrlRule',
-        'pattern' => 'api/content/<type:[\w\-]+>/<id:[\w\-]+>',
-        'route' => 'api/content/update',
+        'pattern' => 'crelish-api/content/<type:[\w\-]+>/<id:[\w\-]+>',
+        'route' => 'crelish-api/content/update',
         'verb' => 'PUT',
       ],
       [
         'class' => 'yii\web\UrlRule',
-        'pattern' => 'api/content/<type:[\w\-]+>/<id:[\w\-]+>',
-        'route' => 'api/content/delete',
+        'pattern' => 'crelish-api/content/<type:[\w\-]+>/<id:[\w\-]+>',
+        'route' => 'crelish-api/content/delete',
         'verb' => 'DELETE',
-      ],
-      // Other API routes
-      [
-        'class' => 'yii\web\UrlRule',
-        'pattern' => 'api/<action:[\w\-]+>/<id:[\w\-]+>',
-        'route' => 'api/<action>'
       ],
       // Site routes
       [
