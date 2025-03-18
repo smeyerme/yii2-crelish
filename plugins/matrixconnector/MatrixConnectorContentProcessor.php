@@ -18,7 +18,7 @@ class MatrixConnectorContentProcessor extends Component
   // Cache for processed elements to avoid redundant processing
   private static $processedElements = [];
 
-  public static function processData($key, $data, &$processedData): void
+  public static function processData($key, $data, &$processedData, $config): void
   {
     $layout = null;
 

@@ -11,7 +11,7 @@
 	{
 		public $data;
 		
-		public static function processData($key, $data, &$processedData): void
+		public static function processData($key, $data, &$processedData, $config): void
 		{
 			$options = !empty($data->options) ? Json::decode($data->options) : [];
 			$widget = !empty($data->widget) ? $data->widget : null;

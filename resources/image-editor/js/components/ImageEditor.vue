@@ -68,21 +68,50 @@
 
         <!-- Rotate Controls -->
         <div v-if="activeTool === 'rotate'" class="rotate-controls">
-          <div class="rotate-slider">
-            <label for="rotation-angle">Rotation Angle: {{ editParams.rotate }}°</label>
-            <input 
-              type="range" 
-              id="rotation-angle" 
-              v-model.number="editParams.rotate" 
-              min="-180" 
-              max="180" 
-              step="1"
-              @input="updatePreview"
-            />
-          </div>
-          <div class="rotate-buttons">
-            <button @click.prevent="rotateLeft" class="btn btn-outline-primary" type="button">Rotate -90°</button>
-            <button @click.prevent="rotateRight" class="btn btn-outline-primary" type="button">Rotate +90°</button>
+          <div class="rotate-options">
+            <label>Rotation Angle: {{ getRotationLabel() }}</label>
+            <div class="rotate-buttons">
+              <button
+                  @click.prevent="setRotation('auto')"
+                  class="btn"
+                  :class="{'btn-primary': editParams.rotate === 'auto', 'btn-outline-primary': editParams.rotate !== 'auto'}"
+                  type="button"
+              >
+                Auto
+              </button>
+              <button
+                  @click.prevent="setRotation('0')"
+                  class="btn"
+                  :class="{'btn-primary': editParams.rotate === '0', 'btn-outline-primary': editParams.rotate !== '0'}"
+                  type="button"
+              >
+                0°
+              </button>
+              <button
+                  @click.prevent="setRotation('90')"
+                  class="btn"
+                  :class="{'btn-primary': editParams.rotate === '90', 'btn-outline-primary': editParams.rotate !== '90'}"
+                  type="button"
+              >
+                90°
+              </button>
+              <button
+                  @click.prevent="setRotation('180')"
+                  class="btn"
+                  :class="{'btn-primary': editParams.rotate === '180', 'btn-outline-primary': editParams.rotate !== '180'}"
+                  type="button"
+              >
+                180°
+              </button>
+              <button
+                  @click.prevent="setRotation('270')"
+                  class="btn"
+                  :class="{'btn-primary': editParams.rotate === '270', 'btn-outline-primary': editParams.rotate !== '270'}"
+                  type="button"
+              >
+                270°
+              </button>
+            </div>
           </div>
         </div>
 
@@ -225,7 +254,7 @@ export default {
       cropper: null,
       editParams: {
         crop: null,
-        rotate: 0,
+        rotate: 'auto',
         flip: null
       },
       previewUrl: '',
@@ -421,20 +450,21 @@ export default {
       this.updatePreview();
     },
 
-    rotateLeft() {
-      this.editParams.rotate -= 90;
-      if (this.editParams.rotate < -180) {
-        this.editParams.rotate += 360;
-      }
+    setRotation(angle) {
+      this.editParams.rotate = angle;
       this.updatePreview();
+      this.hasChanges = this.hasEditParams();
     },
 
-    rotateRight() {
-      this.editParams.rotate += 90;
-      if (this.editParams.rotate > 180) {
-        this.editParams.rotate -= 360;
+    getRotationLabel() {
+      switch(this.editParams.rotate) {
+        case 'auto': return 'Auto (use EXIF data)';
+        case '0': return '0°';
+        case '90': return '90°';
+        case '180': return '180°';
+        case '270': return '270°';
+        default: return this.editParams.rotate;
       }
-      this.updatePreview();
     },
 
     flipHorizontal() {
@@ -466,7 +496,7 @@ export default {
     resetEdits() {
       this.editParams = {
         crop: null,
-        rotate: 0,
+        rotate: 'auto',
         flip: null
       };
       this.destroyCropper();
@@ -487,8 +517,8 @@ export default {
       }
       
       // Add rotation
-      if (this.editParams.rotate !== 0) {
-        url += `&rot=${this.editParams.rotate}`;
+      if (this.editParams.rotate !== 'auto') {
+        url += `&or=${this.editParams.rotate}`;
       }
       
       // Add flip
@@ -758,6 +788,18 @@ export default {
   gap: 10px;
 }
 
+.rotate-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rotate-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .preview-section {
   border: 1px solid #ddd;
   padding: 15px;
@@ -986,4 +1028,6 @@ export default {
   text-align: center;
   margin-top: 15px;
 }
+
+
 </style> 

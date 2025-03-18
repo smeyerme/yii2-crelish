@@ -3,44 +3,44 @@
 	'id' : 'content-form',
 	'layout' : 'default'
 }) %}
-<div class="o-grid u-window-box--medium">
-	<div class="o-grid__cell o-grid__cell--width-65 o-grid__cell--no-gutter">
-		<div class="">
-			<div class="c-heading u-pillar-box-medium">
+<div class="row">
+	<div class="col-8">
+		<div class="card">
+			<div class="card-header">
 				{{ model.systitle }} ({{ model.mime }})
 			</div>
-			<div class="c-card__content">
-				<div class="u-pillar-box-medium">
-					{% if model.mime =='image/jpeg' or model.mime =='image/jpg' or model.mime =='image/webp' or model.mime =='image/png' or model.mime =='image/gif' %}
-						{% if showImageEditor %}
-							<!-- Image Editor Component -->
-							<div class="image-editor-container" 
-								data-asset-uuid="{{ model.uuid }}" 
-								data-field-key="asset_{{ model.uuid }}" 
-								data-input-name="CrelishDynamicModel[asset]">
-							</div>
-							<input type="hidden" id="CrelishDynamicModel[asset]" name="CrelishDynamicModel[asset]" value="{{ model.uuid }}">
-						{% else %}
-							<img src="/crelish/asset/glide?path={{ chelper.getAssetUrl(model.pathName, model.fileName) }}" class="o-image">
-						{% endif %}
-					{% elseif model.mime =='application/pdf' %}
-						<embed src="{{ chelper.getAssetUrl(model.pathName, model.fileName) }}" width="100%" height="800"
-						       type="application/pdf" style="height: 80vh;">
-					{% elseif model.mime == 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' %}
-						<iframe src="http://view.officeapps.live.com/op/view.aspx?src=={{ chelper.getAssetUrl(model.pathName, model.fileName) }}&name={{ model.systitle }}"
-						        width="100%" height="800px"></iframe>
+			<div class="card-content">
+
+				{% if model.mime =='image/jpeg' or model.mime =='image/jpg' or model.mime =='image/webp' or model.mime =='image/png' or model.mime =='image/gif' %}
+					{% if showImageEditor %}
+						<!-- Image Editor Component -->
+						<div class="image-editor-container"
+							data-asset-uuid="{{ model.uuid }}"
+							data-field-key="asset_{{ model.uuid }}"
+							data-input-name="CrelishDynamicModel[asset]">
+						</div>
+						<input type="hidden" id="CrelishDynamicModel[asset]" name="CrelishDynamicModel[asset]" value="{{ model.uuid }}">
+					{% else %}
+						<img src="/crelish/asset/glide?path={{ chelper.getAssetUrl(model.pathName, model.fileName) }}" class="o-image">
 					{% endif %}
-				</div>
+				{% elseif model.mime =='application/pdf' %}
+					<embed src="{{ chelper.getAssetUrl(model.pathName, model.fileName) }}" width="100%" height="800"
+								 type="application/pdf" style="height: 80vh;">
+				{% elseif model.mime == 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' %}
+					<iframe src="http://view.officeapps.live.com/op/view.aspx?src=={{ chelper.getAssetUrl(model.pathName, model.fileName) }}&name={{ model.systitle }}"
+									width="100%" height="800px"></iframe>
+				{% endif %}
+
 			</div>
 		</div>
 	</div>
-	<div class="o-grid__cell o-grid__cell u-letter-box-medium">
+	<div class="col">
 
-		<div class="c-card">
-			<div class="c-card__item c-card__item--brand">
+		<div class="card allow-overflow">
+			<div class="card-header">
 				{{ t('app', 'Asset details') }}
 			</div>
-			<div class="c-card__item">
+			<div class="card-body">
 				{{ form.field(model, 'systitle') | raw }}
 				{{ form.field(model, 'state').dropdownlist({0:'Offline',1:'Draft',2:'Published',3:'Archived'}) | raw }}
 				{{ form.field(model, 'src', { 'inputOptions': { 'class': 'form-control disabled', 'disabled': 'disabled'}}) | raw }}
@@ -48,22 +48,22 @@
 				{{ form.field(model, 'description', {'options': {'style': 'margin-bottom: 0px;' }}).textarea({'rows':6 }) | raw }}
 
 				{% if colormain_hex is not empty %}
-					<div class="form-group field-crelishdynamicjsonmodel-state required">
+					<div class="form-group palette-ul">
 						<label class="control-label" for="crelishdynamicjsonmodel-state">{{ t('app', 'Color palette') }}</label>
 						<ul>
 							{% for color in colorpalette %}
 								<li class="cr-tooltip"  style="background-color: rgb({{ color[0] }}, {{ color[1] }}, {{ color[2] }});">
-										<span>rgb({{ color[0] }}, {{ color[1] }} , {{ color[2] }})</span>
+										<span class="palette-item">rgb({{ color[0] }}, {{ color[1] }} , {{ color[2] }})</span>
 								</li>
 							{% endfor %}
 						</ul>
 					</div>
 
-					<div class="form-group field-crelishdynamicjsonmodel-state required">
+					<div class="form-group palette-ul">
 						<label class="control-label" for="crelishdynamicjsonmodel-state">{{ t('app', 'Main color') }}</label>
 						<ul>
 							<li class="cr-tooltip" style="background-color: {{ colormain_hex }}; width: 100%;">
-								<span>{{ colormain_hex }}</span>
+								<span class="palette-item">{{ colormain_hex }}</span>
 							</li>
 						</ul>
 					</div>
@@ -84,8 +84,8 @@
 
 {% if model.mime == 'application/pdf' and model.thumbnail %}
 	
-	<div class="o-grid u-window-box--medium">
-		<div class="o-grid__cell o-grid__cell--width-80">
+	<div class="row">
+		<div class="col">
 			{% set formExtract = active_form_begin({
 				'id' : 'login-form',
 				'action': '/crelish/asset/extract-from-pdf?uuid=' ~ model.uuid
@@ -128,6 +128,24 @@
   position: relative;
   display: inline-block;
   cursor: crosshair;
+	display: inline-block;
+	width: 2.333rem;
+	height: 2.333rem;
+	padding: 0;
+	margin: 0;
+}
+
+.col:has(.allow-overflow),
+.allow-overflow {
+	overflow: visible;
+}
+
+
+.palette-ul {
+	ul {
+		margin: 0;
+		padding: 0;
+	}
 }
 
 .cr-tooltip span  {
@@ -147,4 +165,9 @@
 .cr-tooltip:hover span {
   visibility: visible;
 }
+
+.palette-item {
+
+}
+
 {% endapply %}
