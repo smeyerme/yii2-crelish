@@ -1,15 +1,15 @@
 {{ use('/giantbits/crelish/widgets') }}
 
-<div class="u-pillar-box-xlarge u-window-box-xlarge">
-    <div class="o-grid o-grid--small-full o-grid--medium-full o-grid--large-fit">
+<section>
+    <div class="row">
         <!-- Welcome Section -->
-        <div class="o-grid__cell">
-            <div class="c-card">
-                <div class="c-card__content">
-                    <div class="c-card__header">
+        <div class="col">
+            <div class="card">
+                <div class="card__content">
+                    <div class="card-header">
                         <h2 class="c-heading">Welcome to Crelish CMS</h2>
                     </div>
-                    <div class="c-card__body">
+                    <div class="card-body">
                         <p>Manage your content, users, and settings from this dashboard.</p>
                     </div>
                 </div>
@@ -18,149 +18,143 @@
     </div>
 
     <!-- Content Statistics -->
-    <div class="o-grid o-grid--small-full o-grid--medium-full o-grid--large-fit u-letter-box-medium">
-        <div class="o-grid__cell">
-            <div class="c-card">
-                <div class="c-card__content">
-                    <div class="c-card__header">
-                        <h3 class="c-heading">Content Statistics</h3>
-                    </div>
-                    <div class="c-card__body">
-                        {% if contentStats|length > 0 %}
-                            <div class="content-stats-grid">
-                                {% for type, stats in contentStats %}
-                                    <div class="content-stats-item">
-                                        <div class="c-card c-card--high">
-                                            <div class="c-card__content">
-                                                <div class="c-card__header">
-                                                    <h4 class="c-heading">
-                                                        <i class="fa-solid fa-database header-icon"></i>
-                                                        {{ stats.label }}
-                                                    </h4>
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="c-heading">Content Statistics</h3>
+                </div>
+                <div class="card-body">
+                    {% if contentStats|length > 0 %}
+                        <div class="content-stats-grid">
+                            {% for type, stats in contentStats %}
+                                <div class="content-stats-item">
+                                    <div class="card card--high">
+                                        <div class="card__content">
+                                            <div class="card-header">
+                                                <h4 class="c-heading">
+                                                    <i class="fa-solid fa-database header-icon"></i>
+                                                    {{ stats.label }}
+                                                </h4>
+                                            </div>
+                                            <div class="card-body u-centered">
+                                                <div class="stats-icon">
+                                                    <i class="fa-solid fa-file-lines"></i>
                                                 </div>
-                                                <div class="c-card__body u-centered">
-                                                    <div class="stats-icon">
-                                                        <i class="fa-solid fa-file-lines"></i>
-                                                    </div>
-                                                    <span class="c-text--loud">{{ stats.count }}</span>
-                                                    <p>items</p>
-                                                </div>
-                                                <div class="c-card__footer">
-                                                    <a href="{{ url('/crelish/content/index', {'ctype': type}) }}" class="c-button c-button--brand u-small">View All</a>
-                                                    <a href="{{ url('/crelish/content/create', {'ctype': type}) }}" class="c-button c-button--info u-small">Create New</a>
-                                                </div>
+                                                <span class="c-text--loud">{{ stats.count }}</span>
+                                                <p>items</p>
+                                            </div>
+                                            <div class="card__footer">
+                                                <a href="{{ url('/crelish/content/index', {'ctype': type}) }}" class="c-button c-button--brand u-small">View All</a>
+                                                <a href="{{ url('/crelish/content/create', {'ctype': type}) }}" class="c-button c-button--info u-small">Create New</a>
                                             </div>
                                         </div>
                                     </div>
-                                {% endfor %}
-                            </div>
-                        {% else %}
-                            <p>No content types found. <a href="{{ url('/crelish/content/index') }}">Create your first content type</a>.</p>
-                        {% endif %}
-                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p>No content types found. <a href="{{ url('/crelish/content/index') }}">Create your first content type</a>.</p>
+                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Recent Content and System Info -->
-    <div class="o-grid o-grid--small-full o-grid--medium-full o-grid--large-fit">
+    <div class="row">
         <!-- Recent Content -->
-        <div class="o-grid__cell u-2of3">
-            <div class="c-card">
-                <div class="c-card__content">
-                    <div class="c-card__header">
-                        <h3 class="c-heading">Recently Updated Content</h3>
-                    </div>
-                    <div class="c-card__body">
-                        {% if recentContent|length > 0 %}
-                            <table class="c-table c-table--striped">
-                                <thead class="c-table__head">
-                                    <tr class="c-table__row c-table__row--heading">
-                                        <th class="c-table__cell">Title</th>
-                                        <th class="c-table__cell">Type</th>
-                                        <th class="c-table__cell">Updated</th>
-                                        <th class="c-table__cell">Actions</th>
+        <div class="col-4">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="c-heading">Recently Updated Content</h3>
+                </div>
+                <div class="card-body">
+                    {% if recentContent|length > 0 %}
+                        <table class="c-table c-table--striped">
+                            <thead class="c-table__head">
+                                <tr class="c-table__row c-table__row--heading">
+                                    <th class="c-table__cell">Title</th>
+                                    <th class="c-table__cell">Type</th>
+                                    <th class="c-table__cell">Updated</th>
+                                    <th class="c-table__cell">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="c-table__body">
+                                {% for item in recentContent %}
+                                    <tr class="c-table__row">
+                                        <td class="c-table__cell">{{ item.title }}</td>
+                                        <td class="c-table__cell">{{ item.typeLabel }}</td>
+                                        <td class="c-table__cell">{{ item.updated|date('Y-m-d H:i') }}</td>
+                                        <td class="c-table__cell">
+                                            <a href="{{ url('crelish/content/update', {'ctype': item.type, 'uuid': item.id}) }}" class="c-button c-button--info u-xsmall">Edit</a>
+                                            <a href="{{ url('crelish/content/view', {'ctype': item.type, 'uuid': item.id}) }}" class="c-button c-button--brand u-xsmall">View</a>
+                                        </td>
                                     </tr>
-                                </thead>
-                                <tbody class="c-table__body">
-                                    {% for item in recentContent %}
-                                        <tr class="c-table__row">
-                                            <td class="c-table__cell">{{ item.title }}</td>
-                                            <td class="c-table__cell">{{ item.typeLabel }}</td>
-                                            <td class="c-table__cell">{{ item.updated|date('Y-m-d H:i') }}</td>
-                                            <td class="c-table__cell">
-                                                <a href="{{ url('crelish/content/update', {'ctype': item.type, 'uuid': item.id}) }}" class="c-button c-button--info u-xsmall">Edit</a>
-                                                <a href="{{ url('crelish/content/view', {'ctype': item.type, 'uuid': item.id}) }}" class="c-button c-button--brand u-xsmall">View</a>
-                                            </td>
-                                        </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        {% else %}
-                            <p>No recent content found.</p>
-                        {% endif %}
-                    </div>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <p>No recent content found.</p>
+                    {% endif %}
                 </div>
             </div>
         </div>
 
         <!-- System Information -->
-        <div class="o-grid__cell u-1of3">
-            <div class="c-card">
-                <div class="c-card__content">
-                    <div class="c-card__header">
-                        <h3 class="c-heading">System Information</h3>
-                    </div>
-                    <div class="c-card__body">
-                        <table class="c-table">
-                            <tbody>
-                                <tr>
-                                    <td><strong>Crelish Version</strong></td>
-                                    <td>{{ systemInfo.version }}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>PHP Version</strong></td>
-                                    <td>{{ systemInfo.php_version }}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Yii Version</strong></td>
-                                    <td>{{ systemInfo.yii_version }}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Environment</strong></td>
-                                    <td>{{ systemInfo.environment }}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Debug Mode</strong></td>
-                                    <td>{{ systemInfo.debug_mode }}</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+        <div class="col-4">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="c-heading">System Information</h3>
+                </div>
+                <div class="card-body">
+                    <table class="c-table">
+                        <tbody>
+                            <tr>
+                                <td><strong>Crelish Version</strong></td>
+                                <td>{{ systemInfo.version }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>PHP Version</strong></td>
+                                <td>{{ systemInfo.php_version }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Yii Version</strong></td>
+                                <td>{{ systemInfo.yii_version }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Environment</strong></td>
+                                <td>{{ systemInfo.environment }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Debug Mode</strong></td>
+                                <td>{{ systemInfo.debug_mode }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
+        </div>
 
+        <div class="col-4">
             <!-- Quick Links -->
-            <div class="c-card u-letter-box-medium">
-                <div class="c-card__content">
-                    <div class="c-card__header">
-                        <h3 class="c-heading">Quick Links</h3>
-                    </div>
-                    <div class="c-card__body">
-                        <ul class="c-list c-list--unstyled">
-                            <li><a href="{{ url('crelish/content/index') }}" class="c-link">Content Management</a></li>
-                            <li><a href="{{ url('crelish/user/index') }}" class="c-link">User Management</a></li>
-                            <li><a href="{{ url('crelish/asset/index') }}" class="c-link">Media Library</a></li>
-                            <li><a href="{{ url('crelish/settings/index') }}" class="c-link">System Settings</a></li>
-                            <li><a href="/docs/API.md" target="_blank" class="c-link">API Documentation</a></li>
-                        </ul>
-                    </div>
+            <div class="card u-letter-box-medium">
+                <div class="card-header">
+                    <h3 class="c-heading">Quick Links</h3>
+                </div>
+                <div class="card-body">
+                    <ul>
+                        <li><a href="{{ url('crelish/content/index') }}" class="c-link">Content Management</a></li>
+                        <li><a href="{{ url('crelish/user/index') }}" class="c-link">User Management</a></li>
+                        <li><a href="{{ url('crelish/asset/index') }}" class="c-link">Media Library</a></li>
+                        <li><a href="{{ url('crelish/settings/index') }}" class="c-link">System Settings</a></li>
+                        <li><a href="/docs/API.md" target="_blank" class="c-link">API Documentation</a></li>
+                    </ul>
                 </div>
             </div>
         </div>
     </div>
-</div>
+</section>
 
 {% apply registerCss %}
 .content-stats-grid {
@@ -193,7 +187,7 @@
     flex-direction: column;
 }
 
-.content-stats-item .c-card {
+.content-stats-item .card {
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -203,30 +197,30 @@
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.content-stats-item .c-card:hover {
+.content-stats-item .card:hover {
     transform: translateY(-5px);
     box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
 }
 
-.content-stats-item .c-card__content {
+.content-stats-item .card__content {
     flex: 1;
     display: flex;
     flex-direction: column;
 }
 
-.content-stats-item .c-card.c-card--high .c-card__header {
+.content-stats-item .card.card--high .card-header {
     background: linear-gradient(135deg, #1a2b4a 0%, #00766c 100%) !important;
     padding: 1.5rem;
     border-bottom: none;
 }
 
-.content-stats-item .c-card.c-card--high .c-card__header .c-heading {
+.content-stats-item .card.card--high .card-header .c-heading {
     color: #ffffff !important;
     font-weight: 700 !important;
     text-shadow: 0 1px 3px rgba(0,0,0,0.3) !important;
 }
 
-.content-stats-item .c-card.c-card--high .c-card__header .header-icon {
+.content-stats-item .card.card--high .card-header .header-icon {
     color: #ffffff !important;
 }
 
@@ -235,7 +229,7 @@
     font-size: 0.9em;
 }
 
-.content-stats-item .c-card__body {
+.content-stats-item .card-body {
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -245,14 +239,14 @@
     background-color: white;
 }
 
-.content-stats-item .c-card__body .c-text--loud {
+.content-stats-item .card-body .c-text--loud {
     font-size: 2.5rem !important;
     font-weight: 700;
     color: #2d3e5c;
     margin-bottom: 0.5rem;
 }
 
-.content-stats-item .c-card__body p {
+.content-stats-item .card-body p {
     color: #475569;
     font-size: 1rem;
     font-weight: 500;
@@ -302,7 +296,7 @@
     transform: scale(1.1);
 }
 
-.content-stats-item .c-card__footer {
+.content-stats-item .card__footer {
     padding: 1.25rem;
     display: flex;
     justify-content: space-between;
@@ -311,7 +305,7 @@
     border-top: 1px solid rgba(0,0,0,0.05);
 }
 
-.content-stats-item .c-card__footer .c-button {
+.content-stats-item .card__footer .c-button {
     flex: 1;
     text-align: center;
     border-radius: 6px;
@@ -322,42 +316,26 @@
     text-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
-.content-stats-item .c-card__footer .c-button:hover {
+.content-stats-item .card__footer .c-button:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
 }
 
-.content-stats-item .c-card__footer .c-button--brand {
-    background-color: #2d3e5c;
-    color: white;
-}
-
-.content-stats-item .c-card__footer .c-button--info {
-    background-color: #00a99d;
-    color: white;
-}
-
 /* Make other cards on the dashboard consistent with the new style */
-.c-card {
+.card {
     border-radius: 12px;
     overflow: hidden;
     box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
 }
 
 /* Default card styles */
-.c-card .c-card__header {
+.card .card-header {
     padding: 1.25rem 1.5rem;
     border-bottom: 1px solid rgba(0,0,0,0.05);
     background-color: #f8fafc;
 }
 
-.c-card .c-card__header .c-heading {
-    margin: 0;
-    font-weight: 600;
-    color: #2d3748;
-}
-
-.c-card .c-card__body {
+.card .card-body {
     padding: 1.5rem;
 }
 {% endapply %}

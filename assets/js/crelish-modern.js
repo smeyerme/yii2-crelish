@@ -12,17 +12,7 @@
     function applyModernHeaderStyling() {
         // Enhance the title in the header bar
         if ($('.navbar--controller').length) {
-            // Check if there's a title in the controller
-            if ($('.navbar--title').length === 0) {
-                // Get the page title from the document title
-                let pageTitle = document.title.split('|').pop().trim();
-                
-                // Always insert at the beginning of the left group
-                // This works whether toggle button is visible or not
-                $('.navbar--controller .group-content-filter').prepend(
-                    '<h1 class="navbar--title">' + pageTitle + '</h1>'
-                );
-            }
+
             
             // Enhance buttons with icons if they don't have them
             $('.navbar--controller .c-button').each(function() {

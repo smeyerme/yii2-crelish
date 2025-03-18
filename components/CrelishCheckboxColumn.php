@@ -23,10 +23,7 @@ class CrelishCheckboxColumn extends CheckboxColumn
     }
 
     return'<label style="padding-left: 0.15rem;">' .
-	    Html::checkbox($this->getHeaderCheckBoxName(), false, ['class' => 'select-on-check-all']) .
-	    '<span><i class="fa-sharp fa-light fa-square"></i></span>
-			 <span><i class="fa-sharp fa-light fa-square-check"></i></span>
-		</label>';
+	    Html::checkbox($this->getHeaderCheckBoxName(), false, ['class' => 'select-on-check-all']) . '</label>';
   }
 
   protected function renderDataCellContent($model, $key, $index)
@@ -46,9 +43,6 @@ class CrelishCheckboxColumn extends CheckboxColumn
       Html::addCssClass($options, $this->cssClass);
     }
 
-    return '<label>' . Html::checkbox($this->name, !empty($options['checked']), $options) . '
-			<span><i class="fa-sharp fa-light fa-square"></i></span>
-			 <span><i class="fa-sharp fa-light fa-square-check"></i></span>
-			</label>';
+    return '<label>' . Html::checkbox($this->name, !empty($options['checked']), $options) . '</label>';
   }
 }

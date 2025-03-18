@@ -50,7 +50,7 @@
 				{% if colormain_hex is not empty %}
 					<div class="form-group field-crelishdynamicjsonmodel-state required">
 						<label class="control-label" for="crelishdynamicjsonmodel-state">{{ t('app', 'Color palette') }}</label>
-						<ul class="gc-list--inline">
+						<ul>
 							{% for color in colorpalette %}
 								<li class="cr-tooltip"  style="background-color: rgb({{ color[0] }}, {{ color[1] }}, {{ color[2] }});">
 										<span>rgb({{ color[0] }}, {{ color[1] }} , {{ color[2] }})</span>
@@ -61,7 +61,7 @@
 
 					<div class="form-group field-crelishdynamicjsonmodel-state required">
 						<label class="control-label" for="crelishdynamicjsonmodel-state">{{ t('app', 'Main color') }}</label>
-						<ul class="gc-list--inline">
+						<ul>
 							<li class="cr-tooltip" style="background-color: {{ colormain_hex }}; width: 100%;">
 								<span>{{ colormain_hex }}</span>
 							</li>
@@ -121,7 +121,7 @@
   $('.colorspawn').css('border-bottom', '4px solid {{ colormain_hex }}');
 </script>
 
-<span class="c-badge gc-mt--1">{{ model.uuid }} : {{ model.ctype }}</span>
+<span class="badge text-bg-secondary">{{ model.uuid }} : {{ model.ctype }}</span>
 
 {% apply registerCss %}
 .cr-tooltip {

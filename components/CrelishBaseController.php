@@ -194,7 +194,7 @@ class CrelishBaseController extends Controller
     $defaults = [
       'id' => 'content-form',
       'outerClass' => 'gc-ptb--2',
-      'groupClass' => 'c-card',
+      'groupClass' => 'card',
       'tabs' => []
     ];
     $settings = array_merge($defaults, $settings);
@@ -292,7 +292,7 @@ class CrelishBaseController extends Controller
   {
     $html = Html::beginTag("div", ['class' => $settings['outerClass']]);
     $html .= $this->renderLanguageSelector();
-    $html .= Html::beginTag("div", ['class' => 'o-grid o-grid--wrap o-grid--small-full']);
+    $html .= Html::beginTag("div", ['class' => 'row']);
     $html .= $this->renderTabs($form, $settings);
     $html .= Html::endTag('div');
     $html .= Html::endTag('div');
@@ -347,12 +347,12 @@ class CrelishBaseController extends Controller
   private function renderGroup($group, $form, $settings): string
   {
     $groupSettings = property_exists($group, 'settings') ? $group->settings : [];
-    $widthClass = !empty($groupSettings->width) ? 'o-grid__cell--width-' . $groupSettings->width : '';
+    $widthClass = !empty($groupSettings->width) ? 'col-md-' . $groupSettings->width : '';
 
-    $html = Html::beginTag('div', ['class' => 'o-grid__cell ' . $widthClass]);
+    $html = Html::beginTag('div', ['class' => 'col ' . $widthClass]);
     $html .= Html::beginTag('div', ['class' => $settings['groupClass']]);
     $html .= $this->renderGroupLabel($group, $groupSettings);
-    $html .= Html::beginTag('div', ['class' => 'c-card__item']);
+    $html .= Html::beginTag('div', ['class' => 'card-body']);
     $html .= $this->renderGroupFields($group, $form);
     $html .= Html::endTag('div');
     $html .= Html::endTag('div');
@@ -366,7 +366,7 @@ class CrelishBaseController extends Controller
     if (empty($groupSettings) ||
       (property_exists($groupSettings, 'showLabel') && $groupSettings->showLabel !== false) ||
       !property_exists($groupSettings, 'showLabel')) {
-      return Html::tag('div', $group->label, ['class' => 'c-card__item c-card__item--brand']);
+      return Html::tag('div', $group->label, ['class' => 'card-header']);
     }
     return '';
   }

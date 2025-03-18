@@ -56,18 +56,6 @@ class ContentController extends CrelishBaseController
     $this->handleSessionAndQueryParams('ctype');
 
     $this->ctype = Yii::$app->session->get('ctype');
-
-    Yii::$app->view->registerJs('
-      $(document).on("pjax:complete" , function(event) {
-        $(".scrollable").animate({ scrollTop: "0" });
-        
-		    if($(".filter-top").length > 0) {
-		      var psT = new PerfectScrollbar(".filter-top", {
-		        suppressScrollY: true
-		      });
-		    }
-      });
-    ', View::POS_LOAD);
   }
 
   /**
