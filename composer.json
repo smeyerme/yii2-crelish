@@ -8,7 +8,7 @@
     ],
     "type": "yii2-extension",
     "license": "BSD-3-Clause",
-    "version": "0.9.3",
+    "version": "0.9.5",
     "minimum-stability": "dev",
     "prefer-stable": true,
     "support": {
@@ -65,7 +65,8 @@
         "baha2odeh/yii2-recaptcha-v3": "*",
         "deeplcom/deepl-php": "^1.11",
         "yiisoft/yii2-swiftmailer": "~2.0.0 || ~2.1.0",
-        "firebase/php-jwt": "^6.11"
+        "firebase/php-jwt": "^6.11",
+        "erusev/parsedown": "^1.7"
     },
     "autoload": {
         "psr-4": {

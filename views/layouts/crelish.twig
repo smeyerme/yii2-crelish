@@ -1,6 +1,7 @@
 {{ use('giantbits/crelish/widgets/FlashMessages') }}
 {{ use('giantbits/crelish/components/widgets/HeaderBar') }}
 {% set crelishBundle = register_asset_bundle('giantbits/crelish/CrelishAsset', true) %}
+{{ register_asset_bundle('giantbits/crelish/CrelishModernAsset') }}
 {{ void(this.beginPage()) }}
 <!DOCTYPE html>
 <html lang="{{ app.language }}">
@@ -11,18 +12,18 @@
 	{{ html.csrfMetaTags | raw }}
 	{{ void(this.head) }}
 </head>
-<body class="crelish-app-root u-text">
+<body class="crelish-app-root u-text {% if this.params['isDocumentationMode'] is defined and this.params['isDocumentationMode'] == true %}documentation-mode{% endif %}">
 {{ void(this.beginBody()) }}
 
 <section class="cr-root_wrap">
-	<div id="cr-left-pane" class="left-col scrollable">
+	<div id="cr-left-pane" class="left-col scrollable {% if this.params['isDocumentationMode'] is defined and this.params['isDocumentationMode'] == true %}documentation-sidebar{% endif %}">
 		<div class="logo-head">
 			<a href="{{ url('crelish/dashboard/index') }}">
 				<img src="{{ crelishBundle.baseUrl }}/img/Crelish-Logo-Dark.svg" border="0" width="128"/>
 			</a>
 		</div>
 		<div class="navbar--main">
-			{% include '_side_nav.twig' %}
+			{% include '@crelish/views/layouts/_side_nav.twig' %}
 		</div>
 	</div>
 	<div id="cr-right-pane" class="scrollable">
@@ -111,6 +112,31 @@
 	padding-left: 1rem;
 	transform: translateX(-1rem);
 }
+
+{% if this.params['isDocumentationMode'] is defined and this.params['isDocumentationMode'] == true %}
+.documentation-sidebar {
+    width: 240px !important;
+    min-width: 240px !important;
+}
+
+.documentation-mode #cr-right-pane {
+    width: calc(100% - 240px) !important;
+}
+
+@media (max-width: 992px) {
+    .documentation-sidebar {
+        width: 240px !important;
+        min-width: 240px !important;
+        transform: none !important;
+        left: 0 !important;
+    }
+    
+    .documentation-mode #cr-right-pane {
+        width: 100% !important;
+        margin-left: 0 !important;
+    }
+}
+{% endif %}
 
 {% endapply %}
 

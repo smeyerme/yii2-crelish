@@ -17,7 +17,7 @@
       'dataProvider': dataProvider,
       'columns': columns,
       'filterSelector': '.cr-content-search',
-      'tableOptions': {'class':'table table-striped table-hover'},
+      'tableOptions': {'class':'table table-striped table-hover content-table'},
       'rowOptions': rowOptions ,
       'formatter': {
         'class': 'yii\\i18n\\Formatter',
@@ -30,6 +30,8 @@
 
 <script>
   $(document).ready(function () {
+    // Apply style enhancements to the content table
+    enhanceContentTable();
 
     $('#cr_content_filter').on("blur", function (e) {
       e.preventDefault();
@@ -86,9 +88,353 @@
       return true;
     });
   });
+
+  // Function to enhance the content table with modern styling
+  function enhanceContentTable() {
+    // Find the content table
+    const table = document.querySelector('.content-table');
+    if (!table) return;
+    
+    // Find all rows
+    const rows = table.querySelectorAll('tbody tr');
+    
+    // Process each row to enhance styling
+    rows.forEach(row => {
+      const cells = row.querySelectorAll('td');
+      
+      // Process each cell to look for status indicators
+      cells.forEach(cell => {
+        const cellText = cell.textContent.trim().toLowerCase();
+        
+        // Handle status values
+        if (cellText === 'draft' || cellText === 'online' || 
+            cellText === 'offline' || cellText === 'archived') {
+          
+          // Create status badge
+          const statusBadge = document.createElement('span');
+          statusBadge.className = `status-badge ${cellText}`;
+          statusBadge.textContent = cellText.toUpperCase();
+          
+          // Replace cell content with badge
+          cell.innerHTML = '';
+          cell.appendChild(statusBadge);
+        }
+        
+        // Handle action buttons
+        const buttons = cell.querySelectorAll('a.btn');
+        buttons.forEach(button => {
+          // Add FontAwesome icons to common actions
+          if (button.textContent.trim().toLowerCase().includes('edit') || 
+              button.textContent.trim().toLowerCase().includes('update')) {
+            button.innerHTML = '<i class="fa-solid fa-pen-to-square"></i> ' + button.textContent;
+            button.classList.add('btn-info');
+          } else if (button.textContent.trim().toLowerCase().includes('delete')) {
+            button.innerHTML = '<i class="fa-solid fa-trash"></i> ' + button.textContent;
+            button.classList.add('btn-danger');
+          } else if (button.textContent.trim().toLowerCase().includes('view')) {
+            button.innerHTML = '<i class="fa-solid fa-eye"></i> ' + button.textContent;
+            button.classList.add('btn-primary');
+          }
+        });
+      });
+    });
+  }
+  
+  // Run enhancement after each PJAX reload
+  $(document).on('pjax:complete', function() {
+    enhanceContentTable();
+  });
 </script>
 
 {{ pjax_end() }}
+
+{% apply registerCss %}
+/* Content list view styling */
+#contentSelect {
+  margin-top: 1rem;
+}
+
+.filter-top {
+  background-color: #f1f5f9 !important;
+  border-radius: 12px 12px 0 0;
+  padding: 0.5rem 1rem;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+}
+
+.content-filter {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 0.5rem 0;
+}
+
+.content-filter li {
+  margin: 0 0.5rem 0 0;
+}
+
+.content-filter li a {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  color: #475569;
+  font-weight: 500;
+}
+
+.content-filter li a:hover {
+  background-color: rgba(0,0,0,0.03);
+  color: #1a2b4a;
+}
+
+.content-filter li.gc-active-filter a {
+  background-color: rgba(0, 118, 108, 0.1);
+  color: #00766c;
+  font-weight: 600;
+}
+
+.content-table {
+  width: 100%;
+  border-spacing: 0;
+  border-collapse: separate;
+  border-radius: 0 0 12px 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+  margin-top: 0 !important;
+}
+
+.content-table thead {
+  background: linear-gradient(135deg, #1a2b4a 0%, #00766c 100%);
+}
+
+.content-table thead th {
+  color: white !important;
+  font-weight: 600 !important;
+  border-bottom: none !important;
+  padding: 1rem 1.25rem !important;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+}
+
+/* Fix for table header links */
+.content-table thead th a,
+.content-table thead th a:visited {
+  color: white !important;
+  font-weight: 600 !important;
+  text-decoration: none !important;
+  transition: opacity 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+}
+
+.content-table thead th a:hover,
+.content-table thead th a:active {
+  color: white !important;
+  opacity: 0.9;
+  text-decoration: none !important;
+}
+
+/* Sort indicators */
+.content-table thead th.asc a:after {
+  content: "▲";
+  display: inline-block;
+  margin-left: 0.5rem;
+  font-size: 0.7em;
+  opacity: 0.9;
+}
+
+.content-table thead th.desc a:after {
+  content: "▼";
+  display: inline-block;
+  margin-left: 0.5rem;
+  font-size: 0.7em;
+  opacity: 0.9;
+}
+
+.content-table tbody tr {
+  transition: all 0.2s ease;
+}
+
+.content-table tbody tr:hover {
+  background-color: #f1f5f9 !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+}
+
+.content-table tbody tr td {
+  padding: 0.875rem 1.25rem !important;
+  border-top: 1px solid #e2e8f0 !important;
+  vertical-align: middle !important;
+}
+
+.content-table tbody tr:first-child td {
+  border-top: none !important;
+}
+
+.content-table .fa-check-square {
+  color: #00766c !important;
+}
+
+.content-table .btn-group .btn {
+  margin-right: 0.25rem;
+  border-radius: 4px !important;
+}
+
+/* Status badges styling */
+.content-table .status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-badge.draft {
+  background-color: rgba(245, 158, 11, 0.15);
+  color: #d97706;
+}
+
+.status-badge.online {
+  background-color: rgba(16, 185, 129, 0.15);
+  color: #059669;
+}
+
+.status-badge.offline {
+  background-color: rgba(107, 114, 128, 0.15);
+  color: #4b5563;
+}
+
+.status-badge.archived {
+  background-color: rgba(139, 92, 246, 0.15);
+  color: #7c3aed;
+}
+
+/* Pagination styling - more specific selectors */
+.content-table + .summary + .pagination,
+#contentSelect > .u-window-box-medium .pagination {
+  margin-top: 1.5rem;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  padding: 0;
+}
+
+.content-table + .summary + .pagination > li,
+#contentSelect > .u-window-box-medium .pagination > li {
+  display: inline-flex;
+  margin: 0 0.25rem;
+}
+
+.content-table + .summary + .pagination > li > a,
+.content-table + .summary + .pagination > li > span,
+#contentSelect > .u-window-box-medium .pagination > li > a,
+#contentSelect > .u-window-box-medium .pagination > li > span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.5rem;
+  height: 2.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  background-color: white;
+  color: #1a2b4a;
+  font-weight: 500;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.content-table + .summary + .pagination > li > a:hover,
+#contentSelect > .u-window-box-medium .pagination > li > a:hover {
+  background-color: #f1f5f9;
+  transform: translateY(-2px);
+  text-decoration: none;
+}
+
+.content-table + .summary + .pagination > li.active > a,
+.content-table + .summary + .pagination > li.active > span,
+#contentSelect > .u-window-box-medium .pagination > li.active > a,
+#contentSelect > .u-window-box-medium .pagination > li.active > span {
+  background: linear-gradient(135deg, #1a2b4a 0%, #00766c 100%);
+  color: white !important;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  font-weight: 600;
+}
+
+/* Summary text styling */
+.content-table + .summary,
+#contentSelect > .u-window-box-medium .summary {
+  color: #64748b;
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+  font-style: italic;
+}
+
+/* Create content modal styling */
+.modal-content {
+  border-radius: 12px;
+  overflow: hidden;
+  border: none;
+}
+
+.modal-header {
+  background: linear-gradient(135deg, #1a2b4a 0%, #00766c 100%);
+  padding: 1.25rem 1.5rem;
+  border-bottom: none;
+}
+
+.modal-header h4 {
+  color: white;
+  font-weight: 600;
+  margin: 0;
+}
+
+.modal-header .close {
+  color: white;
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
+}
+
+.modal-header .close:hover {
+  opacity: 1;
+}
+
+.content-dropper-subnav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 1rem;
+  margin: 0;
+  list-style: none;
+}
+
+.content-dropper-subnav li {
+  flex: 1 0 calc(50% - 0.5rem);
+}
+
+.content-dropper-subnav li a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem 1rem;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  background-color: #f1f5f9;
+  color: #1a2b4a;
+  font-weight: 500;
+  text-decoration: none;
+  border: 1px solid rgba(0,0,0,0.05);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  height: 100%;
+}
+
+.content-dropper-subnav li a:hover {
+  background-color: rgba(0, 118, 108, 0.1);
+  color: #00766c;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+{% endapply %}
 
 <div class="modal modal-lg fade" id="modal-create-content" tabindex="-1" role="dialog">
   <div class="modal-dialog">

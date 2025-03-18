@@ -64,15 +64,30 @@ Run the migrations to set up the database tables:
 ./yii migrate --migrationPath=@vendor/giantbits/yii2-crelish/migrations
 ```
 
-### Content Types Configuration
+### Workspace Setup
 
-Create a directory for your content type definitions:
+Crelish CMS uses a workspace directory in your application to store content type definitions and generated model classes. Create this directory structure:
 
 ```bash
-mkdir -p config/content-types
+mkdir -p workspace/elements
+mkdir -p workspace/models
 ```
 
-Create your first content type (e.g., `config/content-types/page.json`):
+### Content Types Configuration
+
+Content types in Crelish are defined in JSON files stored in the `workspace/elements` directory. You can create these files manually or use the ElementsController in the admin interface.
+
+#### Using ElementsController (Recommended)
+
+1. Access the admin panel at `/crelish`
+2. Navigate to "Elements" in the sidebar
+3. Click "Add New" to create a new content type
+4. Define your fields and configuration
+5. Save the content type
+
+#### Manual Content Type Definition
+
+Create your first content type (e.g., `workspace/elements/page.json`):
 
 ```json
 {
@@ -114,6 +129,19 @@ Create your first content type (e.g., `config/content-types/page.json`):
 }
 ```
 
+### Generating Models and Database Tables
+
+After defining a content type, you need to generate the corresponding model class and database table:
+
+```bash
+./yii crelish/content-type/generate page
+```
+
+This command:
+- Reads the content type definition from `workspace/elements/page.json`
+- Creates or updates the database table for the content type
+- Generates a model class in `workspace/models`
+
 ## First Steps
 
 ### Accessing the Admin Panel
@@ -139,6 +167,16 @@ The default login credentials are:
 4. Click "Add New" and fill in the required fields
 5. Save your content
 
+### Managing Content Types
+
+1. Navigate to "Elements" in the sidebar
+2. View and edit existing content types
+3. Create new content types as needed
+4. After making changes, run the generator command to update models and tables:
+   ```bash
+   ./yii crelish/content-type/generate your-content-type
+   ```
+
 ### Accessing Content via API
 
 You can access your content via the API:
@@ -149,9 +187,32 @@ GET https://your-domain.com/api/content/page
 
 See the [API Documentation](./API.md) for more details.
 
+## Project Structure
+
+After setting up Crelish CMS, your project structure should include:
+
+```
+your-project/
+├── config/
+│   └── web.php (Crelish configuration)
+├── workspace/
+│   ├── elements/ (Content type definitions)
+│   │   ├── page.json
+│   │   └── ...
+│   └── models/ (Generated model classes)
+│       ├── Page.php
+│       └── ...
+└── vendor/
+    └── giantbits/
+        └── yii2-crelish/ (Crelish CMS files)
+```
+
 ## Next Steps
 
 - [Configure authentication](./authentication.md) for your API
 - [Create custom content types](./content-types.md)
 - [Integrate with frontend frameworks](./frontend-integration.md)
-- [Extend Crelish with plugins](./extending.md) 
+- [Extend Crelish with plugins](./extending.md)
+- [Work with widgets](./widgets.md)
+- [Use the documentation viewer](./documentation-viewer.md)
+- [Troubleshoot common issues](./troubleshooting.md) 

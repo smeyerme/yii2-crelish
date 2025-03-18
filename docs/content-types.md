@@ -13,15 +13,42 @@ A content type is a schema that defines:
 
 ## Content Type Definition
 
-Content types are defined in JSON files located in the `config/content-types` directory. Each content type has its own file, named after the content type (e.g., `page.json`, `article.json`).
+Content types are defined in JSON files located in the `workspace/elements` directory of your application (not within the Crelish package itself). Each content type has its own file, named after the content type (e.g., `page.json`, `article.json`, `boardgame.json`).
+
+### Managing Content Types
+
+There are two ways to manage content types in Crelish CMS:
+
+1. **Using the ElementsController**: Crelish provides a web interface to create, read, update, and delete content type definitions through the ElementsController. You can access this interface at `/crelish/elements` in your admin panel.
+
+2. **Manually editing JSON files**: You can also create and edit the JSON files directly in the `workspace/elements` directory.
+
+### ContentTypeController Command
+
+After defining your content types, you need to generate the corresponding database tables and model classes. Crelish provides a console command for this purpose:
+
+```bash
+./yii crelish/content-type/generate boardgame
+```
+
+This command:
+- Reads the content type definition from `workspace/elements/boardgame.json`
+- Creates or updates the database table based on the fields defined
+- Generates a model class in `workspace/models`
+
+To see a list of all available content types:
+
+```bash
+./yii crelish/content-type/list
+```
 
 ### Basic Structure
 
 ```json
 {
-  "name": "page",
-  "label": "Page",
-  "description": "Basic page content type",
+  "name": "boardgame",
+  "label": "Board Game",
+  "description": "Board game content type",
   "fields": {
     // Field definitions go here
   }
@@ -48,190 +75,90 @@ Crelish supports the following field types:
 | `object` | Nested object | Address, metadata |
 | `reference` | Reference to another content item | Author, related pages |
 | `file` | File upload | Document, image |
-| `image` | Image upload with processing | Featured image, gallery |
 
-### Field Properties
+## Creating a Content Type
 
-Each field can have the following properties:
+### Using the ElementsController (Recommended)
 
-```json
-"title": {
-  "type": "string",
-  "label": "Title",
-  "description": "The title of the page",
-  "required": true,
-  "minLength": 3,
-  "maxLength": 255,
-  "default": "New Page",
-  "placeholder": "Enter page title",
-  "help": "The title appears at the top of the page and in search results"
-}
-```
+1. Log in to the Crelish admin panel
+2. Navigate to "Elements" in the sidebar
+3. Click "Add New" to create a new content type
+4. Define your fields and validation rules
+5. Save the content type
+6. Run the generator command to create the database table and model
 
-Common properties for all field types:
+### Manually Creating a JSON File
 
-- `type`: The field type (required)
-- `label`: Human-readable label (required)
-- `description`: Description of the field
-- `required`: Whether the field is required (default: false)
-- `default`: Default value
-- `placeholder`: Placeholder text for input fields
-- `help`: Help text to display in the admin interface
-
-Type-specific properties:
-
-- `string`:
-  - `minLength`: Minimum length
-  - `maxLength`: Maximum length
-  - `pattern`: Regular expression pattern
-  
-- `integer`/`float`:
-  - `min`: Minimum value
-  - `max`: Maximum value
-  - `step`: Step value for input controls
-  
-- `enum`:
-  - `values`: Array of allowed values
-  - `multiple`: Allow multiple selections (default: false)
-  
-- `array`:
-  - `minItems`: Minimum number of items
-  - `maxItems`: Maximum number of items
-  - `items`: Schema for array items
-  
-- `reference`:
-  - `contentType`: Referenced content type
-  - `multiple`: Allow multiple references (default: false)
-  
-- `image`:
-  - `maxSize`: Maximum file size in bytes
-  - `formats`: Allowed formats (e.g., ["jpg", "png", "gif"])
-  - `presets`: Image processing presets
-
-## Example Content Types
-
-### Basic Page
+1. Create a new JSON file in `workspace/elements` (e.g., `boardgame.json`)
+2. Define the content type structure:
 
 ```json
 {
-  "name": "page",
-  "label": "Page",
-  "description": "Basic page content type",
+  "name": "boardgame",
+  "label": "Board Game",
+  "description": "Content type for board games",
   "fields": {
     "title": {
       "type": "string",
       "label": "Title",
-      "description": "Page title",
+      "description": "The name of the board game",
       "required": true,
       "minLength": 3,
       "maxLength": 255
     },
-    "slug": {
-      "type": "string",
-      "label": "Slug",
-      "description": "URL-friendly version of the title",
-      "required": true,
-      "minLength": 3,
-      "maxLength": 255
-    },
-    "content": {
+    "description": {
       "type": "text",
-      "label": "Content",
-      "description": "Page content in HTML format",
+      "label": "Description",
+      "description": "Full description of the board game",
       "required": true
     },
-    "status": {
-      "type": "enum",
-      "label": "Status",
-      "description": "Publication status",
-      "required": true,
-      "values": ["draft", "published", "archived"],
-      "default": "draft"
-    }
-  }
-}
-```
-
-### Blog Post
-
-```json
-{
-  "name": "post",
-  "label": "Blog Post",
-  "description": "Blog post content type",
-  "fields": {
-    "title": {
-      "type": "string",
-      "label": "Title",
-      "description": "Post title",
-      "required": true,
-      "minLength": 3,
-      "maxLength": 255
+    "players": {
+      "type": "object",
+      "label": "Players",
+      "description": "Number of players",
+      "fields": {
+        "min": {
+          "type": "integer",
+          "label": "Minimum Players",
+          "required": true
+        },
+        "max": {
+          "type": "integer",
+          "label": "Maximum Players",
+          "required": true
+        }
+      }
     },
-    "slug": {
-      "type": "string",
-      "label": "Slug",
-      "description": "URL-friendly version of the title",
-      "required": true,
-      "minLength": 3,
-      "maxLength": 255
-    },
-    "content": {
-      "type": "text",
-      "label": "Content",
-      "description": "Post content in HTML format",
+    "playtime": {
+      "type": "integer",
+      "label": "Playtime (minutes)",
+      "description": "Average playing time in minutes",
       "required": true
     },
-    "excerpt": {
-      "type": "text",
-      "label": "Excerpt",
-      "description": "Short summary of the post",
-      "required": false,
-      "maxLength": 500
-    },
-    "featured_image": {
-      "type": "image",
-      "label": "Featured Image",
-      "description": "Main image for the post",
-      "required": false,
-      "formats": ["jpg", "png", "webp"],
-      "presets": ["thumbnail", "medium", "large"]
-    },
-    "author_id": {
-      "type": "reference",
-      "label": "Author",
-      "description": "Post author",
-      "required": true,
-      "contentType": "author"
+    "image": {
+      "type": "file",
+      "label": "Box Image",
+      "description": "Image of the game box",
+      "accept": "image/*"
     },
     "categories": {
-      "type": "reference",
-      "label": "Categories",
-      "description": "Post categories",
-      "required": false,
-      "contentType": "category",
-      "multiple": true
-    },
-    "tags": {
       "type": "array",
-      "label": "Tags",
-      "description": "Post tags",
-      "required": false,
+      "label": "Categories",
+      "description": "Game categories",
       "items": {
         "type": "string"
       }
     },
-    "published_at": {
-      "type": "datetime",
-      "label": "Published At",
-      "description": "Publication date and time",
-      "required": false
+    "publisher": {
+      "type": "reference",
+      "label": "Publisher",
+      "description": "Game publisher",
+      "contentType": "publisher"
     },
     "status": {
       "type": "enum",
       "label": "Status",
       "description": "Publication status",
-      "required": true,
       "values": ["draft", "published", "archived"],
       "default": "draft"
     }
@@ -239,67 +166,138 @@ Type-specific properties:
 }
 ```
 
-## Working with Content Types in Code
+3. Run the generator command to create the database table and model:
 
-### Registering Content Types
-
-Content types are automatically registered when placed in the `config/content-types` directory. The directory path can be configured in your application configuration:
-
-```php
-'components' => [
-    'contentService' => [
-        'class' => 'giantbits\crelish\components\ContentService',
-        'contentTypesPath' => '@app/config/content-types',
-    ],
-],
+```bash
+./yii crelish/content-type/generate boardgame
 ```
 
-### Accessing Content Types
+## Field Configuration
 
-You can access content types through the `contentService` component:
+Each field in a content type can have the following properties:
 
-```php
-// Check if a content type exists
-$exists = Yii::$app->contentService->contentTypeExists('page');
+| Property | Description | Example |
+|----------|-------------|---------|
+| `type` | Field data type | `"type": "string"` |
+| `label` | Human-readable label | `"label": "Title"` |
+| `description` | Help text for the field | `"description": "Enter the title"` |
+| `required` | Whether the field is required | `"required": true` |
+| `default` | Default value | `"default": "Draft"` |
+| `minLength` | Minimum text length | `"minLength": 3` |
+| `maxLength` | Maximum text length | `"maxLength": 255` |
+| `min` | Minimum numeric value | `"min": 0` |
+| `max` | Maximum numeric value | `"max": 100` |
+| `pattern` | Regex validation pattern | `"pattern": "^[A-Z][a-z]+$"` |
+| `accept` | File type filter | `"accept": "image/*"` |
+| `multiple` | Allow multiple values | `"multiple": true` |
+| `values` | Enum possible values | `"values": ["draft", "published"]` |
+| `contentType` | Referenced content type | `"contentType": "author"` |
+| `fields` | Nested fields (for objects) | `"fields": {...}` |
+| `items` | Array item definition | `"items": {"type": "string"}` |
 
-// Get content type definition
-$definition = Yii::$app->contentService->getContentTypeDefinition('page');
+## Content Relationships
 
-// Get a query for content items
-$query = Yii::$app->contentService->getQuery('page');
-$items = $query->all();
+Crelish supports relationships between content types using the `reference` field type:
 
-// Get a single content item
-$item = Yii::$app->contentService->getContentById('page', '123');
+```json
+"author": {
+  "type": "reference",
+  "label": "Author",
+  "description": "Content author",
+  "contentType": "user",
+  "multiple": false
+}
 ```
 
-### Creating and Updating Content
+This creates a relationship to the `user` content type. When you use this field in the admin interface, you'll be able to select from a list of user content items.
+
+## Generated Models
+
+When you run the `generate` command, Crelish creates a model class for your content type in `workspace/models`. For example, a `boardgame` content type would generate a `Boardgame` model class.
+
+This model class extends `\giantbits\crelish\models\CrelishActiveRecord` and provides all the necessary methods for working with your content type.
+
+Example usage in code:
 
 ```php
-// Create a new content item
-$result = Yii::$app->contentService->createContent('page', [
-    'title' => 'Hello World',
-    'slug' => 'hello-world',
-    'content' => '<p>This is my first page.</p>',
-    'status' => 'published',
-]);
+use app\workspace\models\Boardgame;
 
-// Update an existing content item
-$result = Yii::$app->contentService->updateContent('page', '123', [
-    'title' => 'Updated Title',
-    'content' => '<p>This is the updated content.</p>',
-]);
+// Find all published board games
+$games = Boardgame::find()
+    ->where(['status' => 'published'])
+    ->orderBy(['title' => SORT_ASC])
+    ->all();
 
-// Delete a content item
-$result = Yii::$app->contentService->deleteContent('page', '123');
+// Create a new board game
+$game = new Boardgame();
+$game->title = 'Settlers of Catan';
+$game->description = 'A popular strategy board game';
+$game->players = ['min' => 3, 'max' => 4];
+$game->playtime = 90;
+$game->categories = ['Strategy', 'Resource Management'];
+$game->status = 'published';
+$game->save();
+```
+
+## Advanced Field Types
+
+### Object Fields
+
+Object fields allow you to create nested structures:
+
+```json
+"location": {
+  "type": "object",
+  "label": "Location",
+  "fields": {
+    "latitude": {
+      "type": "float",
+      "label": "Latitude"
+    },
+    "longitude": {
+      "type": "float",
+      "label": "Longitude"
+    },
+    "address": {
+      "type": "string",
+      "label": "Address"
+    }
+  }
+}
+```
+
+### Array Fields
+
+Array fields store multiple values:
+
+```json
+"tags": {
+  "type": "array",
+  "label": "Tags",
+  "items": {
+    "type": "string"
+  }
+}
+```
+
+### Reference Fields
+
+Reference fields create relationships to other content types:
+
+```json
+"relatedArticles": {
+  "type": "reference",
+  "label": "Related Articles",
+  "contentType": "article",
+  "multiple": true
+}
 ```
 
 ## Best Practices
 
-1. **Use descriptive names**: Choose clear, descriptive names for content types and fields.
-2. **Keep it simple**: Start with the essential fields and add more as needed.
-3. **Be consistent**: Use consistent naming conventions across content types.
-4. **Use references**: Use references to create relationships between content types.
-5. **Document your content types**: Add descriptions to content types and fields.
-6. **Validate thoroughly**: Define appropriate validation rules for each field.
-7. **Consider the user experience**: Organize fields in a logical order for content editors. 
+1. **Use Clear Names**: Choose descriptive names for your content types and fields
+2. **Group Related Fields**: Use object fields to group related information
+3. **Include Validation**: Add appropriate validation rules to ensure data quality
+4. **Document Your Fields**: Include clear descriptions for all fields
+5. **Consider Performance**: Be mindful of complex relationships between content types
+6. **Use Consistent Naming**: Follow a consistent naming convention for your content types and fields 

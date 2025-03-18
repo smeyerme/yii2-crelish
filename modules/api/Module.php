@@ -54,7 +54,7 @@ class Module extends \yii\base\Module
     private function setupApiConfiguration(): void
     {
         // Configure CORS and authentication behaviors
-        Yii::$app->controllerMap['api'] = [
+        Yii::$app->controllerMap['crelish-api'] = [
             'class' => 'yii\rest\Controller',
             'behaviors' => [
                 'corsFilter' => [
