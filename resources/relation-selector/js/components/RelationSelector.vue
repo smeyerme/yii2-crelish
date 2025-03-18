@@ -255,9 +255,26 @@ export default {
         if (Array.isArray(initialIds) && initialIds.length > 0) {
           this.loading = true;
           
+          // Create a map to store items by ID temporarily
+          const itemsMap = new Map();
+          
           // Fetch each item by ID
-          Promise.all(initialIds.map(id => this.fetchItemById(id, false)))
+          Promise.all(initialIds.map(id => 
+            this.fetchItemById(id, false)
+              .then(item => {
+                if (item) {
+                  itemsMap.set(id, item);
+                }
+                return item;
+              })
+          ))
             .then(() => {
+              // After all items are fetched, add them to the items array
+              // in the original order from initialIds
+              this.items = initialIds
+                .map(id => itemsMap.get(id))
+                .filter(item => item !== undefined);
+                
               this.loading = false;
             })
             .catch(error => {
@@ -310,10 +327,6 @@ export default {
                 this.items.push(data.data);
                 this.emitUpdate();
               }
-            } else {
-              // Just add to items array without checking for duplicates
-              // (used for initial loading)
-              this.items.push(data.data);
             }
             return data.data;
           }

@@ -134,3 +134,4 @@ class HttpBearerAuth extends BaseHttpBearerAuth
     }
 } 
 } 
+} 

@@ -21,7 +21,7 @@ class CrelishAsset extends AssetBundle
   public $css = [
     //'https://cdn.jsdelivr.net/dropzone/4.3.0/basic.min.css',
     'https://cdn.jsdelivr.net/npm/perfect-scrollbar@1.5.5/css/perfect-scrollbar.min.css',
-    'https://cdn.jsdelivr.net/npm/blaze-css@1.2.2/dist/blaze.min.css',
+    //'https://cdn.jsdelivr.net/npm/blaze-css@1.2.2/dist/blaze.min.css',
     //['https://use.fontawesome.com/releases/v5.3.1/css/all.css', 'integrity' => 'sha384-mzrmE5qonljUremFsqc01SB46JvROS7bZs3IO2EmfFsd15uHvIt+Y8vEf7N7fWAU', 'crossorigin' => 'anonymous'],
     'css/crelish.min.css',
   ];

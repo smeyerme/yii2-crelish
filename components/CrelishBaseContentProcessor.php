@@ -20,10 +20,10 @@ class CrelishBaseContentProcessor extends Component
     $processedData = $processedData;
   }
 
-  public static function processContent($ctype, $data)
+  public static function processContent($ctype, $data): array
   {
     $processedData = [];
-    $elementDefinition = CrelishDynamicJsonModel::loadElementDefinition($ctype);
+    $elementDefinition = CrelishDynamicModel::loadElementDefinition($ctype);
 		
 	  if ($data) {
 		  if($ctype === 'widget' && !empty($data->options)) {
@@ -34,7 +34,7 @@ class CrelishBaseContentProcessor extends Component
         $fieldTypeOrig = find($elementDefinition->fields, function ($def) use ($key) {
           return $def->key == $key;
         });
-				
+
         $transform = NULL;
         if (!empty($fieldTypeOrig) && is_object($fieldTypeOrig)) {
           $fieldType = (property_exists($fieldTypeOrig, 'type')) ? $fieldTypeOrig->type : 'textInput';
@@ -51,7 +51,7 @@ class CrelishBaseContentProcessor extends Component
           }
 
           if (class_exists($processorClass)) {
-	          if($ctype === 'widget') {
+            if($ctype === 'widget') {
 							$widget = $content;
 		          $content = new stdClass();
 							$content->widget = $widget;
@@ -59,7 +59,8 @@ class CrelishBaseContentProcessor extends Component
 								$content->options = $widgetOptions;
 							}
 	          }
-            $processorClass::processData($key, $content, $processedData);
+
+            $processorClass::processData($key, $content, $processedData, $fieldTypeOrig);
           } else {
             $processedData[$key] = $content;
           }
