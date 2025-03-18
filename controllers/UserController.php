@@ -4,7 +4,8 @@
 	
 	use giantbits\crelish\components\CrelishBaseController;
 	use giantbits\crelish\components\CrelishBaseHelper;
-	use giantbits\crelish\components\CrelishGlobals;
+  use giantbits\crelish\components\CrelishDataManager;
+  use giantbits\crelish\components\CrelishGlobals;
 	use giantbits\crelish\components\CrelishUser;
 	use giantbits\crelish\components\CrelishDataProvider;
 	use giantbits\crelish\components\CrelishDynamicModel;
@@ -153,6 +154,7 @@
 
       // Handle content filtering
       $searchTerm = $this->handleSessionAndQueryParams('cr_content_filter');
+
       if (!empty($searchTerm)) {
         $filter = ['freesearch' => $searchTerm];
       }
@@ -163,126 +165,145 @@
         $filter['state'] = ['strict', $statusFilter];
       }
 
-      $modelInfo = new CrelishDataProvider($this->ctype, ['filter' => $filter], null, null, true);
-      $modelProvider = null;
+      // Create a data manager for the content type
+      $dataManager = new CrelishDataManager($this->ctype, [
+        'filter' => $filter,
+        'pageSize' => 25
+      ]);
 
-      if ($modelInfo->definitions->storage === 'db' && class_exists($modelClass)) {
-        $query = $modelInfo->getQuery($modelClass::find(), $filter);
+      // Get the element definition
+      $elementDefinition = $dataManager->getDefinitions();
 
-        // Add relations.
-        $modelInfo->setRelations($query);
+      // Get the data provider
+      $dataProvider = null;
 
-        if (!empty($modelInfo->definitions->sortDefault)) {
-          $sortKey = key($modelInfo->definitions->sortDefault);
-          $sortDir = $modelInfo->definitions->sortDefault->{$sortKey};
+      if ($elementDefinition->storage === 'db' && class_exists($modelClass)) {
+        $query = $modelClass::find();
+
+        // Apply filters
+        if ($filter) {
+          foreach ($filter as $key => $value) {
+            if (is_array($value) && $value[0] === 'strict') {
+              $query->andWhere([$key => $value[1]]);
+            } elseif ($key === 'freesearch') {
+              $searchFragments = explode(" ", trim($value));
+              $orConditions = ['or'];
+
+              foreach ($elementDefinition->fields as $field) {
+                if (!property_exists($field, 'virtual') || !$field->virtual) {
+                  foreach ($searchFragments as $fragment) {
+                    $orConditions[] = ['like', $this->ctype . '.' . $field->key, $fragment];
+                  }
+                }
+              }
+
+              $query->andWhere($orConditions);
+            } else {
+              $query->andWhere(['like', $this->ctype . '.' . $key, $value]);
+            }
+          }
         }
 
-        $modelProvider = new ActiveDataProvider([
+        // Add relations.
+        $dataManager->setRelations($query);
+
+        if (!empty($elementDefinition->sortDefault)) {
+          $sortKey = key($elementDefinition->sortDefault);
+          $sortDir = $elementDefinition->sortDefault->{$sortKey};
+
+          if (empty($_GET['sort'])) {
+            $_GET['sort'] = !(empty($sortKey) && !empty($sortDir))
+              ? ($sortDir === 'SORT_ASC' ? $sortKey : "-{$sortKey}")
+              : null;
+          }
+        }
+
+        $dataProvider = new ActiveDataProvider([
           'query' => $query,
           'pagination' => [
             'pageSize' => 25,
-          ],
-          'sort' => [
-            'defaultOrder' => !empty($sortKey) && !empty($sortDir) ? [$sortKey => $sortDir] : null
-          ],
+            'route' => Yii::$app->request->pathInfo,
+            'pageParam' => 'list-page'
+          ]
         ]);
 
-      } elseif ($modelInfo->definitions->storage === 'json') {
-        $modelProvider = $modelInfo->getArrayProvider();
+      } elseif ($elementDefinition->storage === 'json') {
+        $modelProvider = $dataManager->getProvider();
       }
 			
 			if (!empty(\Yii::$app->request->get('export')) && \Yii::$app->request->get('export')) {
 				$this->doExpot($modelProvider);
 			}
-			
-			$columns = array_merge($checkCol, $modelInfo->columns);
-			$columns = map($columns, function ($item) use ($modelInfo) {
-				
-				if (key_exists('attribute', $item) && $item['attribute'] === 'state') {
-					$item['format'] = 'raw';
-					$item['label'] = 'Status';
-					$item['value'] = function ($data) {
-						$state = match ($data['state']) {
-							1 => 'Inactive',
-							2 => 'Online',
-							3 => 'Archived',
-							default => 'Offline',
-						};;
-						return $state;
-					};
-				}
-				
-				if (key_exists('attribute', $item) && $item['attribute'] === 'role') {
-					$item['format'] = 'raw';
-					$item['label'] = 'Rolle / Typ';
-					$item['value'] = function ($data) {
-						switch ($data['role']) {
-							case 1:
-								$state = 'Registriert';
-								break;
-							case 2:
-								$state = 'Abonent';
-								break;
-							case 9:
-								$state = 'Admin';
-								break;
-							default:
-								$state = 'Gast';
-						};
-						return $state;
-					};
-				}
-				
-				if (key_exists('attribute', $item) && $item['attribute'] === 'activationDate') {
-					$item['format'] = 'raw';
-					$item['label'] = 'Datum Aktivierung';
-					$item['value'] = function ($data) {
-						return !empty($data['activationDate']) ? strftime("%d.%m.%Y", $data['activationDate']) : '';
-					};
-				}
-				
-				if (key_exists('attribute', $item) && $item['attribute'] === 'trialEndAt') {
-					$item['format'] = 'raw';
-					$item['label'] = 'Datum Ablauf';
-					$item['value'] = function ($data) {
-						return !empty($data['trialEndAt']) ? strftime("%d.%m.%Y", $data['trialEndAt']) : '';
-					};
-				}
-				
-				if (key_exists('attribute', $item)) {
-					// Add magic here: get definition for attribute, check for items, use items for label display.
-					$itemDef = find($modelInfo->definitions->fields, function ($itm) use ($item) {
-						return $itm->key == $item['attribute'];
-					});
 
-					if (is_object($itemDef) && property_exists($itemDef, 'items')) {
-						$item['format'] = 'raw';
-						$item['label'] = $itemDef->label;
-						$item['value'] = function ($data) use ($itemDef) {
-              if (!empty($itemDef->items) && !empty($itemDef->items->{$data[$itemDef->key]})) {
-                return $itemDef->items->{$data[$itemDef->key]};
-              }
-						};
-					} elseif (is_object($itemDef) && property_exists($itemDef, 'type') && str_contains($itemDef->type, 'SwitchInput')) {
-						$item['format'] = 'raw';
-						$item['label'] = $itemDef->label;
-						$item['value'] = function ($data) use ($itemDef) {
-							return $data[$itemDef->key] == 0 ? 'Nein' : 'Ja';
-						};
-					}
-					
-				}
-				
-				return $item;
-			});
+      $columns = [];
+			$columns = array_merge($columns, $checkCol);
+
+      // Add columns for fields with visibleInGrid = true
+      if (isset($elementDefinition->fields)) {
+        foreach ($elementDefinition->fields as $field) {
+          // Only include fields that have visibleInGrid = true and exclude UUID
+          if (property_exists($field, 'visibleInGrid') && $field->visibleInGrid === true && $field->key !== 'uuid') {
+            $column = [
+              'attribute' => $field->key,
+              'label' => property_exists($field, 'label') ? $field->label : null,
+              'format' => property_exists($field, 'format') ? $field->format : 'text'
+            ];
+
+            // Special handling for state field
+            if ($field->key === 'state') {
+              $column['format'] = 'raw';
+              $column['label'] = Yii::t('i18n', 'Status');
+              $column['value'] = function ($data) {
+                switch ($data['state']) {
+                  case 1:
+                    return Yii::t('i18n', 'Entwurf');
+                  case 2:
+                    return Yii::t('i18n', 'Online');
+                  case 3:
+                    return Yii::t('i18n', 'Archiviert');
+                  default:
+                    return Yii::t('i18n', 'Offline');
+                }
+              };
+            } // Special handling for dropdown fields
+            elseif (property_exists($field, 'items')) {
+              $column['format'] = 'raw';
+              $column['value'] = function ($data) use ($field) {
+                if (!empty($field->items) && !empty($field->items->{$data[$field->key]})) {
+                  return $field->items->{$data[$field->key]};
+                }
+                return $data[$field->key];
+              };
+            } // Special handling for switch inputs
+            elseif (property_exists($field, 'type') && str_contains($field->type, 'SwitchInput')) {
+              $column['format'] = 'raw';
+              $column['value'] = function ($data) use ($field) {
+                return $data[$field->key] == 0 ? 'Nein' : 'Ja';
+              };
+            } // Special handling for value overwrites
+            elseif (property_exists($field, 'valueOverwrite')) {
+              $column['format'] = 'raw';
+              $column['value'] = function ($data) use ($field) {
+                return Arrays::get($data, $field->valueOverwrite);
+              };
+            }
+            // Use gridField if specified
+            if (property_exists($field, 'gridField') && !empty($field->gridField)) {
+              $column['attribute'] = $field->gridField;
+            }
+
+            $columns[] = $column;
+          }
+        }
+      }
 
 			$rowOptions = function ($model, $key, $index, $grid) {
 				return ['onclick' => 'location.href="update?uuid=' . $model['uuid'] . '";'];
 			};
 			
 			return $this->render('index.twig', [
-				'dataProvider' => $modelProvider,
-				'filterProvider' => $modelInfo->getFilters(),
+				'dataProvider' => $dataProvider,
+				'filterProvider' => $dataManager->getFilters(),
 				'columns' => $columns,
 				'ctype' => $this->ctype,
 				'rowOptions' => $rowOptions
