@@ -115,7 +115,7 @@ class Bootstrap implements BootstrapInterface
             'cachePath' => '@runtime/Twig/cache',
             'extensions' => [
               new \Cocur\Slugify\Bridge\Twig\SlugifyExtension(\Cocur\Slugify\Slugify::create()),
-              '\Twig_Extension_Debug',
+              \Twig\Extension\DebugExtension::class,
               \giantbits\crelish\extensions\RegisterCssExtension::class,
               \giantbits\crelish\extensions\RegisterJsExtension::class,
               \giantbits\crelish\extensions\TruncateWords::class,
