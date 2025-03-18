@@ -11,6 +11,7 @@
 	use app\workspace\models\Page;
 	use Yii;
 	use yii\base\Controller;
+	use giantbits\crelish\components\CrelishDataManager;
 	
 	/**
 	 * Class CrelishFrontendController
@@ -139,7 +140,7 @@
 				$slug = $params['pathRequested'];
 			}
 			
-			$entryDataJoint = new CrelishDataProvider($ctype, ['filter' => ['slug' => $slug]]);
+			$entryDataJoint = new CrelishDataManager($ctype, ['filter' => ['slug' => [ 'strict', $slug]]]);
 			if (empty($entryDataJoint->getProvider()->models[0])) {
 				$entryModel = null;
 			} else {

@@ -429,8 +429,43 @@ class HeaderBar extends Widget
         }
       },
       'create' => function () {
+        // First try to get ctype from request
         $ctype = \Yii::$app->request->get('ctype');
-        return '<a href="' . \Yii::$app->urlManager->createUrl(['/crelish/content/create', 'ctype' => $ctype]) . '" class="c-button"><i class="fa-sharp fa-regular fa-plus"></i></a>';
+        
+        // Get base URL for use in JavaScript
+        $baseUrl = \Yii::$app->urlManager->createUrl(['/crelish/content/create']);
+        $baseUrl = preg_replace('/\?.*$/', '', $baseUrl); // Remove any query parameters
+        
+        // Add JavaScript to handle pushState updates
+        $js = <<<JS
+        $(document).ready(function() {
+            // Function to update create button URL
+            function updateCreateButton() {
+                // Extract ctype from current URL
+                var url = new URL(window.location.href);
+                var urlCtype = url.searchParams.get('ctype');
+                
+                if (urlCtype) {
+                    // Update all create buttons with the current ctype
+                    $('.create-content-btn').attr('href', 
+                        '{$baseUrl}?ctype=' + encodeURIComponent(urlCtype)
+                    );
+                }
+            }
+            
+            // Update on initial page load
+            updateCreateButton();
+            
+            // Update when content is loaded via pjax
+            $(document).on('pjax:complete', updateCreateButton);
+            
+            // Update on browser navigation (back/forward)
+            $(window).on('popstate', updateCreateButton);
+        });
+        JS;
+        \Yii::$app->view->registerJs($js);
+        
+        return '<a href="' . \Yii::$app->urlManager->createUrl(['/crelish/content/create', 'ctype' => $ctype]) . '" class="c-button create-content-btn"><i class="fa-sharp fa-regular fa-plus"></i></a>';
       },
       'user-create' => function () {
         return '<a href="' . \Yii::$app->urlManager->createUrl(['/crelish/user/create']) . '" class="c-button"><i class="fa-sharp fa-regular fa-user-plus"></i></a>';
