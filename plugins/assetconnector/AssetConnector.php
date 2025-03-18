@@ -44,9 +44,7 @@ class AssetConnector extends CrelishFormWidget
 
     // Register the script in the view
     $this->view->registerJsFile($publishedUrl);
-    
-    // Register API endpoints if they don't exist
-    //$this->registerApiEndpoints();
+
   }
 
   private function processData($data)

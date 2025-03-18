@@ -19,7 +19,7 @@ class CrelishModernAsset extends AssetBundle
     'css/crelish-modern.css',
   ];
   public $js = [
-    'js/crelish-modern.js'
+    //'js/crelish-modern.js'
   ];
   public $jsOptions = ['position' => \yii\web\View::POS_END];
 

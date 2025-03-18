@@ -23,18 +23,33 @@ class Bootstrap implements BootstrapInterface
   {
     if ($app instanceof Application) {
       $this->configureWebApplication($app);
+      
+      // Register API module only for web application
+      Yii::$app->setModules([
+        'crelish' => [
+          'class' => 'giantbits\crelish\Module',
+          'theme' => Yii::$app->params['crelish']['theme']
+        ],
+        'crelish-api' => [
+          'class' => 'giantbits\crelish\modules\api\Module',
+        ]
+      ]);
+    } else {
+      // Console application
+      Yii::$app->setComponents([
+        'response' => [
+          'class' => 'yii\console\Response',
+        ]
+      ]);
+      
+      // Register only the main crelish module for console
+      Yii::$app->setModules([
+        'crelish' => [
+          'class' => 'giantbits\crelish\Module',
+          'theme' => Yii::$app->params['crelish']['theme']
+        ]
+      ]);
     }
-
-    // Register crelish module
-    Yii::$app->setModules([
-      'crelish' => [
-        'class' => 'giantbits\crelish\Module',
-        'theme' => Yii::$app->params['crelish']['theme']
-      ],
-      'crelish-api' => [
-        'class' => 'giantbits\crelish\modules\api\Module',
-      ]
-    ]);
 
     // Get version from Composer's installed packages data
     try {

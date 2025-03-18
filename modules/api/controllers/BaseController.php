@@ -4,11 +4,13 @@ namespace giantbits\crelish\modules\api\controllers;
 
 use Yii;
 use yii\filters\auth\CompositeAuth;
-use yii\filters\auth\QueryParamAuth;
 use yii\filters\Cors;
 use yii\rest\Controller;
 use yii\web\Response;
 use giantbits\crelish\modules\api\components\JwtHttpBearerAuth;
+use giantbits\crelish\modules\api\components\SessionAuth;
+use giantbits\crelish\modules\api\components\HttpBearerAuth;
+use giantbits\crelish\modules\api\components\QueryParamAuth;
 
 /**
  * Base API controller for Crelish CMS
@@ -26,6 +28,7 @@ class BaseController extends Controller
         $behaviors['corsFilter'] = [
             'class' => Cors::class,
             'cors' => [
+                // Allow requests from any origin for development
                 'Origin' => ['*'],
                 'Access-Control-Request-Method' => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'],
                 'Access-Control-Request-Headers' => ['*'],
@@ -38,10 +41,37 @@ class BaseController extends Controller
         $behaviors['authenticator'] = [
             'class' => CompositeAuth::class,
             'authMethods' => [
-                JwtHttpBearerAuth::class,
-                QueryParamAuth::class,
+                // Session auth for browser requests
+                [
+                    'class' => SessionAuth::class,
+                    'enableDebug' => true,
+                ],
+                // JWT auth for API clients
+                [
+                    'class' => JwtHttpBearerAuth::class,
+                    'header' => 'Authorization',
+                    'pattern' => '/^Bearer\s+(.*?)$/',
+                    'enableDebug' => true,
+                    'allowDirectJwtAuth' => true,
+                ],
+                // HTTP Bearer auth (for access_token)
+                [
+                    'class' => HttpBearerAuth::class,
+                    'enableDebug' => true,
+                    'tryJwtDecode' => true,
+                ],
+                // Query param auth (for token in URL)
+                [
+                    'class' => QueryParamAuth::class,
+                    'tokenParam' => 'access_token',
+                    'enableDebug' => true,
+                    'tryJwtDecode' => true,
+                ],
+                // Basic auth as fallback
+                'yii\filters\auth\HttpBasicAuth',
             ],
-            'except' => ['options'],
+            'except' => ['options'], // Only exclude OPTIONS requests
+            'optional' => ['index', 'view'], // Make read operations optional for authentication during development
         ];
         
         // Add content negotiation

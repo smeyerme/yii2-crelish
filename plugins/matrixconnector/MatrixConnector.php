@@ -2,6 +2,7 @@
 
 namespace giantbits\crelish\plugins\matrixconnector;
 
+use giantbits\crelish\components\CrelishDataManager;
 use giantbits\crelish\components\CrelishDataResolver;
 use giantbits\crelish\components\CrelishDynamicModel;
 use giantbits\crelish\components\CrelishDataProvider;
@@ -114,8 +115,8 @@ class MatrixConnector extends Widget
       if (!is_string($item)) {
         foreach ($item as $reference) {
           $info = [];
-          $dataItem = new CrelishDataProvider($reference['ctype'], [], $reference['uuid']);
-          $itemData = $dataItem->one();
+
+          $dataItem = new CrelishDataManager($reference['ctype'], $settings = [], $reference['uuid']);
 
           foreach ($dataItem->definitions->fields as $field) {
             if (isset($field->visibleInGrid) && $field->visibleInGrid) {

@@ -38,17 +38,6 @@
     }
     
     /**
-     * Apply modern styling to pagination
-     */
-    function applyModernPaginationStyling() {
-        // Add modern styling class to pagination elements
-        $('.pagination').not('.no-modern').addClass('pagination-modern');
-        
-        // Enhance summary text
-        $('.summary').not('.no-modern').addClass('summary-modern');
-    }
-    
-    /**
      * Apply modern styling to card elements
      */
     function applyModernCardStyling() {

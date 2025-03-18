@@ -1,0 +1,110 @@
+/**
+ * Custom styles for JSONEditor in Crelish CMS
+ */
+
+/* Main container styles */
+.json-editor-container {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  min-height: 300px;
+}
+
+/* Adjust ace editor height */
+.jsoneditor-mode-code .ace_editor {
+  height: 400px !important;
+}
+
+/* Form mode styling */
+.jsoneditor-mode-form table.jsoneditor-values {
+  width: 100%;
+}
+
+/* Improve tree mode readability */
+.jsoneditor-mode-tree div.jsoneditor-tree {
+  font-size: 14px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .json-editor-container {
+    height: 300px !important;
+  }
+}
+
+/* Make validation error messages more visible */
+.jsoneditor-validation-errors {
+  color: #a94442;
+  background-color: #f2dede;
+  border: 1px solid #ebccd1;
+  padding: 10px;
+  border-radius: 4px;
+  margin-top: 5px;
+  margin-bottom: 10px;
+}
+
+/* Schema-based form styling improvements */
+.jsoneditor-text {
+  font-family: monospace;
+}
+
+/* Format specific fields (dates, etc) */
+.jsoneditor-field[title*="date"],
+.jsoneditor-field[title*="Date"] {
+  color: #337ab7;
+}
+
+/* Boolean fields */
+.jsoneditor-field[title*="is_"],
+.jsoneditor-field[title*="has_"],
+.jsoneditor-field[title*="can_"] {
+  color: #5cb85c;
+}
+
+/* Number fields */
+.jsoneditor-value.jsoneditor-number {
+  color: #d9534f;
+}
+
+/* HTML content field styling */
+.html-content-field .jsoneditor-value {
+  min-height: 100px;
+  max-height: 300px;
+  overflow-y: auto;
+  background-color: #f9f9f9;
+  padding: 8px;
+  border: 1px solid #e0e0e0;
+  border-radius: 3px;
+  font-family: Arial, sans-serif;
+  white-space: normal;
+  line-height: 1.5;
+}
+
+/* Style HTML preview in value */
+.html-content-preview {
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  background-color: #fff;
+  margin-top: 5px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+/* Make HTML fields stand out */
+.jsoneditor-field[title*="html"],
+.jsoneditor-field[title*="HTML"],
+.jsoneditor-field[title="content"] {
+  font-weight: bold;
+  color: #9c27b0;
+}
+
+/* Enhanced textarea for content fields */
+.content-field-textarea {
+  width: 100%;
+  min-height: 150px;
+  font-family: Arial, sans-serif;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  resize: vertical;
+} 

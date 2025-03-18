@@ -26,14 +26,16 @@ class Module extends \yii\base\Module
     {
         parent::init();
         
-        // Configure JSON response format
-        Yii::$app->response->format = Response::FORMAT_JSON;
+        // Configure JSON response format only in web context
+        if (Yii::$app instanceof \yii\web\Application) {
+            Yii::$app->response->format = Response::FORMAT_JSON;
+            
+            // Set up CORS and other API-specific configurations
+            $this->setupApiConfiguration();
+        }
         
         // Register module-specific translations
         $this->registerTranslations();
-        
-        // Set up CORS and other API-specific configurations
-        $this->setupApiConfiguration();
     }
     
     /**

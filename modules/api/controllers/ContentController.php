@@ -14,6 +14,33 @@ use yii\helpers\ArrayHelper;
 class ContentController extends BaseController
 {
     /**
+     * @inheritdoc
+     */
+    public function behaviors(): array
+    {
+        $behaviors = parent::behaviors();
+        
+        // Add specific access control to content endpoints
+        $behaviors['access'] = [
+            'class' => 'yii\filters\AccessControl',
+            'rules' => [
+                [
+                    'allow' => true,
+                    'actions' => ['index', 'view'],
+                    'roles' => ['?', '@'], // Allow both guest and authenticated users for read operations
+                ],
+                [
+                    'allow' => true,
+                    'actions' => ['create', 'update', 'delete'],
+                    'roles' => ['@'], // Only authenticated users for write operations
+                ],
+            ],
+        ];
+        
+        return $behaviors;
+    }
+
+    /**
      * Get a list of content items by type
      * 
      * @param string $type Content type

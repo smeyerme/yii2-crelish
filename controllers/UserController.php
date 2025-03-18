@@ -526,7 +526,7 @@
 			$this->view->params['headerBarRight'] = [];
 			
 			// Set specific components based on action
-			$action = $this->action ? $this->action->id : null;
+			$action = $this->action?->id;
 			
 			switch ($action) {
 				case 'index':

@@ -685,7 +685,7 @@ export default {
       });
       
       // Send to server
-      fetch('/elements/save', {
+      fetch('/crelish/elements/save', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -702,7 +702,7 @@ export default {
             if (this.isNew && data.key) {
               this.isNew = false;
               // Update URL without reloading the page
-              window.history.pushState({}, '', `/elements/edit?element=${data.key}.json`);
+              window.history.pushState({}, '', `/crelish/elements/edit?element=${data.key}.json`);
             }
           } else {
             this.errorMessage = data.message || 'Failed to save element';

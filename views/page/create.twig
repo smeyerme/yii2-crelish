@@ -6,7 +6,7 @@
 		</div>
 	</div>
 </div>
-<span class="c-badge gc-mt--1">{{ uuid }} : {{ ctype }}</span>
+<span class="badge text-bg-secondary">{{ uuid }} : {{ ctype }}</span>
 
 
 {% apply registerCss %}
@@ -14,6 +14,11 @@
 .crelish-app-root #cr-left-pane {
 	display: none;
 }
+
+#cr-right-pane {
+	width: 100vw;
+}
+
 
 .split {
   display: grid;
