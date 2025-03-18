@@ -68,6 +68,9 @@ class CrelishDynamicModel extends DynamicModel
 
       $this->identifier = $this->_ctype;
 
+      // Initialize the i18n array with supported languages
+      $this->initializeI18n();
+
       // Populate attributes.
       foreach ($fields as $name => $value) {
         if (is_int($name)) {
@@ -76,7 +79,7 @@ class CrelishDynamicModel extends DynamicModel
           $this->defineAttribute($name, $value);
         }
       }
-
+      
       // Add validation rules.
       foreach ($this->_elementDefinition->fields as $field) {
         $this->defineLabel($field->key, Yii::t('app', $field->label));
@@ -100,6 +103,32 @@ class CrelishDynamicModel extends DynamicModel
     }
 
     parent::init();
+  }
+
+  /**
+   * Initialize the i18n array with all supported languages
+   */
+  protected function initializeI18n()
+  {
+    // Check if i18n is already initialized
+    if (!is_array($this->i18n)) {
+      $this->i18n = [];
+    }
+    
+    // Add all supported languages if they exist in params
+    if (isset(Yii::$app->params['crelish']['languages']) && is_array(Yii::$app->params['crelish']['languages'])) {
+      foreach (Yii::$app->params['crelish']['languages'] as $lang) {
+        if (!isset($this->i18n[$lang])) {
+          $this->i18n[$lang] = [];
+        }
+      }
+    } else {
+      // Fallback to at least the current language
+      $currentLang = Yii::$app->language;
+      if (!isset($this->i18n[$currentLang])) {
+        $this->i18n[$currentLang] = [];
+      }
+    }
   }
 
   public function setCtype($value)
@@ -157,6 +186,42 @@ class CrelishDynamicModel extends DynamicModel
       }
     }
 
+    // Handle i18n data if present
+    if (!empty($rawData['i18n'])) {
+      $this->i18n = $rawData['i18n'];
+      
+      // Process each translatable field in i18n data
+      foreach ($this->_elementDefinition->fields as $field) {
+        if (property_exists($field, 'translatable') && $field->translatable === true) {
+          foreach ($this->i18n as $lang => $langData) {
+            if (isset($langData[$field->key])) {
+              $fieldValue = $langData[$field->key];
+              
+              // Handle JSON fields
+              if (property_exists($field, 'type') && $field->type === 'jsonEditor') {
+                if (is_string($fieldValue)) {
+                  // Convert JSON string to array/object
+                  try {
+                    $this->i18n[$lang][$field->key] = Json::decode($fieldValue);
+                  } catch (\Exception $e) {
+                    // If not valid JSON, keep as is
+                  }
+                }
+              }
+              
+              // Apply transformer if defined
+              if (property_exists($field, 'transform')) {
+                $transformer = 'giantbits\crelish\components\transformer\CrelishFieldTransformer' . ucfirst($field->transform);
+                if (method_exists($transformer, 'afterFind')) {
+                  $transformer::afterFind($this->i18n[$lang][$field->key]);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
     // Process data values based on field types.
     foreach ($attributes as $attr => $value) {
       CrelishBaseContentProcessor::processFieldData($this->_ctype, $this->_elementDefinition, $attr, $value, $finalArr);
@@ -184,8 +249,43 @@ class CrelishDynamicModel extends DynamicModel
       $this->defineAttribute('password', \Yii::$app->getSecurity()->generatePasswordHash($this->new_password));
     }
 
+    // Handle i18n data if present
+    if (!empty($this->i18n)) {
+      $modelArray['i18n'] = $this->i18n;
+      
+      // Process each field in i18n data
+      foreach ($this->fieldDefinitions->fields as $field) {
+        if (property_exists($field, 'translatable') && $field->translatable === true) {
+          foreach ($this->i18n as $lang => $langData) {
+            if (isset($langData[$field->key])) {
+              $fieldValue = $langData[$field->key];
+              
+              // Check for field type specific processing
+              if (property_exists($field, 'type') && $field->type === 'jsonEditor') {
+                if (is_array($fieldValue) || is_object($fieldValue)) {
+                  // Store as JSON string
+                  $modelArray['i18n'][$lang][$field->key] = Json::encode($fieldValue);
+                }
+              }
+              
+              // Apply transformer if defined
+              if (property_exists($field, 'transform')) {
+                $transformer = 'giantbits\crelish\components\transformer\CrelishFieldTransformer' . ucfirst($field->transform);
+                $transformer::beforeSave($modelArray['i18n'][$lang][$field->key]);
+              }
+            }
+          }
+        }
+      }
+    }
+
     // Transform and set data
     foreach ($this->attributes() as $attribute) {
+      // Skip attributes that are handled via i18n
+      if ($attribute === 'i18n') {
+        continue;
+      }
+      
       $modelArray[$attribute] = $this->{$attribute};
 
       // Check for transformer
@@ -197,6 +297,10 @@ class CrelishDynamicModel extends DynamicModel
 
       if ($fieldDefinition && property_exists($fieldDefinition, 'transform')) {
         $transformer = 'giantbits\crelish\components\transformer\CrelishFieldTransformer' . ucfirst($fieldDefinition->transform);
+        $transformer::beforeSave($modelArray[$attribute]);
+      } else if ($fieldDefinition && property_exists($fieldDefinition, 'type') && $fieldDefinition->type === 'jsonEditor') {
+        // Special handling for jsonEditor fields - apply JSON transformer
+        $transformer = 'giantbits\crelish\components\transformer\CrelishFieldTransformerJson';
         $transformer::beforeSave($modelArray[$attribute]);
       }
 

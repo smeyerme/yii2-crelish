@@ -120,7 +120,7 @@ class ElementsController extends CrelishBaseController
     }
     
     $key = $post['key'];
-    $isNew = empty($post['uuid']);
+    $isNew = false; //empty($post['uuid']);
     
     // Validate key format
     if (!preg_match('/^[a-z0-9_]+$/', $key)) {

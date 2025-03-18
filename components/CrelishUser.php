@@ -7,6 +7,7 @@
 	use yii\base\BaseObject;
 	use yii\base\NotSupportedException;
 	use yii\data\ActiveDataProvider;
+	use Yii;
 	
 	class CrelishUser extends BaseObject implements \yii\web\IdentityInterface
 	{
@@ -181,13 +182,39 @@
 		 */
 		public static function findIdentityByAccessToken($token, $type = null)
 		{
-			// Use authKey field for API authentication
+			Yii::info("Looking for user with token: " . substr($token, 0, 10) . "...", __METHOD__);
+			
+			// First try to find user by authKey (standard token)
 			$user = User::findOne(['authKey' => $token]);
 			
 			if ($user) {
+				Yii::info("User found by authKey", __METHOD__);
 				return new static($user);
 			}
 			
+			// If the type is JwtHttpBearerAuth, the token is already verified by the component
+			// Just need to extract the user ID and find the user
+			if ($type && (strpos($type, 'JwtHttpBearerAuth') !== false)) {
+				try {
+					// Try to decode the token to get the user ID
+					$key = \Yii::$app->params['jwtSecretKey'] ?? 'your-secret-key-here';
+					$decoded = (array)\Firebase\JWT\JWT::decode($token, new \Firebase\JWT\Key($key, 'HS256'));
+					
+					if (isset($decoded['sub'])) {
+						$userId = $decoded['sub'];
+						$user = User::findOne(['uuid' => $userId]);
+						
+						if ($user) {
+							Yii::info("User found by JWT payload (sub)", __METHOD__);
+							return new static($user);
+						}
+					}
+				} catch (\Exception $e) {
+					Yii::warning("Error decoding JWT: " . $e->getMessage(), __METHOD__);
+				}
+			}
+			
+			Yii::warning("User not found by token", __METHOD__);
 			return null;
 		}
 		

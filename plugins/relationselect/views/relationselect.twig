@@ -1,39 +1,9 @@
-{{ use('kartik/widgets/Select2') }}
-{{ use('yii/widgets/GridView') }}
-
-<div class="mb-3 highlight-addon field-crelishdynamicjsonmodel-{{ formKey }} {{ required }}">
-  <label class="form-label has-star" for="crelishdynamicjsonmodel-{{ field.key }}">{{ field.label }}</label>
-  <input type="hidden"
-         name="CrelishDynamicModel[{{ field.key }}]"
-         value='{{ hiddenValue }}'
-         id="select_{{ field.key }}"/>
-
-  {{ Select2_widget({
-    'name': "temp_select",
-    'value': selectValue,
-    'data': selectData,
-    'options': {'placeholder': t('crelish', 'Bitte wählen...')},
-    'pluginOptions': { 'tags': tagMode, 'allowClear': allowClear },
-    'pluginEvents': {
-      "select2:select": "function() {
-        var select = $(this).val();
-        $('#select_#{field.key}').val(select);
-      }",
-      "select2:unselect": "function() {
-        var select = '';
-        $('#select_#{field.key}').val(select);
-      }"
-    }
-  }) }}
-
-  {% if itemlist %}
-    {{ grid_view_widget({
-      'dataProvider': itemlist,
-      'columns': itemlistcolumns,
-      'options': {
-        'class': 'crelish-list',
-        'style': 'margin-top: 1rem;'
-      }
-    }) | raw }}
-  {% endif %}
+<div class="relation-selector-container mb-3 highlight-addon"
+     data-field-key="{{ fieldKey }}"
+     data-content-type="{{ contentType }}"
+     data-value='{{ storedValue }}'
+     data-input-name="{{ inputName }}"
+     data-label="{{ field.label }}"
+     data-required="{{ isRequired ? 'true' : 'false' }}"
+     data-columns='{{ columns }}'>
 </div>

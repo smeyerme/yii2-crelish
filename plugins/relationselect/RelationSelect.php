@@ -2,14 +2,12 @@
 
 namespace giantbits\crelish\plugins\relationselect;
 
-use giantbits\crelish\components\CrelishDataProvider;
 use giantbits\crelish\components\CrelishFormWidget;
 use Yii;
-use yii\data\ArrayDataProvider;
-use yii\helpers\Html;
-use yii\helpers\Url;
-use function _\find;
-use function _\orderBy;
+use yii\base\InvalidConfigException;
+use yii\helpers\Json;
+use yii\web\View;
+use yii\web\JsExpression;
 
 class RelationSelect extends CrelishFormWidget
 {
@@ -23,108 +21,149 @@ class RelationSelect extends CrelishFormWidget
 
   private $relationDataType;
   private $predefinedOptions;
+  private $storedItems = [];
+  private $assetUrl;
 
   public function init()
   {
     parent::init();
 
-    $customLabel = null;
+    // Set the asset URL (adjust based on your application structure)
+    $this->assetUrl = Yii::$app->assetManager->getPublishedUrl('@vendor/giantbits/yii2-crelish/resources/relation-selector/dist');
 
-    // Set related ctype.
-    $this->relationDataType = '\app\workspace\models\\' . ucfirst($this->field->config->ctype);
+    // Register the Vue component script
+    $this->registerAssets();
 
-    if (!empty($this->field->config->dataLabel)) {
-      $customLabel = $this->field->config->dataLabel;
-    }
-
-    // Fetch options.
-    $optionProvider = $this->relationDataType::find()->asArray()->all();
-
-    $options = [];
-    foreach ($optionProvider as $option) {
-      if($customLabel) {
-        $options[$option['uuid']] = $option[$customLabel];
-      } else {
-        $options[$option['uuid']] = !empty($option['systitle']) ? $option['systitle'] : $option['uuid'];
-      }
-    }
-	  
-	  asort($options);
-
-    $this->predefinedOptions = $options;
-    $ul = Yii::$app->request->get('ul');
+    // Set related content type
+    $contentType = isset($this->field->config->ctype) ? $this->field->config->ctype : null;
     
-    if ($ul) {
-      // Todo: Get type of parent + uuid. Load parent. Unlink subelement.
-      //$ownerCtype = \Yii::$app->request->get('ctype');
-      //$ownerUuid = \Yii::$app->request->get('uuid');
-      $childCtype = str_replace('_list', null, explode('::', $ul)[0]);
-      $childUuid = explode('::', $ul)[1];
-
-      $child = call_user_func('app\workspace\models\\' . ucfirst($this->field->config->ctype) . '::find')->where(['uuid' => $childUuid])->one();
-      $owner = call_user_func('app\workspace\models\\' . ucfirst($this->model->ctype) . '::find')->where(['uuid' => $this->model->uuid])->one();
-
-      if ($owner && $child) {
-        $owner->unlink($childCtype, $child, true);
-      }
-      Yii::$app->response->redirect(Url::current(['ul' => null]));
+    if (!$contentType) {
+      Yii::warning('No content type defined for relation select field: ' . $this->field->key);
+      return;
     }
 
+    // Get stored items for the model if it's not new
+    if (!empty($this->model->uuid) && isset($this->field->config->multiple) && $this->field->config->multiple) {
+      $model = call_user_func('app\workspace\models\\' . ucfirst($this->model->ctype) . '::find')->where(['uuid' => $this->model->uuid])->one();
+      
+      if ($model) {
+        $currentValue = $model->{$this->field->key};
+        
+        // If it's a string, try to decode it as JSON
+        if (is_string($currentValue)) {
+          $currentValue = json_decode($currentValue, true) ?: [];
+        } else if (!is_array($currentValue)) {
+          $currentValue = [];
+        }
+        
+        $this->storedItems = $currentValue;
+      }
+    } elseif (!empty($this->data)) {
+      // For single relation
+      $this->storedItems = is_object($this->data) ? [$this->data->uuid] : [$this->data];
+    }
+  }
+
+  /**
+   * @throws InvalidConfigException
+   */
+  protected function registerAssets()
+  {
+
+    // Get the AssetManager instance
+    $assetManager = Yii::$app->assetManager;
+
+    // Define the source path of your JS file
+    $sourcePath = $sourcePath = Yii::getAlias('@vendor/giantbits/yii2-crelish/resources/relation-selector/dist/relation-selector.js');
+
+    // Publish the file and get the published URL
+    $publishedUrl = $assetManager->publish($sourcePath, [
+      'forceCopy' => YII_DEBUG,
+      'appendTimestamp' => true,
+    ])[1];
+
+    // Get the view
+    $view = Yii::$app->getView();
+    
+    // Register jQuery dependency (should already be registered by Yii)
+    $view->registerJsFile(
+      'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js',
+      ['position' => View::POS_END, 'depends' => [\yii\web\JqueryAsset::class]]
+    );
+    
+    // Register Select2 CSS
+    $view->registerCssFile(
+      'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css',
+      ['position' => View::POS_HEAD]
+    );
+    
+    // Register the Vue component script (after jQuery and Select2)
+    $view->registerJsFile(
+      $publishedUrl,
+      ['position' => View::POS_END, 'depends' => [\yii\web\JqueryAsset::class]]
+    );
+    
+    // Add translations
+    $translations = [
+      'choosePlaceholder' => Yii::t('crelish', 'Bitte wählen...'),
+      'addButton' => Yii::t('crelish', 'Hinzufügen'),
+      'assignedItems' => Yii::t('crelish', 'Zugeordnete Einträge'),
+      'actions' => Yii::t('crelish', 'Aktionen'),
+      'noItemsSelected' => Yii::t('crelish', 'Keine Einträge ausgewählt'),
+      'itemAlreadyAdded' => Yii::t('crelish', 'Dieser Eintrag wurde bereits hinzugefügt'),
+      'loadingOptions' => Yii::t('crelish', 'Lade Optionen...')
+    ];
+    
+    $js = "window.relationSelectorTranslations = " . Json::encode($translations) . ";";
+    $view->registerJs($js, View::POS_HEAD);
   }
 
   public function run()
   {
-    $itemList = $itemListColumns = [];
-    $tagMode = true;
-    $isRequired = find($this->field->rules, function ($rule) {
+    $isRequired = false;
+    
+    // Check if field is required
+    foreach ($this->field->rules as $rule) {
       foreach ($rule as $set) {
         if ($set == 'required') {
-          return true;
+          $isRequired = true;
+          break 2;
         }
       }
-      return false;
-    });
-
-    if (isset($this->field->config->autocreate) && !$this->field->config->autocreate) {
-      $tagMode = false;
     }
-
-    if (isset($this->field->config->multiple) && $this->field->config->multiple) {
-      $tagMode = false;
-      // Load related data.
-      $ar = call_user_func('app\workspace\models\\' . ucfirst($this->model->ctype) . '::find')->where(['uuid' => $this->model->uuid])->one();
-      //$itemList = new ArrayDataProvider();
-      if ($ar) {
-        $itemList = new ArrayDataProvider(['allModels' => $ar->{str_replace('_list', null, $this->field->key)}]);
+    
+    // Prepare table columns
+    $columns = [];
+    if (isset($this->field->config->columns) && is_array($this->field->config->columns)) {
+      foreach ($this->field->config->columns as $column) {
+        if (isset($column['attribute'])) {
+          $columns[] = [
+            'key' => $column['attribute'],
+            'label' => isset($column['label']) ? $column['label'] : $column['attribute']
+          ];
+        }
       }
-
-      $actionCol = [
-        [
-          'format' => 'raw',
-          'value' => function ($data) {
-            $url = Yii::$app->request->absoluteUrl . '&ul=' . $this->field->key . '::' . $data->uuid;
-            return Html::a('<i class="fa-sharp fa-regular  fa-trash"></i>', $url, ['title' => 'Löschen', 'class' => 'c-button u-small']);
-          }
-        ]
-      ];
-
-      $itemListColumns = array_merge($this->field->config->columns, $actionCol);
     }
-
-    // Check for true models
-
-
+    
+    // If no columns specified, use default
+    if (empty($columns)) {
+      $columns = [
+        ['key' => 'systitle', 'label' => Yii::t('crelish', 'Titel')]
+      ];
+    }
+    
     return $this->render('relationselect.twig', [
       'formKey' => $this->formKey,
       'field' => $this->field,
-      'required' => ($isRequired) ? 'required' : '',
-      'selectData' => $this->predefinedOptions,
-      'selectValue' => is_object($this->data) ? $this->data->uuid : $this->data,
-      'hiddenValue' => is_object($this->data) ? $this->data->uuid : $this->data,
-      'tagMode' => $tagMode,
-      'itemlist' => $itemList,
-      'itemlistcolumns' => $itemListColumns,
-      'allowClear' => $this->allowClear,
+      'required' => $isRequired ? 'required' : '',
+      'isRequired' => $isRequired,
+      'fieldKey' => $this->field->key,
+      'contentType' => $this->field->config->ctype,
+      'storedValue' => Json::encode($this->storedItems),
+      'inputName' => "CrelishDynamicModel[{$this->field->key}]",
+      'label' => $this->field->label,
+      'columns' => Json::encode($columns),
+      'isMultiple' => isset($this->field->config->multiple) && $this->field->config->multiple,
     ]);
   }
 }

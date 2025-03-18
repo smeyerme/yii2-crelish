@@ -99,6 +99,11 @@ class CrelishBaseContentProcessor extends Component
     if (!empty($field) && is_object($field)) {
       $fieldType = (property_exists($field, 'type')) ? $field->type : 'textInput';
       $transform = (property_exists($field, 'transform')) ? $field->transform : null;
+      
+      // Special handling for jsonEditor type
+      if ($fieldType === 'jsonEditor' && empty($transform)) {
+        $transform = 'Json';
+      }
     }
 	  
 	  // Get processor class.

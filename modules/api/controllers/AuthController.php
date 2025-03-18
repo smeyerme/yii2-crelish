@@ -9,6 +9,7 @@ use yii\filters\VerbFilter;
 use yii\filters\Cors;
 use yii\web\UnauthorizedHttpException;
 use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
 
 /**
  * Auth controller for the API
@@ -43,6 +44,11 @@ class AuthController extends Controller
                 'validate-token' => ['post', 'get'],
             ],
         ];
+        
+        // Make the debug endpoint accessible without authentication
+        if (isset($behaviors['authenticator'])) {
+            $behaviors['authenticator']['optional'][] = 'debug';
+        }
         
         return $behaviors;
     }
@@ -214,7 +220,7 @@ class AuthController extends Controller
         try {
             // Decode JWT token
             $key = Yii::$app->params['jwtSecretKey'] ?? 'your-secret-key-here';
-            $decoded = JWT::decode($token, $key, ['HS256']);
+            $decoded = JWT::decode($token, new Key($key, 'HS256'));
             
             // Verify token hasn't expired
             if ($decoded->exp < time()) {
@@ -264,5 +270,26 @@ class AuthController extends Controller
                 401
             );
         }
+    }
+    
+    /**
+     * Debug authentication
+     * 
+     * This endpoint will return debugging information about the current request's
+     * authentication status across multiple methods (JWT, Bearer, Query, Session).
+     * 
+     * @return array Debug information
+     */
+    public function actionDebug(): array
+    {
+        // Import the AuthDebug class
+        $debugInfo = \giantbits\crelish\modules\api\components\AuthDebug::debugAll();
+        
+        return $this->createResponse(
+            $debugInfo,
+            true,
+            'Authentication debug information',
+            200
+        );
     }
 } 

@@ -387,7 +387,7 @@ class CrelishBaseController extends Controller
     if (property_exists($field, 'translatable') && $field->translatable === true) {
       return $this->renderTranslatableField($field, $form);
     } else {
-      return $this->buildFormField($field, $form);
+      return $this->buildCustomOrDefaultField($field, $form);
     }
   }
 
@@ -397,7 +397,7 @@ class CrelishBaseController extends Controller
     $html = '';
     if (count(Yii::$app->params['crelish']['languages']) > 1) {
       foreach (Yii::$app->params['crelish']['languages'] as $lang) {
-        $html .= $this->buildFormField($field, $form, $lang);
+        $html .= $this->buildCustomOrDefaultField($field, $form, $lang);
       }
     }
     return $html;
@@ -408,7 +408,7 @@ class CrelishBaseController extends Controller
     ActiveForm::end();
   }
 
-  private function buildFormField($field, $form, $lang = null)
+  private function buildCustomOrDefaultField($field, $form, $lang = null)
   {
     $field->type = $field->type ?? "textInput";
     $fieldKey = $this->getFieldKey($field, $lang);
@@ -429,7 +429,53 @@ class CrelishBaseController extends Controller
     } elseif ($field->type == 'passwordInput') {
       return $this->buildPasswordField($form, $field, $fieldKey, $inputOptions, $fieldOptions);
     } else {
-      return $this->buildDefaultField($form, $field, $fieldKey, $inputOptions, $fieldOptions);
+      $class = 'giantbits\crelish\plugins\\' . strtolower($field->type) . '\\' . ucfirst($field->type);
+      if (class_exists($class)) {
+        // Get field data safely - prevent accessing undefined array indices
+        $fieldData = null;
+        
+        // For translatable fields, try to get from i18n array
+        if (property_exists($field, 'translatable') && $field->translatable === true) {
+          $currentLang = $lang ?: Yii::$app->language;
+          
+          // Make sure i18n is initialized
+          if (!isset($this->model->i18n) || !is_array($this->model->i18n)) {
+            $this->model->i18n = [];
+          }
+          
+          // Make sure language array exists
+          if (!isset($this->model->i18n[$currentLang])) {
+            $this->model->i18n[$currentLang] = [];
+          }
+          
+          // Get field value if it exists, otherwise null
+          if (isset($this->model->i18n[$currentLang][$field->key])) {
+            $fieldData = $this->model->i18n[$currentLang][$field->key];
+          } elseif (isset($this->model->{$field->key})) {
+            // Fallback to non-translated field
+            $fieldData = $this->model->{$field->key};
+          }
+        } else {
+          // Try direct property access first
+          if (isset($this->model->{$field->key})) {
+            $fieldData = $this->model->{$field->key};
+          } elseif (isset($this->model[$fieldKey])) {
+            // Then try array access
+            $fieldData = $this->model[$fieldKey];
+          }
+        }
+
+        return $class::widget([
+          'model' => $this->model,
+          'formKey' => $fieldKey,
+          'data' => $fieldData,
+          'field' => $field
+        ]);
+      } else {
+        return $form->field($this->model, $fieldKey, $inputOptions)
+          ->{$field->type}((array)$fieldOptions)
+          ->label($field->label);
+      }
     }
   }
 
@@ -527,24 +573,6 @@ class CrelishBaseController extends Controller
     return $form->field($this->model, $fieldKey, $inputOptions)
       ->{$field->type}((array)$fieldOptions)
       ->label($field->label);
-  }
-
-  private function buildDefaultField($form, $field, $fieldKey, $inputOptions, $fieldOptions)
-  {
-    $class = 'giantbits\crelish\plugins\\' . strtolower($field->type) . '\\' . ucfirst($field->type);
-    if (class_exists($class)) {
-
-      return $class::widget([
-        'model' => $this->model,
-        'formKey' => $fieldKey,
-        'data' => $this->model[$fieldKey],
-        'field' => $field
-      ]);
-    } else {
-      return $form->field($this->model, $fieldKey, $inputOptions)
-        ->{$field->type}((array)$fieldOptions)
-        ->label($field->label);
-    }
   }
 
   public static function addError($error): void
