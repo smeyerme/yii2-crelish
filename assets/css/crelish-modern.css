@@ -392,8 +392,12 @@
 
 .table-modern tbody tr td {
   padding: 0.875rem 1.25rem !important;
-  border-top: 1px solid var(--color-border) !important;
+  border-top: none !important;
   vertical-align: middle !important;
+}
+
+.content-table tbody tr td {
+  border-top: none !important;
 }
 
 .table-modern tbody tr:first-child td {
@@ -732,6 +736,7 @@
   padding: 1.5rem;
   text-align: center;
   border-bottom: 1px solid var(--color-border);
+  justify-content: center;
 }
 
 #cr-left-pane .logo-head img {
@@ -746,6 +751,7 @@
   padding: 1rem 1.25rem;
   border-bottom: 1px solid var(--color-border);
   margin-bottom: 1rem;
+  background: rgb(7 0 0 / 10%);
 }
 
 #cr-left-pane .c-avatar {

@@ -162,7 +162,7 @@ class HeaderBar extends Widget
             });
             
             // Handle search button click
-            $('.c-button--brand').on('click', function() {
+            $('.c-button--search').on('click', function() {
                 var searchTerm = $('.header-search-input').val();
                 submitSearch(searchTerm);
             });
