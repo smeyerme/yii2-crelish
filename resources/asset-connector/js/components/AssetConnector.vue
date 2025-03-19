@@ -4,22 +4,39 @@
     <div v-if="label" class="image-selector-label">
       {{ label }}
     </div>
-    <div v-if="currentImageUrl" class="selected-image">
-      <img :src="currentImageUrl" :key="'img-'+modelValue" alt="Selected image" class="preview-img">
-      <div class="image-details">
-        <button @click="openImageSelector" class="btn btn-sm btn-primary" type="button">{{ t('labelChangeImage') }}</button>
-        <button @click="clearImage" class="btn btn-sm btn-outline-danger" type="button">{{ t('labelClear') }}</button>
+    
+    <!-- File preview area - always visible -->
+    <div class="file-preview-area">
+      <div v-if="currentImageUrl" class="selected-file">
+        <img :src="currentImageUrl" :key="'img-'+modelValue" :alt="selectedFileTitle || 'Selected file'" class="preview-img">
+        <div class="file-details">
+          <div v-if="selectedFileTitle" class="file-title">{{ selectedFileTitle }}</div>
+          <div v-if="selectedFileMime" class="file-mime">{{ selectedFileMime }}</div>
+          <div class="file-actions">
+            <button @click="openImageSelector" class="btn btn-sm btn-primary" type="button">{{ t('labelChangeFile') }}</button>
+            <button @click="clearImage" class="btn btn-sm btn-outline-danger" type="button">{{ t('labelClear') }}</button>
+          </div>
+        </div>
+      </div>
+      <div v-else class="empty-preview">
+        <div class="placeholder-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+            <polyline points="13 2 13 9 20 9"></polyline>
+          </svg>
+        </div>
+        <p class="placeholder-text">{{ t('labelNoFileSelected') }}</p>
+        <button @click="openImageSelector" class="btn btn-outline-primary" type="button">
+          {{ t('labelSelectFile') }} <span v-if="required" class="required-indicator">*</span>
+        </button>
       </div>
     </div>
-    <button v-else @click="openImageSelector" class="btn btn-outline-primary" type="button">
-      {{ t('labelSelectImage') }} <span v-if="required" class="required-indicator">*</span>
-    </button>
 
-    <!-- Image selector modal -->
+    <!-- File selector modal -->
     <div v-if="selectorOpen" class="image-selector-modal">
       <div class="image-selector-content">
         <div class="image-selector-header">
-          <h3>{{ t('titleSelectImage') }}</h3>
+          <h3>{{ t('titleSelectFile') }}</h3>
           <button @click="cancelImageSelection" class="close-btn">&times;</button>
         </div>
 
@@ -29,7 +46,7 @@
               <input
                   v-model="searchTerm"
                   type="text"
-                  :placeholder="t('labelSearchImages')"
+                  :placeholder="t('labelSearchFiles')"
                   class="form-control"
                   @input="debounceSearch"
               >
@@ -42,19 +59,23 @@
                 <option value="image/gif">{{ t('labelGifImages') }}</option>
                 <option value="image/svg+xml">{{ t('labelSvgImages') }}</option>
                 <option value="application/pdf">{{ t('labelPdfDocuments') }}</option>
+                <option value="application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document">{{ t('labelWordDocuments') }}</option>
+                <option value="application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">{{ t('labelExcelDocuments') }}</option>
+                <option value="text/">{{ t('labelTextDocuments') }}</option>
+                <option value="audio/">{{ t('labelAudioFiles') }}</option>
+                <option value="video/">{{ t('labelVideoFiles') }}</option>
               </select>
             </div>
           </div>
 
           <div class="upload-container">
             <label for="file-upload" class="btn btn-success upload-btn">
-              <span>{{ t('labelUploadNewImage') }}</span>
+              <span>{{ t('labelUploadNewFile') }}</span>
             </label>
             <input
                 id="file-upload"
                 type="file"
                 @change="uploadFile"
-                accept="image/*"
                 class="file-input"
             >
             <div v-if="uploadStatus" class="upload-status" :class="{'upload-success': uploadSuccess, 'upload-error': !uploadSuccess}">
@@ -64,24 +85,25 @@
 
           <div v-if="loading" class="loading-indicator">
             <div class="spinner"></div>
-            <p>{{ t('labelLoadingImages') }}</p>
+            <p>{{ t('labelLoadingFiles') }}</p>
           </div>
 
           <div v-else class="image-grid">
             <div
-                v-for="img in filteredImages"
-                :key="img.uuid"
+                v-for="item in filteredImages"
+                :key="item.uuid"
                 class="image-item"
-                :class="{'selected': tempSelectedId === img.uuid}"
-                @click="selectImage(img.uuid)"
+                :class="{'selected': tempSelectedId === item.uuid}"
+                @click="selectImage(item.uuid)"
             >
-              <img :src="img.preview_url" :alt="img.title">
-              <div class="image-title">{{ img.title }}</div>
+              <img :src="item.preview_url" :alt="item.title">
+              <div class="image-title">{{ item.title }}</div>
+              <div class="file-type">{{ getFileTypeLabel(item.mime) }}</div>
             </div>
           </div>
 
           <div v-if="!loading && filteredImages.length === 0" class="no-results">
-            <p>{{ t('labelNoImagesFound') }}</p>
+            <p>{{ t('labelNoFilesFound') }}</p>
           </div>
 
           <div v-if="hasMoreImages && !loading" class="load-more">
@@ -150,28 +172,36 @@ export default {
       searchTimeout: null,
       imageCache: {},
       currentImageUrl: null,
+      selectedFileTitle: null,
+      selectedFileMime: null,
       // Default translations as fallbacks
       defaultTranslations: {
-        labelSelectImage: 'Select Image',
-        labelChangeImage: 'Change Image',
+        labelSelectFile: 'Select File',
+        labelChangeFile: 'Change File',
         labelClear: 'Clear',
-        labelUploadNewImage: 'Upload New Image',
-        labelSearchImages: 'Search images...',
+        labelUploadNewFile: 'Upload New File',
+        labelSearchFiles: 'Search files...',
         labelAllFileTypes: 'All file types',
         labelJpegImages: 'JPEG images',
         labelPngImages: 'PNG images',
         labelGifImages: 'GIF images',
         labelSvgImages: 'SVG images',
         labelPdfDocuments: 'PDF documents',
-        labelLoadingImages: 'Loading images...',
-        labelNoImagesFound: 'No images found. Try adjusting your search or upload a new image.',
+        labelWordDocuments: 'Word documents',
+        labelExcelDocuments: 'Excel spreadsheets',
+        labelTextDocuments: 'Text documents',
+        labelAudioFiles: 'Audio files',
+        labelVideoFiles: 'Video files',
+        labelLoadingFiles: 'Loading files...',
+        labelNoFilesFound: 'No files found. Try adjusting your search or upload a new file.',
+        labelNoFileSelected: 'No file selected',
         labelLoadMore: 'Load More',
         labelCancel: 'Cancel',
         labelSelect: 'Select',
         labelUploadingStatus: 'Uploading...',
         labelUploadSuccessful: 'Upload successful!',
         labelUploadFailed: 'Upload failed. Please try again.',
-        titleSelectImage: 'Select Image'
+        titleSelectFile: 'Select File'
       }
     };
   },
@@ -198,10 +228,10 @@ export default {
         if (!newVal) {
           this.currentImageUrl = null;
           this.tempSelectedId = null;
+          this.selectedFileTitle = null;
+          this.selectedFileMime = null;
         } else {
-          this.fetchImageUrl(newVal).then(url => {
-            this.currentImageUrl = url;
-          });
+          this.fetchImageDetails(newVal);
           this.tempSelectedId = newVal;
         }
         
@@ -227,14 +257,31 @@ export default {
   },
 
   methods: {
-    async fetchImageUrl(imageId) {
+    getFileTypeLabel(mimeType) {
+      if (!mimeType) return '';
+      
+      if (mimeType.startsWith('image/')) {
+        return 'Image';
+      } else if (mimeType === 'application/pdf') {
+        return 'PDF';
+      } else if (mimeType.includes('word')) {
+        return 'Word';
+      } else if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) {
+        return 'Excel';
+      } else if (mimeType.startsWith('text/')) {
+        return 'Text';
+      } else if (mimeType.startsWith('audio/')) {
+        return 'Audio';
+      } else if (mimeType.startsWith('video/')) {
+        return 'Video';
+      } else {
+        return 'File';
+      }
+    },
+    
+    async fetchImageDetails(imageId) {
       // If no image is selected, return null
       if (!imageId) return null;
-
-      // If we already have this image URL cached, return it
-      if (this.imageCache[imageId]) {
-        return this.imageCache[imageId];
-      }
 
       try {
         const response = await fetch(`/crelish/asset/api-get?uuid=${imageId}`);
@@ -243,6 +290,9 @@ export default {
           const data = await response.json();
           // Store the URL in the cache
           this.imageCache[imageId] = data.preview_url || data.full_url;
+          this.currentImageUrl = this.imageCache[imageId];
+          this.selectedFileTitle = data.title;
+          this.selectedFileMime = data.mime;
           return this.imageCache[imageId];
         }
       } catch (error) {
@@ -252,26 +302,9 @@ export default {
       return null;
     },
 
-    getImageUrl(imageId) {
-      if (!imageId) return null;
-
-      // If we have the URL cached, return it immediately
-      if (this.imageCache[imageId]) {
-        return this.imageCache[imageId];
-      }
-
-      // Trigger the fetch for this image but don't wait for it
-      this.fetchImageUrl(imageId);
-
-      // Return a loading placeholder or null
-      return null;
-    },
-
     prefetchImages() {
       if (this.modelValue) {
-        this.fetchImageUrl(this.modelValue).then(url => {
-          this.currentImageUrl = url;
-        });
+        this.fetchImageDetails(this.modelValue);
         this.tempSelectedId = this.modelValue;
       }
     },
@@ -298,6 +331,8 @@ export default {
       // Reset state first to ensure UI changes
       this.currentImageUrl = null;
       this.tempSelectedId = null;
+      this.selectedFileTitle = null;
+      this.selectedFileMime = null;
       
       // Update the model value
       this.$emit('update:modelValue', null);
@@ -323,9 +358,13 @@ export default {
         const selectedImage = this.filteredImages.find(img => img.uuid === this.tempSelectedId);
         
         // If we have the image data, update the cache immediately
-        if (selectedImage && selectedImage.preview_url) {
-          this.imageCache[this.tempSelectedId] = selectedImage.preview_url;
-          this.currentImageUrl = selectedImage.preview_url;
+        if (selectedImage) {
+          if (selectedImage.preview_url) {
+            this.imageCache[this.tempSelectedId] = selectedImage.preview_url;
+            this.currentImageUrl = selectedImage.preview_url;
+          }
+          this.selectedFileTitle = selectedImage.title;
+          this.selectedFileMime = selectedImage.mime;
         }
         
         // Update the model value
@@ -338,9 +377,7 @@ export default {
         
         // If we don't have the image preview yet, fetch it
         if (!this.currentImageUrl) {
-          this.fetchImageUrl(this.tempSelectedId).then(url => {
-            this.currentImageUrl = url;
-          });
+          this.fetchImageDetails(this.tempSelectedId);
         }
       }
       
@@ -514,26 +551,70 @@ export default {
   margin-left: 2px;
 }
 
-.selected-image {
+/* File preview area */
+.file-preview-area {
+  width: 100%;
+  max-width: 38rem;
+  margin-bottom: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: #f8f9fa;
+  overflow: hidden;
+}
+
+.selected-file {
   display: flex;
-  align-items: flex-start;
-  margin-bottom: 0.5rem;
+  flex-direction: column;
+  width: 100%;
 }
 
 .preview-img {
-  width: 150px;
-  height: 80px;
+  width: 100%;
+  height: auto;
   object-fit: contain;
-  margin-right: 1rem;
-  border: 1px solid #ddd;
   background-color: #f8f9fa;
-  padding: 5px;
+  border-bottom: 1px solid #ddd;
 }
 
-.image-details {
+.file-details {
+  padding: 0.75rem;
+}
+
+.file-title {
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+  word-break: break-word;
+}
+
+.file-mime {
+  font-size: 0.8rem;
+  color: #6c757d;
+  margin-bottom: 0.75rem;
+}
+
+.file-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Empty state */
+.empty-preview {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  text-align: center;
+}
+
+.placeholder-icon {
+  margin-bottom: 1rem;
+  color: #6c757d;
+}
+
+.placeholder-text {
+  margin-bottom: 1rem;
+  color: #6c757d;
 }
 
 /* Image selector modal */
@@ -647,7 +728,7 @@ export default {
   padding: 0.5rem;
   cursor: pointer;
   transition: all 0.2s;
-  height: 170px;
+  height: 190px;
   display: flex;
   flex-direction: column;
 }
@@ -674,6 +755,12 @@ export default {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-align: center;
+}
+
+.file-type {
+  font-size: 0.75rem;
+  color: #6c757d;
   text-align: center;
 }
 
@@ -787,5 +874,20 @@ export default {
   content: "*";
   color: #dc3545;
   margin-left: 2px;
+}
+
+@media (max-width: 768px) {
+  .file-preview-area {
+    max-width: 100%;
+  }
+  
+  .search-filter-container {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .image-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  }
 }
 </style>

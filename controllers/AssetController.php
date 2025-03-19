@@ -518,7 +518,7 @@ class AssetController extends CrelishBaseController
           $previewUrl = $model['pathName'] . $model['src'];
           break;
         case 'application/pdf':
-          $previewUrl = '/crelish/asset/glide?path=thumbs/' . $model['thumbnail'] . '&p=small';
+          $previewUrl = '/uploads/thumbs/' . $model['thumbnail'];
           break;
         default:
           // Default placeholder for unsupported file types
@@ -577,7 +577,8 @@ class AssetController extends CrelishBaseController
         $previewUrl = $model->pathName . $model->src;
         break;
       case 'application/pdf':
-        $previewUrl = '/crelish/asset/glide?path=thumbs/' . $model->thumbnail . '&p=small';
+        $filename = $this->generatePdfThumbnail($model);
+        $previewUrl = '/uploads/thumbs/' . $filename;
         break;
       default:
         // Default placeholder for unsupported file types
@@ -706,6 +707,15 @@ class AssetController extends CrelishBaseController
         $model->colormain_rgb = Json::encode($domColor);
         $model->colormain_hex = '#' . sprintf('%02x', $domColor[0]) . sprintf('%02x', $domColor[1]) . sprintf('%02x', $domColor[2]);
         $model->colorpalette = Json::encode($palColor);
+      } catch (Exception $e) {
+        // Silently ignore color extraction errors
+      }
+    }
+
+    // Try to generate thumbnail for pdf.
+    if ($mimeType == 'application/pdf') {
+      try {
+        $this->generatePdfThumbnail($model, false);
       } catch (Exception $e) {
         // Silently ignore color extraction errors
       }
@@ -949,5 +959,62 @@ class AssetController extends CrelishBaseController
       'items' => $items,
       'total' => count($items)
     ];
+  }
+
+  private function generatePdfThumbnail($asset, $save = true)
+  {
+    // Ensure paths are properly escaped and formatted
+    $fileString = Yii::getAlias('@app') . '/web/uploads/' . $asset->src;
+    $thumbsDir = Yii::getAlias('@app') . '/web/uploads/thumbs';
+    $fileStringDest = $thumbsDir . '/thumb_' . $asset->uuid . '_' . str_replace('.pdf', '.jpg', $asset->src);
+    
+    // Make sure the thumbs directory exists
+    if (!is_dir($thumbsDir)) {
+      mkdir($thumbsDir, 0755, true);
+    }
+
+    // Make sure the source file exists
+    if (!file_exists($fileString)) {
+      Yii::error("Source PDF file does not exist: {$fileString}", 'application');
+      return false;
+    }
+    
+    // Escape special characters in paths for shell command
+    $fileStringEscaped = escapeshellarg($fileString);
+    $fileStringDestEscaped = escapeshellarg($fileStringDest);
+    
+    // Use safer command format with density parameter for better quality
+    $command = "convert -density 150 {$fileStringEscaped}[0] -colorspace sRGB -alpha remove -strip -resize 800x -quality 85 {$fileStringDestEscaped}";
+    
+    // Execute command and capture output and return status
+    exec($command, $output, $returnVar);
+    
+    // Check return status - 0 means success
+    if ($returnVar !== 0) {
+      Yii::error("PDF Thumbnail generation failed. Command: {$command}, Output: " . implode("\n", $output), 'application');
+      return false;
+    }
+    
+    // Check if thumbnail was actually created
+    if (!file_exists($fileStringDest)) {
+      Yii::error("PDF Thumbnail file not created despite successful command execution", 'application');
+      return false;
+    }
+    
+    // Update asset with thumbnail name
+    $thumbnailName = 'thumb_' . $asset->uuid . '_' . str_replace('.pdf', '.jpg', $asset->src);
+    $asset->thumbnail = $thumbnailName;
+
+    if(!$save) {
+      return $thumbnailName;
+    }
+
+    if ($asset->save(false)) {
+      Yii::info("PDF Thumbnail created successfully: {$thumbnailName}", 'application');
+      return $thumbnailName;
+    } else {
+      Yii::error("Failed to update asset record with thumbnail name", 'application');
+      return false;
+    }
   }
 }

@@ -82,7 +82,7 @@ class AssetConnector extends CrelishFormWidget
     
     // Prepare the asset data for the Vue component
     $assetValue = !empty($this->assetData) ? $this->assetData->uuid : '';
-    
+
     // Render the container for the Vue component
     $inputName = "CrelishDynamicModel[{$this->field->key}]";
     
