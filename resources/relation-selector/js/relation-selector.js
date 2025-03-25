@@ -5,7 +5,7 @@ import RelationSelector from './components/RelationSelector.vue';
 document.addEventListener('DOMContentLoaded', () => {
   // Find all relation selector containers
   const containers = document.querySelectorAll('.relation-selector-container');
-  
+
   // Get global translations if available
   let globalTranslations = {};
   try {
@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
   } catch (error) {
     // Ignore errors
   }
-  
+
   containers.forEach((container, index) => {
     // Get the configuration from the data attributes
     const config = {
@@ -25,9 +25,10 @@ document.addEventListener('DOMContentLoaded', () => {
       label: container.dataset.label || '',
       inputName: container.dataset.inputName || '',
       required: container.dataset.required === 'true',
+      isMultiple: container.dataset.multiple === 'true',
       columns: []
     };
-    
+
     // Parse columns configuration if available
     if (container.dataset.columns) {
       try {
@@ -36,7 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
         console.warn('Failed to parse columns JSON', error);
       }
     }
-    
+
     // Check for container-specific translations
     let translations = { ...globalTranslations };
     if (container.dataset.translations) {
@@ -47,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
         console.warn('Failed to parse translations JSON', error);
       }
     }
-    
+
     try {
       // Create a Vue app for this container
       const app = createApp(RelationSelector, {
@@ -57,22 +58,23 @@ document.addEventListener('DOMContentLoaded', () => {
         label: config.label,
         inputName: config.inputName,
         required: config.required,
+        isMultiple: config.isMultiple,
         columns: config.columns,
         translations: translations,
         'onUpdate:modelValue': (newValue) => {
           // Update the data attribute on the container
           container.dataset.value = newValue || '[]';
-          
+
           // Dispatch a custom event
           container.dispatchEvent(new CustomEvent('relation-updated', {
             detail: { value: newValue }
           }));
         }
       });
-      
+
       app.mount(container);
     } catch (error) {
       console.error('Error mounting relation selector', error);
     }
   });
-}); 
+});

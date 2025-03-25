@@ -5,10 +5,57 @@ namespace giantbits\crelish\plugins\relationselect;
 use giantbits\crelish\components\CrelishDynamicModel;
 use giantbits\crelish\components\CrelishDataResolver;
 use yii\base\Component;
+use Yii;
+use yii\helpers\Json;
 
 class RelationSelectContentProcessor extends Component
 {
   public $data;
+
+  /**
+   * Helper method to normalize various data formats to an array of UUIDs
+   *
+   * @param mixed $data The data to normalize
+   * @return array An array of UUIDs
+   */
+  private static function normalizeToArray($data) {
+    // Empty values
+    if (empty($data)) {
+      return [];
+    }
+
+    // Already an array
+    if (is_array($data)) {
+      // Make sure we have only string UUIDs, not objects or nested arrays
+      return array_map(function($item) {
+        if (is_object($item) && isset($item->uuid)) {
+          return $item->uuid;
+        } elseif (is_array($item) && isset($item['uuid'])) {
+          return $item['uuid'];
+        } else {
+          return (string)$item;
+        }
+      }, $data);
+    }
+
+    // If it's an object with a uuid property
+    if (is_object($data) && isset($data->uuid)) {
+      return [$data->uuid];
+    }
+
+    // Try to parse as JSON (could be an array or object)
+    if (is_string($data) && (strpos($data, '[') === 0 || strpos($data, '{') === 0)) {
+      try {
+        $decoded = Json::decode($data);
+        return self::normalizeToArray($decoded); // Recursive call to handle the decoded value
+      } catch (\Exception $e) {
+        // Not valid JSON, treat as a string UUID
+      }
+    }
+
+    // Assume it's a single UUID string
+    return [(string)$data];
+  }
 
   public static function processDataPreSave($key, $data, $fieldConfig, &$parent)
   {
@@ -19,15 +66,30 @@ class RelationSelectContentProcessor extends Component
       && $fieldConfig->config->autocreate === true
       && (!is_object($data) && !preg_match($UUIDv4, $data))
       && !empty($data)) {
-      
-      $model = new CrelishDynamicModel( ['ctype' => $fieldConfig->config->ctype]);
+
+      $model = new CrelishDynamicModel(['ctype' => $fieldConfig->config->ctype]);
       $model->systitle = $data;
       $model->state = 2;
       $model->save();
       return $model->uuid;
     }
 
-    return $data;
+    // Check if this is a multiple or single relation
+    $isMultiple = isset($fieldConfig->config->multiple) && $fieldConfig->config->multiple === true;
+
+    // Normalize the data to an array of UUIDs regardless of input format
+    $normalizedData = self::normalizeToArray($data);
+
+    // For single relations, return only the first UUID if available
+    if (!$isMultiple) {
+      if (empty($normalizedData)) {
+        return null;
+      }
+      return $normalizedData[0];
+    }
+
+    // For multiple relations, return the JSON encoded array
+    return Json::encode($normalizedData);
   }
 
   public static function processDataPostSave($key, $data, $fieldConfig, &$parent)
@@ -40,9 +102,9 @@ class RelationSelectContentProcessor extends Component
     ) {
       // Ensure data is a string UUID
       $uuid = is_object($data) && isset($data->uuid) ? $data->uuid : $data;
-      
+
       $relatedModel = CrelishDataResolver::resolveModel([
-        'ctype' => $fieldConfig->config->ctype, 
+        'ctype' => $fieldConfig->config->ctype,
         'uuid' => $uuid
       ]);
 
@@ -57,88 +119,106 @@ class RelationSelectContentProcessor extends Component
 
   public static function processData($key, $data, &$processedData, $config)
   {
+    // Check if this is a multiple or single relation
+    $isMultiple = isset($config->config->multiple) && $config->config->multiple === true;
+    $contentType = isset($config->config->ctype) ? $config->config->ctype : null;
 
+    if (!empty($data) && $contentType) {
+      // Normalize to an array of UUIDs regardless of input format
+      $normalizedData = self::normalizeToArray($data);
 
-    if (!empty($data)) {
-      // Check if data is an array of UUIDs (for multiple relations)
-      if (is_array($data) && isset($data[0]) && !is_array($data[0])) {
+      // For multiple relations, process all items
+      if ($isMultiple) {
         $processedData[$key] = [];
         $idx = 0;
-        foreach ($data as $uuid) {
-          // Ensure uuid is a string
-          $uuid = is_object($uuid) && isset($uuid->uuid) ? $uuid->uuid : $uuid;
 
+        foreach ($normalizedData as $uuid) {
           $sourceData = CrelishDataResolver::resolveModel([
-            'ctype' => $config->config->ctype,
+            'ctype' => $contentType,
             'uuid' => $uuid
           ]);
 
           if ($sourceData) {
             $processedData[$key][$idx] = $sourceData;
+            $idx++;
           }
-          $idx++;
         }
       } else {
-        // Single relation
-        $uuid = isset($data['uuid']) ? $data['uuid'] : (is_object($data) && isset($data->uuid) ? $data->uuid : $data);
+        // For single relation, only process the first item if available
+        if (!empty($normalizedData)) {
+          $uuid = $normalizedData[0];
 
-        $sourceData = CrelishDataResolver::resolveModel([
-          'ctype' => $config->config->ctype,
-          'uuid' => $uuid
-        ]);
+          $sourceData = CrelishDataResolver::resolveModel([
+            'ctype' => $contentType,
+            'uuid' => $uuid
+          ]);
 
-        if ($sourceData) {
-          $processedData[$key] = $sourceData;
+          if ($sourceData) {
+            $processedData[$key] = $sourceData;
+          } else {
+            $processedData[$key] = null;
+          }
         } else {
-          $processedData[$key] = [];
+          $processedData[$key] = null;
         }
       }
     } elseif (!empty($data['temp'])) {
       $processedData[$key] = $data;
+    } else {
+      // No data provided
+      $processedData[$key] = $isMultiple ? [] : null;
     }
   }
 
   public static function processJson($ctype, $key, $data, &$processedData)
   {
     $definition = CrelishDynamicModel::loadElementDefinition($ctype);
+    if (!isset($definition->fields[$key]) || !isset($definition->fields[$key]->config->ctype)) {
+      Yii::warning("Missing configuration for field {$key} in content type {$ctype}");
+      return;
+    }
+
     $relatedCtype = $definition->fields[$key]->config->ctype;
     $multiple = isset($definition->fields[$key]->config->multiple) && $definition->fields[$key]->config->multiple === true;
 
-    if ($data && $relatedCtype) {
-      // If data is a JSON string, decode it
-      if (is_string($data) && (strpos($data, '[') === 0 || strpos($data, '{') === 0)) {
-        $data = json_decode($data, true);
-      }
+    if (empty($data) || empty($relatedCtype)) {
+      $processedData[$key] = $multiple ? [] : null;
+      return;
+    }
 
-      // Handle multiple relations
-      if ($multiple && is_array($data)) {
-        $processedData[$key] = [];
-        foreach ($data as $uuid) {
-          // Ensure uuid is a string
-          $uuid = is_object($uuid) && isset($uuid->uuid) ? $uuid->uuid : $uuid;
+    // Normalize to an array of UUIDs regardless of input format
+    $normalizedData = self::normalizeToArray($data);
 
-          $sourceData = new CrelishDynamicModel([], [
-            'ctype' => $relatedCtype,
-            'uuid' => $uuid
-          ]);
-
-          
-          if ($sourceData) {
-            $processedData[$key][] = $sourceData;
-          }
-        }
-      } else {
-        // Single relation
-        $uuid = is_object($data) && isset($data->uuid) ? $data->uuid : $data;
-        
+    // Handle based on multiple configuration
+    if ($multiple) {
+      $processedData[$key] = [];
+      foreach ($normalizedData as $uuid) {
         $sourceData = CrelishDataResolver::resolveModel([
-          'ctype' => $relatedCtype, 
+          'ctype' => $relatedCtype,
           'uuid' => $uuid
         ]);
-        
+
+        if ($sourceData) {
+          $processedData[$key][] = $sourceData;
+        }
+      }
+    } else {
+      // For single relations, use only the first UUID if available
+      if (!empty($normalizedData)) {
+        $uuid = $normalizedData[0];
+
+        $sourceData = CrelishDataResolver::resolveModel([
+          'ctype' => $relatedCtype,
+          'uuid' => $uuid
+        ]);
+
         if ($sourceData) {
           $processedData[$key] = $sourceData;
+        } else {
+          $processedData[$key] = null;
         }
+      } else {
+        $processedData[$key] = null;
       }
     }
   }
