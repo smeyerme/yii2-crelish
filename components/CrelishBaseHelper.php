@@ -276,8 +276,7 @@ class CrelishBaseHelper
       return null;
     }
 
-    $cleanPath = str_starts_with($asset->pathName, '/') ? $asset->pathName : '/' . $asset->pathName;
-    return $cleanPath . (str_ends_with($cleanPath, '/') ? $asset->fileName : '/' . $asset->fileName);
+    return self::getAssetUrl($asset->pathName, $asset->fileName);
   }
 
   /**

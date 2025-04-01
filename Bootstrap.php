@@ -312,6 +312,8 @@ class Bootstrap implements BootstrapInterface
         'pattern' => 'document/secure/<id:[\w\-]+>',
         'route' => 'document/secure'
       ],
+      'api/tournaments' => 'tournament-api/index',
+      'api/tournaments/<id>' => 'tournament-api/view',
       // Other API routes
       [
         'class' => 'yii\web\UrlRule',

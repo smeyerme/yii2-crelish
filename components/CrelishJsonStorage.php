@@ -18,13 +18,14 @@ class CrelishJsonStorage implements CrelishDataStorage
      * @var string Base directory for content files
      */
     protected $contentDir;
+
     
     /**
      * Constructor
      */
     public function __construct()
     {
-        $this->contentDir = Yii::getAlias('@app/workspace/content');
+        $this->contentDir = Yii::getAlias('@app/workspace/data');
     }
     
     /**
@@ -37,7 +38,7 @@ class CrelishJsonStorage implements CrelishDataStorage
     public function findOne(string $ctype, string $uuid): ?array
     {
         $filePath = $this->getFilePath($ctype, $uuid);
-        
+
         if (!file_exists($filePath)) {
             return null;
         }
@@ -64,10 +65,11 @@ class CrelishJsonStorage implements CrelishDataStorage
     public function findAll(string $ctype, array $filter = [], array $sort = [], int $limit = 0): array
     {
         $typeDir = $this->getTypeDir($ctype);
-        
+
         if (!is_dir($typeDir)) {
             return [];
         }
+
         
         $files = FileHelper::findFiles($typeDir, ['only' => ['*.json']]);
         $records = [];
@@ -100,7 +102,7 @@ class CrelishJsonStorage implements CrelishDataStorage
         if ($limit > 0 && count($records) > $limit) {
             $records = array_slice($records, 0, $limit);
         }
-        
+
         return $records;
     }
     
