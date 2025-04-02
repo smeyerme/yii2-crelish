@@ -4,13 +4,12 @@
 	'layout' : 'default'
 }) %}
 <div class="row">
-	<div class="col-8">
+	<div class="col col-8">
 		<div class="card">
 			<div class="card-header">
 				{{ model.systitle }} ({{ model.mime }})
 			</div>
 			<div class="card-content">
-
 				{% if model.mime =='image/jpeg' or model.mime =='image/jpg' or model.mime =='image/webp' or model.mime =='image/png' or model.mime =='image/gif' %}
 					{% if showImageEditor %}
 						<!-- Image Editor Component -->
@@ -34,7 +33,7 @@
 			</div>
 		</div>
 	</div>
-	<div class="col">
+	<div class="col col-4">
 
 		<div class="card allow-overflow">
 			<div class="card-header">
@@ -71,7 +70,7 @@
 
 				{% if model.mime == 'application/pdf' and model.thumbnail %}
 					<label>{{ t('app', 'thumbnail') }}</label>
-					<img src="/uploads/thumbs/{{ model.thumbnail }}" class="o-image">
+					<img src="/uploads/thumbs/{{ model.thumbnail }}" class="thumbnail">
 				{% endif %}
 			</div>
 		</div>
@@ -81,41 +80,6 @@
 	</div>
 </div>
 {{ active_form_end() }}
-
-{% if model.mime == 'application/pdf' and model.thumbnail %}
-	
-	<div class="row">
-		<div class="col">
-			{% set formExtract = active_form_begin({
-				'id' : 'login-form',
-				'action': '/crelish/asset/extract-from-pdf?uuid=' ~ model.uuid
-			}) %}
-			{#
-			<div class="c-card">
-				<div class="c-card__item c-card__item--brand">
-					{{ t('app', 'extract_pdf_pages') }}
-				</div>
-				<div class="c-card__item">
-					
-					{{ formExtract.field(extractModel, 'start') | raw }}
-					{{ formExtract.field(extractModel, 'end') | raw }}
-					{{ formExtract.field(extractModel, 'systitle') | raw }}
-					{{ formExtract.field(extractModel, 'author') | raw }}
-					{{ formExtract.field(extractModel, 'description') | raw }}
-					{{ formExtract.field(extractModel, 'event') | raw }}
-					{{ formExtract.field(model, 'state').dropdownlist({0:'Offline',1:'Draft',2:'Published',3:'Archived'}) | raw }}
-					<div class="form-group">
-						<input type="submit" value="Extract" class="btn btn-primary"/>
-					</div>
-				</div>
-			</div>
-			#}
-			
-			{{ active_form_end() }}
-		</div>
-	</div>
-{% endif %}
-
 
 <script>
   $('.colorspawn').css('border-bottom', '4px solid {{ colormain_hex }}');
@@ -168,6 +132,11 @@
 
 .palette-item {
 
+}
+
+.thumbnail {
+	width: 100%;
+	height: auto;
 }
 
 {% endapply %}

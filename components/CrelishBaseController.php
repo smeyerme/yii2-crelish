@@ -25,9 +25,6 @@ class CrelishBaseController extends Controller
 
     parent::init();
 
-    Yii::$app->sourceLanguage = 'en';
-    Yii::$app->language = 'de';
-
     Yii::$app->view->title = ucfirst($this->id);
     
     // Handle common session and query parameters
@@ -40,21 +37,6 @@ class CrelishBaseController extends Controller
 
       Yii::$app->view->registerJs($js, \yii\web\View::POS_HEAD);
     }
-
-    //$intelliCache = Yii::$app->session->get('intellicache');
-    /*if (!empty($intelliCache)) {
-
-      $js = "$.ajax({
-          url: '/crelish/settings/intellicache.html',
-          data: {
-              auth: '2e212e112e-2e12ea-vhrto4',
-              uuid: '" . $this->uuid . "'
-          },
-          success: function(r){ console.info('Intellicache done'); }
-      });";
-      Yii::$app->view->registerJs($js);
-      Yii::$app->session->remove('intellicache');
-    }*/
 
     if ((Yii::$app->user->isGuest || Yii::$app->user->identity->role < 9)
       && Yii::$app->requestedRoute != 'crelish/user/login'
@@ -171,6 +153,7 @@ class CrelishBaseController extends Controller
 
   public function buildForm($action = 'default', $settings = []): bool|string
   {
+
     $this->initializeFormSettings($settings);
     $this->initializeModel($action, $settings);
 
@@ -193,7 +176,7 @@ class CrelishBaseController extends Controller
   {
     $defaults = [
       'id' => 'content-form',
-      'outerClass' => 'gc-ptb--2',
+      'outerClass' => null,
       'groupClass' => 'card',
       'tabs' => []
     ];
@@ -290,6 +273,7 @@ class CrelishBaseController extends Controller
 
   private function renderFormStructure($form, $settings): string
   {
+
     $html = Html::beginTag("div", ['class' => $settings['outerClass']]);
     $html .= $this->renderLanguageSelector();
     $html .= Html::beginTag("div", ['class' => 'row']);
@@ -322,7 +306,9 @@ class CrelishBaseController extends Controller
   private function renderTabs($form, $settings): string
   {
     $html = '';
+
     foreach ($this->model->fieldDefinitions->tabs as $tab) {
+
       if ($this->isTabVisible($tab)) {
         $html .= $this->renderTab($tab, $form, $settings);
       }
@@ -337,6 +323,7 @@ class CrelishBaseController extends Controller
 
   private function renderTab($tab, $form, $settings): string
   {
+
     $html = '';
     foreach ($tab->groups as $group) {
       $html .= $this->renderGroup($group, $form, $settings);
@@ -347,6 +334,7 @@ class CrelishBaseController extends Controller
   private function renderGroup($group, $form, $settings): string
   {
     $groupSettings = property_exists($group, 'settings') ? $group->settings : [];
+
     $widthClass = !empty($groupSettings->width) ? 'col-md-' . $groupSettings->width : '';
 
     $html = Html::beginTag('div', ['class' => 'col ' . $widthClass]);
@@ -390,7 +378,6 @@ class CrelishBaseController extends Controller
       return $this->buildCustomOrDefaultField($field, $form);
     }
   }
-
 
   private function renderTranslatableField($field, $form): string
   {
@@ -539,7 +526,7 @@ class CrelishBaseController extends Controller
 
   private function handleTranslationOptions(&$field, &$fieldOptions, &$widgetOptions, $lang): void
   {
-    $field->label .= ' (' . strtoupper($lang) . ')';
+
     if (!empty($this->model->allTranslations[$field->key])) {
       $currentValue = $this->model->allTranslations[$field->key][$lang] ?? $this->model->{$field->key};
       $fieldOptions['value'] = $currentValue;
