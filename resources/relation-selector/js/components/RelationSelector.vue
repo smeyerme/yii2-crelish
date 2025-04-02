@@ -123,6 +123,11 @@ export default {
     isMultiple: {
       type: Boolean,
       default: true
+    },
+    // Fields to use for filtering when calling the API
+    filterFields: {
+      type: Array,
+      default: () => ['systitle']
     }
   },
 
@@ -216,10 +221,17 @@ export default {
           dataType: 'json',
           delay: 250,
           data: function(params) {
-            return {
-              filter: params.term,
+            const filterData = {
               page: params.page || 1
             };
+            
+            // If we have a search term, create a filter parameter using the configured fields
+            if (params.term) {
+              // Format the filter as "field1:term&field2:term" 
+              filterData.filter = vm.filterFields.map(field => `${field}:${params.term}`).join('&');
+            }
+            
+            return filterData;
           },
           beforeSend: function(xhr) {
             // Include CSRF token in the request headers
@@ -298,10 +310,17 @@ export default {
           dataType: 'json',
           delay: 250,
           data: function(params) {
-            return {
-              filter: params.term,
+            const filterData = {
               page: params.page || 1
             };
+            
+            // If we have a search term, create a filter parameter using the configured fields
+            if (params.term) {
+              // Format the filter as "field1:term&field2:term" 
+              filterData.filter = vm.filterFields.map(field => `${field}:${params.term}`).join('&');
+            }
+            
+            return filterData;
           },
           beforeSend: function(xhr) {
             // Include CSRF token in the request headers

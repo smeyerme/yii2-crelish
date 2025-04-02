@@ -141,26 +141,32 @@ class PageController extends CrelishBaseController
       ]
     ];
 
-    $columns = array_merge($checkCol, $modelProvider->columns);
+    //$columns = array_merge($checkCol, $modelProvider->columns);
+    $columns = array_merge($checkCol, [
+      ['attribute' => 'systitle', 'label' => Yii::t('app', 'Systitle')],
+      ['attribute' => 'slug',  'label' => Yii::t('app', 'Slug'), 'value' => function ($model) {
+        return '/' . $model->slug;
+      }],
+      ['attribute' => 'state'],
+      [
+        'attribute' => 'updated',
+        'label' => Yii::t('app', 'Updated'),
+        'format' => 'date',
+      ],
+    ]);
+
     $columns = map($columns, function ($item) {
 
       if (key_exists('attribute', $item) && $item['attribute'] === 'state') {
         $item['format'] = 'raw';
         $item['label'] = 'Status';
         $item['value'] = function ($data) {
-          switch ($data['state']) {
-            case 1:
-              $state = 'Draft';
-              break;
-            case 2:
-              $state = 'Online';
-              break;
-            case 3:
-              $state = 'Archived';
-              break;
-            default:
-              $state = 'Offline';
-          };
+          $state = match ($data['state']) {
+            1 => 'Draft',
+            2 => 'Online',
+            3 => 'Archived',
+            default => 'Offline',
+          };;
 
           return $state;
         };

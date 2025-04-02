@@ -84,12 +84,26 @@ class CrelishDynamicModel extends DynamicModel
       foreach ($this->_elementDefinition->fields as $field) {
         $this->defineLabel($field->key, Yii::t('app', $field->label));
         if (!empty($field->rules)) {
-
           foreach ($field->rules as $rule) {
-            if (empty($rule[1])) {
-              $this->addRule([$field->key], $rule[0]);
-            } else {
-              $this->addRule([$field->key], $rule[0], (array)$rule[1]);
+            // Handle different rule formats
+            if (is_string($rule)) {
+              // Simple validator with no parameters
+              $this->addRule([$field->key], $rule);
+            } else if (is_array($rule)) {
+              if (isset($rule[0])) {
+                if (is_array($rule[0]) && count($rule) === 1) {
+                  // Handle nested array format like your current JSON
+                  $nestedRule = $rule[0];
+                  $validator = $nestedRule[0];
+                  $params = isset($nestedRule[1]) ? (array)$nestedRule[1] : [];
+                  $this->addRule([$field->key], $validator, $params);
+                } else {
+                  // Standard format [validator, params]
+                  $validator = $rule[0];
+                  $params = isset($rule[1]) ? (array)$rule[1] : [];
+                  $this->addRule([$field->key], $validator, $params);
+                }
+              }
             }
           }
         }
