@@ -3,14 +3,14 @@
  # @var string statusValue
  #}
 
-<button class="c-button c-button-search"><i class="fa-sharp fa-regular fa-search"></i></button>
+<button class="c-button c-button-search"><i class="fa-sharp  fa-regular fa-search"></i></button>
 <div class="o-field" style="position: relative; width: 80%;">
     <input class="c-field header-search-input" name="cr_content_filter" id="cr_content_filter"
            value="{{ filterValue|e }}"
            placeholder="{{ t('app', 'Search users...') }}">
     {% if filterValue is not empty %}
         <span class="search-clear-btn" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer;">
-            <i class="fa-sharp fa-regular fa-times"></i>
+            <i class="fa-sharp  fa-regular fa-times"></i>
         </span>
     {% endif %}
 </div>

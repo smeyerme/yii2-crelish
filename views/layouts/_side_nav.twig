@@ -24,7 +24,7 @@
 {% else %}
 <div class="navbar-item">
     <a href="{{ url('/crelish/dashboard/index') }}">
-        <i class="fas fa-arrow-left"></i> {{ t('app', 'Back to Crelish') }}
+        <i class="fa-sharp fa-solid fa-arrow-left"></i> {{ t('app', 'Back to Crelish') }}
     </a>
 </div>
 
@@ -36,7 +36,7 @@
     {% for file in this.params['documentationFiles'] %}
         <div class="navbar-item {% if this.params['currentDocPage'] is defined and this.params['currentDocPage'] == file.filename %}active{% endif %}">
             <a href="{{ url('/crelish/documentation/read', {'page': file.filename}) }}">
-                <i class="fas fa-file-alt"></i> {{ file.title }}
+                <i class="fa-sharp fa-solid fa-file-alt"></i> {{ file.title }}
             </a>
         </div>
     {% endfor %}
@@ -46,7 +46,7 @@
 <div class="version-container">
     <a href="{{ url('/crelish/documentation/index') }}" class="documentation-link" title="{{ t('app', 'View Documentation') }}">
         <span class="cr-version">{{ app.params.crelish.version }}</span>
-        <i class="fas fa-book-open docs-icon"></i>
+        <i class="fa-sharp fa-solid fa-book-open docs-icon"></i>
     </a>
 </div>
 

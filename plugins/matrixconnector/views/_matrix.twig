@@ -127,16 +127,16 @@
           <div class="sortable-container" ref="sortable_{ areaKey }">
             <div class="c-card" ref-area={ areaKey } each={ item in parent.parent.data[areaKey] || [] }>
               <div role="separator" class="c-card__item c-card__item--divider">
-                <span class="glyphicon glyphicon-move fa-sharp fa-regular fa-arrows-alt" aria-hidden="true"></span>
+                <span class="glyphicon glyphicon-move fa-sharp  fa-regular fa-arrows-alt" aria-hidden="true"></span>
                 <strong>{ item.info[0].value }</strong>
                 <span class="c-input-group pull-right">
                   <a class="c-button gc-bc--palette-wetasphalt u-xsmall"
                      href="/crelish/content/update?ctype={ item.ctype }&uuid={ item.uuid }"
                      target="_blank">
-                    <i class="fa-sharp fa-regular fa-edit"></i>
+                    <i class="fa-sharp  fa-regular fa-edit"></i>
                   </a>
                   <a class="c-button gc-bc--palette-pomgranate u-xsmall" onclick={ parent.parent.parent.removeItem }>
-                    <i class="fa-sharp fa-regular fa-trash"></i>
+                    <i class="fa-sharp  fa-regular fa-trash"></i>
                   </a>
                 </span>
               </div>

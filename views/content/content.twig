@@ -126,13 +126,13 @@
           // Add FontAwesome icons to common actions
           if (button.textContent.trim().toLowerCase().includes('edit') || 
               button.textContent.trim().toLowerCase().includes('update')) {
-            button.innerHTML = '<i class="fa-solid fa-pen-to-square"></i> ' + button.textContent;
+            button.innerHTML = '<i class="fa-sharp  fa-pen-to-square"></i> ' + button.textContent;
             button.classList.add('btn-info');
           } else if (button.textContent.trim().toLowerCase().includes('delete')) {
-            button.innerHTML = '<i class="fa-solid fa-trash"></i> ' + button.textContent;
+            button.innerHTML = '<i class="fa-sharp  fa-trash"></i> ' + button.textContent;
             button.classList.add('btn-danger');
           } else if (button.textContent.trim().toLowerCase().includes('view')) {
-            button.innerHTML = '<i class="fa-solid fa-eye"></i> ' + button.textContent;
+            button.innerHTML = '<i class="fa-sharp  fa-eye"></i> ' + button.textContent;
             button.classList.add('btn-primary');
           }
         });

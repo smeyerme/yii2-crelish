@@ -313,14 +313,14 @@ class HeaderBar extends Widget
           );
         } else {
           // Fallback to PHP template or direct HTML
-          $html = '<button class="c-button c-button--brand"><i class="fa-sharp fa-regular fa-search"></i></button>';
+          $html = '<button class="c-button c-button--brand"><i class="fa-sharp  fa-regular fa-search"></i></button>';
           $html .= '<div class="o-field" style="position: relative;">';
           $html .= Html::textInput('cr_content_filter', $searchValue, [
             'class' => 'c-field header-search-input',
             'placeholder' => \Yii::t('app', 'Type your search phrase here...'),
           ]);
           if (!empty($searchValue)) {
-            $html .= '<span class="search-clear-btn" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer;"><i class="fa-sharp fa-regular fa-times"></i></span>';
+            $html .= '<span class="search-clear-btn" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer;"><i class="fa-sharp  fa-regular fa-times"></i></span>';
           }
           $html .= '</div>';
           return $html;
@@ -342,14 +342,14 @@ class HeaderBar extends Widget
           );
         } else {
           // Fallback to PHP template or direct HTML
-          $html = '<button class="c-button c-button--brand"><i class="fa-sharp fa-regular fa-search"></i></button>';
+          $html = '<button class="c-button c-button--brand"><i class="fa-sharp  fa-regular fa-search"></i></button>';
           $html .= '<div class="o-field" style="position: relative;">';
           $html .= Html::textInput('cr_content_filter', $searchValue, [
             'class' => 'c-field header-search-input',
             'placeholder' => \Yii::t('app', 'Search users...'),
           ]);
           if (!empty($searchValue)) {
-            $html .= '<span class="search-clear-btn" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer;"><i class="fa-sharp fa-regular fa-times"></i></span>';
+            $html .= '<span class="search-clear-btn" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer;"><i class="fa-sharp  fa-regular fa-times"></i></span>';
           }
           $html .= '</div>';
 
@@ -390,12 +390,12 @@ class HeaderBar extends Widget
           // Fallback to PHP template or direct HTML
           $html = '<div class="c-input-group group-content-filter">';
           $html .= '<span id="submitButton" class="c-button btn-save c-button--success" type="button" onclick="$(\'#content-form\').submit();">';
-          $html .= '<i class="fa-sharp fa-regular fa-save"></i> ';
+          $html .= '<i class="fa-sharp  fa-regular fa-save"></i> ';
           $html .= '</span>';
           
           if ($showSaveAndReturn) {
             $html .= '<span class="c-button btn-save c-button--success-darker" type="button" onclick="$(\'#save_n_return\').val(\'1\'); $(\'#content-form\').submit();">';
-            $html .= '<i class="fa-sharp fa-regular fa-save"></i> <i class="fa-sharp fa-regular fa-reply"></i> ';
+            $html .= '<i class="fa-sharp  fa-regular fa-save"></i> <i class="fa-sharp  fa-regular fa-reply"></i> ';
             $html .= '</span>';
           }
           
@@ -408,7 +408,7 @@ class HeaderBar extends Widget
             $deleteUrl = \Yii::$app->urlManager->createUrl(["/{$module}/{$controller}/delete", 'ctype' => $ctype, 'uuid' => $uuid]);
             
             $html .= '<span class="c-button btn-delete c-button--error" type="button" onclick="openDeleteDialog(\'' . $deleteUrl . '\');">';
-            $html .= '<i class="fa-sharp fa-regular fa-trash"></i>';
+            $html .= '<i class="fa-sharp  fa-regular fa-trash"></i>';
             $html .= '</span>';
           }
           
@@ -465,18 +465,18 @@ class HeaderBar extends Widget
         JS;
         \Yii::$app->view->registerJs($js);
         
-        return '<a href="' . \Yii::$app->urlManager->createUrl(['/crelish/content/create', 'ctype' => $ctype]) . '" class="c-button create-content-btn"><i class="fa-sharp fa-regular fa-plus"></i></a>';
+        return '<a href="' . \Yii::$app->urlManager->createUrl(['/crelish/content/create', 'ctype' => $ctype]) . '" class="c-button create-content-btn"><i class="fa-sharp  fa-regular fa-plus"></i></a>';
       },
       'user-create' => function () {
-        return '<a href="' . \Yii::$app->urlManager->createUrl(['/crelish/user/create']) . '" class="c-button"><i class="fa-sharp fa-regular fa-user-plus"></i></a>';
+        return '<a href="' . \Yii::$app->urlManager->createUrl(['/crelish/user/create']) . '" class="c-button"><i class="fa-sharp  fa-regular fa-user-plus"></i></a>';
       },
       'asset-view-controls' => function () {
         $html = '<span class="c-input-group u-small" style="margin-right: 0;">';
         $html .= '<button class="c-button c-button--error btn-delete-grid hidden">';
-        $html .= '<i class="fa-sharp fa-regular fa-check-square"></i> ' . \Yii::t('app', 'Löschen');
+        $html .= '<i class="fa-sharp  fa-regular fa-check-square"></i> ' . \Yii::t('app', 'Löschen');
         $html .= '</button>';
-        $html .= '<a class="c-button" id="switch-to-grid"><i class="fas fa-th-large"></i></a>';
-        $html .= '<a class="c-button" id="switch-to-list"><i class="fas fa-list"></i></a>';
+        $html .= '<a class="c-button" id="switch-to-grid"><i class="fa-sharp fa-solid fa-th-large"></i></a>';
+        $html .= '<a class="c-button" id="switch-to-list"><i class="fa-sharp fa-solid fa-list"></i></a>';
         $html .= '</span>';
 
         // Register JavaScript for view controls
@@ -521,7 +521,7 @@ class HeaderBar extends Widget
       },
       'delete' => function () {
         return '<button class="c-button c-button--error btn-delete-grid hidden">
-                    <i class="fa-sharp fa-regular fa-check-square"></i> ' . '
+                    <i class="fa-sharp  fa-regular fa-check-square"></i> ' . '
                 </button>';
       },
       'item-delete' => function () {
@@ -533,7 +533,7 @@ class HeaderBar extends Widget
         $deleteUrl = \Yii::$app->urlManager->createUrl(["/{$module}/{$controller}/delete", 'ctype' => $ctype, 'uuid' => $uuid]);
         
         return '<button class="c-button c-button--error" onclick="openDeleteDialog(\'' . $deleteUrl . '\');">
-                    <i class="fa-sharp fa-regular fa-trash"></i>
+                    <i class="fa-sharp  fa-regular fa-trash"></i>
                 </button>';
       },
     ];

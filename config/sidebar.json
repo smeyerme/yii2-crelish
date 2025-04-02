@@ -4,49 +4,49 @@
       "id": "dashboard",
       "label": "Dashboard",
       "url": "crelish/dashboard/index",
-      "icon": "fas fa-chart-pie",
+      "icon": "fa-sharp fa-solid fa-chart-pie",
       "order": 10
     },
     {
       "id": "page",
       "label": "Pages",
       "url": "crelish/page/index",
-      "icon": "fa-sharp fa-regular fa-bookmark",
+      "icon": "fa-sharp  fa-regular fa-bookmark",
       "order": 20
     },
     {
       "id": "content",
       "label": "Content",
       "url": "crelish/content/index",
-      "icon": "fa-sharp fa-regular fa-edit",
+      "icon": "fa-sharp  fa-regular fa-edit",
       "order": 30
     },
     {
       "id": "asset",
       "label": "Assets",
       "url": "crelish/asset/index",
-      "icon": "fas fa-folder-open",
+      "icon": "fa-sharp fa-solid fa-folder-open",
       "order": 40
     },
     {
       "id": "user",
       "label": "User",
       "url": "crelish/user/index",
-      "icon": "fa-sharp fa-regular fa-users",
+      "icon": "fa-sharp  fa-regular fa-users",
       "order": 50
     },
     {
       "id": "translation",
       "label": "Translations",
       "url": "crelish/translation/index",
-      "icon": "fa-sharp fa-regular fa-language",
+      "icon": "fa-sharp  fa-regular fa-language",
       "order": 60
     },
     {
       "id": "settings",
       "label": "Settings",
       "url": "crelish/settings/index",
-      "icon": "fa-sharp fa-regular fa-cogs",
+      "icon": "fa-sharp  fa-regular fa-cogs",
       "order": 70
     }
   ]

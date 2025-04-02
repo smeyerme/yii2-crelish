@@ -353,7 +353,7 @@ class ContentController extends CrelishBaseController
                 $ctype = $elementType;
               }
 
-              return Html::a('<span class="fa-sharp fa-regular fa-plus"></span>', '', [
+              return Html::a('<span class="fa-sharp  fa-regular fa-plus"></span>', '', [
                 'title' => \Yii::t('app', 'Add'),
                 'data-pjax' => '0',
                 'data-content' => Json::encode(

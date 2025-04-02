@@ -18,10 +18,12 @@ use yii\web\AssetBundle;
 class CrelishAsset extends AssetBundle
 {
   public $sourcePath = '@app/vendor/giantbits/yii2-crelish/assets';
-  public $css = [];
+  public $css = [
+    'css/all.min.css',
+    //'css/fa/sharp-regular.min.css',
+  ];
   public $js = [
     'https://cdn.jsdelivr.net/dropzone/4.3.0/dropzone.min.js',
-    ['https://kit.fontawesome.com/c7033483c3.js', 'crossorigin' => 'anonymous'],
   ];
   public $jsOptions = ['position' => \yii\web\View::POS_HEAD];
 
