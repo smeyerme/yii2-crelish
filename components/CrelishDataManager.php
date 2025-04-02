@@ -45,8 +45,9 @@ class CrelishDataManager extends Component
    * @param string $ctype Content type
    * @param array $settings Settings
    * @param string|null $uuid UUID
+   * @param bool $autoSetRelations Whether to automatically set relations for queries
    */
-  public function __construct(string $ctype, array $settings = [], string $uuid = null)
+  public function __construct(string $ctype, array $settings = [], string $uuid = null, bool $autoSetRelations = false)
   {
     $this->ctype = $ctype;
     $this->settings = $settings;
@@ -55,6 +56,11 @@ class CrelishDataManager extends Component
     $this->definitions = $this->getDefinitions();
 
     parent::__construct();
+    
+    // Auto-set relations if requested
+    if ($autoSetRelations) {
+      $this->initRelations();
+    }
   }
 
   /**
@@ -74,9 +80,44 @@ class CrelishDataManager extends Component
   /**
    * Get all records
    *
+   * @param bool $withRelations Whether to include relations in the query
    * @return array Array of records and pagination
    */
-  public function all(): array
+  public function all(bool $withRelations = false): array
+  {
+    $filter = $this->settings['filter'] ?? [];
+    $sort = $this->settings['sort'] ?? [];
+    $pageSize = $this->settings['pageSize'] ?? 30;
+
+    // Ensure sort is in the correct format
+    if (!empty($sort) && !isset($sort['defaultOrder'])) {
+      $sort = ['defaultOrder' => $sort];
+    }
+
+    if(empty($sort) && !empty($this->definitions->sortDefault)) {
+      $sort = ['defaultOrder' => (array) $this->definitions->sortDefault];
+    }
+
+    $dataProvider = $this->storage->getDataProvider($this->ctype, $filter, $sort, $pageSize);
+
+    // Set up relations if needed
+    if ($withRelations && $dataProvider instanceof \yii\data\ActiveDataProvider) {
+      $this->setRelations($dataProvider->query);
+    }
+
+    return [
+      'models' => $dataProvider->getModels(),
+      'pagination' => $dataProvider->getPagination(),
+    ];
+  }
+
+  /**
+   * Get a data provider
+   * 
+   * @param bool $withRelations Whether to include relations in the query
+   * @return DataProviderInterface Data provider
+   */
+  public function getProvider(bool $withRelations = false): DataProviderInterface
   {
     $filter = $this->settings['filter'] ?? [];
     $sort = $this->settings['sort'] ?? [];
@@ -88,38 +129,22 @@ class CrelishDataManager extends Component
     }
 
     $dataProvider = $this->storage->getDataProvider($this->ctype, $filter, $sort, $pageSize);
-
-    return [
-      'models' => $dataProvider->getModels(),
-      'pagination' => $dataProvider->getPagination(),
-    ];
-  }
-
-  /**
-   * Get a data provider
-   *
-   * @return DataProviderInterface Data provider
-   */
-  public function getProvider(): DataProviderInterface
-  {
-    $filter = $this->settings['filter'] ?? [];
-    $sort = $this->settings['sort'] ?? [];
-    $pageSize = $this->settings['pageSize'] ?? 30;
-
-    // Ensure sort is in the correct format
-    if (!empty($sort) && !isset($sort['defaultOrder'])) {
-      $sort = ['defaultOrder' => $sort];
+    
+    // Set up relations if needed
+    if ($withRelations && $dataProvider instanceof \yii\data\ActiveDataProvider) {
+      $this->setRelations($dataProvider->query);
     }
-
-    return $this->storage->getDataProvider($this->ctype, $filter, $sort, $pageSize);
+    
+    return $dataProvider;
   }
 
   /**
    * Get all records as raw data
    *
+   * @param bool $withRelations Whether to include relations in the query
    * @return array Array of records
    */
-  public function rawAll(): array
+  public function rawAll(bool $withRelations = false): array
   {
     $filter = $this->settings['filter'] ?? [];
     $sort = $this->settings['sort'] ?? [];
@@ -128,7 +153,96 @@ class CrelishDataManager extends Component
     if (!empty($sort) && !isset($sort['defaultOrder'])) {
       $sort = ['defaultOrder' => $sort];
     }
-
+    
+    // If relations are needed, we need to get a query object, 
+    // add the relation joins, and then execute the query manually
+    if ($withRelations && $this->storage instanceof CrelishDbStorage) {
+      $query = $this->getQuery();
+      if ($query) {
+        $this->setRelations($query);
+        
+        // Apply filters
+        if (!empty($filter)) {
+          foreach ($filter as $attribute => $value) {
+            if ($attribute === 'freesearch') {
+              // Handle freesearch (implementation should match storage class)
+              $searchFragments = explode(" ", trim($value));
+              $orConditions = ['or'];
+              
+              $modelClass = $this->storage->getModelClass($this->ctype);
+              $tableSchema = $modelClass::getTableSchema();
+              
+              foreach ($tableSchema->columns as $column) {
+                if (in_array($column->type, ['string', 'text', 'char'])) {
+                  foreach ($searchFragments as $fragment) {
+                    // Use table qualified column names to avoid ambiguous column errors
+                    $orConditions[] = ['like', $this->ctype . '.' . $column->name, $fragment];
+                  }
+                }
+              }
+              
+              $query->andWhere($orConditions);
+            } elseif (is_array($value) && isset($value[0]) && $value[0] === 'strict') {
+              // Handle dot notation for relations (e.g., company.systitle)
+              if (strpos($attribute, '.') !== false) {
+                $query->andWhere([$attribute => $value[1]]);
+              } else {
+                // Use table qualified column names for non-relation fields
+                $query->andWhere([$this->ctype . '.' . $attribute => $value[1]]);
+              }
+            } else {
+              // Handle dot notation for relations (e.g., company.systitle)
+              if (strpos($attribute, '.') !== false) {
+                $query->andWhere(['like', $attribute, $value]);
+              } else {
+                // Use table qualified column names for non-relation fields
+                $query->andWhere(['like', $this->ctype . '.' . $attribute, $value]);
+              }
+            }
+          }
+        }
+        
+        // Apply sorting
+        if (!empty($sort)) {
+          if (isset($sort['defaultOrder'])) {
+            $qualifiedSort = [];
+            foreach ($sort['defaultOrder'] as $column => $direction) {
+              // If column already has a table qualifier (contains a dot), use as is
+              if (strpos($column, '.') !== false) {
+                $qualifiedSort[$column] = $direction;
+              } else {
+                // Otherwise qualify with the content type table name
+                $qualifiedSort[$this->ctype . '.' . $column] = $direction;
+              }
+            }
+            $query->orderBy($qualifiedSort);
+          } else {
+            $qualifiedSort = [];
+            foreach ($sort as $column => $direction) {
+              // If column already has a table qualifier (contains a dot), use as is
+              if (strpos($column, '.') !== false) {
+                $qualifiedSort[$column] = $direction;
+              } else {
+                // Otherwise qualify with the content type table name
+                $qualifiedSort[$this->ctype . '.' . $column] = $direction;
+              }
+            }
+            $query->orderBy($qualifiedSort);
+          }
+        }
+        
+        $models = $query->all();
+        $result = [];
+        
+        foreach ($models as $model) {
+          $result[] = $model->attributes;
+        }
+        
+        return $result;
+      }
+    }
+    
+    // Default behavior when relations are not needed
     return $this->storage->findAll($this->ctype, $filter, $sort);
   }
 
@@ -260,5 +374,37 @@ class CrelishDataManager extends Component
         }
       }
     }
+  }
+
+  /**
+   * Initialize relations for the current content type
+   * This is used for automatically setting up relations in the storage layer
+   *
+   * @return void
+   */
+  public function initRelations(): void
+  {
+    if ($this->storage instanceof CrelishDbStorage) {
+      $query = $this->getQuery();
+      if ($query) {
+        $this->setRelations($query);
+      }
+    }
+  }
+
+  /**
+   * Get the query object for the current content type
+   * This is useful for direct query manipulation and relation setup
+   *
+   * @return \yii\db\ActiveQuery|null The query object or null if not using database storage
+   */
+  public function getQuery(): ?\yii\db\ActiveQuery
+  {
+    if ($this->storage instanceof CrelishDbStorage) {
+      $modelClass = $this->storage->getModelClass($this->ctype);
+      return $modelClass::find();
+    }
+    
+    return null;
   }
 } 

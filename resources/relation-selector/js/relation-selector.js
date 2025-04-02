@@ -26,7 +26,8 @@ document.addEventListener('DOMContentLoaded', () => {
       inputName: container.dataset.inputName || '',
       required: container.dataset.required === 'true',
       isMultiple: container.dataset.multiple === 'true',
-      columns: []
+      columns: [],
+      filterFields: ['systitle'] // Default
     };
 
     // Parse columns configuration if available
@@ -35,6 +36,15 @@ document.addEventListener('DOMContentLoaded', () => {
         config.columns = JSON.parse(container.dataset.columns);
       } catch (error) {
         console.warn('Failed to parse columns JSON', error);
+      }
+    }
+    
+    // Parse filter fields configuration if available
+    if (container.dataset.filterFields) {
+      try {
+        config.filterFields = JSON.parse(container.dataset.filterFields);
+      } catch (error) {
+        console.warn('Failed to parse filterFields JSON', error);
       }
     }
 
@@ -60,6 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
         required: config.required,
         isMultiple: config.isMultiple,
         columns: config.columns,
+        filterFields: config.filterFields,
         translations: translations,
         'onUpdate:modelValue': (newValue) => {
           // Update the data attribute on the container

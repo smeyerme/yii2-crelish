@@ -162,7 +162,7 @@
       // Handle status filtering
       $statusFilter = $this->handleSessionAndQueryParams('cr_status_filter');
       if (!empty($statusFilter)) {
-        $filter['state'] = ['strict', $statusFilter];
+        $filter['user.state'] = ['strict', $statusFilter];
       }
 
       // Create a data manager for the content type
@@ -242,7 +242,7 @@
       if (isset($elementDefinition->fields)) {
         foreach ($elementDefinition->fields as $field) {
           // Only include fields that have visibleInGrid = true and exclude UUID
-          if (property_exists($field, 'visibleInGrid') && $field->visibleInGrid === true && $field->key !== 'uuid') {
+          if (property_exists($field, 'visibleInGrid') && $field->visibleInGrid === true && !in_array($field->key, ['uuid', 'salutation', 'created', 'updated']) ) {
             $column = [
               'attribute' => $field->key,
               'label' => property_exists($field, 'label') ? $field->label : null,

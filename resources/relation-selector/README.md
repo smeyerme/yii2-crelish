@@ -43,7 +43,8 @@ Add a container element with the necessary data attributes:
      data-input-name="CrelishDynamicModel[related_items]"
      data-label="Related Articles"
      data-required="true"
-     data-columns='[{"key": "systitle", "label": "Title"}, {"key": "published_date", "label": "Date"}]'>
+     data-columns='[{"key": "systitle", "label": "Title"}, {"key": "published_date", "label": "Date"}]'
+     data-filter-fields='["systitle", "description", "tags"]'>
 </div>
 ```
 
@@ -57,6 +58,7 @@ Add a container element with the necessary data attributes:
 - `data-required`: Whether the field is required (optional, defaults to false)
 - `data-columns`: JSON array of column definitions (optional)
 - `data-translations`: JSON object of custom translations (optional)
+- `data-filter-fields`: JSON array of field names to use for filtering (optional, defaults to ["systitle"])
 
 ### Column definition format
 
