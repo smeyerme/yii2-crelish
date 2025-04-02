@@ -11,7 +11,7 @@
 	{% set fileType = 'svg' %}
 	{% set mimeIcon = 'fa-image' %}
 {% elseif model.mime == 'application/pdf' %}
-	{% set preview = '<img src="/crelish/asset/glide?path=thumbs/' ~ model.thumbnail ~ '&p=small" onerror="this.style.display=\'none\';" />' %}
+	{% set preview = '<img src="/crelish/asset/glide?path=/uploads/thumbs/' ~ model.thumbnail ~ '&p=small" onerror="this.style.display=\'none\';" />' %}
 	{% set fileType = 'pdf' %}
 	{% set mimeIcon = 'fa-file-pdf' %}
 {% elseif model.mime starts with 'audio/' %}

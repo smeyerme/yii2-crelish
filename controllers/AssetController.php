@@ -187,7 +187,7 @@ class AssetController extends CrelishBaseController
               $preview = Html::img($model['pathName'] . $model['src'], ['style' => 'width: 80px; height: auto;']);
               break;
             case 'application/pdf':
-              $preview = Html::img('/crelish/asset/glide?path=thumbs/' . $model['thumbnail'] . '&p=small', ['style' => 'width: 80px; height: auto;']);
+              $preview = Html::img('/crelish/asset/glide?path=/uploads/thumbs/' . $model['thumbnail'] . '&p=small', ['style' => 'width: 80px; height: auto;']);
               break;
           }
 
