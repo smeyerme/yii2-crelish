@@ -5,20 +5,20 @@
 <div class="c-input-group group-content-filter">
     <span id="submitButton" class="c-button btn-save c-button--success" type="button"
           onclick="$('#content-form').submit();">
-        <i class="fa-sharp fa-regular fa-save"></i>
+        <i class="fa-sharp  fa-regular fa-save"></i>
     </span>
     
     {% if showSaveAndReturn is not defined or showSaveAndReturn %}
         <span class="c-button btn-save c-button--success-darker" type="button"
               onclick="$('#save_n_return').val(1); $('#content-form').submit();">
-            <i class="fa-sharp fa-regular fa-save"></i> <i class="fa-sharp fa-regular fa-reply"></i> 
+            <i class="fa-sharp  fa-regular fa-save"></i> <i class="fa-sharp  fa-regular fa-reply"></i>
         </span>
     {% endif %}
     
     {% if showDelete is defined and showDelete %}
         <span class="c-button btn-delete c-button--error" type="button"
               onclick="openDeleteDialog('{{ deleteUrl }}');">
-            <i class="fa-sharp fa-regular fa-trash"></i>
+            <i class="fa-sharp  fa-regular fa-trash"></i>
         </span>
     {% endif %}
 </div>

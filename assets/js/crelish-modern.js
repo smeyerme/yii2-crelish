@@ -24,17 +24,17 @@
                 
                 // Add appropriate icons based on button text
                 if (text.includes('save')) {
-                    $btn.prepend('<i class="fa-solid fa-save"></i> ');
+                    $btn.prepend('<i class="fa-sharp  fa-save"></i> ');
                 } else if (text.includes('delete')) {
-                    $btn.prepend('<i class="fa-solid fa-trash"></i> ');
+                    $btn.prepend('<i class="fa-sharp  fa-trash"></i> ');
                 } else if (text.includes('back')) {
-                    $btn.prepend('<i class="fa-solid fa-arrow-left"></i> ');
+                    $btn.prepend('<i class="fa-sharp  fa-arrow-left"></i> ');
                 } else if (text.includes('create') || text.includes('new') || text.includes('add')) {
-                    $btn.prepend('<i class="fa-solid fa-plus"></i> ');
+                    $btn.prepend('<i class="fa-sharp  fa-plus"></i> ');
                 } else if (text.includes('edit') || text.includes('update')) {
-                    $btn.prepend('<i class="fa-solid fa-edit"></i> ');
+                    $btn.prepend('<i class="fa-sharp  fa-edit"></i> ');
                 } else if (text.includes('view')) {
-                    $btn.prepend('<i class="fa-solid fa-eye"></i> ');
+                    $btn.prepend('<i class="fa-sharp  fa-eye"></i> ');
                 }
             });
         }

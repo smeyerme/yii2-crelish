@@ -53,7 +53,7 @@
                   <i class="fa fa-arrow-down"></i>
                 </button>
                 <button type="button" class="c-button u-small" @click="removeItem(index)" title="Löschen">
-                  <i class="fa-sharp fa-regular fa-trash"></i>
+                  <i class="fa-sharp  fa-regular fa-trash"></i>
                 </button>
               </td>
             </tr>
