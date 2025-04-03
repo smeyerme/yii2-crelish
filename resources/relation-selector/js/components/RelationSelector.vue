@@ -69,7 +69,7 @@
     </div>
 
     <!-- Hidden input to store value for form submission -->
-    <input type="hidden" :name="inputName" :value="serializedValue" />
+    <input type="hidden" :name="inputName" id="w3" :value="serializedValue" />
   </div>
 </template>
 

@@ -25,6 +25,8 @@ class CrelishBaseController extends Controller
 
     parent::init();
 
+    Yii::$app->sourceLanguage = 'en';
+
     Yii::$app->view->title = ucfirst($this->id);
     
     // Handle common session and query parameters
