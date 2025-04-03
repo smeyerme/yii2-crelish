@@ -536,10 +536,14 @@
 					break;
 					
 				case 'create':
+          // For create/update actions, add back button and save buttons
+          $this->view->params['headerBarLeft'][] = 'back-button';
+          $this->view->params['headerBarRight'] = [['save', true, false]];
+          break;
 				case 'update':
 					// For create/update actions, add back button and save buttons
 					$this->view->params['headerBarLeft'][] = 'back-button';
-					$this->view->params['headerBarRight'] = ['save'];
+					$this->view->params['headerBarRight'] = [['save', true, true]];
 					break;
 					
 				case 'login':
