@@ -289,6 +289,10 @@ class AssetController extends CrelishBaseController
       }
     }
 
+    if($model->mime === 'application/pdf' && empty($model->thumbnail)) {
+      $this->generatePdfThumbnail($model);
+    }
+
     $extractedDoc = new Asset();
 
     // Register the image editor assets if needed
