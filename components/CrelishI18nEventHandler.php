@@ -35,7 +35,7 @@ class CrelishI18nEventHandler
     $translatedText = null;
     $category = $event->category;
     $message = $event->message;
-    $language = $event->language;
+    $language = self::buildTargetLanguage($event->language);
     $sourceLanguage = Yii::$app->sourceLanguage ?? 'en';
     $apiKey = $_ENV['DEEPL_API_KEY'];
 
@@ -61,8 +61,8 @@ class CrelishI18nEventHandler
 
       $result = $translator->translateText(
         $message,
-        upperCase($sourceLanguage),
-        upperCase($language),
+        strtoupper($sourceLanguage),
+        strtoupper($language),
       );
 
       $translatedText = $result->text;
@@ -81,5 +81,18 @@ class CrelishI18nEventHandler
     }
 
     $event->translatedMessage = $event->message;
+  }
+
+  private static function buildTargetLanguage(string $language)
+  {
+
+    switch ($language) {
+
+      case 'en':
+        $language = 'EN-US';
+        break;
+    }
+
+    return $language;
   }
 }
