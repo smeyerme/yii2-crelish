@@ -168,7 +168,7 @@ class Bootstrap implements BootstrapInterface
         'enablePrettyUrl' => true,
         'enableStrictParsing' => true,
         'showScriptName' => false,
-        'rules' => [], // Rules moved to configureUrlRules method
+        'rules' => [],
       ],
       'i18n' => [
         'class' => 'yii\i18n\I18N',
@@ -312,16 +312,18 @@ class Bootstrap implements BootstrapInterface
         'pattern' => 'document/secure/<id:[\w\-]+>',
         'route' => 'document/secure'
       ],
-      'api/tournaments' => 'tournament-api/index',
-      'api/tournaments/<id>' => 'tournament-api/view',
       // Other API routes
       [
         'class' => 'yii\web\UrlRule',
-        'pattern' => 'api/<action:[\w\-]+>',
+        'pattern' => 'api/<action:[\w\-]+>/<id:[\w\-]+>',
         'route' => 'api/<action>'
       ],
       // REST API rules
-      ['class' => 'yii\rest\UrlRule', 'controller' => 'user', 'tokens' => ['{uuid}' => '<uuid:\\d[\\d,]*>']],
+      [
+        'class' => 'yii\rest\UrlRule',
+        'controller' => 'user',
+        'tokens' => ['{uuid}' => '<uuid:\\d[\\d,]*>']
+      ],
       // API routes
       [
         'class' => 'yii\web\UrlRule',
@@ -364,7 +366,9 @@ class Bootstrap implements BootstrapInterface
         'route' => 'site/<action>'
       ],
       // Crelish base rule
-      ['class' => 'giantbits\crelish\components\CrelishBaseUrlRule'],
+      [
+        'class' => 'giantbits\crelish\components\CrelishBaseUrlRule'
+      ],
       // Crelish admin routes
       [
         'class' => 'yii\web\UrlRule',
