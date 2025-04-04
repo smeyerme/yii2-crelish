@@ -123,7 +123,7 @@
 
         Yii::$app->assetManager->bundles['yii\web\JqueryAsset'] = [
           'js' => [
-            YII_DEBUG ? 'jquery.min.js' : 'jquery.js'
+            YII_DEBUG ? 'jquery.js' : 'jquery.min.js'
           ]
         ];
       }
