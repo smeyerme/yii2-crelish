@@ -120,6 +120,12 @@
     {
       if (Yii::$app instanceof \yii\web\Application) {
         Yii::$app->assetManager->bundles = [];
+
+        Yii::$app->assetManager->bundles['yii\web\JqueryAsset'] = [
+          'js' => [
+            YII_DEBUG ? 'jquery.min.js' : 'jquery.js'
+          ]
+        ];
       }
     }
     
