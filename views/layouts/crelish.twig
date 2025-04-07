@@ -4,12 +4,24 @@
 {{ register_asset_bundle('giantbits/crelish/CrelishModernAsset') }}
 {{ void(this.beginPage()) }}
 <!DOCTYPE html>
-<html lang="{{ app.language }}">
+<html lang="{{ app.language }}" data-theme="light">
 <head>
 	<meta charset="{{ app.charset }}">
 	<meta name="viewport" content="width=device-width, minimum-scale=1, maximum-scale=1, user-scalable=no">
 	<title>Crelish {% if this.title %}| {% endif %} {{ html.encode(this.title) }}</title>
 	{{ html.csrfMetaTags | raw }}
+	<!-- Prevent flash of light theme -->
+	<script>
+		(function() {
+			// Check for saved theme preference or use OS preference
+			var savedTheme = localStorage.getItem('theme');
+			var prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)').matches;
+			var theme = savedTheme || (prefersDarkScheme ? 'dark' : 'light');
+			
+			// Apply theme immediately before page renders
+			document.documentElement.setAttribute('data-theme', theme);
+		})();
+	</script>
 	{{ void(this.head) }}
 </head>
 <body class="crelish-app-root u-text {% if this.params['isDocumentationMode'] is defined and this.params['isDocumentationMode'] == true %}documentation-mode{% endif %}">
@@ -19,7 +31,8 @@
 	<div id="cr-left-pane" class="left-col scrollable {% if this.params['isDocumentationMode'] is defined and this.params['isDocumentationMode'] == true %}documentation-sidebar{% endif %}">
 		<div class="logo-head">
 			<a href="{{ url('crelish/dashboard/index') }}">
-				<img src="{{ crelishBundle.baseUrl }}/img/Crelish-Logo-Light.svg" border="0" width="128"/>
+				<img src="{{ crelishBundle.baseUrl }}/img/Crelish-Logo-Light.svg" class="logo-light" border="0" width="128"/>
+				<img src="{{ crelishBundle.baseUrl }}/img/Crelish-Logo-Dark.svg" class="logo-dark" border="0" width="128"/>
 			</a>
 		</div>
 		<div class="navbar--main">

@@ -1,15 +1,16 @@
 <style>
 	.translation-container {
 		display: flex;
-		height: calc(100vh - 150px);
-		margin-bottom: 20px;
+		height: calc(100vh - 240px); /* Adjusted for card padding and header */
+		margin-bottom: 0;
 	}
 
 	.tab-navigation {
 		width: 250px;
 		overflow-y: auto;
 		border-right: 1px solid #ddd;
-		background-color: #f5f5f5;
+		background-color: #f8f9fa; /* Lighter background that matches card better */
+		border-radius: 4px 0 0 4px; /* Rounded left corners */
 	}
 
 	.tab-content {
@@ -26,13 +27,14 @@
 	}
 
 	.category-tab:hover {
-		background-color: #e9e9e9;
+		background-color: rgba(0, 0, 0, 0.04); /* More subtle hover effect */
 	}
 
 	.category-tab.active {
-		background-color: #007bff;
+		background-color: var(--color-primary-light, #007bff);
 		color: white;
 		font-weight: bold;
+		box-shadow: inset 3px 0 0 var(--color-primary-dark, #0056b3); /* Left border indicator */
 	}
 
 	.category-content {
@@ -63,16 +65,20 @@
 		display: flex;
 		margin-bottom: 10px;
 		padding: 12px;
-		border-radius: 4px;
-		transition: background-color 0.2s;
+		border-radius: var(--border-radius-md, 4px);
+		transition: all 0.2s ease;
+		border: 1px solid transparent; /* Transparent border for smooth hover transition */
 	}
 
 	.translation-row:nth-of-type(odd) {
-		background-color: #f8f9fa;
+		background-color: rgba(0, 0, 0, 0.02); /* Very subtle alternating row color */
 	}
 
 	.translation-row:hover {
-		background-color: #e9ecef;
+		background-color: rgba(0, 0, 0, 0.05); /* Very subtle hover state */
+		border-color: rgba(0, 0, 0, 0.1); /* Light border on hover */
+		transform: translateY(-1px); /* Slight lift effect */
+		box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.1)); /* Subtle shadow on hover */
 	}
 
 	.translation-row > label {
@@ -138,6 +144,66 @@
 		text-align: center;
 		color: #6c757d;
 		font-style: italic;
+	}
+
+	/* Dark mode styles for translation interface */
+	[data-theme="dark"] .tab-navigation {
+		background-color: var(--color-bg-light); /* Lighter and more subtle in dark mode */
+		border-right-color: var(--color-border);
+	}
+
+	[data-theme="dark"] .category-tab {
+		border-bottom-color: var(--color-border);
+		color: var(--color-text-light);
+	}
+
+	[data-theme="dark"] .category-tab:hover {
+		background-color: rgba(255, 255, 255, 0.05); /* Subtle hover effect in dark mode */
+	}
+
+	[data-theme="dark"] .category-tab.active {
+		background-color: var(--color-primary-light);
+		color: var(--color-text-light);
+	}
+
+	[data-theme="dark"] .category-content h2 {
+		color: var(--color-text-light);
+	}
+
+	[data-theme="dark"] .translation-row {
+		background-color: transparent; /* No background by default */
+		border-color: transparent;
+	}
+
+	[data-theme="dark"] .translation-row:nth-of-type(odd) {
+		background-color: rgba(255, 255, 255, 0.02); /* Very subtle alternating row color in dark mode */
+	}
+
+	[data-theme="dark"] .translation-row:hover {
+		background-color: rgba(255, 255, 255, 0.05); /* Very subtle hover in dark mode */
+		border-color: rgba(255, 255, 255, 0.1); /* Light border on hover */
+		transform: translateY(-1px);
+		box-shadow: var(--shadow-sm);
+	}
+
+	[data-theme="dark"] .translation-row > label {
+		color: var(--color-text-light);
+	}
+
+	[data-theme="dark"] .translation-row > textarea {
+		background-color: var(--color-bg-light);
+		border-color: var(--color-border);
+		color: var(--color-text-light);
+	}
+
+	[data-theme="dark"] .translation-row > textarea:focus {
+		border-color: var(--color-primary-light);
+		outline: 0;
+		box-shadow: 0 0 0 0.2rem rgba(var(--color-primary-light-rgb), 0.25);
+	}
+
+	[data-theme="dark"] .no-results {
+		color: var(--color-text-muted);
 	}
 
 	/* For smaller screens */
@@ -291,51 +357,65 @@
 	});
 </script>
 
-<div class="search-container">
-	<input type="text" id="global-search" class="search-input" placeholder="Search for keys or translations...">
-</div>
+<!-- Search is now in the header bar -->
 
-{% if app.params.crelish.languages|length > 1 %}
-	<div class="lang-ui-switch" style="margin: 1.333rem 0 0 0;">
-		<span>{{ t('app', 'Select language to edit:') }}</span>
-		<select id="language-select" class="language-selector" onchange="changeLanguage()">
-			{% for lang in app.params.crelish.languages %}
-				<option value="{{ lang }}" {% if lang == app.request.get('language') %}selected{% endif %}>
-					{{ lang|upper }}
-				</option>
-			{% endfor %}
-		</select>
-	</div>
-{% endif %}
+<div class="card">
+	<div class="card-body">
+		{% if app.params.crelish.languages|length > 1 %}
+			<div class="language-selector-container" style="
+				display: flex;
+				width: 100%;
+				background-color: var(--color-bg-light);
+				padding: 1rem;
+				border-radius: var(--border-radius-md);
+				margin-bottom: 1.5rem;
+				border: 1px solid var(--color-border);
+				justify-content: space-between;
+				align-items: center;
+				font-weight: 500;">
+				<span>{{ t('app', 'Select language to edit:') }}</span>
+				<select id="language-select" class="language-selector form-select" onchange="changeLanguage()" style="
+					width: auto;
+					max-width: 150px;">
+					{% for lang in app.params.crelish.languages %}
+						<option value="{{ lang }}" {% if lang == app.request.get('language') %}selected{% endif %}>
+							{{ lang|upper }}
+						</option>
+					{% endfor %}
+				</select>
+			</div>
+		{% endif %}
 
-<form id="content-form" method="post" action="{{ path('/crelish/translation/save', {'language': language}) }}">
-	<input type="hidden" name="{{ _csrfParam }}" value="{{ _csrfToken }}">
+		<form id="content-form" method="post" action="{{ path('/crelish/translation/save', {'language': language}) }}">
+			<input type="hidden" name="{{ _csrfParam }}" value="{{ _csrfToken }}">
 
-	<div class="translation-container">
-		<!-- Tab navigation -->
-		<div class="tab-navigation">
-			{% for category, items in translations %}
-				<div class="category-tab" data-category="category-{{ category | slugify }}">
-					{{ category }}
-				</div>
-			{% endfor %}
-		</div>
-
-		<!-- Tab content -->
-		<div class="tab-content">
-			{% for category, items in translations %}
-				<div id="category-{{ category | slugify }}" class="category-content">
-					<h2>{{ category }}</h2>
-
-					{% for key, value in items %}
-						<div class="translation-row">
-							<label for="textarea-{{ category }}-{{ key | slugify }}">{{ key | raw }}</label>
-							<textarea id="textarea-{{ category }}-{{ key | slugify }}"
-												name="Translations[{{ category }}][{{ key }}]">{{ value }}</textarea>
+			<div class="translation-container">
+				<!-- Tab navigation -->
+				<div class="tab-navigation">
+					{% for category, items in translations %}
+						<div class="category-tab" data-category="category-{{ category | slugify }}">
+							{{ category }}
 						</div>
 					{% endfor %}
 				</div>
-			{% endfor %}
-		</div>
+
+				<!-- Tab content -->
+				<div class="tab-content">
+					{% for category, items in translations %}
+						<div id="category-{{ category | slugify }}" class="category-content">
+							<h2>{{ category }}</h2>
+
+							{% for key, value in items %}
+								<div class="translation-row">
+									<label for="textarea-{{ category }}-{{ key | slugify }}">{{ key | raw }}</label>
+									<textarea id="textarea-{{ category }}-{{ key | slugify }}"
+													name="Translations[{{ category }}][{{ key }}]">{{ value }}</textarea>
+								</div>
+							{% endfor %}
+						</div>
+					{% endfor %}
+				</div>
+			</div>
+		</form>
 	</div>
-</form>
+</div>

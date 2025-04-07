@@ -44,10 +44,22 @@
 {% endif %}
 
 <div class="version-container">
-    <a href="{{ url('/crelish/documentation/index') }}" class="documentation-link" title="{{ t('app', 'View Documentation') }}">
-        <span class="cr-version">{{ app.params.crelish.version }}</span>
-        <i class="fa-sharp fa-solid fa-book-open docs-icon"></i>
-    </a>
+    <div class="sidebar-bottom-section">
+        <div class="theme-toggle-wrapper">
+            <div class="theme-toggle">
+                <input type="checkbox" id="theme-toggle-checkbox" class="theme-toggle-checkbox">
+                <label for="theme-toggle-checkbox" class="theme-toggle-label">
+                    <i class="fa-sharp fa-solid fa-sun theme-toggle-light"></i>
+                    <i class="fa-sharp fa-solid fa-moon theme-toggle-dark"></i>
+                    <span class="theme-toggle-ball"></span>
+                </label>
+            </div>
+        </div>
+        <a href="{{ url('/crelish/documentation/index') }}" class="documentation-link" title="{{ t('app', 'View Documentation') }}">
+            <span class="cr-version">{{ app.params.crelish.version }}</span>
+            <i class="fa-sharp fa-solid fa-book-open docs-icon"></i>
+        </a>
+    </div>
 </div>
 
 {% apply registerCss %}
@@ -60,19 +72,27 @@
 
 .version-container {
     margin-top: auto;
-    padding: 1rem;
+    padding: 1rem 1.25rem;
     text-align: center;
+}
+
+.sidebar-bottom-section {
     display: flex;
-    justify-content: center;
+    flex-direction: row;
+    justify-content: space-between;
     align-items: center;
+    width: 100%;
+    height: 30px; /* Match height of the toggle */
 }
 
 .documentation-link {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     text-decoration: none;
     color: inherit;
     transition: all 0.3s ease;
+    height: 100%;
 }
 
 .documentation-link:hover {
@@ -83,15 +103,18 @@
     font-size: 0.75rem;
     opacity: 0.7;
     margin-right: 0.5rem;
+    line-height: 1;
 }
 
 .docs-icon {
     font-size: 0.9rem;
     opacity: 0.7;
+    vertical-align: middle;
+    line-height: 1;
 }
 
 .navbar-heading {
-    color: #888;
+    color: var(--color-text-muted);
     font-size: 0.8rem;
     font-weight: 600;
     text-transform: uppercase;
@@ -100,4 +123,77 @@
     border-bottom: 1px solid rgba(0,0,0,0.05);
     margin-bottom: 0.5rem;
 }
+
+/* Theme toggle switch styling */
+.theme-toggle-wrapper {
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+.theme-toggle {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 30px;
+}
+
+.theme-toggle-checkbox {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+    pointer-events: none;
+}
+
+.theme-toggle-label {
+    position: relative;
+    display: block;
+    height: 30px;
+    width: 60px;
+    background: #e2e8f0;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+[data-theme="dark"] .theme-toggle-label {
+    background: #334155;
+}
+
+.theme-toggle-label .theme-toggle-light {
+    position: absolute;
+    left: 8px;
+    top: 7px;
+    font-size: 14px;
+    color: #f59e0b;
+    transition: 0.3s;
+}
+
+.theme-toggle-label .theme-toggle-dark {
+    position: absolute;
+    right: 8px;
+    top: 7px;
+    font-size: 14px;
+    color: #818cf8;
+    transition: 0.3s;
+}
+
+.theme-toggle-ball {
+    position: absolute;
+    display: block;
+    width: 24px;
+    height: 24px;
+    top: 3px;
+    left: 3px;
+    background: #fff;
+    border-radius: 50%;
+    transition: 0.3s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.theme-toggle-checkbox:checked + .theme-toggle-label .theme-toggle-ball {
+    transform: translateX(30px);
+}
+
 {% endapply %}

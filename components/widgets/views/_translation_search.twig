@@ -1,0 +1,37 @@
+{#
+ # Translation search component for the header bar
+ #}
+
+<button class="c-button c-button--search"><i class="fa-sharp fa-regular fa-search"></i></button>
+<div class="o-field" style="position: relative; flex-grow: 1; max-width: 100%;">
+    <input class="c-field header-search-input" name="translation_global_search" id="global-search" 
+           style="width: 100%;"
+           placeholder="{{ t('app', 'Search for keys or translations...') }}">
+    <span class="search-clear-btn" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; display: none;">
+        <i class="fa-sharp fa-regular fa-times"></i>
+    </span>
+</div>
+
+<script>
+    $(document).ready(function() {
+        // Show clear button when search has content
+        $('#global-search').on('input', function() {
+            if ($(this).val().length > 0) {
+                $('.search-clear-btn').show();
+            } else {
+                $('.search-clear-btn').hide();
+            }
+        });
+        
+        // Clear search when clicking the clear button
+        $('.search-clear-btn').on('click', function() {
+            $('#global-search').val('').trigger('input');
+            $(this).hide();
+        });
+        
+        // Check initial state
+        if ($('#global-search').val().length > 0) {
+            $('.search-clear-btn').show();
+        }
+    });
+</script>

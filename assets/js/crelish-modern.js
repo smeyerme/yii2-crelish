@@ -178,6 +178,47 @@
     }
     
     /**
+     * Initialize dark mode functionality
+     */
+    function initDarkMode() {
+        const toggleCheckbox = $('#theme-toggle-checkbox');
+        
+        // Get the current theme (should already be set by inline script)
+        const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+        
+        // Ensure toggle state matches current theme
+        toggleCheckbox.prop('checked', currentTheme === 'dark');
+        
+        // Toggle event handler with improved click feedback
+        toggleCheckbox.on('change', function() {
+            const newTheme = this.checked ? 'dark' : 'light';
+            
+            // Apply theme change
+            document.documentElement.setAttribute('data-theme', newTheme);
+            
+            // Save preference
+            localStorage.setItem('theme', newTheme);
+            
+            // Optional: Add a small animation effect for feedback
+            const body = $('body');
+            body.css('opacity', '0.98');
+            setTimeout(function() {
+                body.css('opacity', '1');
+            }, 300);
+        });
+        
+        // Listen for OS theme preference changes
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+            if (!localStorage.getItem('theme')) {
+                // Only apply if user hasn't set their own preference
+                const newTheme = e.matches ? 'dark' : 'light';
+                document.documentElement.setAttribute('data-theme', newTheme);
+                toggleCheckbox.prop('checked', e.matches);
+            }
+        });
+    }
+    
+    /**
      * Initialize all modern styling
      */
     function initModernStyling() {
@@ -188,6 +229,7 @@
         applyModernGridStyling();
         applyModernSidebarStyling();
         initSidebarToggle();
+        initDarkMode();
         
         // Re-apply on AJAX complete for dynamic content
         $(document).ajaxComplete(function() {
@@ -216,7 +258,8 @@
         applyModernCardStyling: applyModernCardStyling,
         applyModernGridStyling: applyModernGridStyling,
         applyModernSidebarStyling: applyModernSidebarStyling,
-        initSidebarToggle: initSidebarToggle
+        initSidebarToggle: initSidebarToggle,
+        initDarkMode: initDarkMode
     };
     
 })(jQuery); 
