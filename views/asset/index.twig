@@ -723,65 +723,6 @@ progress::-moz-progress-bar {
   display: none;
 }
 
-/* Pagination styling for asset list - more specific selectors */
-.asset-table + .summary + .pagination,
-#assetList > .u-window-box-medium .pagination {
-  margin-top: 1.5rem;
-  display: flex;
-  justify-content: center;
-  width: 100%;
-  padding: 0;
-}
-
-.asset-table + .summary + .pagination > li,
-#assetList > .u-window-box-medium .pagination > li {
-  display: inline-flex;
-  margin: 0 0.25rem;
-}
-
-.asset-table + .summary + .pagination > li > a,
-.asset-table + .summary + .pagination > li > span,
-#assetList > .u-window-box-medium .pagination > li > a,
-#assetList > .u-window-box-medium .pagination > li > span {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 2.5rem;
-  height: 2.5rem;
-  padding: 0.5rem 0.75rem;
-  border-radius: 8px;
-  background-color: white;
-  color: #1a2b4a;
-  font-weight: 500;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  transition: all 0.2s ease;
-  width: 100%;
-}
-
-.asset-table + .summary + .pagination > li > a:hover,
-#assetList > .u-window-box-medium .pagination > li > a:hover {
-  background-color: #f1f5f9;
-  transform: translateY(-2px);
-  text-decoration: none;
-}
-
-.asset-table + .summary + .pagination > li.active > a,
-.asset-table + .summary + .pagination > li.active > span,
-#assetList > .u-window-box-medium .pagination > li.active > a,
-#assetList > .u-window-box-medium .pagination > li.active > span {
-  background: linear-gradient(135deg, #1a2b4a 0%, #00766c 100%);
-  color: white !important;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-  font-weight: 600;
-}
-
-/* Summary text styling */
-.asset-table + .summary,
-#assetList > .u-window-box-medium .summary {
-  color: #64748b;
-  font-size: 0.875rem;
-  margin-bottom: 1rem;
-  font-style: italic;
-}
+/* Pagination styling has been moved to crelish-modern.css for standardization */
 
 {% endapply %}

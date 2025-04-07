@@ -100,14 +100,8 @@ class HeaderBar extends Widget
   protected function registerCss()
   {
     $css = <<<CSS
-        .navbar--controller .c-input-group .o-field:last-child .c-field {
-            border-top-right-radius: 4px;
-            border-bottom-right-radius: 4px;
-            height: 100%;
-            border: none;
-        }
-
-        select.c-field:not([multiple]) {
+        /* Override for select fields only */
+        .navbar--controller .c-input-group select.c-field:not([multiple]) {
             border: none;
         }
         CSS;
@@ -313,10 +307,11 @@ class HeaderBar extends Widget
           );
         } else {
           // Fallback to PHP template or direct HTML
-          $html = '<button class="c-button c-button--brand"><i class="fa-sharp  fa-regular fa-search"></i></button>';
-          $html .= '<div class="o-field" style="position: relative;">';
+          $html = '<button class="c-button c-button--search"><i class="fa-sharp  fa-regular fa-search"></i></button>';
+          $html .= '<div class="o-field" style="position: relative; flex-grow: 1; max-width: 100%;">';
           $html .= Html::textInput('cr_content_filter', $searchValue, [
             'class' => 'c-field header-search-input',
+            'style' => 'width: 100%;',
             'placeholder' => \Yii::t('app', 'Type your search phrase here...'),
           ]);
           if (!empty($searchValue)) {
@@ -342,10 +337,11 @@ class HeaderBar extends Widget
           );
         } else {
           // Fallback to PHP template or direct HTML
-          $html = '<button class="c-button c-button--brand"><i class="fa-sharp  fa-regular fa-search"></i></button>';
-          $html .= '<div class="o-field" style="position: relative;">';
+          $html = '<button class="c-button c-button--search"><i class="fa-sharp  fa-regular fa-search"></i></button>';
+          $html .= '<div class="o-field" style="position: relative; flex-grow: 1; max-width: 100%;">';
           $html .= Html::textInput('cr_content_filter', $searchValue, [
             'class' => 'c-field header-search-input',
+            'style' => 'width: 100%;',
             'placeholder' => \Yii::t('app', 'Search users...'),
           ]);
           if (!empty($searchValue)) {
@@ -535,6 +531,32 @@ class HeaderBar extends Widget
         return '<button class="c-button c-button--error" onclick="openDeleteDialog(\'' . $deleteUrl . '\');">
                     <i class="fa-sharp  fa-regular fa-trash"></i>
                 </button>';
+      },
+      
+      // Translation search component for the header bar
+      'translation-search' => function () {
+        // Check if Twig view renderer is available
+        if (isset(Yii::$app->view->renderers['twig'])) {
+          // Use Twig template
+          return Yii::$app->view->renderFile(
+            '@giantbits/crelish/components/widgets/views/_translation_search.twig',
+            []
+          );
+        } else {
+          // Fallback to PHP template or direct HTML
+          $html = '<button class="c-button c-button--search"><i class="fa-sharp fa-regular fa-search"></i></button>';
+          $html .= '<div class="o-field" style="position: relative; flex-grow: 1; max-width: 100%;">';
+          $html .= Html::textInput('translation_global_search', '', [
+            'id' => 'global-search',
+            'class' => 'c-field header-search-input',
+            'style' => 'width: 100%;',
+            'placeholder' => \Yii::t('app', 'Search for keys or translations...'),
+          ]);
+          $html .= '<span class="search-clear-btn" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; display: none;"><i class="fa-sharp fa-regular fa-times"></i></span>';
+          $html .= '</div>';
+          
+          return $html;
+        }
       },
     ];
   }
