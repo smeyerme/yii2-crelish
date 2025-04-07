@@ -290,7 +290,7 @@ class HeaderBar extends Widget
         }
 
         return '<a class="c-button" href="' . \Yii::$app->urlManager->createUrl($url) . '">
-                    <span class="fui-arrow-left"></span> ' . Yii::t('app', 'Back') . '
+                    <i class="fa-sharp fa-solid fa-arrow-left"></i> ' . Yii::t('app', 'Back') . '
                 </a>';
       },
       'search' => function () {
