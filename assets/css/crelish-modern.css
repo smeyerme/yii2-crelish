@@ -12,7 +12,7 @@
   --color-primary-light-rgb: 0, 118, 108;
   --color-bg-light: #f1f5f9;
   --color-bg-main: #ffffff;
-  --color-bg-secondary: #f8fafc;
+  --color-bg-secondary: #e0e0e7;
   --color-text-dark: #2d3748;
   --color-text-muted: #64748b;
   --color-text-light: #ffffff;
@@ -51,7 +51,7 @@ html {
   --color-primary-light-rgb: 0, 169, 157;
   --color-bg-light: #1e293b;
   --color-bg-main: #121926;
-  --color-bg-secondary: #0f172a;
+  --color-bg-secondary: #0d131d;
   --color-text-dark: #e2e8f0;
   --color-text-muted: #94a3b8;
   --color-text-light: #ffffff;
