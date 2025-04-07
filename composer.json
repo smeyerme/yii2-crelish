@@ -8,7 +8,7 @@
     ],
     "type": "yii2-extension",
     "license": "BSD-3-Clause",
-    "version": "0.11.7",
+    "version": "0.11.8",
     "minimum-stability": "dev",
     "prefer-stable": true,
     "support": {
