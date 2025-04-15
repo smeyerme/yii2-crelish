@@ -48,9 +48,9 @@
         $('.table').not('.no-modern').addClass('table-modern');
         
         // Convert status text to badges
-        $('.table-modern td:contains("online"), .table-modern td:contains("offline"), .table-modern td:contains("draft"), .table-modern td:contains("archived")').each(function() {
+        $('.table-modern td:contains("online"), .table-modern td:contains("offline"), .table-modern td:contains("draft"), .table-modern td:contains("archived"), .table-modern td:contains("Archiviert")').each(function() {
             var text = $(this).text().trim().toLowerCase();
-            if (text === 'online' || text === 'offline' || text === 'draft' || text === 'archived') {
+            if (text === 'online' || text === 'offline' || text === 'draft' || text === 'archived' || text === 'archiviert') {
                 $(this).html('<span class="status-badge ' + text + '">' + text + '</span>');
             }
         });
