@@ -27,7 +27,10 @@ class CrelishBaseHelper
 {
   public static function urlFromSlug($slug, $params = [], $langCode = null, $scheme = false): string
   {
-    $url = '/' . $slug;
+    // Handle home page special case
+    $isHomePage = ($slug === \Yii::$app->params['crelish']['entryPoint']['slug']);
+    
+    $url = $isHomePage ? '' : '/' . $slug;
 
     unset($params['pathRequested']);
 
@@ -38,7 +41,17 @@ class CrelishBaseHelper
           $langCode = $sub[1];
         }
       }
-      $url = '/' . $langCode . $url;
+      
+      if ($isHomePage) {
+        // For homepage with language prefix, just return the language
+        $url = '/' . $langCode;
+      } else {
+        // For other pages with language prefix
+        $url = '/' . $langCode . $url;
+      }
+    } else if ($isHomePage) {
+      // When no language prefix but it's homepage, return root
+      $url = '/';
     }
 
     return Url::to(array_merge([$url], $params), $scheme);
@@ -56,7 +69,7 @@ class CrelishBaseHelper
   {
     // Get the current request path
     $pathInfo = \Yii::$app->request->getPathInfo();
-
+    
     // If we have a language prefix enabled, we need to remove the current language prefix
     if (isset(\Yii::$app->params['crelish']['langprefix']) && \Yii::$app->params['crelish']['langprefix']) {
       $pathParts = explode('/', $pathInfo, 2);
@@ -71,18 +84,39 @@ class CrelishBaseHelper
     // Now we have the slug without language prefix
     $slug = $pathInfo;
 
-    // If it's empty, use the entry point slug
+    // If it's empty, we're on the homepage
     if (empty($slug)) {
       $slug = \Yii::$app->params['crelish']['entryPoint']['slug'];
     }
 
+    // For homepage, make sure to set pathRequested to maintain consistency
+    if (empty($pathInfo) && !isset($params['pathRequested'])) {
+      $params['pathRequested'] = \Yii::$app->params['crelish']['entryPoint']['slug'];
+    }
+    
     // Generate URL with the new language using urlFromSlug
     return self::urlFromSlug($slug, $params, $langCode, $scheme);
   }
 
   public static function currentUrl($params = [])
   {
-    return Url::to(array_merge(['/' . \Yii::$app->controller->entryPoint['slug']], $params));
+    $slug = \Yii::$app->controller->entryPoint['slug'];
+    $isHomePage = ($slug === \Yii::$app->params['crelish']['entryPoint']['slug']);
+    
+    if ($isHomePage && isset(\Yii::$app->params['crelish']['langprefix']) && \Yii::$app->params['crelish']['langprefix']) {
+      // For homepage with language prefix
+      $langCode = \Yii::$app->language;
+      if (preg_match('/([a-z]{2})-[A-Z]{2}/', $langCode, $sub)) {
+        $langCode = $sub[1];
+      }
+      return Url::to(array_merge(['/' . $langCode], $params));
+    } else if ($isHomePage) {
+      // For homepage without language prefix
+      return Url::to(array_merge(['/'], $params));
+    }
+    
+    // For non-homepage
+    return Url::to(array_merge(['/' . $slug], $params));
   }
 
   public static function currentCrelishUrl($params = [])
