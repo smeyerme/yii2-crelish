@@ -12,6 +12,7 @@
 	use Yii;
 	use yii\base\Controller;
 	use giantbits\crelish\components\CrelishDataManager;
+	use giantbits\crelish\components\CrelishGlobals;
 	
 	/**
 	 * Class CrelishFrontendController
@@ -87,6 +88,12 @@
 			
 			// Add content aka. do the magic.
 			//$this->data = new CrelishDynamicModel( ['ctype' => $this->entryPoint['ctype'], 'uuid' => $this->entryPoint['uuid']]);
+			
+			// Make sure the language is set correctly before loading the model
+			if (isset(\Yii::$app->request->getQueryParams()['language']) && !empty(\Yii::$app->request->getQueryParams()['language'])) {
+				\Yii::$app->language = \Yii::$app->request->getQueryParams()['language'];
+			}
+			
 			$this->data = call_user_func('app\workspace\models\\' . ucfirst($this->entryPoint['ctype']) . '::find')->where(['uuid' => $this->entryPoint['uuid']])->one();
 
 			// Set layout.
@@ -138,9 +145,20 @@
 			
 			if (!empty($params = \Yii::$app->request->getQueryParams())) {
 				$slug = $params['pathRequested'];
+				// Make sure the language from query params is set in application
+				if (isset($params['language']) && !empty($params['language'])) {
+					\Yii::$app->language = $params['language'];
+				}
 			}
 			
-			$entryDataJoint = new CrelishDataManager($ctype, ['filter' => ['slug' => [ 'strict', $slug]]]);
+			// Get the current language for model loading
+			$langCode = \Yii::$app->language;
+			// Extract 2-letter code from full code like 'en-US'
+			if (preg_match('/([a-z]{2})-[A-Z]{2}/', $langCode, $sub)) {
+				$langCode = $sub[1];
+			}
+			
+			$entryDataJoint = new CrelishDataManager($ctype, ['filter' => ['slug' => ['strict', $slug]]]);
 			if (empty($entryDataJoint->getProvider()->models[0])) {
 				$entryModel = null;
 			} else {
