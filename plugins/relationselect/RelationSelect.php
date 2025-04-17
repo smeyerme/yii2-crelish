@@ -125,52 +125,133 @@ class RelationSelect extends CrelishFormWidget
    */
   protected function registerAssets()
   {
-    // Get the AssetManager instance
-    $assetManager = Yii::$app->assetManager;
-
-    // Define the source path of your JS file
-    $sourcePath = Yii::getAlias('@vendor/giantbits/yii2-crelish/resources/relation-selector/dist/relation-selector.js');
-
-    // Publish the file and get the published URL
-    $publishedUrl = $assetManager->publish($sourcePath, [
-      'forceCopy' => YII_DEBUG,
-      'appendTimestamp' => true,
-    ])[1];
-
-    // Get the view
+    // Register custom CSS for dark mode support
     $view = Yii::$app->getView();
+    
+    // Register Krajee Select2 initialization function to prevent errors and hide loading spinner
+    $js = <<<JS
+// Define Krajee's required initialization functions if they don't exist
+if (typeof initS2Loading !== 'function') {
+    window.initS2Loading = function(id, optVar) {
+        // Hide loading indicators immediately
+        setTimeout(function() {
+            var s2LoadingElm = "#" + id + "-container .kv-plugin-loading.loading-" + id;
+            $(s2LoadingElm).removeClass("kv-loading").hide();
+            
+            var s2Header = "#" + id + "-container .select2-container--krajee";
+            $(s2Header).removeClass("loading");
+        }, 100);
+    };
+}
+if (typeof initS2Unload !== 'function') {
+    window.initS2Unload = function(id, optVar) {
+        // Placeholder function to prevent errors
+        var s2LoadingElm = "#" + id + "-container .kv-plugin-loading.loading-" + id;
+        $(s2LoadingElm).removeClass("kv-loading").hide();
+    };
+}
+if (typeof initS2Change !== 'function') {
+    window.initS2Change = function(id, optVar) {
+        // Placeholder function to prevent errors
+        var s2LoadingElm = "#" + id + "-container .kv-plugin-loading.loading-" + id;
+        $(s2LoadingElm).removeClass("kv-loading").hide();
+    };
+}
 
-    // Register jQuery dependency (should already be registered by Yii)
-    $view->registerJsFile(
-      'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js',
-      ['position' => View::POS_END, 'depends' => [\yii\web\JqueryAsset::class]]
-    );
-
-    // Register Select2 CSS
-    $view->registerCssFile(
-      'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css',
-      ['position' => View::POS_HEAD]
-    );
-
-    // Register the component script (after jQuery and Select2)
-    $view->registerJsFile(
-      $publishedUrl,
-      ['position' => View::POS_END, 'depends' => [\yii\web\JqueryAsset::class]]
-    );
-
-    // Add translations
-    $translations = [
-      'choosePlaceholder' => Yii::t('crelish', 'Bitte wählen...'),
-      'addButton' => Yii::t('crelish', 'Hinzufügen'),
-      'assignedItems' => Yii::t('crelish', 'Zugeordnete Einträge'),
-      'actions' => Yii::t('crelish', 'Aktionen'),
-      'noItemsSelected' => Yii::t('crelish', 'Keine Einträge ausgewählt'),
-      'itemAlreadyAdded' => Yii::t('crelish', 'Dieser Eintrag wurde bereits hinzugefügt'),
-      'loadingOptions' => Yii::t('crelish', 'Lade Optionen...')
-    ];
-
-    $js = "window.relationSelectorTranslations = " . Json::encode($translations) . ";";
+// Additional function to ensure loading spinner is removed
+$(document).ready(function() {
+    setTimeout(function() {
+        $('.kv-plugin-loading').hide();
+        $('.kv-loading').removeClass('kv-loading');
+        $('.loading').removeClass('loading');
+    }, 500);
+});
+JS;
     $view->registerJs($js, View::POS_HEAD);
+    
+    $css = <<<CSS
+/* Hide loading spinners immediately */
+.kv-plugin-loading {
+  display: none !important;
+}
+.select2-container--krajee.loading {
+  opacity: 1 !important;
+}
+
+/* Relation Select Styling */
+.selected-items {
+  border: 1px solid #dee2e6;
+  border-radius: 0.25rem;
+  padding: 0.75rem;
+  background-color: #f8f9fa;
+}
+
+.no-items-message {
+  padding: 0.75rem;
+  color: #6c757d;
+  font-style: italic;
+}
+
+.actions {
+  white-space: nowrap;
+}
+
+.actions button {
+  margin-right: 0.25rem;
+}
+
+/* Dark mode support */
+html[data-theme="dark"] .selected-items {
+  border-color: #495057;
+  background-color: #343a40;
+  color: #f8f9fa;
+}
+
+html[data-theme="dark"] .no-items-message {
+  color: #adb5bd;
+}
+
+/* Dark mode CSS for all possible Krajee themes - bs3, bs4, bs5, krajee */
+html[data-theme="dark"] .select2-container--krajee .select2-selection,
+html[data-theme="dark"] .select2-container--krajee-bs3 .select2-selection,
+html[data-theme="dark"] .select2-container--krajee-bs4 .select2-selection,
+html[data-theme="dark"] .select2-container--krajee-bs5 .select2-selection {
+  background-color: #2c3e50;
+  border-color: #495057;
+  color: #f8f9fa;
+}
+
+html[data-theme="dark"] .select2-container--krajee .select2-selection__rendered,
+html[data-theme="dark"] .select2-container--krajee-bs3 .select2-selection__rendered,
+html[data-theme="dark"] .select2-container--krajee-bs4 .select2-selection__rendered,
+html[data-theme="dark"] .select2-container--krajee-bs5 .select2-selection__rendered {
+  color: #f8f9fa;
+}
+
+html[data-theme="dark"] .select2-container--krajee .select2-dropdown,
+html[data-theme="dark"] .select2-container--krajee-bs3 .select2-dropdown,
+html[data-theme="dark"] .select2-container--krajee-bs4 .select2-dropdown,
+html[data-theme="dark"] .select2-container--krajee-bs5 .select2-dropdown {
+  background-color: #2c3e50;
+  border-color: #495057;
+}
+
+html[data-theme="dark"] .select2-container--krajee .select2-results__option,
+html[data-theme="dark"] .select2-container--krajee-bs3 .select2-results__option,
+html[data-theme="dark"] .select2-container--krajee-bs4 .select2-results__option,
+html[data-theme="dark"] .select2-container--krajee-bs5 .select2-results__option {
+  color: #f8f9fa;
+}
+
+html[data-theme="dark"] .select2-container--krajee .select2-results__option--highlighted[aria-selected],
+html[data-theme="dark"] .select2-container--krajee-bs3 .select2-results__option--highlighted[aria-selected],
+html[data-theme="dark"] .select2-container--krajee-bs4 .select2-results__option--highlighted[aria-selected],
+html[data-theme="dark"] .select2-container--krajee-bs5 .select2-results__option--highlighted[aria-selected] {
+  background-color: #3498db;
+}
+CSS;
+    
+    $view->registerCss($css);
   }
 
   public function run()
@@ -187,7 +268,81 @@ class RelationSelect extends CrelishFormWidget
       }
     }
 
-    // Prepare table columns
+    // Check if multiple selection is enabled
+    $isMultiple = isset($this->field->config->multiple) && $this->field->config->multiple;
+
+    // Prepare data for the view
+    $hiddenValue = '';
+
+    if ($isMultiple) {
+      // For multiple selection, store as JSON array
+      $hiddenValue = Json::encode($this->storedItems);
+    } else {
+      // For single selection, store as simple string
+      $hiddenValue = !empty($this->storedItems) ? (string)$this->storedItems[0] : '';
+    }
+    
+    // Ensure we have not null or array value for debug purposes
+    Yii::debug("Multiple: " . ($isMultiple ? 'Yes' : 'No') . ", Value: " . print_r($hiddenValue, true), 'relationselect');
+
+    // Prepare select data and initial value for Select2
+    $selectData = [];
+    $selectValue = [];
+
+    // If we have stored items, we need to fetch their details to display
+    if (!empty($this->storedItems)) {
+      foreach ($this->storedItems as $uuid) {
+        // Only fetch valid UUIDs
+        if (empty($uuid) || !is_string($uuid) || trim($uuid) === '') continue;
+
+        // Fetch item details from API to get the title
+        $model = call_user_func('\giantbits\crelish\components\CrelishDataResolver::resolveModel', [
+          'ctype' => $this->field->config->ctype,
+          'uuid' => $uuid
+        ]);
+
+        if ($model) {
+          $displayText = $model->systitle ?? $model->title ?? $model->name ?? $uuid;
+          // In single mode, store as a simple associative array
+          if (!$isMultiple) {
+            $selectData = [$uuid => $displayText];
+          } else {
+            // In multiple mode, build up the array
+            $selectData[$uuid] = $displayText;
+          }
+          $selectValue[] = $uuid;
+        }
+      }
+    }
+
+    // For non-multiple selection, only use the first value
+    if (!$isMultiple) {
+      if (!empty($selectValue)) {
+        $selectValue = $selectValue[0];
+      } else {
+        $selectValue = '';
+      }
+    } else {
+      // Ensure it's always an array for multiple selection
+      $selectValue = (array)$selectValue;
+    }
+
+    // Determine AJAX URL for Select2
+    $ajaxUrl = '/crelish-api/content/' . $this->field->config->ctype;
+
+    // Determine filter fields for searching
+    $filterFields = isset($this->field->config->filterFields) 
+      ? $this->field->config->filterFields 
+      : ['systitle'];
+      
+    // No need for complex JSON encoding here, we'll build the AJAX config directly in the template
+    
+    // Generate a unique ID for the form element
+    $fieldId = 'rel_' . $this->field->key . '_' . substr(md5(uniqid()), 0, 8);
+    
+    // No need for complex JSON encoding here, we'll build the plugin events directly in the template
+
+    // Prepare table columns for multiple selection mode
     $columns = [];
     if (isset($this->field->config->columns) && is_array($this->field->config->columns)) {
       foreach ($this->field->config->columns as $column) {
@@ -207,21 +362,57 @@ class RelationSelect extends CrelishFormWidget
       ];
     }
 
-    // Check if multiple selection is enabled
-    $isMultiple = isset($this->field->config->multiple) && $this->field->config->multiple;
-
+    // Log what we're sending to the view
+    Yii::debug([
+      'selectValue' => $selectValue,
+      'selectData' => $selectData,
+      'hiddenValue' => $hiddenValue,
+    ], 'relationselect-data');
+    
+    // Make sure the select data is in the correct format for the Widget
+    if (is_array($selectData) && !empty($selectData)) {
+      if (!$isMultiple) {
+        // For single selection mode, make sure it's a simple associative array
+        if (count($selectData) > 1) {
+          $selectData = array_slice($selectData, 0, 1, true);
+        }
+      }
+    } else {
+      // If empty or not an array, provide a default empty array
+      $selectData = [];
+    }
+    
+    // Make sure the select value is in the correct format
+    if ($isMultiple) {
+      // For multiple mode, ensure it's an array
+      $selectValue = is_array($selectValue) ? $selectValue : [];
+    } else {
+      // For single mode, ensure it's a string
+      $selectValue = !empty($selectValue) ? (is_array($selectValue) ? (string)reset($selectValue) : (string)$selectValue) : '';
+    }
+    
+    // Log final values for debugging
+    Yii::debug("Final values: " . print_r([
+      'selectValue' => $selectValue,
+      'selectData' => $selectData
+    ], true), 'relationselect-final');
+    
     return $this->render('relationselect.twig', [
       'formKey' => $this->formKey,
       'field' => $this->field,
       'required' => $isRequired ? 'required' : '',
       'isRequired' => $isRequired,
-      'fieldKey' => $this->field->key,
       'contentType' => $this->field->config->ctype,
-      'storedValue' => Json::encode($this->storedItems),
+      'hiddenValue' => $hiddenValue,
       'inputName' => "CrelishDynamicModel[{$this->field->key}]",
-      'label' => $this->field->label,
-      'columns' => Json::encode($columns),
+      'selectValue' => $selectValue,
+      'selectData' => $selectData,
       'isMultiple' => $isMultiple,
+      'allowClear' => !$isRequired,
+      'columns' => $columns,
+      'fieldId' => $fieldId,
+      'ajaxUrl' => $ajaxUrl,
+      'filterFields' => $filterFields
     ]);
   }
 }
