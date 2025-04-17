@@ -104,7 +104,7 @@
         {{ form.field(model, 'email', {'errorOptions':{'class':'help hidden'}, 'options':{'class':'gradient-box'}, 'inputOptions':{'class':'c-field', 'placeholder':'Email'}}).label(false) | raw }}
       </div>
       <div class="form-group">
-        {{ form.field(model, 'password', {'errorOptions':{'class':'help hidden'}, 'options':{'class':''}, 'inputOptions':{'class':'c-field', 'placeholder':'Pasword'}}).passwordInput().label(false) | raw }}
+        {{ form.field(model, 'password', {'errorOptions':{'class':'help hidden'}, 'options':{'class':''}, 'inputOptions':{'class':'c-field', 'placeholder':'Password'}}).passwordInput().label(false) | raw }}
       </div>
       <button type="submit">{{ t('crelish', 'Sign In') }}</button>
 
@@ -147,11 +147,15 @@ body::before {
   z-index: 0;
 }
 
+section {
+    width: 100%;
+}
+
 .modal {
   position: relative;
   z-index: 1;
   width: 120ch;
-  max-width: 90%;
+  max-width: 95%;
   background-color: white;
   border-radius: 8px;
   overflow: hidden;
@@ -188,10 +192,12 @@ body::before {
 .header {
   margin-bottom: 2rem;
   text-align: center;
+}
 
-  img {
-    margin-bottom: 1rem;
-  }
+.header img {
+  margin-bottom: 1rem;
+  max-width: 100%;
+  height: auto;
 }
 
 .header h2 {
@@ -268,26 +274,11 @@ button:hover {
   color: #475569;
 }
 
-@media (max-width: 768px) {
-  .modal {
-    flex-direction: column;
-  }
-
-  .image-section,
-  .form-section {
-    width: 100%;
-  }
-
-  .image-section {
-    min-height: 200px;
-  }
-}
-
 span {
   font-size: 0.75rem;
   margin-top: 1rem;
   color: darkgrey;
-
+  text-align: center;
 }
 
 .error-summary {
@@ -304,5 +295,77 @@ span {
   display: block;
   margin-top: 0.25rem;
   padding-inline: 0.75rem;
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  .modal {
+    flex-direction: column;
+    max-width: 100%;
+    margin: 0;
+    height: auto;
+  }
+
+  .image-section,
+  .form-section {
+    width: 100%;
+  }
+
+  .image-section {
+    min-height: 150px;
+    max-height: 280px;
+  }
+  
+  .image-section svg {
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
+    transform: none;
+    margin-left: 0;
+  }
+
+  .form-section {
+    padding: 1.5rem;
+  }
+  
+  .header {
+    margin-bottom: 1.5rem;
+  }
+  
+  .header img {
+    width: 140px;
+  }
+  
+  .form-group {
+    margin-bottom: 0.75rem;
+  }
+  
+  button {
+    margin-top: 0.75rem;
+    padding: 0.85rem;
+  }
+}
+
+/* Small mobile devices */
+@media (max-width: 400px) {
+  body {
+    padding: 0.5rem;
+  }
+  
+  .modal {
+    border-radius: 6px;
+  }
+  
+  .image-section {
+    min-height: 120px;
+  }
+  
+  .form-section {
+    padding: 1.25rem;
+  }
+  
+  .form-group input {
+    padding: 0.65rem;
+  }
 }
 {% endapply %}

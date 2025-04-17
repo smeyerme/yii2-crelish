@@ -1,10 +1,368 @@
-<div class="relation-selector-container mb-3 highlight-addon"
-     data-field-key="{{ fieldKey }}"
-     data-content-type="{{ contentType }}"
-     data-value='{{ storedValue }}'
-     data-input-name="{{ inputName }}"
-     data-label="{{ field.label }}"
-     data-required="{{ isRequired ? 'true' : 'false' }}"
-     data-multiple="{{ isMultiple ? 'true' : 'false' }}"
-     data-columns='{{ columns }}'>
+{{ use('kartik/widgets/Select2') }}
+
+
+<div class="mb-3 highlight-addon field-crelishdynamicmodel-{{ formKey }} {{ required }}">
+  <label class="form-label has-star" for="{{ fieldId }}">{{ field.label }}</label>
+
+  {% if isMultiple %}
+    <input type="hidden" name="{{ inputName }}" id="{{ fieldId }}" value='{{ hiddenValue }}'/>
+
+    {{ Select2_widget({
+      'name': "temp_select_" ~ field.key,
+      'value': null,
+      'theme': 'krajee',
+      'options': {
+        'placeholder': t('app', 'Bitte wählen...'),
+        'id': fieldId ~ "_select",
+        'class': 'form-control'
+      },
+      'pluginOptions': {
+        'allowClear': true,
+        'minimumInputLength': 0,
+        'width': '100%',
+        'language': 'de',
+        'ajax': {
+          'url': ajaxUrl,
+          'dataType': 'json',
+          'delay': 350,
+          'data': js('function(params) {
+            var filterData = { page: params.page || 1 };
+            if (params.term) {
+              var filterFields = ' ~ filterFields|json_encode ~ ';
+              filterData.filter = filterFields.map(function(field) {
+                return field + ":" + params.term;
+              }).join("&");
+            }
+            return filterData;
+            }'),
+        'processResults': js('function(data, params) {
+          params.page = params.page || 1;
+          var results = [];
+          if (data.success && data.data && data.data.items) {
+            results = data.data.items.map(function(item) {
+              return {
+                id: item.uuid,
+                text: item.systitle || item.title || item.name || item.uuid,
+                data: item
+              };
+            });
+          }
+        return {
+          results: results,
+          pagination: {
+            more: (params.page * 20) < (data.data ? data.data.total || 0 : 0)
+          }
+        };
+      }'),
+          'cache': true
+        }
+      }
+    }) }}
+
+    <div class="mt-2">
+      <button type="button" class="btn btn-primary" id="{{ fieldId }}_add">
+        <i class="fa fa-plus"></i> {{ t('app', 'Hinzufügen') }}
+      </button>
+    </div>
+
+    <div id="{{ fieldId }}_items" class="selected-items mt-3"
+         {% if selectData|length == 0 %}style="display:none"{% endif %}>
+      <h6>{{ t('app', 'Zugeordnete Einträge') }}</h6>
+      <div class="table-responsive">
+        <table class="table crelish-list" id="{{ fieldId }}_table">
+          <thead>
+          <tr>
+            {% for column in columns %}
+              <th>{{ column.label }}</th>
+            {% endfor %}
+            <th>{{ t('app', 'Aktionen') }}</th>
+          </tr>
+          </thead>
+          <tbody>
+          {% for uuid, title in selectData %}
+            <tr data-id="{{ uuid }}">
+              <td>{{ title }}</td>
+              <td class="actions">
+                {% if not loop.first %}
+                  <button type="button" class="c-button u-small move-up" title="Nach oben">
+                    <i class="fa fa-arrow-up"></i>
+                  </button>
+                {% endif %}
+                {% if not loop.last %}
+                  <button type="button" class="c-button u-small move-down" title="Nach unten">
+                    <i class="fa fa-arrow-down"></i>
+                  </button>
+                {% endif %}
+                <button type="button" class="c-button u-small remove-item" title="Löschen">
+                  <i class="fa-sharp fa-regular fa-trash"></i>
+                </button>
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="{{ fieldId }}_no_items" class="no-items-message"
+         {% if selectData|length > 0 %}style="display:none"{% endif %}>
+      {{ t('app', 'Keine Einträge ausgewählt') }}
+    </div>
+
+    <script>
+        (function ($) {
+            $(document).ready(function () {
+                var selectedItems = {{ hiddenValue|raw }};
+                var selectElement = $('#{{ fieldId }}_select');
+                var hiddenInput = $('#{{ fieldId }}');
+                var addButton = $('#{{ fieldId }}_add');
+                var itemsContainer = $('#{{ fieldId }}_items');
+                var noItemsMessage = $('#{{ fieldId }}_no_items');
+                var itemsTable = $('#{{ fieldId }}_table');
+
+                // Make sure selectedItems is an array
+                if (!Array.isArray(selectedItems)) {
+                    try {
+                        selectedItems = JSON.parse(selectedItems || '[]');
+                    } catch (e) {
+                        selectedItems = [];
+                    }
+                }
+
+                // Function to update the hidden input value
+                function updateHiddenInput() {
+                    hiddenInput.val(JSON.stringify(selectedItems));
+                }
+
+                // Function to add a new item to the table
+                function addItemToTable(item) {
+                    // Check if already exists
+                    if (selectedItems.includes(item.id)) {
+                        alert("{{ t('app', 'Dieser Eintrag wurde bereits hinzugefügt') }}");
+                        return;
+                    }
+
+                    // Add to array
+                    selectedItems.push(item.id);
+
+                    // Create table row
+                    var row = $('<tr>').attr('data-id', item.id);
+
+                    // Add title column
+                    row.append($('<td>').text(item.text));
+
+                    // Add action buttons
+                    var actionsCell = $('<td class="actions">');
+
+                    // Add the buttons based on position
+                    if (selectedItems.length > 1) {
+                        actionsCell.append(
+                            $('<button type="button" class="c-button u-small move-up" title="Nach oben">')
+                                .html('<i class="fa fa-arrow-up"></i>')
+                                .css('display', selectedItems.length > 1 && selectedItems[0] !== item.id ? 'inline-block' : 'none')
+                        );
+                    }
+
+                    actionsCell.append(
+                        $('<button type="button" class="c-button u-small move-down" title="Nach unten">')
+                            .html('<i class="fa fa-arrow-down"></i>')
+                            .css('display', 'none') // Will update in updateMoveButtons
+                    );
+
+                    // Add delete button
+                    actionsCell.append(
+                        $('<button type="button" class="c-button u-small remove-item" title="Löschen">')
+                            .html('<i class="fa-sharp fa-regular fa-trash"></i>')
+                    );
+
+                    row.append(actionsCell);
+
+                    // Add to table
+                    itemsTable.find('tbody').append(row);
+
+                    // Show the table if it was hidden
+                    if (selectedItems.length === 1) {
+                        itemsContainer.show();
+                        noItemsMessage.hide();
+                    }
+
+                    // Update up/down buttons
+                    updateMoveButtons();
+
+                    // Update hidden input
+                    updateHiddenInput();
+                }
+
+                // Function to remove an item
+                function removeItem(id) {
+                    // Update the array
+                    selectedItems = selectedItems.filter(function (uuid) {
+                        return uuid !== id;
+                    });
+
+                    // Remove from table
+                    itemsTable.find('tr[data-id="' + id + '"]').remove();
+
+                    // Hide the table if it's empty
+                    if (selectedItems.length === 0) {
+                        itemsContainer.hide();
+                        noItemsMessage.show();
+                    }
+
+                    // Update up/down buttons
+                    updateMoveButtons();
+
+                    // Update hidden input
+                    updateHiddenInput();
+                }
+
+                // Function to move an item up
+                function moveItemUp(id) {
+                    var index = selectedItems.indexOf(id);
+                    if (index > 0) {
+                        // Swap in the array
+                        var temp = selectedItems[index - 1];
+                        selectedItems[index - 1] = selectedItems[index];
+                        selectedItems[index] = temp;
+
+                        // Swap in the DOM
+                        var row = itemsTable.find('tr[data-id="' + id + '"]');
+                        row.insertBefore(row.prev());
+
+                        // Update buttons
+                        updateMoveButtons();
+
+                        // Update hidden input
+                        updateHiddenInput();
+                    }
+                }
+
+                // Function to move an item down
+                function moveItemDown(id) {
+                    var index = selectedItems.indexOf(id);
+                    if (index < selectedItems.length - 1) {
+                        // Swap in the array
+                        var temp = selectedItems[index + 1];
+                        selectedItems[index + 1] = selectedItems[index];
+                        selectedItems[index] = temp;
+
+                        // Swap in the DOM
+                        var row = itemsTable.find('tr[data-id="' + id + '"]');
+                        row.insertAfter(row.next());
+
+                        // Update buttons
+                        updateMoveButtons();
+
+                        // Update hidden input
+                        updateHiddenInput();
+                    }
+                }
+
+                // Function to update move buttons visibility
+                function updateMoveButtons() {
+                    var rows = itemsTable.find('tbody tr');
+
+                    // Hide all buttons first
+                    rows.find('.move-up, .move-down').hide();
+
+                    // If only one or no items, no need for move buttons
+                    if (rows.length <= 1) return;
+
+                    // Show move up for all except first
+                    rows.slice(1).find('.move-up').show();
+
+                    // Show move down for all except last
+                    rows.slice(0, -1).find('.move-down').show();
+                }
+
+                // Add button click handler
+                addButton.on('click', function () {
+                    var selectedOption = selectElement.select2('data')[0];
+                    if (!selectedOption) return;
+
+                    addItemToTable(selectedOption);
+
+                    // Clear the selection
+                    selectElement.val(null).trigger('change');
+                });
+
+                // Remove button click handler
+                itemsTable.on('click', '.remove-item', function () {
+                    var id = $(this).closest('tr').data('id');
+                    removeItem(id);
+                });
+
+                // Move up button click handler
+                itemsTable.on('click', '.move-up', function () {
+                    var id = $(this).closest('tr').data('id');
+                    moveItemUp(id);
+                });
+
+                // Move down button click handler
+                itemsTable.on('click', '.move-down', function () {
+                    var id = $(this).closest('tr').data('id');
+                    moveItemDown(id);
+                });
+
+                // Initial state setup
+                updateMoveButtons();
+            });
+        })(jQuery);
+    </script>
+  {% else %}
+    {# Single selection mode #}
+  <input type="hidden" name="{{ inputName }}" id="{{ fieldId }}" value="{{ hiddenValue }}"/>
+
+    {{ Select2_widget({
+      'name': "temp_select_" ~ field.key,
+      'value': selectValue|default(''),
+      'data': selectData|default({}),
+      'options': {
+        'placeholder': t('app', 'Bitte wählen...'),
+        'id': fieldId ~ "_select"
+      },
+      'pluginOptions': {
+        'allowClear': allowClear,
+        'minimumInputLength': 0,
+        'ajax': {
+          'url': ajaxUrl,
+          'dataType': 'json',
+          'delay': 350,
+          'data': js('function(params) {
+        var filterData = { page: params.page || 1 };
+        if (params.term) {
+          var filterFields = ' ~ filterFields|json_encode ~ ';
+          filterData.filter = filterFields.map(function(field) {
+            return field + ":" + params.term;
+          }).join("&");
+        }
+        return filterData;
+      }'),
+          'processResults': js('function(data, params) {
+        params.page = params.page || 1;
+        var results = [];
+        if (data.success && data.data && data.data.items) {
+          results = data.data.items.map(function(item) {
+            return {
+              id: item.uuid,
+              text: item.systitle || item.title || item.name || item.uuid
+            };
+          });
+        }
+        return {
+          results: results,
+          pagination: {
+            more: (params.page * 20) < (data.data ? data.data.total || 0 : 0)
+          }
+        };
+      }'),
+          'cache': true
+        }
+      },
+      'pluginEvents': {
+        "select2:select": js('function() { $("#' ~ fieldId ~ '").val($(this).val()); }'),
+        "select2:unselect": js('function() { $("#' ~ fieldId ~ '").val(""); }')
+      }
+    }) }}
+  {% endif %}
 </div>

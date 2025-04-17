@@ -95,7 +95,29 @@ class CrelishDataManager extends Component
     }
 
     if(empty($sort) && !empty($this->definitions->sortDefault)) {
-      $sort = ['defaultOrder' => (array) $this->definitions->sortDefault];
+      // Get sort defaults from definition
+      $defaultSort = (array) $this->definitions->sortDefault;
+      $processedSort = [];
+      
+      // Process each sort field
+      foreach ($defaultSort as $field => $direction) {
+        // Convert string constants to actual constant values or default to SORT_ASC
+        if (is_string($direction)) {
+          if ($direction === 'SORT_ASC' || strtolower($direction) === 'asc') {
+            $processedSort[$field] = SORT_ASC;
+          } elseif ($direction === 'SORT_DESC' || strtolower($direction) === 'desc') {
+            $processedSort[$field] = SORT_DESC;
+          } else {
+            // Default to SORT_ASC for backward compatibility
+            $processedSort[$field] = SORT_ASC;
+          }
+        } else {
+          // Use the provided value if it's already a number
+          $processedSort[$field] = $direction;
+        }
+      }
+      
+      $sort = ['defaultOrder' => $processedSort];
     }
 
     $dataProvider = $this->storage->getDataProvider($this->ctype, $filter, $sort, $pageSize);
@@ -127,6 +149,32 @@ class CrelishDataManager extends Component
     if (!empty($sort) && !isset($sort['defaultOrder'])) {
       $sort = ['defaultOrder' => $sort];
     }
+    
+    if(empty($sort) && !empty($this->definitions->sortDefault)) {
+      // Get sort defaults from definition
+      $defaultSort = (array) $this->definitions->sortDefault;
+      $processedSort = [];
+      
+      // Process each sort field
+      foreach ($defaultSort as $field => $direction) {
+        // Convert string constants to actual constant values or default to SORT_ASC
+        if (is_string($direction)) {
+          if ($direction === 'SORT_ASC' || strtolower($direction) === 'asc') {
+            $processedSort[$field] = SORT_ASC;
+          } elseif ($direction === 'SORT_DESC' || strtolower($direction) === 'desc') {
+            $processedSort[$field] = SORT_DESC;
+          } else {
+            // Default to SORT_ASC for backward compatibility
+            $processedSort[$field] = SORT_ASC;
+          }
+        } else {
+          // Use the provided value if it's already a number
+          $processedSort[$field] = $direction;
+        }
+      }
+      
+      $sort = ['defaultOrder' => $processedSort];
+    }
 
     $dataProvider = $this->storage->getDataProvider($this->ctype, $filter, $sort, $pageSize);
     
@@ -152,6 +200,32 @@ class CrelishDataManager extends Component
     // Ensure sort is in the correct format
     if (!empty($sort) && !isset($sort['defaultOrder'])) {
       $sort = ['defaultOrder' => $sort];
+    }
+    
+    if(empty($sort) && !empty($this->definitions->sortDefault)) {
+      // Get sort defaults from definition
+      $defaultSort = (array) $this->definitions->sortDefault;
+      $processedSort = [];
+      
+      // Process each sort field
+      foreach ($defaultSort as $field => $direction) {
+        // Convert string constants to actual constant values or default to SORT_ASC
+        if (is_string($direction)) {
+          if ($direction === 'SORT_ASC' || strtolower($direction) === 'asc') {
+            $processedSort[$field] = SORT_ASC;
+          } elseif ($direction === 'SORT_DESC' || strtolower($direction) === 'desc') {
+            $processedSort[$field] = SORT_DESC;
+          } else {
+            // Default to SORT_ASC for backward compatibility
+            $processedSort[$field] = SORT_ASC;
+          }
+        } else {
+          // Use the provided value if it's already a number
+          $processedSort[$field] = $direction;
+        }
+      }
+      
+      $sort = ['defaultOrder' => $processedSort];
     }
     
     // If relations are needed, we need to get a query object, 
