@@ -32,22 +32,29 @@
       "id": "user",
       "label": "User",
       "url": "crelish/user/index",
-      "icon": "fa-sharp  fa-regular fa-users",
+      "icon": "fa-sharp fa-regular fa-users",
       "order": 50
+    },
+    {
+      "id": "analytios",
+      "label": "Analytics",
+      "url": "crelish/analytics/index",
+      "icon": "fa-sharp fa-regular fa-chart-mixed",
+      "order": 60
     },
     {
       "id": "translation",
       "label": "Translations",
       "url": "crelish/translation/index",
       "icon": "fa-sharp  fa-regular fa-language",
-      "order": 60
+      "order": 70
     },
     {
       "id": "settings",
       "label": "Settings",
       "url": "crelish/settings/index",
       "icon": "fa-sharp  fa-regular fa-cogs",
-      "order": 70
+      "order": 80
     }
   ]
 }
