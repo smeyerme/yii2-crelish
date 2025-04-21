@@ -117,6 +117,9 @@ class MatrixConnectorContentProcessor extends Component
 
     // Process the content
     $sourceDataOut = CrelishBaseContentProcessor::processContent($element['ctype'], $sourceData);
+    
+    // Add ctype to the output data so it's available in templates
+    $sourceDataOut['ctype'] = $element['ctype'];
 
     if (!empty($processedData['uuid'])) {
       $sourceDataOut['parentUuid'] = $processedData['uuid'];
