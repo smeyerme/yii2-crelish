@@ -73,12 +73,12 @@ class CrelishAnalyticsComponent extends Component
   public function trackPageView($pageData)
   {
 
-    if (!$this->enabled || $this->shouldExclude()) {
-      return false;
-    }
-
     // Check if the current request is from a bot
     $isBot = $this->isBot();
+
+    if (!$this->enabled || $this->shouldExclude() || $isBot) {
+      return false;
+    }
 
     // Get user details
     $userId = !Yii::$app->user->isGuest ? Yii::$app->user->id : null;

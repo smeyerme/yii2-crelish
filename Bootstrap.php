@@ -267,7 +267,7 @@ class Bootstrap implements BootstrapInterface
         'class' => 'giantbits\crelish\components\CrelishAnalyticsComponent',
         'enabled' => true,
         'excludeIps' => [
-          //'127.0.0.1',
+          '127.0.0.1',
           // Add development/internal IPs here
         ],
       ],
