@@ -312,6 +312,49 @@ class CrelishBaseHelper
 
     return self::getAssetUrl($asset->pathName, $asset->fileName);
   }
+  
+  /**
+   * Track a content element view for analytics
+   * 
+   * This can be called from any template to track element views,
+   * including list views, detail views, and widget-rendered elements.
+   * 
+   * Usage in templates:
+   * {{ chelper.trackElementView(element.uuid, element.ctype, 'list') }}
+   * {{ chelper.trackElementView(element.uuid, element.ctype, 'detail') }}
+   * 
+   * @param string $elementUuid The UUID of the element to track
+   * @param string $elementType The type of the element (e.g., 'news', 'job', 'boardgame')
+   * @param string $viewType Optional. The type of view ('list', 'detail', etc.)
+   * @return bool|string Returns the element UUID if tracking was successful, false otherwise
+   */
+  public static function trackElementView($elementUuid, $elementType, $viewType = null)
+  {
+    // Skip if analytics component isn't available or no page UUID
+    if (!isset(\Yii::$app->crelishAnalytics) || 
+        !isset(\Yii::$app->controller->entryPoint['uuid'])) {
+      return false;
+    }
+    
+    // Skip tracking if we don't have necessary element data
+    if (empty($elementUuid) || empty($elementType)) {
+      return false;
+    }
+    
+    $trackingType = $elementType;
+    
+    // Track the element view
+    $result = \Yii::$app->crelishAnalytics->trackElementView(
+      $elementUuid,
+      $trackingType,
+      \Yii::$app->controller->entryPoint['uuid'],
+      $viewType ?? null
+    );
+    
+    // Return the element UUID if tracking was successful (useful for chaining in templates)
+    // $result ? $elementUuid : false
+    return;
+  }
 
   /**
    * @throws RandomException
@@ -338,5 +381,177 @@ class CrelishBaseHelper
     }
 
     return false;
+  }
+  
+  /**
+   * Get a tracked download URL for an asset
+   * 
+   * This helper generates a URL that will track the download of the asset
+   * using the DownloadAction and analytics_element_views table.
+   * 
+   * @param string $uuid The UUID of the asset
+   * @param array $options Configuration options:
+   *   - inline: bool - Whether to display the file inline rather than download it
+   *   - filename: string - Custom filename to use for the download
+   * @return string URL for tracked download
+   */
+  public static function getTrackedDownloadUrl($uuid, $options = []): string
+  {
+    if (empty($uuid)) {
+      return '';
+    }
+    
+    $params = ['uuid' => $uuid];
+    
+    // Add inline parameter if specified
+    if (isset($options['inline']) && $options['inline']) {
+      $params['inline'] = 1;
+    }
+    
+    // Generate URL to download action
+    return Yii::$app->urlManager->createUrl(array_merge(['/crelish/asset/download'], $params));
+  }
+  
+  /**
+   * Generate responsive image HTML using asset UUID
+   * 
+   * This helper intelligently generates appropriate HTML for responsive images
+   * based on the intended usage context. It automatically utilizes the Asset model's
+   * stored attributes to prevent layout shift and provide proper alt text.
+   * 
+   * @param string $uuid The UUID of the asset
+   * @param array $options Configuration options:
+   *   - preset: string - Name of a predefined preset (hero, card, thumbnail, content)
+   *   - sizes: string - The sizes attribute for the img tag
+   *   - widths: array - Custom widths to generate
+   *   - format: string - Image format (webp, jpg) - defaults to webp
+   *   - quality: int - Image quality (0-100) - defaults to 75
+   *   - alt: string - Custom alt text for the image (overrides asset description/filename)
+   *   - class: string - CSS classes for the img tag
+   *   - loading: string - Loading attribute (lazy, eager) - defaults to lazy
+   *   - width: int - Custom width attribute (overrides asset width)
+   *   - height: int - Custom height attribute (overrides asset height)
+   * @return string HTML for responsive image
+   */
+  public static function responsiveImage($uuid, $options = []): string
+  {
+    // Try to get the asset
+    $asset = \app\workspace\models\Asset::findOne($uuid);
+    if (!$asset) {
+      return '';
+    }
+    
+    // First determine alt text from asset data
+    $altText = '';
+    if (!empty($asset->description)) {
+      $altText = $asset->description;
+    } elseif (!empty($asset->fileName)) {
+      $altText = pathinfo($asset->fileName, PATHINFO_FILENAME);
+    }
+    
+    // Default options
+    $defaults = [
+      'preset' => 'default',
+      'sizes' => '100vw',
+      'widths' => [480, 768, 1024],
+      'format' => 'webp',
+      'quality' => 75,
+      'alt' => $altText,
+      'class' => 'img-fluid',
+      'loading' => 'lazy',
+      'width' => $asset->width ?? null,
+      'height' => $asset->height ?? null
+    ];
+    
+    // Merge options with defaults
+    $options = array_merge($defaults, $options);
+    
+    // Configure presets for common use cases
+    $presets = [
+      'hero' => [
+        'widths' => [480, 768, 1024, 1600, 2000],
+        'sizes' => '(max-width: 767px) 100vw, (max-width: 1199px) 100vw, 100vw',
+        'loading' => 'eager',
+      ],
+      'card' => [
+        'widths' => [300, 600, 900],
+        'sizes' => '(max-width: 767px) 100vw, (max-width: 991px) 50vw, (max-width: 1199px) 33.333vw, 25vw',
+      ],
+      'thumbnail' => [
+        'widths' => [120, 240],
+        'sizes' => '120px',
+      ],
+      'content' => [
+        'widths' => [400, 800, 1200],
+        'sizes' => '(max-width: 767px) 100vw, (max-width: 991px) 75vw, 50vw',
+      ],
+      'default' => [
+        'widths' => [480, 768, 1024],
+        'sizes' => '100vw',
+      ]
+    ];
+    
+    // Apply preset if specified and exists
+    if (isset($presets[$options['preset']])) {
+      $options = array_merge($options, $presets[$options['preset']]);
+    }
+    
+    // Get original dimensions for aspect ratio calculation
+    $originalWidth = $asset->width ?? 0;
+    $originalHeight = $asset->height ?? 0;
+    
+    // Calculate dimensions for the responsive image to maintain aspect ratio
+    if ($originalWidth > 0 && $originalHeight > 0) {
+      $aspectRatio = $originalWidth / $originalHeight;
+      
+      // If custom width specified but no height, calculate height to maintain aspect ratio
+      if ($options['width'] && !$options['height']) {
+        $options['height'] = round($options['width'] / $aspectRatio);
+      }
+      // If custom height specified but no width, calculate width to maintain aspect ratio
+      elseif ($options['height'] && !$options['width']) {
+        $options['width'] = round($options['height'] * $aspectRatio);
+      }
+    }
+    
+    // Path to the original image
+    $imagePath = self::getAssetUrl($asset->pathName, $asset->fileName);
+    
+    // Base URL with format and quality
+    $baseUrl = '/crelish/asset/glide?path=' . ltrim($imagePath, '/') . '&q=' . $options['quality'] . '&fm=' . $options['format'];
+    
+    // Generate the highest resolution version for src
+    $mainWidth = max($options['widths']);
+    $mainUrl = $baseUrl . '&w=' . $mainWidth;
+    
+    // Generate srcset
+    $srcset = [];
+    foreach ($options['widths'] as $width) {
+      $url = $baseUrl . '&w=' . $width;
+      $srcset[] = $url . ' ' . $width . 'w';
+    }
+    
+    // Build HTML attributes for the img tag
+    $attrs = [
+      'src' => $mainUrl,
+      'alt' => $options['alt'],
+      'class' => $options['class'],
+      'loading' => $options['loading'],
+      'srcset' => implode(', ', $srcset),
+      'sizes' => $options['sizes'],
+      'width' => $options['width'],
+      'height' => $options['height']
+    ];
+    
+    // Build the HTML string
+    $html = '<img';
+    foreach ($attrs as $name => $value) {
+      if ($value !== null && $value !== '') {
+        $html .= ' ' . $name . '="' . htmlspecialchars($value) . '"';
+      }
+    }
+    $html .= '>';
+    
+    return $html;
   }
 }

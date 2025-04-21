@@ -262,7 +262,15 @@ class Bootstrap implements BootstrapInterface
       'contentService' => [
         'class' => 'giantbits\crelish\components\ContentService',
         'contentTypesPath' => '@app/config/content-types',
-      ]
+      ],
+      'crelishAnalytics' => [
+        'class' => 'giantbits\crelish\components\CrelishAnalyticsComponent',
+        'enabled' => true,
+        'excludeIps' => [
+          //'127.0.0.1',
+          // Add development/internal IPs here
+        ],
+      ],
     ];
 
     // Add analytics component if enabled

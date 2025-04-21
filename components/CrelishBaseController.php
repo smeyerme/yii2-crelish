@@ -47,6 +47,15 @@ class CrelishBaseController extends Controller
     }
   }
 
+  public function behaviors()
+  {
+    return [
+      'botDetection' => [
+        'class' => 'giantbits\crelish\components\BotDetectionMiddleware'
+      ]
+    ];
+  }
+
   /**
    * Called before the action is executed
    * 

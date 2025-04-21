@@ -96,6 +96,11 @@
 			
 			$this->data = call_user_func('app\workspace\models\\' . ucfirst($this->entryPoint['ctype']) . '::find')->where(['uuid' => $this->entryPoint['uuid']])->one();
 
+      // Track page view if analytics component is available
+      if (isset(Yii::$app->crelishAnalytics) && $this->entryPoint['uuid']) {
+        Yii::$app->crelishAnalytics->trackPageView($this->entryPoint);
+      }
+
 			// Set layout.
 			$this->setLayout();
 			

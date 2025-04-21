@@ -52,7 +52,7 @@ class AssetController extends CrelishBaseController
         'rules' => [
           [
             'allow' => true,
-            'actions' => ['login', 'glide', 'api-search', 'api-get', 'api-upload'],
+            'actions' => ['login', 'glide', 'download', 'api-search', 'api-get', 'api-upload'],
             'roles' => ['?', '@'], // Allow both guests and authenticated users to access these endpoints
           ],
           [
@@ -74,7 +74,8 @@ class AssetController extends CrelishBaseController
   public function actions(): array
   {
     return [
-      'glide' => 'giantbits\crelish\actions\GlideAction'
+      'glide' => 'giantbits\crelish\actions\GlideAction',
+      'download' => 'giantbits\crelish\actions\DownloadAction'
     ];
   }
 
