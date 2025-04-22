@@ -581,7 +581,7 @@ html[data-theme="dark"] {
 }
 
 .card-header h3 {
-    color: var(--dashboard-text);
+    color: var(--bs-heading-color);
     margin-bottom: 0;
     font-size: 1.25rem;
 }
@@ -611,9 +611,10 @@ html[data-theme="dark"] {
     border-top: 1px solid var(--dashboard-card-border);
 }
 
-.table thead th {
+.table thead tr th  {
     vertical-align: bottom;
     border-bottom: 2px solid var(--dashboard-card-border);
+    color: var(--dashboard-text) !important;
 }
 
 .table-striped tbody tr:nth-of-type(odd) {
