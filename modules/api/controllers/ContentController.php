@@ -108,10 +108,15 @@ class ContentController extends BaseController
         if (!empty($filterArray)) {
           $settings['filter'] = $filterArray;
         }
+
+        if(isset($settings['filter']['systitle']) && count($settings['filter']) === 1 && !empty($settings['filter']['systitle'])) {
+          $settings['filter']['freesearch'] = $settings['filter']['systitle'];
+          unset($settings['filter']['systitle']);
+        }
       }
 
       // Create data manager
-      $dataManager = new \giantbits\crelish\components\CrelishDataManager($type, $settings);
+      $dataManager = new \giantbits\crelish\components\CrelishDataManager($type, $settings, null,true);
 
       // Get data
       $result = $dataManager->all();
