@@ -1,4 +1,5 @@
 <?php
+
 use yii\helpers\Html;
 use yii\helpers\Url;
 
@@ -18,7 +19,6 @@ $exportSessionsUrl = Url::to(['export', 'type' => 'sessions']);
             <div class="col-md-12">
                 <div class="card" style="margin-bottom: 0;">
                     <div class="card-header">
-                        <h2><?= Yii::t('crelish', 'Website Analytics Dashboard') ?></h2>
                         <div class="analytics-filters">
                             <div class="form-group">
                                 <label><?= Yii::t('crelish', 'Time Period:') ?></label>
