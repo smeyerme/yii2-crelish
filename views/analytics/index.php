@@ -145,6 +145,11 @@ $typeText = Yii::t('crelish', 'Type');
 $viewsText = Yii::t('crelish', 'Views');
 $noDataText = Yii::t('crelish', 'No data available for the selected period');
 $pageViewsText = Yii::t('crelish', 'Page Views');
+$uniqueVisitorsText = Yii::t('crelish', 'Unique Visitors');
+$avgVisitorsPerDayText = Yii::t('crelish', 'Average Visitors Per Day');
+$visitorsText = Yii::t('crelish', 'Visitors');
+$fileTypeText = Yii::t('crelish', 'File Type');
+$viewTypeText = Yii::t('crelish', 'View Type');
 
 // JavaScript with proper URL handling
 $js = <<<JS
@@ -154,7 +159,22 @@ var topPagesUrl = '$topPagesUrl';
 var topElementsUrl = '$topElementsUrl';
 var exportPageViewsBaseUrl = '$exportPageViewsUrl';
 var exportElementsBaseUrl = '$exportElementsUrl';
-var exportSessionsBaseUrl = '$exportSessionsUrl';
+var exportSessionsBaseUrl = '$exportSessionsBaseUrl';
+
+// Translation variables
+var totalViewsText = '$totalViewsText';
+var avgViewsPerDayText = '$avgViewsPerDayText';
+var pageText = '$pageText';
+var elementText = '$elementText';
+var typeText = '$typeText';
+var viewsText = '$viewsText';
+var noDataText = '$noDataText';
+var pageViewsText = '$pageViewsText';
+var uniqueVisitorsText = '$uniqueVisitorsText';
+var avgVisitorsPerDayText = '$avgVisitorsPerDayText';
+var visitorsText = '$visitorsText';
+var fileTypeText = '$fileTypeText';
+var viewTypeText = '$viewTypeText';
 
 // Chart objects
 var pageViewsChart = null;
@@ -287,12 +307,7 @@ function loadTrafficSummary() {
             // Calculate average views per day
             var avgViews = Math.round(totalViews / data.length) || 0;
             
-            // Prepare translated text variables
-            var uniqueVisitorsText = "<?= Yii::t('crelish', 'Unique Visitors') ?>";
-            var totalViewsText = "<?= Yii::t('crelish', 'Total Views') ?>";
-            var avgVisitorsPerDayText = "<?= Yii::t('crelish', 'Average Visitors Per Day') ?>";
-            var avgViewsPerDayText = "<?= Yii::t('crelish', 'Average Views Per Day') ?>";
-            
+            // Choose the right text based on unique visitors setting
             var viewTypeText = uniqueVisitors ? uniqueVisitorsText : totalViewsText;
             var avgViewTypeText = uniqueVisitors ? avgVisitorsPerDayText : avgViewsPerDayText;
             
@@ -327,8 +342,7 @@ function loadTopPages() {
         },
         dataType: 'json',
         success: function(data) {
-            var visitorsText = "<?= Yii::t('crelish', 'Visitors') ?>";
-            var viewsText = "<?= Yii::t('crelish', 'Views') ?>";
+            // Choose the right column header based on unique visitors setting
             var viewTypeText = uniqueVisitors ? visitorsText : viewsText;
             
             var html = '<table class="table table-striped">';
@@ -381,12 +395,12 @@ function loadTopElements() {
             
             // Add file type column for downloads
             if (elementType === 'download') {
-                html += '<th>' + "<?= Yii::t('crelish', 'File Type') ?>" + '</th>';
+                html += '<th>' + fileTypeText + '</th>';
             }
             
             // Add view type column if showing all types
             if (elementType === '') {
-                html += '<th>' + "<?= Yii::t('crelish', 'View Type') ?>" + '</th>';
+                html += '<th>' + viewTypeText + '</th>';
             }
             
             html += '<th>' + viewsText + '</th>';
@@ -466,9 +480,7 @@ function renderPageViewsChart(data) {
     var backgroundColor = isDarkMode ? 'rgba(54, 162, 235, 0.2)' : 'rgba(54, 162, 235, 0.2)';
     var borderColor = isDarkMode ? '#63a7ff' : '#007bff';
     
-    // Set label based on whether we're showing unique visitors
-    var uniqueVisitorsText = "<?= Yii::t('crelish', 'Unique Visitors') ?>";
-    var pageViewsText = "<?= Yii::t('crelish', 'Page Views') ?>";
+    // Set chart label based on unique visitors setting
     var chartLabel = $('#unique-visitors').is(':checked') ? uniqueVisitorsText : pageViewsText;
         
     // Create new chart with fixed size and theme-aware options
