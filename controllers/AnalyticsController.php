@@ -22,6 +22,32 @@ class AnalyticsController extends CrelishBaseController
   }
 
   /**
+   * Override the setupHeaderBar method for dashboard-specific components
+   */
+  protected function setupHeaderBar()
+  {
+    // Default left components for all actions
+    $this->view->params['headerBarLeft'] = ['toggle-sidebar'];
+
+    // Default right components (empty by default)
+    $this->view->params['headerBarRight'] = [];
+
+    // Set specific components based on action
+    $action = $this->action ? $this->action->id : null;
+
+    switch ($action) {
+      case 'index':
+        // For dashboard index, just show the toggle sidebar
+        $this->view->params['headerBarLeft'][] = ['title', Yii::t('crelish', 'Website Analytics')];
+        break;
+
+      default:
+        // For other actions, just keep the defaults
+        break;
+    }
+  }
+
+  /**
    * Dashboard index
    */
   public function actionIndex()
