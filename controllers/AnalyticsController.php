@@ -54,10 +54,12 @@ class AnalyticsController extends CrelishBaseController
   {
     $period = Yii::$app->request->get('period', 'month');
     $excludeBots = Yii::$app->request->get('exclude_bots', 1);
+    $uniqueVisitors = Yii::$app->request->get('unique_visitors', 0);
 
     return $this->render('index', [
       'period' => $period,
-      'excludeBots' => $excludeBots
+      'excludeBots' => $excludeBots,
+      'uniqueVisitors' => $uniqueVisitors
     ]);
   }
 
@@ -70,8 +72,9 @@ class AnalyticsController extends CrelishBaseController
 
     $period = Yii::$app->request->get('period', 'month');
     $excludeBots = Yii::$app->request->get('exclude_bots', 1);
+    $uniqueVisitors = Yii::$app->request->get('unique_visitors', 0);
 
-    return Yii::$app->crelishAnalytics->getPageViewStats($period, (bool)$excludeBots);
+    return Yii::$app->crelishAnalytics->getPageViewStats($period, (bool)$excludeBots, (bool)$uniqueVisitors);
   }
 
   /**
@@ -84,8 +87,9 @@ class AnalyticsController extends CrelishBaseController
     $period = Yii::$app->request->get('period', 'month');
     $limit = Yii::$app->request->get('limit', 10);
     $excludeBots = Yii::$app->request->get('exclude_bots', 1);
+    $uniqueVisitors = Yii::$app->request->get('unique_visitors', 0);
 
-    $pages = Yii::$app->crelishAnalytics->getTopPages($period, $limit, (bool)$excludeBots);
+    $pages = Yii::$app->crelishAnalytics->getTopPages($period, $limit, (bool)$excludeBots, (bool)$uniqueVisitors);
 
     // Enrich with page titles
     foreach ($pages as &$page) {
@@ -195,6 +199,7 @@ class AnalyticsController extends CrelishBaseController
   {
     $period = Yii::$app->request->get('period', 'month');
     $excludeBots = Yii::$app->request->get('exclude_bots', 1);
+    $uniqueVisitors = Yii::$app->request->get('unique_visitors', 0);
     $type = Yii::$app->request->get('type', 'page_views');
 
     $filename = 'analytics_' . $type . '_' . date('Y-m-d') . '.csv';
@@ -202,8 +207,17 @@ class AnalyticsController extends CrelishBaseController
     $query = (new \yii\db\Query());
 
     if ($type === 'page_views') {
-      $query->select(['page_uuid', 'page_type', 'url', 'session_id', 'user_id', 'created_at'])
-        ->from('analytics_page_views');
+      // If unique visitors is enabled and we're exporting page views
+      if ($uniqueVisitors) {
+        // Get a list of unique IP + session_id combinations
+        $query->select(['page_uuid', 'page_type', 'url', 'session_id', 'user_id', 'ip_address', 'created_at'])
+          ->from('analytics_page_views')
+          ->groupBy(['ip_address', 'session_id', 'page_uuid']);
+      } else {
+        // Regular page views export
+        $query->select(['page_uuid', 'page_type', 'url', 'session_id', 'user_id', 'ip_address', 'created_at'])
+          ->from('analytics_page_views');
+      }
 
       if ($excludeBots) {
         $query->where(['is_bot' => 0]);

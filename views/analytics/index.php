@@ -36,6 +36,12 @@ $exportSessionsUrl = Url::to(['export', 'type' => 'sessions']);
                                   <?= Yii::t('crelish', 'Exclude Bot Traffic') ?>
                                 </label>
                             </div>
+                            <div class="form-group">
+                                <label>
+                                  <?= Html::checkbox('unique_visitors', $uniqueVisitors, ['id' => 'unique-visitors']) ?>
+                                  <?= Yii::t('crelish', 'Show Unique Visitors Only') ?>
+                                </label>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -171,6 +177,12 @@ $(document).ready(function() {
         updateExportLinks();
     });
     
+    // Handle unique visitors toggle change
+    $('#unique-visitors').change(function() {
+        loadData();
+        updateExportLinks();
+    });
+    
     // Handle element type filter change
     $('#element-type-filter').change(function() {
         loadTopElements();
@@ -221,9 +233,10 @@ function loadData() {
 function updateExportLinks() {
     var period = $('#period-filter').val();
     var excludeBots = $('#exclude-bots').is(':checked') ? 1 : 0;
+    var uniqueVisitors = $('#unique-visitors').is(':checked') ? 1 : 0;
     
     $('#export-page-views').attr('href', 
-        exportPageViewsBaseUrl + '&period=' + period + '&exclude_bots=' + excludeBots);
+        exportPageViewsBaseUrl + '&period=' + period + '&exclude_bots=' + excludeBots + '&unique_visitors=' + uniqueVisitors);
     $('#export-elements').attr('href', 
         exportElementsBaseUrl + '&period=' + period);
     $('#export-sessions').attr('href', 
@@ -234,10 +247,15 @@ function updateExportLinks() {
 function loadPageViewStats() {
     var period = $('#period-filter').val();
     var excludeBots = $('#exclude-bots').is(':checked') ? 1 : 0;
+    var uniqueVisitors = $('#unique-visitors').is(':checked') ? 1 : 0;
     
     $.ajax({
         url: pageViewStatsUrl,
-        data: { period: period, exclude_bots: excludeBots },
+        data: { 
+            period: period, 
+            exclude_bots: excludeBots,
+            unique_visitors: uniqueVisitors
+        },
         dataType: 'json',
         success: function(data) {
             renderPageViewsChart(data);
@@ -249,10 +267,15 @@ function loadPageViewStats() {
 function loadTrafficSummary() {
     var period = $('#period-filter').val();
     var excludeBots = $('#exclude-bots').is(':checked') ? 1 : 0;
+    var uniqueVisitors = $('#unique-visitors').is(':checked') ? 1 : 0;
     
     $.ajax({
         url: pageViewStatsUrl,
-        data: { period: period, exclude_bots: excludeBots },
+        data: { 
+            period: period, 
+            exclude_bots: excludeBots,
+            unique_visitors: uniqueVisitors
+        },
         dataType: 'json',
         success: function(data) {
             // Calculate total views
@@ -264,13 +287,16 @@ function loadTrafficSummary() {
             // Calculate average views per day
             var avgViews = Math.round(totalViews / data.length) || 0;
             
+            var viewTypeText = uniqueVisitors ? "<?= Yii::t('crelish', 'Unique Visitors') ?>" : "<?= Yii::t('crelish', 'Total Views') ?>";
+            var avgViewTypeText = uniqueVisitors ? "<?= Yii::t('crelish', 'Average Visitors Per Day') ?>" : "<?= Yii::t('crelish', 'Average Views Per Day') ?>";
+            
             var html = '<div class="summary-stat">';
-            html += '<h4>' + "$totalViewsText" + '</h4>';
+            html += '<h4>' + viewTypeText + '</h4>';
             html += '<div class="stat-value">' + totalViews.toLocaleString() + '</div>';
             html += '</div>';
             
             html += '<div class="summary-stat">';
-            html += '<h4>' + "$avgViewsPerDayText" + '</h4>';
+            html += '<h4>' + avgViewTypeText + '</h4>';
             html += '<div class="stat-value">' + avgViews.toLocaleString() + '</div>';
             html += '</div>';
             
@@ -283,14 +309,22 @@ function loadTrafficSummary() {
 function loadTopPages() {
     var period = $('#period-filter').val();
     var excludeBots = $('#exclude-bots').is(':checked') ? 1 : 0;
+    var uniqueVisitors = $('#unique-visitors').is(':checked') ? 1 : 0;
     
     $.ajax({
         url: topPagesUrl,
-        data: { period: period, exclude_bots: excludeBots, limit: 10 },
+        data: { 
+            period: period, 
+            exclude_bots: excludeBots, 
+            unique_visitors: uniqueVisitors,
+            limit: 10 
+        },
         dataType: 'json',
         success: function(data) {
+            var viewTypeText = uniqueVisitors ? "<?= Yii::t('crelish', 'Visitors') ?>" : "<?= Yii::t('crelish', 'Views') ?>";
+            
             var html = '<table class="table table-striped">';
-            html += '<thead><tr><th>' + "$pageText" + '</th><th>' + "$typeText" + '</th><th>' + "$viewsText" + '</th></tr></thead>';
+            html += '<thead><tr><th>' + "$pageText" + '</th><th>' + "$typeText" + '</th><th>' + viewTypeText + '</th></tr></thead>';
             html += '<tbody>';
             
             if (data.length === 0) {
@@ -424,13 +458,18 @@ function renderPageViewsChart(data) {
     var backgroundColor = isDarkMode ? 'rgba(54, 162, 235, 0.2)' : 'rgba(54, 162, 235, 0.2)';
     var borderColor = isDarkMode ? '#63a7ff' : '#007bff';
     
+    // Set label based on whether we're showing unique visitors
+    var chartLabel = $('#unique-visitors').is(':checked') ? 
+        "<?= Yii::t('crelish', 'Unique Visitors') ?>" : 
+        "<?= Yii::t('crelish', 'Page Views') ?>";
+        
     // Create new chart with fixed size and theme-aware options
     pageViewsChart = new Chart(ctx, {
         type: 'line',
         data: {
             labels: labels,
             datasets: [{
-                label: "$pageViewsText",
+                label: chartLabel,
                 data: viewCounts,
                 backgroundColor: backgroundColor,
                 borderColor: borderColor,

@@ -215,18 +215,30 @@ class CrelishAnalyticsComponent extends Component
    * Get page view statistics for a given period
    * @param string $period day|week|month|year
    * @param bool $excludeBots
+   * @param bool $uniqueVisitors Only count unique visitors (by IP + session_id)
    * @return array
    */
-  public function getPageViewStats($period = 'month', $excludeBots = true)
+  public function getPageViewStats($period = 'month', $excludeBots = true, $uniqueVisitors = false)
   {
     $dateExpression = $this->getDateExpressionForPeriod($period);
 
-    $query = (new Query())
-      ->select([
+    $query = (new Query());
+    
+    if ($uniqueVisitors) {
+      // For unique visitors, count distinct combinations of IP and session_id
+      $query->select([
+        'date' => $dateExpression,
+        'views' => 'COUNT(DISTINCT CONCAT(ip_address, "-", session_id))'
+      ]);
+    } else {
+      // For total views, count all records
+      $query->select([
         'date' => $dateExpression,
         'views' => 'COUNT(*)'
-      ])
-      ->from('analytics_page_views');
+      ]);
+    }
+    
+    $query->from('analytics_page_views');
 
     if ($excludeBots) {
       $query->where(['is_bot' => 0]);
@@ -242,18 +254,32 @@ class CrelishAnalyticsComponent extends Component
    * @param string $period day|week|month|year
    * @param int $limit
    * @param bool $excludeBots
+   * @param bool $uniqueVisitors Only count unique visitors (by IP + session_id)
    * @return array
    */
-  public function getTopPages($period = 'month', $limit = 10, $excludeBots = true)
+  public function getTopPages($period = 'month', $limit = 10, $excludeBots = true, $uniqueVisitors = false)
   {
-    $query = (new Query())
-      ->select([
+    $query = (new Query());
+    
+    if ($uniqueVisitors) {
+      // For unique visitors, count distinct combinations of IP and session_id per page
+      $query->select([
+        'page_uuid',
+        'page_type',
+        'url',
+        'views' => 'COUNT(DISTINCT CONCAT(ip_address, "-", session_id))'
+      ]);
+    } else {
+      // For total views, count all records
+      $query->select([
         'page_uuid',
         'page_type',
         'url',
         'views' => 'COUNT(*)'
-      ])
-      ->from('analytics_page_views');
+      ]);
+    }
+    
+    $query->from('analytics_page_views');
 
     if ($excludeBots) {
       $query->where(['is_bot' => 0]);
