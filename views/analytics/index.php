@@ -287,8 +287,14 @@ function loadTrafficSummary() {
             // Calculate average views per day
             var avgViews = Math.round(totalViews / data.length) || 0;
             
-            var viewTypeText = uniqueVisitors ? "<?= Yii::t('crelish', 'Unique Visitors') ?>" : "<?= Yii::t('crelish', 'Total Views') ?>";
-            var avgViewTypeText = uniqueVisitors ? "<?= Yii::t('crelish', 'Average Visitors Per Day') ?>" : "<?= Yii::t('crelish', 'Average Views Per Day') ?>";
+            // Prepare translated text variables
+            var uniqueVisitorsText = "<?= Yii::t('crelish', 'Unique Visitors') ?>";
+            var totalViewsText = "<?= Yii::t('crelish', 'Total Views') ?>";
+            var avgVisitorsPerDayText = "<?= Yii::t('crelish', 'Average Visitors Per Day') ?>";
+            var avgViewsPerDayText = "<?= Yii::t('crelish', 'Average Views Per Day') ?>";
+            
+            var viewTypeText = uniqueVisitors ? uniqueVisitorsText : totalViewsText;
+            var avgViewTypeText = uniqueVisitors ? avgVisitorsPerDayText : avgViewsPerDayText;
             
             var html = '<div class="summary-stat">';
             html += '<h4>' + viewTypeText + '</h4>';
@@ -321,14 +327,16 @@ function loadTopPages() {
         },
         dataType: 'json',
         success: function(data) {
-            var viewTypeText = uniqueVisitors ? "<?= Yii::t('crelish', 'Visitors') ?>" : "<?= Yii::t('crelish', 'Views') ?>";
+            var visitorsText = "<?= Yii::t('crelish', 'Visitors') ?>";
+            var viewsText = "<?= Yii::t('crelish', 'Views') ?>";
+            var viewTypeText = uniqueVisitors ? visitorsText : viewsText;
             
             var html = '<table class="table table-striped">';
-            html += '<thead><tr><th>' + "$pageText" + '</th><th>' + "$typeText" + '</th><th>' + viewTypeText + '</th></tr></thead>';
+            html += '<thead><tr><th>' + pageText + '</th><th>' + typeText + '</th><th>' + viewTypeText + '</th></tr></thead>';
             html += '<tbody>';
             
             if (data.length === 0) {
-                html += '<tr><td colspan="3">' + "$noDataText" + '</td></tr>';
+                html += '<tr><td colspan="3">' + noDataText + '</td></tr>';
             } else {
                 data.forEach(function(page) {
                     html += '<tr>';
@@ -368,26 +376,26 @@ function loadTopElements() {
         success: function(data) {
             var html = '<table class="table table-striped">';
             html += '<thead><tr>';
-            html += '<th>' + "$elementText" + '</th>';
-            html += '<th>' + "$typeText" + '</th>';
+            html += '<th>' + elementText + '</th>';
+            html += '<th>' + typeText + '</th>';
             
             // Add file type column for downloads
             if (elementType === 'download') {
-                html += '<th>File Type</th>';
+                html += '<th>' + "<?= Yii::t('crelish', 'File Type') ?>" + '</th>';
             }
             
             // Add view type column if showing all types
             if (elementType === '') {
-                html += '<th>View Type</th>';
+                html += '<th>' + "<?= Yii::t('crelish', 'View Type') ?>" + '</th>';
             }
             
-            html += '<th>' + "$viewsText" + '</th>';
+            html += '<th>' + viewsText + '</th>';
             html += '</tr></thead>';
             html += '<tbody>';
             
             if (data.length === 0) {
                 var colSpan = elementType === 'download' ? 4 : (elementType !== '' ? 3 : 4);
-                html += '<tr><td colspan="' + colSpan + '">' + "$noDataText" + '</td></tr>';
+                html += '<tr><td colspan="' + colSpan + '">' + noDataText + '</td></tr>';
             } else {
                 data.forEach(function(element) {
                     html += '<tr>';
@@ -459,9 +467,9 @@ function renderPageViewsChart(data) {
     var borderColor = isDarkMode ? '#63a7ff' : '#007bff';
     
     // Set label based on whether we're showing unique visitors
-    var chartLabel = $('#unique-visitors').is(':checked') ? 
-        "<?= Yii::t('crelish', 'Unique Visitors') ?>" : 
-        "<?= Yii::t('crelish', 'Page Views') ?>";
+    var uniqueVisitorsText = "<?= Yii::t('crelish', 'Unique Visitors') ?>";
+    var pageViewsText = "<?= Yii::t('crelish', 'Page Views') ?>";
+    var chartLabel = $('#unique-visitors').is(':checked') ? uniqueVisitorsText : pageViewsText;
         
     // Create new chart with fixed size and theme-aware options
     pageViewsChart = new Chart(ctx, {
