@@ -36,6 +36,12 @@ $exportSessionsUrl = Url::to(['export', 'type' => 'sessions']);
                                   <?= Yii::t('crelish', 'Exclude Bot Traffic') ?>
                                 </label>
                             </div>
+                            <div class="form-group">
+                                <label>
+                                  <?= Html::checkbox('unique_visitors', $uniqueVisitors, ['id' => 'unique-visitors']) ?>
+                                  <?= Yii::t('crelish', 'Show Unique Visitors Only') ?>
+                                </label>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -139,6 +145,11 @@ $typeText = Yii::t('crelish', 'Type');
 $viewsText = Yii::t('crelish', 'Views');
 $noDataText = Yii::t('crelish', 'No data available for the selected period');
 $pageViewsText = Yii::t('crelish', 'Page Views');
+$uniqueVisitorsText = Yii::t('crelish', 'Unique Visitors');
+$avgVisitorsPerDayText = Yii::t('crelish', 'Average Visitors Per Day');
+$visitorsText = Yii::t('crelish', 'Visitors');
+$fileTypeText = Yii::t('crelish', 'File Type');
+$viewTypeText = Yii::t('crelish', 'View Type');
 
 // JavaScript with proper URL handling
 $js = <<<JS
@@ -148,7 +159,22 @@ var topPagesUrl = '$topPagesUrl';
 var topElementsUrl = '$topElementsUrl';
 var exportPageViewsBaseUrl = '$exportPageViewsUrl';
 var exportElementsBaseUrl = '$exportElementsUrl';
-var exportSessionsBaseUrl = '$exportSessionsUrl';
+var exportSessionsBaseUrl = '$exportSessionsBaseUrl';
+
+// Translation variables
+var totalViewsText = '$totalViewsText';
+var avgViewsPerDayText = '$avgViewsPerDayText';
+var pageText = '$pageText';
+var elementText = '$elementText';
+var typeText = '$typeText';
+var viewsText = '$viewsText';
+var noDataText = '$noDataText';
+var pageViewsText = '$pageViewsText';
+var uniqueVisitorsText = '$uniqueVisitorsText';
+var avgVisitorsPerDayText = '$avgVisitorsPerDayText';
+var visitorsText = '$visitorsText';
+var fileTypeText = '$fileTypeText';
+var viewTypeText = '$viewTypeText';
 
 // Chart objects
 var pageViewsChart = null;
@@ -167,6 +193,12 @@ $(document).ready(function() {
     
     // Handle bot exclusion change
     $('#exclude-bots').change(function() {
+        loadData();
+        updateExportLinks();
+    });
+    
+    // Handle unique visitors toggle change
+    $('#unique-visitors').change(function() {
         loadData();
         updateExportLinks();
     });
@@ -221,9 +253,10 @@ function loadData() {
 function updateExportLinks() {
     var period = $('#period-filter').val();
     var excludeBots = $('#exclude-bots').is(':checked') ? 1 : 0;
+    var uniqueVisitors = $('#unique-visitors').is(':checked') ? 1 : 0;
     
     $('#export-page-views').attr('href', 
-        exportPageViewsBaseUrl + '&period=' + period + '&exclude_bots=' + excludeBots);
+        exportPageViewsBaseUrl + '&period=' + period + '&exclude_bots=' + excludeBots + '&unique_visitors=' + uniqueVisitors);
     $('#export-elements').attr('href', 
         exportElementsBaseUrl + '&period=' + period);
     $('#export-sessions').attr('href', 
@@ -234,10 +267,15 @@ function updateExportLinks() {
 function loadPageViewStats() {
     var period = $('#period-filter').val();
     var excludeBots = $('#exclude-bots').is(':checked') ? 1 : 0;
+    var uniqueVisitors = $('#unique-visitors').is(':checked') ? 1 : 0;
     
     $.ajax({
         url: pageViewStatsUrl,
-        data: { period: period, exclude_bots: excludeBots },
+        data: { 
+            period: period, 
+            exclude_bots: excludeBots,
+            unique_visitors: uniqueVisitors
+        },
         dataType: 'json',
         success: function(data) {
             renderPageViewsChart(data);
@@ -249,10 +287,15 @@ function loadPageViewStats() {
 function loadTrafficSummary() {
     var period = $('#period-filter').val();
     var excludeBots = $('#exclude-bots').is(':checked') ? 1 : 0;
+    var uniqueVisitors = $('#unique-visitors').is(':checked') ? 1 : 0;
     
     $.ajax({
         url: pageViewStatsUrl,
-        data: { period: period, exclude_bots: excludeBots },
+        data: { 
+            period: period, 
+            exclude_bots: excludeBots,
+            unique_visitors: uniqueVisitors
+        },
         dataType: 'json',
         success: function(data) {
             // Calculate total views
@@ -264,13 +307,17 @@ function loadTrafficSummary() {
             // Calculate average views per day
             var avgViews = Math.round(totalViews / data.length) || 0;
             
+            // Choose the right text based on unique visitors setting
+            var viewTypeText = uniqueVisitors ? uniqueVisitorsText : totalViewsText;
+            var avgViewTypeText = uniqueVisitors ? avgVisitorsPerDayText : avgViewsPerDayText;
+            
             var html = '<div class="summary-stat">';
-            html += '<h4>' + "$totalViewsText" + '</h4>';
+            html += '<h4>' + viewTypeText + '</h4>';
             html += '<div class="stat-value">' + totalViews.toLocaleString() + '</div>';
             html += '</div>';
             
             html += '<div class="summary-stat">';
-            html += '<h4>' + "$avgViewsPerDayText" + '</h4>';
+            html += '<h4>' + avgViewTypeText + '</h4>';
             html += '<div class="stat-value">' + avgViews.toLocaleString() + '</div>';
             html += '</div>';
             
@@ -283,18 +330,27 @@ function loadTrafficSummary() {
 function loadTopPages() {
     var period = $('#period-filter').val();
     var excludeBots = $('#exclude-bots').is(':checked') ? 1 : 0;
+    var uniqueVisitors = $('#unique-visitors').is(':checked') ? 1 : 0;
     
     $.ajax({
         url: topPagesUrl,
-        data: { period: period, exclude_bots: excludeBots, limit: 10 },
+        data: { 
+            period: period, 
+            exclude_bots: excludeBots, 
+            unique_visitors: uniqueVisitors,
+            limit: 10 
+        },
         dataType: 'json',
         success: function(data) {
+            // Choose the right column header based on unique visitors setting
+            var viewTypeText = uniqueVisitors ? visitorsText : viewsText;
+            
             var html = '<table class="table table-striped">';
-            html += '<thead><tr><th>' + "$pageText" + '</th><th>' + "$typeText" + '</th><th>' + "$viewsText" + '</th></tr></thead>';
+            html += '<thead><tr><th>' + pageText + '</th><th>' + typeText + '</th><th>' + viewTypeText + '</th></tr></thead>';
             html += '<tbody>';
             
             if (data.length === 0) {
-                html += '<tr><td colspan="3">' + "$noDataText" + '</td></tr>';
+                html += '<tr><td colspan="3">' + noDataText + '</td></tr>';
             } else {
                 data.forEach(function(page) {
                     html += '<tr>';
@@ -334,26 +390,26 @@ function loadTopElements() {
         success: function(data) {
             var html = '<table class="table table-striped">';
             html += '<thead><tr>';
-            html += '<th>' + "$elementText" + '</th>';
-            html += '<th>' + "$typeText" + '</th>';
+            html += '<th>' + elementText + '</th>';
+            html += '<th>' + typeText + '</th>';
             
             // Add file type column for downloads
             if (elementType === 'download') {
-                html += '<th>File Type</th>';
+                html += '<th>' + fileTypeText + '</th>';
             }
             
             // Add view type column if showing all types
             if (elementType === '') {
-                html += '<th>View Type</th>';
+                html += '<th>' + viewTypeText + '</th>';
             }
             
-            html += '<th>' + "$viewsText" + '</th>';
+            html += '<th>' + viewsText + '</th>';
             html += '</tr></thead>';
             html += '<tbody>';
             
             if (data.length === 0) {
                 var colSpan = elementType === 'download' ? 4 : (elementType !== '' ? 3 : 4);
-                html += '<tr><td colspan="' + colSpan + '">' + "$noDataText" + '</td></tr>';
+                html += '<tr><td colspan="' + colSpan + '">' + noDataText + '</td></tr>';
             } else {
                 data.forEach(function(element) {
                     html += '<tr>';
@@ -424,13 +480,16 @@ function renderPageViewsChart(data) {
     var backgroundColor = isDarkMode ? 'rgba(54, 162, 235, 0.2)' : 'rgba(54, 162, 235, 0.2)';
     var borderColor = isDarkMode ? '#63a7ff' : '#007bff';
     
+    // Set chart label based on unique visitors setting
+    var chartLabel = $('#unique-visitors').is(':checked') ? uniqueVisitorsText : pageViewsText;
+        
     // Create new chart with fixed size and theme-aware options
     pageViewsChart = new Chart(ctx, {
         type: 'line',
         data: {
             labels: labels,
             datasets: [{
-                label: "$pageViewsText",
+                label: chartLabel,
                 data: viewCounts,
                 backgroundColor: backgroundColor,
                 borderColor: borderColor,
