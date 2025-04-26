@@ -1,0 +1,324 @@
+<div class="analytics-dashboard">
+    <div class="dashboard-header mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h2>{{ t('crelish', 'Analytics Dashboard') }}</h2>
+                <div class="dashboard-controls">
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#add-widget-modal">
+                        <i class="fa-sharp fa-regular fa-plus"></i> {{ t('crelish', 'Add Widget') }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Top Widgets Section #}
+    {% if topWidgets|length > 0 %}
+    <div class="dashboard-section dashboard-top">
+        <div class="row">
+            {% for widget in topWidgets %}
+            <div class="col-md-{{ widget.size }}">
+                {{ widget.run()|raw }}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {# Left & Right Widgets Sections #}
+    <div class="dashboard-section dashboard-middle">
+        <div class="row">
+            {# Left Widgets #}
+            <div class="col-md-6">
+                {% for widget in leftWidgets %}
+                {{ widget.run()|raw }}
+                {% endfor %}
+            </div>
+
+            {# Right Widgets #}
+            <div class="col-md-6">
+                {% for widget in rightWidgets %}
+                {{ widget.run()|raw }}
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    {# Bottom Widgets Section #}
+    {% if bottomWidgets|length > 0 %}
+    <div class="dashboard-section dashboard-bottom">
+        <div class="row">
+            {% for widget in bottomWidgets %}
+            <div class="col-md-{{ widget.size }}">
+                {{ widget.run()|raw }}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{# Add Widget Modal #}
+<div class="modal fade" id="add-widget-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ t('crelish', 'Add Dashboard Widget') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="add-widget-form">
+                    <div class="mb-3">
+                        <label for="widget-type" class="form-label">{{ t('crelish', 'Widget Type') }}</label>
+                        <select class="form-select" id="widget-type" name="type" required>
+                            <option value="">{{ t('crelish', 'Select Widget Type') }}</option>
+                            {% for value, label in availableWidgets %}
+                            <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="widget-section" class="form-label">{{ t('crelish', 'Dashboard Section') }}</label>
+                        <select class="form-select" id="widget-section" name="section" required>
+                            <option value="top">{{ t('crelish', 'Top') }}</option>
+                            <option value="left">{{ t('crelish', 'Left') }}</option>
+                            <option value="right">{{ t('crelish', 'Right') }}</option>
+                            <option value="bottom">{{ t('crelish', 'Bottom') }}</option>
+                        </select>
+                    </div>
+
+                    <div id="widget-options-container"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('crelish', 'Cancel') }}</button>
+                <button type="button" class="btn btn-primary" id="add-widget-btn">{{ t('crelish', 'Add Widget') }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Widget type option handling
+    $('#widget-type').change(function() {
+        var type = $(this).val();
+        var optionsContainer = $('#widget-options-container');
+
+        // Clear existing options
+        optionsContainer.empty();
+
+        // Add options based on widget type
+        if (type === 'contentperformance' || type === 'topelements') {
+            // Add title field
+            var titleHtml = '<div class="mb-3">' +
+                '<label for="widget-title" class="form-label">{{ t("crelish", "Widget Title") }}</label>' +
+                '<input type="text" class="form-control" id="widget-title" name="options[title]">' +
+                '</div>';
+
+            optionsContainer.append(titleHtml);
+
+            // Add content type selector for contentperformance
+            if (type === 'contentperformance') {
+                var contentTypeHtml = '<div class="mb-3">' +
+                    '<label for="widget-content-type" class="form-label">{{ t("crelish", "Content Type") }}</label>' +
+                    '<select class="form-select" id="widget-content-type" name="options[contentType]">' +
+                    '<option value="">{{ t("crelish", "All Content Types") }}</option>';
+
+                // Content types would ideally be loaded via AJAX in a real implementation
+
+                contentTypeHtml += '</select></div>';
+
+                optionsContainer.append(contentTypeHtml);
+            }
+        }
+
+        if (type === 'userjourney') {
+            // Add title field
+            var titleHtml = '<div class="mb-3">' +
+                '<label for="widget-title" class="form-label">{{ t("crelish", "Widget Title") }}</label>' +
+                '<input type="text" class="form-control" id="widget-title" name="options[title]" value="{{ t("crelish", "User Journey") }}">' +
+                '</div>';
+
+            optionsContainer.append(titleHtml);
+
+            // Add size field
+            var sizeHtml = '<div class="mb-3">' +
+                '<label for="widget-size" class="form-label">{{ t("crelish", "Widget Size") }}</label>' +
+                '<select class="form-select" id="widget-size" name="options[size]">' +
+                '<option value="12" selected>{{ t("crelish", "Full Width") }}</option>' +
+                '<option value="6">{{ t("crelish", "Half Width") }}</option>' +
+                '</select>' +
+                '</div>';
+
+            optionsContainer.append(sizeHtml);
+        }
+    });
+
+    // Add widget button handling
+    $('#add-widget-btn').click(function() {
+        var form = $('#add-widget-form');
+        var type = $('#widget-type').val();
+        var section = $('#widget-section').val();
+
+        // Collect options
+        var options = {};
+        form.find('[name^="options["]').each(function() {
+            var key = $(this).attr('name').match(/options\[(.*?)\]/)[1];
+            options[key] = $(this).val();
+        });
+
+        // Validate form
+        if (!type || !section) {
+            alert('{{ t("crelish", "Please fill all required fields") }}');
+            return;
+        }
+
+        // Send add widget request
+        $.ajax({
+            url: '{{ url(["/crelish/analytics/add-widget"]) }}',
+            type: 'POST',
+            data: {
+                type: type,
+                section: section,
+                options: options
+            },
+            success: function(response) {
+                if (response.success) {
+                    // Reload the page to show the new widget
+                    location.reload();
+                } else {
+                    alert(response.message || '{{ t("crelish", "Failed to add widget") }}');
+                }
+            },
+            error: function() {
+                alert('{{ t("crelish", "An error occurred while adding the widget") }}');
+            }
+        });
+    });
+
+    // Widget refresh handling
+    $('.widget-refresh').click(function() {
+        var widget = $(this).closest('.dashboard-widget');
+        var widgetId = widget.data('widget-id');
+
+        refreshWidget(widgetId);
+    });
+
+    // Widget filter handling
+    $('.widget-filter-form').submit(function(e) {
+        e.preventDefault();
+
+        var form = $(this);
+        var widgetId = form.data('widget-id');
+        var filters = {};
+
+        // Collect filter values
+        form.find('input, select').each(function() {
+            var input = $(this);
+            var name = input.attr('name');
+
+            if (name) {
+                if (input.attr('type') === 'checkbox') {
+                    filters[name] = input.is(':checked') ? 1 : 0;
+                } else {
+                    filters[name] = input.val();
+                }
+            }
+        });
+
+        // Refresh widget with filters
+        refreshWidget(widgetId, filters);
+
+        // Hide filter panel
+        $('#' + widgetId + '-filters').collapse('hide');
+    });
+
+    // Widget remove handling
+    $('.widget-remove').click(function() {
+        if (!confirm('{{ t("crelish", "Are you sure you want to remove this widget?") }}')) {
+            return;
+        }
+
+        var widget = $(this).closest('.dashboard-widget');
+        var section = widget.data('section');
+        var index = widget.data('index');
+
+        // Send remove widget request
+        $.ajax({
+            url: '{{ url(["/crelish/analytics/remove-widget"]) }}',
+            type: 'POST',
+            data: {
+                section: section,
+                index: index
+            },
+            success: function(response) {
+                if (response.success) {
+                    // Remove widget from DOM
+                    widget.parent().remove();
+                } else {
+                    alert(response.message || '{{ t("crelish", "Failed to remove widget") }}');
+                }
+            },
+            error: function() {
+                alert('{{ t("crelish", "An error occurred while removing the widget") }}');
+            }
+        });
+    });
+
+    // Auto-refresh widgets
+    setInterval(function() {
+        $('.dashboard-widget[data-auto-refresh="true"]').each(function() {
+            var widget = $(this);
+            var widgetId = widget.data('widget-id');
+            var refreshInterval = parseInt(widget.data('refresh-interval')) || 60;
+
+            // Only refresh if the interval has passed
+            var lastRefresh = widget.data('last-refresh') || 0;
+            var now = Math.floor(Date.now() / 1000);
+
+            if (now - lastRefresh >= refreshInterval) {
+                refreshWidget(widgetId);
+                widget.data('last-refresh', now);
+            }
+        });
+    }, 10000); // Check every 10 seconds
+
+    // Helper function to refresh widget
+    function refreshWidget(widgetId, filters) {
+        var widget = $('.dashboard-widget[data-widget-id="' + widgetId + '"]');
+        var contentContainer = widget.find('.widget-content');
+
+        // Add loading indicator
+        contentContainer.append('<div class="widget-loading"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">{{ t("crelish", "Loading...") }}</span></div></div>');
+
+        // Request widget data
+        $.ajax({
+            url: '{{ url(["/crelish/analytics/get-widget-data"]) }}',
+            type: 'GET',
+            data: {
+                widget_id: widgetId,
+                filters: filters || {}
+            },
+            success: function(response) {
+                // Remove loading indicator
+                contentContainer.find('.widget-loading').remove();
+
+                if (response.success && response.data) {
+                    // Update widget content
+                    contentContainer.html(response.data.content);
+                } else {
+                    contentContainer.html('<div class="alert alert-danger">{{ t("crelish", "Failed to load widget data") }}</div>');
+                }
+            },
+            error: function() {
+                // Remove loading indicator
+                contentContainer.find('.widget-loading').remove();
+
+                contentContainer.html('<div class="alert alert-danger">{{ t("crelish", "An error occurred while loading widget data") }}</div>');
+            }
+        });
+    }
+});
+</script>

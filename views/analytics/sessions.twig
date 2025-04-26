@@ -1,0 +1,635 @@
+<div class="container-fluid px-4 py-3">
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="card-title mb-0">{{ t('crelish', 'User Sessions Overview') }}</h5>
+          <div class="filters d-flex">
+            <!-- Period selection -->
+            <div class="me-3">
+              <select id="period" class="form-select form-select-sm">
+                <option value="day" {% if period == 'day' %}selected{% endif %}>{{ t('crelish', 'Today') }}</option>
+                <option value="week"
+                        {% if period == 'week' %}selected{% endif %}>{{ t('crelish', 'Last 7 days') }}</option>
+                <option value="month"
+                        {% if period == 'month' %}selected{% endif %}>{{ t('crelish', 'Last 30 days') }}</option>
+                <option value="year"
+                        {% if period == 'year' %}selected{% endif %}>{{ t('crelish', 'Last 365 days') }}</option>
+                <option value="all" {% if period == 'all' %}selected{% endif %}>{{ t('crelish', 'All time') }}</option>
+              </select>
+            </div>
+
+            <!-- Bot filter -->
+            <div class="form-check form-switch me-3 d-flex align-items-center">
+              <input id="exclude-bots" class="form-check-input me-2" type="checkbox" role="switch"
+                     {% if excludeBots %}checked{% endif %}>
+              <label class="form-check-label" for="exclude-bots">{{ t('crelish', 'Exclude bots') }}</label>
+            </div>
+
+            <!-- Refresh button -->
+            <button id="refresh-data" class="btn btn-sm btn-outline-primary">
+              <i class="fa-sharp fa-regular fa-rotate me-1"></i> {{ t('crelish', 'Refresh') }}
+            </button>
+          </div>
+        </div>
+        <div class="card-body">
+          <!-- Sessions count chart -->
+          <div class="sessions-chart-container">
+            <canvas id="sessions-chart" class="sessions-chart"></canvas>
+          </div>
+
+          <!-- Loading indicator -->
+          <div id="loading-indicator" class="text-center p-5 d-none">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">{{ t('crelish', 'Loading...') }}</span>
+            </div>
+            <p class="mt-2">{{ t('crelish', 'Loading session data...') }}</p>
+          </div>
+
+          <!-- Summary statistics -->
+          <div class="row mt-4 mb-3">
+            <div class="col-md-3">
+              <div class="summary-stat">
+                <h4>{{ t('crelish', 'Total Sessions') }}</h4>
+                <div class="stat-value" id="total-sessions">-</div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="summary-stat">
+                <h4>{{ t('crelish', 'Avg. Session Duration') }}</h4>
+                <div class="stat-value" id="avg-duration">-</div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="summary-stat">
+                <h4>{{ t('crelish', 'Avg. Pages / Session') }}</h4>
+                <div class="stat-value" id="avg-pages">-</div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="summary-stat">
+                <h4>{{ t('crelish', 'Avg. Elements / Session') }}</h4>
+                <div class="stat-value" id="avg-elements">-</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="card-title mb-0">{{ t('crelish', 'Session Details') }}</h5>
+          <div class="d-flex align-items-center">
+            <!-- Items per page -->
+            <div class="me-3 d-flex align-items-center">
+              <label for="per-page" class="me-2">{{ t('crelish', 'Per page:') }}</label>
+              <select id="per-page" class="form-select form-select-sm" style="width: 70px;">
+                <option value="10" {% if pageSize == 10 %}selected{% endif %}>10</option>
+                <option value="20" {% if pageSize == 20 %}selected{% endif %}>20</option>
+                <option value="50" {% if pageSize == 50 %}selected{% endif %}>50</option>
+                <option value="100" {% if pageSize == 100 %}selected{% endif %}>100</option>
+              </select>
+            </div>
+
+            <!-- Search input -->
+            <div class="input-group input-group-sm" style="width: 250px;">
+              <input type="text" id="search-input" class="form-control"
+                     placeholder="{{ t('crelish', 'Search by IP or session ID') }}">
+              <button class="btn btn-outline-secondary" type="button" id="search-button">
+                <i class="fa-sharp fa-regular fa-magnifying-glass"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="card-body p-0">
+          <!-- Sessions table -->
+          <div class="table-responsive">
+            <table class="table table-hover sessions-table mb-0">
+              <thead>
+              <tr>
+                <th>{{ t('crelish', 'Started') }}</th>
+                <th>{{ t('crelish', 'IP Address') }}</th>
+                <th>{{ t('crelish', 'Duration') }}</th>
+                <th>{{ t('crelish', 'Pages') }}</th>
+                <th>{{ t('crelish', 'Elements') }}</th>
+                <th>{{ t('crelish', 'First Page') }}</th>
+                <th class="text-end">{{ t('crelish', 'Actions') }}</th>
+              </tr>
+              </thead>
+              <tbody id="sessions-table-body">
+              <!-- Session rows will be populated by JavaScript -->
+              <tr>
+                <td colspan="7" class="text-center py-4">{{ t('crelish', 'Loading sessions data...') }}</td>
+              </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination -->
+          <div class="d-flex justify-content-between align-items-center p-3 border-top">
+            <div id="pagination-info">
+              {{ t('crelish', 'Showing {start} to {end} of {total} sessions', {
+                'start': 1,
+                'end': 20,
+                'total': 0
+              }) }}
+            </div>
+            <nav aria-label="Session pagination">
+              <ul class="pagination pagination-sm mb-0" id="pagination">
+                <!-- Pagination will be populated by JavaScript -->
+              </ul>
+            </nav>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- User journey container (initially hidden) -->
+  <div id="user-journey-container" class="session-journey-container mt-4">
+    <div class="row">
+      <div class="col-12">
+        <div class="card shadow-sm">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0" id="journey-session-title">{{ t('crelish', 'User Journey') }}</h5>
+            <button type="button" class="btn-close" id="close-journey"
+                    aria-label="{{ t('crelish', 'Close') }}"></button>
+          </div>
+          <div class="card-body">
+            <div id="user-journey-content" class="user-journey-wrapper">
+              <!-- UserJourneyWidget will be rendered here -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+    // Initialize variables for chart and data
+    let sessionsChart = null;
+    let currentPage = {{ page }};
+    let pageSize = {{ pageSize }};
+    let sessionsList = [];
+    let totalSessions = 0;
+    let pageCount = 0;
+
+    // DOM ready
+    document.addEventListener('DOMContentLoaded', function () {
+        // Load initial data
+        loadSessionsData();
+
+        // Set up event listeners
+        document.getElementById('period').addEventListener('change', function () {
+            loadSessionsData();
+        });
+
+        document.getElementById('exclude-bots').addEventListener('change', function () {
+            loadSessionsData();
+        });
+
+        document.getElementById('refresh-data').addEventListener('click', function () {
+            loadSessionsData();
+        });
+
+        document.getElementById('per-page').addEventListener('change', function () {
+            pageSize = parseInt(this.value);
+            currentPage = 1;
+            loadSessionsData();
+        });
+
+        document.getElementById('search-button').addEventListener('click', function () {
+            const searchTerm = document.getElementById('search-input').value.trim();
+            // Implement search functionality
+            if (searchTerm) {
+                filterSessions(searchTerm);
+            } else {
+                loadSessionsData();
+            }
+        });
+
+        document.getElementById('search-input').addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                document.getElementById('search-button').click();
+            }
+        });
+
+        document.getElementById('close-journey').addEventListener('click', function () {
+            hideUserJourney();
+        });
+    });
+
+    /**
+     * Load sessions data from the API
+     */
+    function loadSessionsData() {
+        showLoading();
+
+        const period = document.getElementById('period').value;
+        const excludeBots = document.getElementById('exclude-bots').checked ? 1 : 0;
+
+        fetch(`/crelish/analytics/get-sessions-data?period=${period}&exclude_bots=${excludeBots}&page=${currentPage}&per_page=${pageSize}`)
+            .then(response => response.json())
+            .then(data => {
+                sessionsList = data.sessions;
+                totalSessions = data.pagination.total;
+                pageCount = data.pagination.pageCount;
+
+                // Update UI
+                updateChart(data.chartData);
+                updateSummaryStats(data.sessions);
+                updateSessionsTable(data.sessions);
+                updatePagination(data.pagination);
+
+                hideLoading();
+            })
+            .catch(error => {
+                console.error('Error loading sessions data:', error);
+                hideLoading();
+                // Show error message
+                document.getElementById('sessions-table-body').innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center py-4 text-danger">
+                        {{ t('crelish', 'Error loading sessions data. Please try again.') }}
+                    </td>
+                </tr>
+            `;
+            });
+    }
+
+    /**
+     * Show loading indicator
+     */
+    function showLoading() {
+        document.getElementById('loading-indicator').classList.remove('d-none');
+    }
+
+    /**
+     * Hide loading indicator
+     */
+    function hideLoading() {
+        document.getElementById('loading-indicator').classList.add('d-none');
+    }
+
+    /**
+     * Update the sessions chart
+     */
+    function updateChart(chartData) {
+        const ctx = document.getElementById('sessions-chart').getContext('2d');
+
+        // Prepare data for Chart.js
+        const labels = chartData.map(item => item.date);
+        const data = chartData.map(item => parseInt(item.count));
+        const sessionIds = {}; // Map dates to session IDs (will be populated in real implementation)
+
+        // Destroy existing chart if it exists
+        if (sessionsChart) {
+            sessionsChart.destroy();
+        }
+
+        // Create the chart
+        sessionsChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: '{{ t('crelish', 'Number of Sessions') }}',
+                    data: data,
+                    backgroundColor: 'rgba(13, 110, 253, 0.2)',
+                    borderColor: 'rgba(13, 110, 253, 1)',
+                    borderWidth: 2,
+                    tension: 0.2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    fill: true
+                }]
+            },
+            options: {
+                animation: {
+                    duration: 0 // Disable animations to prevent flickering
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                },
+                layout: {
+                    padding: {
+                        top: 10,
+                        bottom: 10
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                return `{{ t('crelish', 'Sessions') }}: ${context.parsed.y}`;
+                            }
+                        }
+                    },
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    }
+                },
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                responsive: true,
+                maintainAspectRatio: true,
+                aspectRatio: 3, // Fixed aspect ratio
+                onClick: (e, elements) => {
+                    if (elements.length > 0) {
+                        const index = elements[0].index;
+                        const date = labels[index];
+
+                        // In a real implementation, we would fetch sessions for this date
+                        // For now, we'll just filter the current list
+                        filterSessionsByDate(date);
+                    }
+                }
+            }
+        });
+    }
+
+    /**
+     * Filter sessions by date
+     */
+    function filterSessionsByDate(date) {
+        // This would be replaced with an actual API call in a real implementation
+        // For now, we'll just update the period dropdown to show the selected date
+        const periodDropdown = document.getElementById('period');
+        periodDropdown.value = 'day';
+
+        // Refresh the data
+        loadSessionsData();
+    }
+
+    /**
+     * Update summary statistics
+     */
+    function updateSummaryStats(sessions) {
+        const totalSessionsEl = document.getElementById('total-sessions');
+        const avgDurationEl = document.getElementById('avg-duration');
+        const avgPagesEl = document.getElementById('avg-pages');
+        const avgElementsEl = document.getElementById('avg-elements');
+
+        // Calculate statistics
+        totalSessionsEl.textContent = totalSessions;
+
+        if (sessions.length > 0) {
+            // Average duration
+            const totalDuration = sessions.reduce((sum, session) => sum + parseInt(session.duration || 0), 0);
+            const avgDuration = totalDuration / sessions.length;
+            avgDurationEl.textContent = formatDuration(avgDuration);
+
+            // Average pages per session
+            const totalPages = sessions.reduce((sum, session) => sum + parseInt(session.total_pages || 0), 0);
+            const avgPages = totalPages / sessions.length;
+            avgPagesEl.textContent = avgPages.toFixed(1);
+
+            // Average elements per session
+            const totalElements = sessions.reduce((sum, session) => sum + parseInt(session.total_elements || 0), 0);
+            const avgElements = totalElements / sessions.length;
+            avgElementsEl.textContent = avgElements.toFixed(1);
+        } else {
+            avgDurationEl.textContent = '-';
+            avgPagesEl.textContent = '-';
+            avgElementsEl.textContent = '-';
+        }
+    }
+
+    /**
+     * Update the sessions table
+     */
+    function updateSessionsTable(sessions) {
+        const tableBody = document.getElementById('sessions-table-body');
+        tableBody.innerHTML = '';
+
+        if (sessions.length === 0) {
+            tableBody.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center py-4">
+                    {{ t('crelish', 'No sessions found for the selected period.') }}
+                </td>
+            </tr>
+        `;
+            return;
+        }
+
+        sessions.forEach(session => {
+            const row = document.createElement('tr');
+            row.dataset.sessionId = session.session_id;
+            row.innerHTML = `
+            <td>${session.created_at_formatted}</td>
+            <td>${session.ip_address}</td>
+            <td>${session.duration_formatted || '-'}</td>
+            <td>${session.total_pages || 0}</td>
+            <td>${session.total_elements || 0}</td>
+            <td title="${session.first_url || ''}">
+                ${session.first_page_title || session.first_url || '-'}
+            </td>
+            <td class="text-end">
+                <button class="btn btn-sm btn-outline-primary view-journey-btn" data-session-id="${session.session_id}">
+                    <i class="fa-sharp fa-regular fa-timeline"></i> {{ t('crelish', 'View Journey') }}
+                </button>
+            </td>
+        `;
+            tableBody.appendChild(row);
+        });
+
+        // Add event listeners to view journey buttons
+        document.querySelectorAll('.view-journey-btn').forEach(button => {
+            button.addEventListener('click', function (e) {
+                e.stopPropagation(); // Prevent row click from triggering
+                const sessionId = this.dataset.sessionId;
+                showUserJourney(sessionId);
+            });
+        });
+
+        // Add event listeners to table rows
+        document.querySelectorAll('#sessions-table-body tr').forEach(row => {
+            row.addEventListener('click', function () {
+                const sessionId = this.dataset.sessionId;
+                showUserJourney(sessionId);
+            });
+        });
+    }
+
+    /**
+     * Update pagination controls
+     */
+    function updatePagination(pagination) {
+        const paginationEl = document.getElementById('pagination');
+        const paginationInfoEl = document.getElementById('pagination-info');
+
+        // Update pagination info text
+        const start = (pagination.page - 1) * pagination.pageSize + 1;
+        const end = Math.min(pagination.page * pagination.pageSize, pagination.total);
+
+        paginationInfoEl.textContent = '{{ t('crelish', 'Showing {start} to {end} of {total} sessions') }}'.replace('{start}', start).replace('{end}', end).replace('{total}', pagination.total);
+
+        // Build pagination controls
+        paginationEl.innerHTML = '';
+
+        // Previous button
+        const prevLi = document.createElement('li');
+        prevLi.className = `page-item ${pagination.page <= 1 ? 'disabled' : ''}`;
+        prevLi.innerHTML = `<a class="page-link" href="#" aria-label="{{ t('crelish', 'Previous') }}"><span aria-hidden="true">&laquo;</span></a>`;
+
+        if (pagination.page > 1) {
+            prevLi.querySelector('a').addEventListener('click', function (e) {
+                e.preventDefault();
+                goToPage(pagination.page - 1);
+            });
+        }
+
+        paginationEl.appendChild(prevLi);
+
+        // Page numbers
+        let startPage = Math.max(1, pagination.page - 2);
+        let endPage = Math.min(pagination.pageCount, pagination.page + 2);
+
+        // Ensure we always show at least 5 pages if available
+        if (endPage - startPage < 4 && pagination.pageCount > 4) {
+            if (startPage === 1) {
+                endPage = Math.min(pagination.pageCount, 5);
+            } else if (endPage === pagination.pageCount) {
+                startPage = Math.max(1, pagination.pageCount - 4);
+            }
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            const pageLi = document.createElement('li');
+            pageLi.className = `page-item ${i === pagination.page ? 'active' : ''}`;
+            pageLi.innerHTML = `<a class="page-link" href="#">${i}</a>`;
+
+            if (i !== pagination.page) {
+                pageLi.querySelector('a').addEventListener('click', function (e) {
+                    e.preventDefault();
+                    goToPage(i);
+                });
+            }
+
+            paginationEl.appendChild(pageLi);
+        }
+
+        // Next button
+        const nextLi = document.createElement('li');
+        nextLi.className = `page-item ${pagination.page >= pagination.pageCount ? 'disabled' : ''}`;
+        nextLi.innerHTML = `<a class="page-link" href="#" aria-label="{{ t('crelish', 'Next') }}"><span aria-hidden="true">&raquo;</span></a>`;
+
+        if (pagination.page < pagination.pageCount) {
+            nextLi.querySelector('a').addEventListener('click', function (e) {
+                e.preventDefault();
+                goToPage(pagination.page + 1);
+            });
+        }
+
+        paginationEl.appendChild(nextLi);
+    }
+
+    /**
+     * Go to specific page
+     */
+    function goToPage(page) {
+        currentPage = page;
+        loadSessionsData();
+
+        // Scroll back to the top of the table
+        document.querySelector('.sessions-table').scrollIntoView({behavior: 'smooth'});
+    }
+
+    /**
+     * Filter sessions by search term
+     */
+    function filterSessions(searchTerm) {
+        // Reset page to 1 when searching
+        currentPage = 1;
+
+        // In a real implementation, this would call the API with a search parameter
+        // For now, we'll just reload the data (the backend would handle the filtering)
+        loadSessionsData();
+    }
+
+    /**
+     * Show user journey for a specific session
+     */
+    function showUserJourney(sessionId) {
+        const journeyContainer = document.getElementById('user-journey-container');
+        const journeyContent = document.getElementById('user-journey-content');
+        const journeyTitle = document.getElementById('journey-session-title');
+
+        // Set session title
+        const session = sessionsList.find(s => s.session_id === sessionId);
+        if (session) {
+            journeyTitle.textContent = `{{ t('crelish', 'User Journey') }} - ${session.ip_address} (${session.created_at_formatted})`;
+        }
+
+        // Show loading in journey content
+        journeyContent.innerHTML = `
+        <div class="text-center p-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">{{ t('crelish', 'Loading...') }}</span>
+            </div>
+            <p class="mt-2">{{ t('crelish', 'Loading user journey...') }}</p>
+        </div>
+    `;
+
+        // Show the container with animation
+        journeyContainer.classList.add('visible');
+
+        // Scroll to journey container
+        journeyContainer.scrollIntoView({behavior: 'smooth'});
+
+        // Load user journey data
+        // We'll render the UserJourneyWidget via AJAX
+        fetch(`/crelish/analytics/render-widget?widget=UserJourneyWidget&sessionId=${sessionId}`)
+            .then(response => response.text())
+            .then(html => {
+                journeyContent.innerHTML = html;
+            })
+            .catch(error => {
+                console.error('Error loading user journey:', error);
+                journeyContent.innerHTML = `
+                <div class="alert alert-danger">
+                    {{ t('crelish', 'Error loading user journey. Please try again.') }}
+                </div>
+            `;
+            });
+    }
+
+    /**
+     * Hide user journey container
+     */
+    function hideUserJourney() {
+        const journeyContainer = document.getElementById('user-journey-container');
+        journeyContainer.classList.remove('visible');
+    }
+
+    /**
+     * Format duration in seconds to a human readable format
+     */
+    function formatDuration(seconds) {
+        if (seconds < 60) {
+            return `${Math.round(seconds)}s`;
+        } else if (seconds < 3600) {
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = Math.round(seconds % 60);
+            return `${minutes}m ${remainingSeconds}s`;
+        } else {
+            const hours = Math.floor(seconds / 3600);
+            const remainingMinutes = Math.floor((seconds % 3600) / 60);
+            return `${hours}h ${remainingMinutes}m`;
+        }
+    }
+</script>

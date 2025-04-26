@@ -17,6 +17,7 @@ class CrelishModernAsset extends AssetBundle
   public $sourcePath = '@app/vendor/giantbits/yii2-crelish/assets';
   public $css = [
     'css/crelish-modern.css',
+    'css/dashboard-widgets.css',
   ];
   public $js = [
     'js/crelish-modern.js',
