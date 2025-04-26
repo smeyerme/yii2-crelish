@@ -1,0 +1,48 @@
+{
+    "top": [
+        {
+            "type": "pageviews",
+            "options": {
+                "size": 12,
+                "title": "Page Views Over Time",
+                "autoRefresh": true,
+                "refreshInterval": 300
+            }
+        }
+    ],
+    "left": [
+        {
+            "type": "uniquevisitors",
+            "options": {
+                "title": "Unique Visitors"
+            }
+        },
+        {
+            "type": "topelements",
+            "options": {
+                "title": "Top Inhalte"
+            }
+        }
+    ],
+    "right": [
+        {
+            "type": "contentperformance",
+            "options": {
+                "title": "Content Performance by Type"
+            }
+        },
+        {
+            "type": "contenttypes",
+            "options": []
+        }
+    ],
+    "bottom": [
+        {
+            "type": "userjourney",
+            "options": {
+                "size": 12,
+                "title": "Recent User Journey"
+            }
+        }
+    ]
+}

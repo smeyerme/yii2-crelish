@@ -159,7 +159,7 @@ var topPagesUrl = '$topPagesUrl';
 var topElementsUrl = '$topElementsUrl';
 var exportPageViewsBaseUrl = '$exportPageViewsUrl';
 var exportElementsBaseUrl = '$exportElementsUrl';
-var exportSessionsBaseUrl = '$exportSessionsBaseUrl';
+var exportSessionsBaseUrl = '$exportSessionsUrl';
 
 // Translation variables
 var totalViewsText = '$totalViewsText';

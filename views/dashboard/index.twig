@@ -1,159 +1,167 @@
 {{ use('/giantbits/crelish/widgets') }}
 
 <section>
-    <div class="row">
-        <!-- Welcome Section -->
-        <div class="col">
-            <div class="card">
-                <div class="card__content">
-                    <div class="card-header">
-                        <h2 class="c-heading">{{ t('crelish', 'Welcome to Crelish CMS') }}</h2>
-                    </div>
-                    <div class="card-body">
-                        <p>{{ t('crelish', 'Manage your content, users, and settings from this dashboard.') }}</p>
-                    </div>
-                </div>
-            </div>
+  <div class="row">
+    <!-- Welcome Section -->
+    <div class="col">
+      <div class="card">
+        <div class="card__content">
+          <div class="card-header">
+            <h2 class="c-heading">{{ t('crelish', 'Welcome to Crelish CMS') }}</h2>
+          </div>
+          <div class="card-body">
+            <p>{{ t('crelish', 'Manage your content, users, and settings from this dashboard.') }}</p>
+          </div>
         </div>
+      </div>
     </div>
+  </div>
 
-    <!-- Content Statistics -->
-    <div class="row">
-        <div class="col">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="c-heading">{{ t('crelish', 'Content Statistics') }}</h3>
-                </div>
-                <div class="card-body">
-                    {% if contentStats|length > 0 %}
-                        <div class="content-stats-grid">
-                            {% for type, stats in contentStats %}
-                                <div class="content-stats-item">
-                                    <div class="card card--high">
-                                        <div class="card__content">
-                                            <div class="card-header">
-                                                <h4 class="c-heading">
-                                                    <i class="fa-sharp  fa-database header-icon"></i>
-                                                    {{ stats.label }}
-                                                </h4>
-                                            </div>
-                                            <div class="card-body u-centered">
-                                                <div class="stats-icon">
-                                                    <i class="fa-sharp  fa-file-lines"></i>
-                                                </div>
-                                                <span class="c-text--loud">{{ stats.count }}</span>
-                                                <p>{{ t('crelish', 'items') }}</p>
-                                            </div>
-                                            <div class="card__footer">
-                                                <a href="{{ url('/crelish/content/index', {'ctype': type}) }}" class="c-button c-button--brand u-small">{{ t('crelish', 'View All') }}</a>
-                                                <a href="{{ url('/crelish/content/create', {'ctype': type}) }}" class="c-button c-button--info u-small">{{ t('crelish', 'Create New') }}</a>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            {% endfor %}
+  <!-- Content Statistics -->
+  <div class="row">
+    <div class="col">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="c-heading">{{ t('crelish', 'Content Statistics') }}</h3>
+        </div>
+        <div class="card-body">
+          {% if contentStats|length > 0 %}
+            <div class="content-stats-grid">
+              {% for type, stats in contentStats %}
+                <div class="content-stats-item">
+                  <div class="card card--high">
+                    <div class="card__content">
+                      <div class="card-header">
+                        <h4 class="c-heading">
+                          <i class="fa-sharp  fa-database header-icon"></i>
+                          {{ stats.label }}
+                        </h4>
+                      </div>
+                      <div class="card-body u-centered">
+                        <div class="stats-icon">
+                          <i class="fa-sharp  fa-file-lines"></i>
                         </div>
-                    {% else %}
-                        <p>{{ t('crelish', 'No content types found.') }} <a href="{{ url('/crelish/content/index') }}">{{ t('crelish', 'Create your first content type') }}</a>.</p>
-                    {% endif %}
+                        <span class="c-text--loud">{{ stats.count }}</span>
+                        <p>{{ t('crelish', 'items') }}</p>
+                      </div>
+                      <div class="card__footer">
+                        <a href="{{ url('/crelish/content/index', {'ctype': type}) }}"
+                           class="c-button c-button--brand u-small">{{ t('crelish', 'View All') }}</a>
+                        <a href="{{ url('/crelish/content/create', {'ctype': type}) }}"
+                           class="c-button c-button--info u-small">{{ t('crelish', 'Create New') }}</a>
+                      </div>
+                    </div>
+                  </div>
                 </div>
+              {% endfor %}
             </div>
+          {% else %}
+            <p>{{ t('crelish', 'No content types found.') }} <a
+                  href="{{ url('/crelish/content/index') }}">{{ t('crelish', 'Create your first content type') }}</a>.
+            </p>
+          {% endif %}
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Content and System Info -->
+  <div class="row">
+    <!-- Recent Content -->
+    <div class="col-4">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="c-heading">{{ t('crelish', 'Recently Updated Content') }}</h3>
+        </div>
+        <div class="card-body">
+          {% if recentContent|length > 0 %}
+            <table class="c-table c-table--striped">
+              <thead class="c-table__head">
+              <tr class="c-table__row c-table__row--heading">
+                <th class="c-table__cell">{{ t('crelish', 'Title') }}</th>
+                <th class="c-table__cell">{{ t('crelish', 'Type') }}</th>
+                <th class="c-table__cell">{{ t('crelish', 'Updated') }}</th>
+                <th class="c-table__cell">{{ t('crelish', 'Actions') }}</th>
+              </tr>
+              </thead>
+              <tbody class="c-table__body">
+              {% for item in recentContent %}
+                <tr class="c-table__row">
+                  <td class="c-table__cell">{{ item.title }}</td>
+                  <td class="c-table__cell">{{ item.typeLabel }}</td>
+                  <td class="c-table__cell">{{ item.updated|date('Y-m-d H:i') }}</td>
+                  <td class="c-table__cell">
+                    <a href="{{ url('crelish/content/update', {'ctype': item.type, 'uuid': item.id}) }}"
+                       class="c-button c-button--info u-xsmall">{{ t('crelish', 'Edit') }}</a>
+                    <a href="{{ url('crelish/content/view', {'ctype': item.type, 'uuid': item.id}) }}"
+                       class="c-button c-button--brand u-xsmall">{{ t('crelish', 'View') }}</a>
+                  </td>
+                </tr>
+              {% endfor %}
+              </tbody>
+            </table>
+          {% else %}
+            <p>{{ t('crelish', 'No recent content found.') }}</p>
+          {% endif %}
+        </div>
+      </div>
     </div>
 
-    <!-- Recent Content and System Info -->
-    <div class="row">
-        <!-- Recent Content -->
-        <div class="col-4">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="c-heading">{{ t('crelish', 'Recently Updated Content') }}</h3>
-                </div>
-                <div class="card-body">
-                    {% if recentContent|length > 0 %}
-                        <table class="c-table c-table--striped">
-                            <thead class="c-table__head">
-                                <tr class="c-table__row c-table__row--heading">
-                                    <th class="c-table__cell">{{ t('crelish', 'Title') }}</th>
-                                    <th class="c-table__cell">{{ t('crelish', 'Type') }}</th>
-                                    <th class="c-table__cell">{{ t('crelish', 'Updated') }}</th>
-                                    <th class="c-table__cell">{{ t('crelish', 'Actions') }}</th>
-                                </tr>
-                            </thead>
-                            <tbody class="c-table__body">
-                                {% for item in recentContent %}
-                                    <tr class="c-table__row">
-                                        <td class="c-table__cell">{{ item.title }}</td>
-                                        <td class="c-table__cell">{{ item.typeLabel }}</td>
-                                        <td class="c-table__cell">{{ item.updated|date('Y-m-d H:i') }}</td>
-                                        <td class="c-table__cell">
-                                            <a href="{{ url('crelish/content/update', {'ctype': item.type, 'uuid': item.id}) }}" class="c-button c-button--info u-xsmall">{{ t('crelish', 'Edit') }}</a>
-                                            <a href="{{ url('crelish/content/view', {'ctype': item.type, 'uuid': item.id}) }}" class="c-button c-button--brand u-xsmall">{{ t('crelish', 'View') }}</a>
-                                        </td>
-                                    </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    {% else %}
-                        <p>{{ t('crelish', 'No recent content found.') }}</p>
-                    {% endif %}
-                </div>
-            </div>
+    <!-- System Information -->
+    <div class="col-4">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="c-heading">{{ t('crelish', 'System Information') }}</h3>
         </div>
-
-        <!-- System Information -->
-        <div class="col-4">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="c-heading">{{ t('crelish', 'System Information') }}</h3>
-                </div>
-                <div class="card-body">
-                    <table class="c-table">
-                        <tbody>
-                            <tr>
-                                <td><strong>{{ t('crelish', 'Crelish Version') }}</strong></td>
-                                <td>{{ systemInfo.version }}</td>
-                            </tr>
-                            <tr>
-                                <td><strong>{{ t('crelish', 'PHP Version') }}</strong></td>
-                                <td>{{ systemInfo.php_version }}</td>
-                            </tr>
-                            <tr>
-                                <td><strong>{{ t('crelish', 'Yii Version') }}</strong></td>
-                                <td>{{ systemInfo.yii_version }}</td>
-                            </tr>
-                            <tr>
-                                <td><strong>{{ t('crelish', 'Environment') }}</strong></td>
-                                <td>{{ systemInfo.environment }}</td>
-                            </tr>
-                            <tr>
-                                <td><strong>{{ t('crelish', 'Debug Mode') }}</strong></td>
-                                <td>{{ systemInfo.debug_mode }}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+        <div class="card-body">
+          <table class="c-table">
+            <tbody>
+            <tr>
+              <td><strong>{{ t('crelish', 'Crelish Version') }}</strong></td>
+              <td>{{ systemInfo.version }}</td>
+            </tr>
+            <tr>
+              <td><strong>{{ t('crelish', 'PHP Version') }}</strong></td>
+              <td>{{ systemInfo.php_version }}</td>
+            </tr>
+            <tr>
+              <td><strong>{{ t('crelish', 'Yii Version') }}</strong></td>
+              <td>{{ systemInfo.yii_version }}</td>
+            </tr>
+            <tr>
+              <td><strong>{{ t('crelish', 'Environment') }}</strong></td>
+              <td>{{ systemInfo.environment }}</td>
+            </tr>
+            <tr>
+              <td><strong>{{ t('crelish', 'Debug Mode') }}</strong></td>
+              <td>{{ systemInfo.debug_mode }}</td>
+            </tr>
+            </tbody>
+          </table>
         </div>
-
-        <div class="col-4">
-            <!-- Quick Links -->
-            <div class="card u-letter-box-medium">
-                <div class="card-header">
-                    <h3 class="c-heading">{{ t('crelish', 'Quick Links') }}</h3>
-                </div>
-                <div class="card-body">
-                    <ul>
-                        <li><a href="{{ url('crelish/content/index') }}" class="c-link">{{ t('crelish', 'Content Management') }}</a></li>
-                        <li><a href="{{ url('crelish/user/index') }}" class="c-link">{{ t('crelish', 'User Management') }}</a></li>
-                        <li><a href="{{ url('crelish/asset/index') }}" class="c-link">{{ t('crelish', 'Media Library') }}</a></li>
-                        <li><a href="{{ url('crelish/settings/index') }}" class="c-link">{{ t('crelish', 'System Settings') }}</a></li>
-                        <li><a href="/docs/API.md" target="_blank" class="c-link">{{ t('crelish', 'API Documentation') }}</a></li>
-                    </ul>
-                </div>
-            </div>
-        </div>
+      </div>
     </div>
+
+    <div class="col-4">
+      <!-- Quick Links -->
+      <div class="card u-letter-box-medium">
+        <div class="card-header">
+          <h3 class="c-heading">{{ t('crelish', 'Quick Links') }}</h3>
+        </div>
+        <div class="card-body">
+          <ul>
+            <li><a href="{{ url('crelish/content/index') }}" class="c-link">{{ t('crelish', 'Content Management') }}</a>
+            </li>
+            <li><a href="{{ url('crelish/user/index') }}" class="c-link">{{ t('crelish', 'User Management') }}</a></li>
+            <li><a href="{{ url('crelish/asset/index') }}" class="c-link">{{ t('crelish', 'Media Library') }}</a></li>
+            <li><a href="{{ url('crelish/settings/index') }}" class="c-link">{{ t('crelish', 'System Settings') }}</a>
+            </li>
+            <li><a href="/docs/API.md" target="_blank" class="c-link">{{ t('crelish', 'API Documentation') }}</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
 </section>
 
 {% apply registerCss %}
@@ -217,7 +225,7 @@
 .content-stats-item .card.card--high .card-header .c-heading {
     color: #ffffff !important;
     font-weight: 700 !important;
-    text-shadow: 0 1px 3px rgba(0,0,0,0.3) !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
 }
 
 .content-stats-item .card.card--high .card-header .header-icon {
@@ -313,7 +321,7 @@
     transition: all 0.15s ease;
     font-weight: 600;
     letter-spacing: 0.01em;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .content-stats-item .card__footer .c-button:hover {

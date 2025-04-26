@@ -36,11 +36,27 @@
       "order": 50
     },
     {
-      "id": "analytios",
+      "id": "analytics",
       "label": "Analytics",
       "url": "crelish/analytics/index",
       "icon": "fa-sharp fa-regular fa-chart-mixed",
-      "order": 60
+      "order": 60,
+      "children": [
+        {
+          "id": "analytics-dashboard",
+          "label": "Dashboard",
+          "url": "crelish/analytics/dashboard",
+          "icon": "fa-sharp fa-regular fa-chart-line",
+          "order": 10
+        },
+        {
+          "id": "analytics-sessions",
+          "label": "User Sessions",
+          "url": "crelish/analytics/sessions",
+          "icon": "fa-sharp fa-regular fa-timeline",
+          "order": 20
+        }
+      ]
     },
     {
       "id": "translation",

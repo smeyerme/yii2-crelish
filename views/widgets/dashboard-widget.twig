@@ -1,0 +1,48 @@
+<div class="dashboard-widget card mb-4" 
+     data-widget-id="{{ id }}" 
+     data-section="{{ section }}"
+     data-index="{{ index }}"
+     data-auto-refresh="{{ autoRefresh ? 'true' : 'false' }}" 
+     data-refresh-interval="{{ refreshInterval }}">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h3 class="card-title">{{ title }}</h3>
+        <div class="widget-controls">
+            {% if filters|length > 0 %}
+            <button type="button" class="widget-filter-toggle"
+                    data-bs-toggle="collapse" data-bs-target="#{{ id }}-filters">
+                <i class="fa-sharp fa-regular fa-filter"></i>
+            </button>
+            {% endif %}
+            <button type="button" class="widget-refresh">
+                <i class="fa-sharp fa-regular fa-arrows-rotate"></i>
+            </button>
+            <button type="button" class="widget-remove"
+                    data-section="{{ section }}" data-index="{{ index }}">
+                <i class="fa-sharp fa-regular fa-xmark"></i>
+            </button>
+        </div>
+    </div>
+
+    {% if filters|length > 0 %}
+    <div id="{{ id }}-filters" class="widget-filters collapse">
+        <div class="card-body border-bottom">
+            <form class="widget-filter-form" data-widget-id="{{ id }}">
+                {{ filters|raw }}
+                <button type="submit" class="btn btn-primary btn-sm mt-2">
+                    {{ t('crelish', 'Apply Filters') }}
+                </button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="card-body widget-content">
+        {{ content|raw }}
+    </div>
+
+    {% if description %}
+    <div class="card-footer text-muted">
+        <small>{{ description }}</small>
+    </div>
+    {% endif %}
+</div>
