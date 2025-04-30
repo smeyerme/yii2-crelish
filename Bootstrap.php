@@ -5,6 +5,7 @@ namespace giantbits\crelish;
 use giantbits\crelish\components\CrelishI18nEventHandler;
 use \yii\base\BootstrapInterface;
 use yii\base\InvalidConfigException;
+use yii\helpers\VarDumper;
 use yii\web\Application;
 use Yii;
 
@@ -28,7 +29,8 @@ class Bootstrap implements BootstrapInterface
       Yii::$app->setModules([
         'crelish' => [
           'class' => 'giantbits\crelish\Module',
-          'theme' => Yii::$app->params['crelish']['theme']
+          'theme' => Yii::$app->params['crelish']['theme'],
+          'controllerMap' => $this->scanWorkspaceControllers($app)
         ],
         'crelish-api' => [
           'class' => 'giantbits\crelish\modules\api\Module',
@@ -92,6 +94,42 @@ class Bootstrap implements BootstrapInterface
   }
 
   /**
+   * Scan workspace for custom controllers and return controller map
+   *
+   * @return array Controller map
+   */
+  private function scanWorkspaceControllers($app): array
+  {
+    $controllerMap = [];
+    $workspacePath = Yii::getAlias('@app/workspace/crelish/controllers');
+
+    if (file_exists($workspacePath) && is_dir($workspacePath)) {
+      $files = glob($workspacePath . '/*.php');
+
+      foreach ($files as $file) {
+        $className = basename($file, '.php');
+        $controllerName = lcfirst(str_replace('Controller', '', $className));
+        $fullClassName = 'app\\workspace\\crelish\\controllers\\' . $className;
+        $controllerMap[$controllerName] = $fullClassName;
+
+        // Add URL rule for this controller
+        $app->getUrlManager()->addRules([
+          [
+            'class' => 'yii\web\UrlRule',
+            'pattern' => 'crelish/' . $controllerName . '/<action:[\w\-]+>',
+            'route' => 'crelish/' . $controllerName . '/<action>'
+          ]
+        ], false);
+
+        // Log discovered controller
+        Yii::info("Discovered workspace controller: {$controllerName} => {$fullClassName}", 'crelish');
+      }
+    }
+
+    return $controllerMap;
+  }
+
+  /**
    * Configure web application components and URL rules
    * 
    * @param Application $app
@@ -103,6 +141,9 @@ class Bootstrap implements BootstrapInterface
 
     // Add URL rules
     $this->configureUrlRules($app);
+
+    // Configure view paths for workspace
+    $this->configureViewPaths($app);
     
     $app->get('sideBarManager')->init();
   }
@@ -267,9 +308,12 @@ class Bootstrap implements BootstrapInterface
         'class' => 'giantbits\crelish\components\CrelishAnalyticsComponent',
         'enabled' => true,
         'excludeIps' => [
-          '127.0.0.1',
+          //'127.0.0.1',
           // Add development/internal IPs here
         ],
+      ],
+      'dashboardManager' => [
+        'class' => 'giantbits\crelish\components\CrelishDashboardManager',
       ],
     ];
 
@@ -414,5 +458,27 @@ class Bootstrap implements BootstrapInterface
         'route' => '<controller>/<action>'
       ],
     ], true);
+  }
+
+  private function configureViewPaths($app): void
+  {
+    // Create path mappings for workspace views
+    $workspaceViewPath = Yii::getAlias('@app/workspace/crelish/views');
+
+    if (file_exists($workspaceViewPath) && is_dir($workspaceViewPath)) {
+      // Get existing path map
+      $pathMap = $app->getView()->theme->pathMap;
+
+      // Add workspace paths with higher priority
+      $pathMap['@giantbits/crelish/views'] = [
+        $workspaceViewPath,
+        '@app/themes/' . $app->params['crelish']['theme'] . '/crelish/views',
+      ];
+
+      // Set the updated pathMap
+      $app->getView()->theme->pathMap = $pathMap;
+
+      Yii::info("Added workspace view path: {$workspaceViewPath}", 'crelish');
+    }
   }
 }
