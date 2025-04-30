@@ -13,15 +13,15 @@
         // Enhance the title in the header bar
         if ($('.navbar--controller').length) {
 
-            
+
             // Enhance buttons with icons if they don't have them
             $('.navbar--controller .c-button').each(function() {
                 const $btn = $(this);
                 const text = $btn.text().trim().toLowerCase();
-                
+
                 // Skip buttons that already have icons
                 if ($btn.find('i, span.fui-arrow-left').length) return;
-                
+
                 // Add appropriate icons based on button text
                 if (text.includes('save')) {
                     $btn.prepend('<i class="fa-sharp  fa-save"></i> ');
@@ -241,6 +241,14 @@
                 applyModernGridStyling();
                 applyModernSidebarStyling();
             }, 100);
+        });
+
+        $('.fas').each(function() {
+            // Remove the "fas" class
+            $(this).removeClass('fas');
+
+            // Add the "fa-sharp" and "fa-regular" classes
+            $(this).addClass('fa-sharp fa-regular');
         });
     }
     

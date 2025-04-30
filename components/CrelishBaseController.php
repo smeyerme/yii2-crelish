@@ -5,7 +5,6 @@ namespace giantbits\crelish\components;
 use kartik\widgets\ActiveForm;
 use Yii;
 use yii\base\InvalidRouteException;
-use yii\helpers\VarDumper;
 use yii\i18n\Formatter;
 use yii\web\Controller;
 use yii\helpers\Html;

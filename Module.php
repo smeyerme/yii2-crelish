@@ -56,7 +56,10 @@
 	    
 	    if (Yii::$app instanceof Application) {
 		    $this->controllerNamespace = 'giantbits\crelish\commands';
-	    }
+	    } else {
+        // For web applications, set the default namespace
+        $this->controllerNamespace = 'giantbits\crelish\controllers';
+      }
       
       Yii::setAlias('@crelish', '@app/vendor/giantbits/yii2-crelish');
       Yii::setAlias('@workspace', '@app/workspace');
@@ -87,7 +90,9 @@
      */
     private function buildControllerMap(): void
     {
-      $this->controllerMap = [];
+      if (empty($this->controllerMap)) {
+        $this->controllerMap = [];
+      }
     }
     
     /**
