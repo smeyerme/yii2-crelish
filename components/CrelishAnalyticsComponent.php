@@ -184,12 +184,17 @@ class CrelishAnalyticsComponent extends Component
    * Check if the current request is from a bot
    * @return bool
    */
+  /**
+   * Check if the current request is from a bot
+   * @return bool
+   */
   public function isBot()
   {
     $userAgent = Yii::$app->request->userAgent;
 
-    if (empty($userAgent)) {
-      return true; // No user agent is suspicious
+    // Empty or very short user agents are suspicious
+    if (empty($userAgent) || strlen($userAgent) < 30) {
+      return true;
     }
 
     // Check against the bot database
@@ -202,6 +207,21 @@ class CrelishAnalyticsComponent extends Component
       if (stripos($userAgent, $pattern['user_agent_pattern']) !== false) {
         return true;
       }
+    }
+
+    // Check for Chrome 100.0.x.x pattern (likely spoofed)
+    if (preg_match('/Chrome\/100\.0\.[0-9]+\.[0-9]+/', $userAgent)) {
+      return true;
+    }
+
+    // Check for malformed Mozilla strings
+    if (preg_match('/Mozilla\/5\.0(101|084|066)/', $userAgent)) {
+      return true;
+    }
+
+    // Check for Mozilla/5.0 with nothing after it
+    if ($userAgent === 'Mozilla/5.0' || preg_match('/^Mozilla\/[0-9]+\.[0-9]+$/', $userAgent)) {
+      return true;
     }
 
     // Additional bot detection logic
