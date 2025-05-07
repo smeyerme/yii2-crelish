@@ -86,22 +86,26 @@ class ContentPerformanceWidget extends CrelishDashboardWidget
      * Get content type options for filter
      * @return array
      */
-    protected function getContentTypeOptions()
-    {
-        $contentTypes = (new Query())
-            ->select(['page_type'])
-            ->from('analytics_page_views')
-            ->groupBy(['page_type'])
-            ->all();
-            
-        $options = ['' => Yii::t('crelish', 'All Content Types')];
-        
-        foreach ($contentTypes as $type) {
-            $options[$type['page_type']] = ucfirst($type['page_type']);
-        }
-        
-        return $options;
+  /**
+   * Get content type options for filter
+   * @return array
+   */
+  protected function getContentTypeOptions()
+  {
+    $contentTypes = (new Query())
+      ->select(['element_type'])
+      ->from('analytics_element_views')
+      ->groupBy(['element_type'])
+      ->all();
+
+    $options = ['' => Yii::t('crelish', 'All Content Types')];
+
+    foreach ($contentTypes as $type) {
+      $options[$type['element_type']] = ucfirst($type['element_type']);
     }
+
+    return $options;
+  }
     
     /**
      * Render widget content
@@ -448,72 +452,68 @@ JS;
      * Get performance data
      * @return array
      */
-    protected function getPerformanceData()
-    {
-        // Get raw data based on content type filter
-        if (empty($this->contentType)) {
-            // Get data for all content types
-            $query = (new Query())
-                ->select([
-                    'page_type',
-                    'views' => $this->uniqueVisitors ? 
-                        'COUNT(DISTINCT CONCAT(ip_address, "-", session_id))' : 
-                        'COUNT(*)'
-                ])
-                ->from('analytics_page_views')
-                ->groupBy(['page_type'])
-                ->orderBy(['views' => SORT_DESC]);
-        } else {
-            // Get data for specific content type
-            $query = (new Query())
-                ->select([
-                    'page_uuid',
-                    'views' => $this->uniqueVisitors ? 
-                        'COUNT(DISTINCT CONCAT(ip_address, "-", session_id))' : 
-                        'COUNT(*)'
-                ])
-                ->from('analytics_page_views')
-                ->where(['page_type' => $this->contentType])
-                ->groupBy(['page_uuid'])
-                ->orderBy(['views' => SORT_DESC])
-                ->limit($this->limit);
-        }
-        
-        // Apply common filters
-        if ($this->excludeBots) {
-            $query->andWhere(['is_bot' => 0]);
-        }
-        
-        if ($this->period !== 'all') {
-            $query->andWhere(['>=', 'created_at', $this->getPeriodStartDate($this->period)]);
-        }
-        
-        $result = $query->all();
-        
-        // Enrich with additional data if needed
-        if (!empty($this->contentType)) {
-            foreach ($result as &$item) {
-                try {
-                    $modelClass = 'app\workspace\models\\' . ucfirst($this->contentType);
-                    if (class_exists($modelClass)) {
-                        $contentModel = call_user_func($modelClass . '::find')
-                            ->where(['uuid' => $item['page_uuid']])
-                            ->one();
-                            
-                        if ($contentModel && isset($contentModel['systitle'])) {
-                            $item['title'] = $contentModel['systitle'];
-                        } else {
-                            $item['title'] = 'Unknown: ' . $item['page_uuid'];
-                        }
-                    } else {
-                        $item['title'] = 'Unknown: ' . $item['page_uuid'];
-                    }
-                } catch (\Exception $e) {
-                    $item['title'] = 'Unknown: ' . $item['page_uuid'];
-                }
-            }
-        }
-        
-        return $result;
+  protected function getPerformanceData()
+  {
+    // Get raw data based on content type filter
+    if (empty($this->contentType)) {
+      // Get data for all content types
+      $query = (new Query())
+        ->select([
+          'element_type AS page_type', // Keep as page_type for compatibility with existing methods
+          'views' => $this->uniqueVisitors ?
+            'COUNT(DISTINCT session_id)' :
+            'COUNT(*)'
+        ])
+        ->from('analytics_element_views')
+        ->groupBy(['element_type'])
+        ->orderBy(['views' => SORT_DESC]);
+    } else {
+      // Get data for specific content type
+      $query = (new Query())
+        ->select([
+          'element_uuid AS page_uuid', // Keep as page_uuid for compatibility with existing methods
+          'views' => $this->uniqueVisitors ?
+            'COUNT(DISTINCT session_id)' :
+            'COUNT(*)'
+        ])
+        ->from('analytics_element_views')
+        ->where(['element_type' => $this->contentType])
+        ->groupBy(['element_uuid'])
+        ->orderBy(['views' => SORT_DESC])
+        ->limit($this->limit);
     }
+
+    // Apply common filters
+    if ($this->period !== 'all') {
+      $query->andWhere(['>=', 'created_at', $this->getPeriodStartDate($this->period)]);
+    }
+
+    $result = $query->all();
+
+    // Enrich with additional data if needed
+    if (!empty($this->contentType)) {
+      foreach ($result as &$item) {
+        try {
+          $modelClass = 'app\workspace\models\\' . ucfirst($this->contentType);
+          if (class_exists($modelClass)) {
+            $contentModel = call_user_func($modelClass . '::find')
+              ->where(['uuid' => $item['page_uuid']])
+              ->one();
+
+            if ($contentModel && isset($contentModel['systitle'])) {
+              $item['title'] = $contentModel['systitle'];
+            } else {
+              $item['title'] = 'Unknown: ' . $item['page_uuid'];
+            }
+          } else {
+            $item['title'] = 'Unknown: ' . $item['page_uuid'];
+          }
+        } catch (\Exception $e) {
+          $item['title'] = 'Unknown: ' . $item['page_uuid'];
+        }
+      }
+    }
+
+    return $result;
+  }
 }

@@ -276,9 +276,7 @@ HTML;
                 return date('Y-m-d 00:00:00');
             case 'week':
                 return date('Y-m-d 00:00:00', strtotime('-7 days'));
-            case 'month':
-                return date('Y-m-d 00:00:00', strtotime('-30 days'));
-            case 'year':
+          case 'year':
                 return date('Y-m-d 00:00:00', strtotime('-365 days'));
             default:
                 return date('Y-m-d 00:00:00', strtotime('-30 days'));
