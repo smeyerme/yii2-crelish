@@ -241,14 +241,15 @@ class CrelishAnalyticsComponent extends Component
   public function getPageViewStats($period = 'month', $excludeBots = true, $uniqueVisitors = false)
   {
     $dateExpression = $this->getDateExpressionForPeriod($period);
+    $startDate = $this->getPeriodStartDate($period);
 
     $query = (new Query());
-    
+
     if ($uniqueVisitors) {
-      // For unique visitors, count distinct combinations of IP and session_id
+      // For unique visitors, count distinct user_id or ip_address
       $query->select([
         'date' => $dateExpression,
-        'views' => 'COUNT(DISTINCT CONCAT(ip_address, "-", session_id))'
+        'views' => 'COUNT(DISTINCT COALESCE(user_id, ip_address))'
       ]);
     } else {
       // For total views, count all records
@@ -257,12 +258,15 @@ class CrelishAnalyticsComponent extends Component
         'views' => 'COUNT(*)'
       ]);
     }
-    
+
     $query->from('analytics_page_views');
 
     if ($excludeBots) {
       $query->where(['is_bot' => 0]);
     }
+
+    // Add the date filter
+    $query->andWhere(['>=', 'created_at', $startDate]);
 
     return $query->groupBy(['date'])
       ->orderBy(['date' => SORT_ASC])
@@ -391,7 +395,7 @@ class CrelishAnalyticsComponent extends Component
    * @param string $period
    * @return string
    */
-  private function getPeriodStartDate($period)
+  public function getPeriodStartDate($period)
   {
     switch ($period) {
       case 'day':
