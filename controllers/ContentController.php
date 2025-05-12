@@ -123,28 +123,35 @@ class ContentController extends CrelishBaseController
             // Add search conditions for the fields of the main content type
             foreach ($elementDefinition->fields as $field) {
               if (!property_exists($field, 'virtual') || !$field->virtual) {
+                // Create an AND condition for each field
+                $fieldCondition = ['and'];
                 foreach ($searchFragments as $fragment) {
-                  $orConditions[] = ['like', $this->ctype . '.' . $field->key, $fragment];
+                  $fieldCondition[] = ['like', $this->ctype . '.' . $field->key, $fragment];
                 }
+                // Add this field's AND condition to the overall OR conditions
+                $orConditions[] = $fieldCondition;
               }
             }
-            
+
             // Add search conditions for related models
             foreach ($elementDefinition->fields as $field) {
               if (property_exists($field, 'type') && $field->type === 'relationSelect' && property_exists($field, 'config')) {
                 $config = $field->config;
-                
+
                 if (property_exists($config, 'ctype')) {
                   $relationCtype = $config->ctype;
                   $labelField = property_exists($config, 'labelField') ? $config->labelField : 'systitle';
-                  
+
                   // Make sure the relation is joined
                   $query->joinWith($field->key);
-                  
-                  // Add search conditions for the label field of the related model
+
+                  // Create an AND condition for each related field
+                  $relationFieldCondition = ['and'];
                   foreach ($searchFragments as $fragment) {
-                    $orConditions[] = ['like', $relationCtype . '.' . $labelField, $fragment];
+                    $relationFieldCondition[] = ['like', $relationCtype . '.' . $labelField, $fragment];
                   }
+                  // Add this related field's AND condition to the overall OR conditions
+                  $orConditions[] = $relationFieldCondition;
                 }
               }
             }
