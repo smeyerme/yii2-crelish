@@ -968,55 +968,71 @@ class AssetController extends CrelishBaseController
 
   private function generatePdfThumbnail($asset, $save = true)
   {
-    // Ensure paths are properly escaped and formatted
-    $fileString = Yii::getAlias('@app') . '/web/uploads/' . $asset->src;
+    // Get the actual file path without relying on the filename string
+    $uploadDir = Yii::getAlias('@app') . '/web/uploads/';
     $thumbsDir = Yii::getAlias('@app') . '/web/uploads/thumbs';
-    $fileStringDest = $thumbsDir . '/thumb_' . $asset->uuid . '_' . str_replace('.pdf', '.jpg', $asset->src);
-    
+
+    // Handle path encoding properly
+    $fileString = $uploadDir . $asset->src;
+    $thumbnailBaseName = 'thumb_' . $asset->uuid . '_' . pathinfo($asset->src, PATHINFO_FILENAME) . '.jpg';
+    $fileStringDest = $thumbsDir . '/' . $thumbnailBaseName;
+
     // Make sure the thumbs directory exists
     if (!is_dir($thumbsDir)) {
       mkdir($thumbsDir, 0755, true);
     }
 
-    // Make sure the source file exists
+    // Verify the file exists, with better error reporting
     if (!file_exists($fileString)) {
       Yii::error("Source PDF file does not exist: {$fileString}", 'application');
+      // Try to diagnose the issue by listing files that might match
+      $pattern = $uploadDir . pathinfo($asset->src, PATHINFO_FILENAME) . '*';
+      $possibleFiles = glob($pattern);
+      if (!empty($possibleFiles)) {
+        Yii::error("Similar files found: " . implode(", ", $possibleFiles), 'application');
+      }
       return false;
     }
-    
-    // Escape special characters in paths for shell command
+
+    // Escape paths properly for shell command
     $fileStringEscaped = escapeshellarg($fileString);
     $fileStringDestEscaped = escapeshellarg($fileStringDest);
-    
-    // Use safer command format with density parameter for better quality
+
+    // Use ImageMagick with proper density setting
     $command = "convert -density 150 {$fileStringEscaped}[0] -colorspace sRGB -alpha remove -strip -resize 800x -quality 85 {$fileStringDestEscaped}";
-    
-    // Execute command and capture output and return status
+
+    // Execute command with better error handling
     exec($command, $output, $returnVar);
-    
-    // Check return status - 0 means success
+
     if ($returnVar !== 0) {
       Yii::error("PDF Thumbnail generation failed. Command: {$command}, Output: " . implode("\n", $output), 'application');
-      return false;
+
+      // Try alternative approach with GhostScript if ImageMagick fails
+      $gsCommand = "gs -sDEVICE=jpeg -dJPEGQ=85 -dPDFFitPage -dSAFER -dBATCH -dNOPAUSE -dFirstPage=1 -dLastPage=1 -r150 -sOutputFile={$fileStringDestEscaped} {$fileStringEscaped}";
+      exec($gsCommand, $gsOutput, $gsReturnVar);
+
+      if ($gsReturnVar !== 0) {
+        Yii::error("Alternative PDF conversion with GhostScript also failed: " . implode("\n", $gsOutput), 'application');
+        return false;
+      }
     }
-    
-    // Check if thumbnail was actually created
+
+    // Check if thumbnail was created
     if (!file_exists($fileStringDest)) {
       Yii::error("PDF Thumbnail file not created despite successful command execution", 'application');
       return false;
     }
-    
-    // Update asset with thumbnail name
-    $thumbnailName = 'thumb_' . $asset->uuid . '_' . str_replace('.pdf', '.jpg', $asset->src);
-    $asset->thumbnail = $thumbnailName;
 
-    if(!$save) {
-      return $thumbnailName;
+    // Store just the filename part in the database
+    $asset->thumbnail = $thumbnailBaseName;
+
+    if (!$save) {
+      return $thumbnailBaseName;
     }
 
     if ($asset->save(false)) {
-      Yii::info("PDF Thumbnail created successfully: {$thumbnailName}", 'application');
-      return $thumbnailName;
+      Yii::info("PDF Thumbnail created successfully: {$thumbnailBaseName}", 'application');
+      return $thumbnailBaseName;
     } else {
       Yii::error("Failed to update asset record with thumbnail name", 'application');
       return false;
