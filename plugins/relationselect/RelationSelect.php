@@ -203,7 +203,7 @@ JS;
 /* Dark mode support */
 html[data-theme="dark"] .selected-items {
   border-color: #495057;
-  background-color: #343a40;
+  background-color: #1e2a3b;
   color: #f8f9fa;
 }
 
@@ -249,6 +249,12 @@ html[data-theme="dark"] .select2-container--krajee-bs4 .select2-results__option-
 html[data-theme="dark"] .select2-container--krajee-bs5 .select2-results__option--highlighted[aria-selected] {
   background-color: #3498db;
 }
+
+td.actions button {
+    border-radius: 0.6rem;
+    background-color: #ffffff;
+}
+
 CSS;
     
     $view->registerCss($css);
@@ -281,9 +287,6 @@ CSS;
       // For single selection, store as simple string
       $hiddenValue = !empty($this->storedItems) ? (string)$this->storedItems[0] : '';
     }
-    
-    // Ensure we have not null or array value for debug purposes
-    Yii::debug("Multiple: " . ($isMultiple ? 'Yes' : 'No') . ", Value: " . print_r($hiddenValue, true), 'relationselect');
 
     // Prepare select data and initial value for Select2
     $selectData = [];
@@ -361,13 +364,6 @@ CSS;
         ['key' => 'systitle', 'label' => Yii::t('crelish', 'Titel')]
       ];
     }
-
-    // Log what we're sending to the view
-    Yii::debug([
-      'selectValue' => $selectValue,
-      'selectData' => $selectData,
-      'hiddenValue' => $hiddenValue,
-    ], 'relationselect-data');
     
     // Make sure the select data is in the correct format for the Widget
     if (is_array($selectData) && !empty($selectData)) {
@@ -390,12 +386,6 @@ CSS;
       // For single mode, ensure it's a string
       $selectValue = !empty($selectValue) ? (is_array($selectValue) ? (string)reset($selectValue) : (string)$selectValue) : '';
     }
-    
-    // Log final values for debugging
-    Yii::debug("Final values: " . print_r([
-      'selectValue' => $selectValue,
-      'selectData' => $selectData
-    ], true), 'relationselect-final');
     
     return $this->render('relationselect.twig', [
       'formKey' => $this->formKey,

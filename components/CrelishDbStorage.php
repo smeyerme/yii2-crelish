@@ -200,6 +200,7 @@ class CrelishDbStorage implements CrelishDataStorage
     // Process post-save operations
     if ($result && $elementDefinition) {
       foreach ($elementDefinition->fields as $field) {
+
         if (property_exists($field, 'type') && isset($data[$field->key])) {
           $fieldType = $field->type;
           $processorClass = 'giantbits\crelish\plugins\\' . strtolower($fieldType) . '\\' . ucfirst($fieldType) . 'ContentProcessor';
