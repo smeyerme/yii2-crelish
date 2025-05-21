@@ -57,7 +57,7 @@ class RelationSelectContentProcessor extends Component
     return [(string)$data];
   }
 
-  public static function processDataPreSave($key, $data, $fieldConfig, &$parent)
+  public static function processDataPreSaveOff($key, $data, $fieldConfig, &$parent)
   {
     $UUIDv4 = '/^[0-9A-F]{8}-[0-9A-F]{4}-4[0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}$/i';
 
@@ -77,6 +77,7 @@ class RelationSelectContentProcessor extends Component
     // Check if this is a multiple or single relation
     $isMultiple = isset($fieldConfig->config->multiple) && $fieldConfig->config->multiple === true;
 
+
     // Normalize the data to an array of UUIDs regardless of input format
     $normalizedData = self::normalizeToArray($data);
 
@@ -94,23 +95,62 @@ class RelationSelectContentProcessor extends Component
 
   public static function processDataPostSave($key, $data, $fieldConfig, &$parent)
   {
+
+    $isMultiple = isset($fieldConfig->config->multiple) && $fieldConfig->config->multiple === true;
+
+    if(!$isMultiple) {
+      return $data;
+    }
+
     if (
       $data &&
-      isset($fieldConfig->config->multiple) &&
-      $fieldConfig->config->multiple === true &&
-      isset($fieldConfig->config->key)
+      isset($key)
     ) {
-      // Ensure data is a string UUID
-      $uuid = is_object($data) && isset($data->uuid) ? $data->uuid : $data;
+      $relationKey = $key;
+      $relationGetter = 'get' . ucfirst($relationKey);
+      $existingRelations = $parent->$relationGetter()->all();
 
-      $relatedModel = CrelishDataResolver::resolveModel([
-        'ctype' => $fieldConfig->config->ctype,
-        'uuid' => $uuid
-      ]);
+      $existingUuids = [];
+      foreach ($existingRelations as $relation) {
+        $parent->unlink($key, $relation, true);
+      }
 
-      // Link it.
-      if($relatedModel) {
-        $parent->link($fieldConfig->config->key, $relatedModel);
+      $data = JSON::decode($data);
+
+      // Check if we're dealing with an array
+      if (is_array($data)) {
+        // Process each item in the array
+        foreach ($data as $item) {
+          // Ensure item is a string UUID
+          $uuid = is_object($item) && isset($item->uuid) ? $item->uuid : $item;
+
+          if (in_array($uuid, $existingUuids, true)) {
+            continue;
+          }
+
+          $relatedModel = CrelishDataResolver::resolveModel([
+            'ctype' => $fieldConfig->config->ctype,
+            'uuid' => $uuid
+          ]);
+
+          // Link it.
+          if ($relatedModel) {
+            $parent->link($key, $relatedModel);
+          }
+        }
+      } else {
+        // Process a single item (original code)
+        $uuid = is_object($data) && isset($data->uuid) ? $data->uuid : $data;
+
+        $relatedModel = CrelishDataResolver::resolveModel([
+          'ctype' => $fieldConfig->config->ctype,
+          'uuid' => $uuid
+        ]);
+
+        // Link it.
+        if ($relatedModel) {
+          $parent->link($fieldConfig->config->key, $relatedModel);
+        }
       }
     }
 

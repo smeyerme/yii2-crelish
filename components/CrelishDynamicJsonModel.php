@@ -242,4 +242,9 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
 	{
 		return CrelishDynamicModel::loadElementDefinition($ctype);
 	}
+
+  public function getIsNewRecord()
+  {
+    return $this->isNew;
+  }
 }

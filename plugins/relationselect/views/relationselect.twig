@@ -83,16 +83,12 @@
             <tr data-id="{{ uuid }}">
               <td>{{ title }}</td>
               <td class="actions">
-                {% if not loop.first %}
-                  <button type="button" class="c-button u-small move-up" title="Nach oben">
-                    <i class="fa fa-arrow-up"></i>
-                  </button>
-                {% endif %}
-                {% if not loop.last %}
-                  <button type="button" class="c-button u-small move-down" title="Nach unten">
-                    <i class="fa fa-arrow-down"></i>
-                  </button>
-                {% endif %}
+                <button type="button" class="c-button u-small move-up" title="Nach oben">
+                  <i class="fa fa-sharp fa-regular fa-arrow-up"></i>
+                </button>
+                <button type="button" class="c-button u-small move-down" title="Nach unten">
+                  <i class="fa fa-sharp fa-regular fa-arrow-down"></i>
+                </button>
                 <button type="button" class="c-button u-small remove-item" title="Löschen">
                   <i class="fa-sharp fa-regular fa-trash"></i>
                 </button>
@@ -136,6 +132,9 @@
 
                 // Function to add a new item to the table
                 function addItemToTable(item) {
+
+                    if(item.id === "") return;
+
                     // Check if already exists
                     if (selectedItems.includes(item.id)) {
                         alert("{{ t('app', 'Dieser Eintrag wurde bereits hinzugefügt') }}");
@@ -158,14 +157,14 @@
                     if (selectedItems.length > 1) {
                         actionsCell.append(
                             $('<button type="button" class="c-button u-small move-up" title="Nach oben">')
-                                .html('<i class="fa fa-arrow-up"></i>')
+                                .html('<i class="fa fa-sharp fa-regular fa-arrow-up"></i>')
                                 .css('display', selectedItems.length > 1 && selectedItems[0] !== item.id ? 'inline-block' : 'none')
                         );
                     }
 
                     actionsCell.append(
                         $('<button type="button" class="c-button u-small move-down" title="Nach unten">')
-                            .html('<i class="fa fa-arrow-down"></i>')
+                            .html('<i class="fa fa-sharp fa-regular fa-arrow-down"></i>')
                             .css('display', 'none') // Will update in updateMoveButtons
                     );
 
@@ -229,11 +228,11 @@
                         var row = itemsTable.find('tr[data-id="' + id + '"]');
                         row.insertBefore(row.prev());
 
-                        // Update buttons
-                        updateMoveButtons();
-
                         // Update hidden input
                         updateHiddenInput();
+
+                        // Update buttons
+                        updateMoveButtons();
                     }
                 }
 
@@ -250,11 +249,11 @@
                         var row = itemsTable.find('tr[data-id="' + id + '"]');
                         row.insertAfter(row.next());
 
-                        // Update buttons
-                        updateMoveButtons();
-
                         // Update hidden input
                         updateHiddenInput();
+
+                        // Update buttons
+                        updateMoveButtons();
                     }
                 }
 
