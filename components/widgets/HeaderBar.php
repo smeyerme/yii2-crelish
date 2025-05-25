@@ -264,7 +264,7 @@ class HeaderBar extends Widget
   /**
    * Initialize the predefined components
    */
-  private function initComponents()
+  private function initComponents(): void
   {
     // Get current content type
     $ctype = \Yii::$app->session->get('ctype');
@@ -427,15 +427,14 @@ class HeaderBar extends Widget
           return $html;
         }
       },
-      'create' => function ($ctype = null, $controller = null) {
+      'create' => function ($ctype = null, $controller = null) use ($controllerId) {
         // First try to get ctype from request
         if(empty($ctype)) {
           $ctype = \Yii::$app->request->get('ctype');
         }
         // Get base URL for use in JavaScript
-
         if(empty($controller)) {
-          $controller = 'content';
+          $controller = $controllerId;
         }
 
         $baseUrl = \Yii::$app->urlManager->createUrl(['/crelish/' . $controller . '/create']);

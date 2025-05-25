@@ -11,13 +11,11 @@ namespace giantbits\crelish\components;
 
 use app\workspace\models\Asset;
 use app\workspace\models\Download;
-use app\workspace\models\News;
 use app\workspace\models\Product;
 use app\workspace\models\Reference;
 use Cocur\Slugify\Slugify;
 use OzdemirBurak\Iris\Color\Hex;
 use MatthiasMullie\Minify\CSS;
-use Random\RandomException;
 use Yii;
 use yii\helpers\Url;
 use yii\web\JsExpression;
@@ -250,34 +248,64 @@ class CrelishBaseHelper
     return preg_replace('/[^a-zA-Z0-9\-\._]/', '-', $dangerousFilename);
   }
 
+  /**
+   * Lightens a hex color by the specified percentage
+   * @param string $hexcolor Hex color code (e.g. "#FF9E1B" or "#F9B")
+   * @param float $percent Percentage to lighten (0-1)
+   * @return string Lightened hex color
+   */
   public static function lightenColor($hexcolor, $percent)
   {
+    // Remove # if present
+    $hexcolor = ltrim($hexcolor, '#');
 
-    $hex = new Hex($hexcolor);
-
-    return $hex->lighten($percent);
-
-    if (strlen($hexcolor) < 6) {
+    // Expand shorthand form (e.g. "03F") to full form (e.g. "0033FF")
+    if (strlen($hexcolor) === 3) {
       $hexcolor = $hexcolor[0] . $hexcolor[0] . $hexcolor[1] . $hexcolor[1] . $hexcolor[2] . $hexcolor[2];
     }
-    $hexcolor = array_map('hexdec', str_split(str_pad(str_replace('#', '', $hexcolor), 6, '0'), 2));
 
-    foreach ($hexcolor as $i => $color) {
-      $from = $percent < 0 ? 0 : $color;
-      $to = $percent < 0 ? $color : 255;
-      $pvalue = ceil(($to - $from) * $percent);
-      $hexcolor[$i] = str_pad(dechex($color + $pvalue), 2, '0', STR_PAD_LEFT);
-    }
+    // Convert to RGB
+    $r = hexdec(substr($hexcolor, 0, 2));
+    $g = hexdec(substr($hexcolor, 2, 2));
+    $b = hexdec(substr($hexcolor, 4, 2));
 
-    return '#' . implode($hexcolor);
+    // Lighten
+    $r = (int)min(255, $r + ($percent * (255 - $r)));
+    $g = (int)min(255, $g + ($percent * (255 - $g)));
+    $b = (int)min(255, $b + ($percent * (255 - $b)));
+
+    // Convert back to hex
+    return sprintf("#%02x%02x%02x", $r, $g, $b);
   }
 
+  /**
+   * Darkens a hex color by the specified percentage
+   * @param string $hexcolor Hex color code (e.g. "#FF9E1B" or "#F9B")
+   * @param float $percent Percentage to darken (0-1)
+   * @return string Darkened hex color
+   */
   public static function darkenColor($hexcolor, $percent)
   {
-    $hex = new Hex($hexcolor);
-    return $hex->darken($percent);
+    // Remove # if present
+    $hexcolor = ltrim($hexcolor, '#');
 
-    return $hex->shade($percent);
+    // Expand shorthand form (e.g. "03F") to full form (e.g. "0033FF")
+    if (strlen($hexcolor) === 3) {
+      $hexcolor = $hexcolor[0] . $hexcolor[0] . $hexcolor[1] . $hexcolor[1] . $hexcolor[2] . $hexcolor[2];
+    }
+
+    // Convert to RGB
+    $r = hexdec(substr($hexcolor, 0, 2));
+    $g = hexdec(substr($hexcolor, 2, 2));
+    $b = hexdec(substr($hexcolor, 4, 2));
+
+    // Darken
+    $r = (int)max(0, $r - ($percent * $r));
+    $g = (int)max(0, $g - ($percent * $g));
+    $b = (int)max(0, $b - ($percent * $b));
+
+    // Convert back to hex
+    return sprintf("#%02x%02x%02x", $r, $g, $b);
   }
 
   public static function jsExpression($js)
@@ -553,5 +581,86 @@ class CrelishBaseHelper
     $html .= '>';
     
     return $html;
+  }
+
+  /**
+   * Calculate WCAG 2.1 contrast ratio between two colors
+   * @param string $color1 Hex color code (e.g. "#FF9E1B")
+   * @param string $color2 Hex color code (e.g. "#FFFFFF")
+   * @return float Contrast ratio (1-21)
+   */
+  public static function calculateContrastRatio($color1, $color2): float
+  {
+    // Convert hex colors to RGB
+    $rgb1 = self::hexToRgb($color1);
+    $rgb2 = self::hexToRgb($color2);
+
+    // Calculate luminance values
+    $luminance1 = self::calculateLuminance($rgb1);
+    $luminance2 = self::calculateLuminance($rgb2);
+
+    // Make sure the lighter color is first
+    $lighter = max($luminance1, $luminance2);
+    $darker = min($luminance1, $luminance2);
+
+    // Calculate contrast ratio using WCAG formula
+    return ($lighter + 0.05) / ($darker + 0.05);
+  }
+
+  /**
+   * Convert hex color to RGB array
+   */
+  public static function hexToRgb($hex): array
+  {
+    $hex = ltrim($hex, '#');
+    if (strlen($hex) === 3) {
+      $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
+    }
+
+    return [
+      'r' => hexdec(substr($hex, 0, 2)),
+      'g' => hexdec(substr($hex, 2, 2)),
+      'b' => hexdec(substr($hex, 4, 2))
+    ];
+  }
+
+  /**
+   * Calculate relative luminance using WCAG formula
+   */
+  public static function calculateLuminance($rgb): float
+  {
+    $r = $rgb['r'] / 255;
+    $g = $rgb['g'] / 255;
+    $b = $rgb['b'] / 255;
+
+    $r = $r <= 0.03928 ? $r / 12.92 : pow(($r + 0.055) / 1.055, 2.4);
+    $g = $g <= 0.03928 ? $g / 12.92 : pow(($g + 0.055) / 1.055, 2.4);
+    $b = $b <= 0.03928 ? $b / 12.92 : pow(($b + 0.055) / 1.055, 2.4);
+
+    return 0.2126 * $r + 0.7152 * $g + 0.0722 * $b;
+  }
+
+  public static function adjustColorForContrast($textColor, $backgroundColor = '#FFFFFF', $minContrast = 4.5) {
+    $currentContrast = self::calculateContrastRatio($textColor, $backgroundColor);
+    $originalColor = $textColor;
+    $adjustStep = 0.05; // 5% adjustment per step
+    $maxAttempts = 20;  // Prevent infinite loops
+    $attempts = 0;
+
+    // Determine if we should darken or lighten based on background
+    $bgLuminance = self::calculateLuminance(self::hexToRgb($backgroundColor));
+    $shouldDarken = $bgLuminance > 0.5;
+
+    while ($currentContrast < $minContrast && $attempts < $maxAttempts) {
+      if ($shouldDarken) {
+        $textColor = self::darkenColor($textColor, $adjustStep);
+      } else {
+        $textColor = self::lightenColor($textColor, $adjustStep);
+      }
+      $currentContrast = self::calculateContrastRatio($textColor, $backgroundColor);
+      $attempts++;
+    }
+
+    return $textColor;
   }
 }
