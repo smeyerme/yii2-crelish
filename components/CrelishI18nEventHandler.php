@@ -14,20 +14,48 @@ use yii\i18n\MissingTranslationEvent;
 use function _\upperCase;
 
 /**
- *
+ * Event handler for missing translations in Crelish CMS
+ * 
+ * This handler automatically translates missing translations using DeepL API
+ * when enabled and stores them in translation files for future use.
+ * 
+ * Configuration in params.php:
+ * - languages: Array of supported languages (e.g., ['de', 'en', 'fr'])
+ * - crelish.enable_autotranslation: Boolean to enable/disable auto-translation
+ * 
+ * Environment variables:
+ * - DEEPL_API_KEY: Your DeepL API key for translation service
  */
 class CrelishI18nEventHandler
 {
 
   /**
-   * [handleMissingTranslation description]
-   * @param MissingTranslationEvent $event [description]
-   * @return [type]                         [description]
-   * @throws DeepLException
+   * Handle missing translation events
+   * 
+   * @param MissingTranslationEvent $event The missing translation event
+   * @return void
    */
   public static function handleMissingTranslation(MissingTranslationEvent $event): void
   {
     if (empty($event->message)) {
+      return;
+    }
+
+    // Check if the language is in the list of supported languages
+    $supportedLanguages = Yii::$app->params['languages'] ?? [];
+    if (!empty($supportedLanguages) && !in_array($event->language, $supportedLanguages)) {
+      // Language not supported, don't translate
+      $event->translatedMessage = $event->message;
+      return;
+    }
+    
+    // Check if target language is same as source language
+    $sourceLanguage = Yii::$app->sourceLanguage ?? 'en';
+    if ($event->language === $sourceLanguage || 
+        strpos($event->language, $sourceLanguage) === 0 || 
+        strpos($sourceLanguage, $event->language) === 0) {
+      // Same language, no need to translate
+      $event->translatedMessage = $event->message;
       return;
     }
 
@@ -36,8 +64,7 @@ class CrelishI18nEventHandler
     $category = $event->category;
     $message = $event->message;
     $language = self::buildTargetLanguage($event->language);
-    $sourceLanguage = Yii::$app->sourceLanguage ?? 'en';
-    $apiKey = $_ENV['DEEPL_API_KEY'];
+    $apiKey = $_ENV['DEEPL_API_KEY'] ?? null;
 
     // Initialize file system
     $translationObject = null;
@@ -55,17 +82,28 @@ class CrelishI18nEventHandler
       $translation = [];
     }
 
-    if(Yii::$app->params['crelish']['enable_autotranslation']) {
-      // Start translation process
-      $translator = new Translator($apiKey);
+    if(Yii::$app->params['crelish']['enable_autotranslation'] ?? false) {
+      // Check if API key is available
+      if (empty($apiKey)) {
+        Yii::warning('DeepL API key not found in environment variables', 'crelish.i18n');
+      } else {
+        try {
+          // Start translation process
+          $translator = new Translator($apiKey);
 
-      $result = $translator->translateText(
-        $message,
-        strtoupper($sourceLanguage),
-        strtoupper($language),
-      );
+          $result = $translator->translateText(
+            $message,
+            strtoupper($sourceLanguage),
+            strtoupper($language),
+          );
 
-      $translatedText = $result->text;
+          $translatedText = $result->text;
+        } catch (DeepLException $e) {
+          Yii::error('DeepL translation failed: ' . $e->getMessage(), 'crelish.i18n');
+        } catch (\Exception $e) {
+          Yii::error('Translation failed: ' . $e->getMessage(), 'crelish.i18n');
+        }
+      }
     }
 
     if ($translatedText) {
@@ -83,16 +121,47 @@ class CrelishI18nEventHandler
     $event->translatedMessage = $event->message;
   }
 
-  private static function buildTargetLanguage(string $language)
+  /**
+   * Build DeepL target language code from application language code
+   * 
+   * @param string $language Application language code (e.g., 'en', 'de')
+   * @return string DeepL language code (e.g., 'EN-US', 'DE')
+   */
+  private static function buildTargetLanguage(string $language): string
   {
+    // Map common language codes to DeepL format
+    $languageMap = [
+      'en' => 'EN-US',
+      'en-US' => 'EN-US',
+      'en-GB' => 'EN-GB',
+      'de' => 'DE',
+      'de-DE' => 'DE',
+      'de-AT' => 'DE',
+      'de-CH' => 'DE',
+      'fr' => 'FR',
+      'fr-FR' => 'FR',
+      'es' => 'ES',
+      'es-ES' => 'ES',
+      'it' => 'IT',
+      'it-IT' => 'IT',
+      'nl' => 'NL',
+      'nl-NL' => 'NL',
+      'pl' => 'PL',
+      'pl-PL' => 'PL',
+      'pt' => 'PT-PT',
+      'pt-PT' => 'PT-PT',
+      'pt-BR' => 'PT-BR',
+      'ru' => 'RU',
+      'ru-RU' => 'RU',
+      'ja' => 'JA',
+      'ja-JP' => 'JA',
+      'zh' => 'ZH',
+      'zh-CN' => 'ZH',
+      'ko' => 'KO',
+      'ko-KR' => 'KO',
+    ];
 
-    switch ($language) {
-
-      case 'en':
-        $language = 'EN-US';
-        break;
-    }
-
-    return $language;
+    // Return mapped language or uppercase original if not found
+    return $languageMap[$language] ?? strtoupper($language);
   }
 }
