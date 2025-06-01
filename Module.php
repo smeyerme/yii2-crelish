@@ -124,6 +124,11 @@
     protected function resetGlobalSettings(): void
     {
       if (Yii::$app instanceof \yii\web\Application) {
+        // Preserve the PjaxAsset override if it exists
+        $pjaxAssetConfig = isset(Yii::$app->assetManager->bundles['yii\widgets\PjaxAsset']) 
+          ? Yii::$app->assetManager->bundles['yii\widgets\PjaxAsset'] 
+          : null;
+        
         Yii::$app->assetManager->bundles = [];
 
         Yii::$app->assetManager->bundles['yii\web\JqueryAsset'] = [
@@ -131,6 +136,11 @@
             YII_DEBUG ? 'jquery.js' : 'jquery.min.js'
           ]
         ];
+        
+        // Restore PjaxAsset override if it was set
+        if ($pjaxAssetConfig !== null) {
+          Yii::$app->assetManager->bundles['yii\widgets\PjaxAsset'] = $pjaxAssetConfig;
+        }
       }
     }
     

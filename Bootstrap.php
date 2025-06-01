@@ -23,8 +23,25 @@ class Bootstrap implements BootstrapInterface
   public function bootstrap($app): void
   {
     if ($app instanceof Application) {
-      $this->configureWebApplication($app);
+      // Configure asset bundle overrides before any other configuration
+      $app->set('assetManager', [
+        'class' => 'yii\web\AssetManager',
+        'bundles' => [
+          'yii\widgets\PjaxAsset' => [
+            'class' => 'yii\web\AssetBundle',
+            'sourcePath' => '@giantbits/crelish/assets/js',
+            'js' => [
+              'jquery.pjax.fixed.js'
+            ],
+            'depends' => [
+              'yii\web\YiiAsset',
+            ]
+          ],
+        ],
+      ]);
       
+      $this->configureWebApplication($app);
+
       // Register API module only for web application
       Yii::$app->setModules([
         'crelish' => [
