@@ -167,7 +167,8 @@ class ContentController extends CrelishBaseController
       $dataManager->setRelations($query);
 
       if (!empty($elementDefinition->sortDefault)) {
-        $sortKey = key($elementDefinition->sortDefault);
+        $sortDefault = (array)$elementDefinition->sortDefault;
+        $sortKey = array_key_first($sortDefault);
         $sortDir = $elementDefinition->sortDefault->{$sortKey};
 
         if (empty($_GET['sort'])) {
