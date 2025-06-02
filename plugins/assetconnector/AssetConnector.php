@@ -50,7 +50,10 @@ class AssetConnector extends CrelishFormWidget
   private function processData($data)
   {
     if (!is_object($data)) {
-      if (substr($data, 0, 1) == '{' || substr($data, 0, 1) == '[') {
+      // Handle null or empty data
+      if (empty($data)) {
+        $data = ['uuid' => null];
+      } elseif (is_string($data) && (substr($data, 0, 1) == '{' || substr($data, 0, 1) == '[')) {
         $data = Json::decode($data);
       } else {
         $data = ['uuid' => $data];
