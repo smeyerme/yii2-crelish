@@ -13,6 +13,7 @@ use yii\base\Widget;
 class CrelishFormWidget extends Widget
 {
   public $model;
+  public $attribute;
 
   public function init()
   {
