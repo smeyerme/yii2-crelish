@@ -1,0 +1,291 @@
+{# RelationSelectV2 Widget Template #}
+<div class="relation-select-container">
+    {# Hidden input for form submission #}
+    <input type="hidden" 
+           id="{{ inputId }}" 
+           name="{{ inputName }}" 
+           value="{{ value|json_encode }}"
+           {{ required ? 'required' : '' }}>
+    
+    {# Select2 dropdown for adding items #}
+    <select class="form-control relation-select-dropdown" 
+            data-ctype="{{ ctype }}"
+            data-api-endpoint="{{ apiEndpoint }}"
+            data-multiple="{{ multiple ? 'true' : 'false' }}"
+            {{ multiple ? 'multiple' : '' }}>
+        
+        {# Pre-populate with stored items #}
+        {% for item in storedItems %}
+            <option value="{{ item.uuid }}" selected>
+                {{ item.systitle ?? item.title ?? item.name ?? item.uuid }}
+            </option>
+        {% endfor %}
+    </select>
+    
+    {# Table view for multiple selections #}
+    {% if multiple and tableView and storedItems %}
+        <div class="relation-select-table">
+            <table>
+                <thead>
+                    <tr>
+                        {% if columns %}
+                            {% for column in columns %}
+                                <th>{{ column.label ?? column.key }}</th>
+                            {% endfor %}
+                        {% else %}
+                            <th>{{ widget.t('title') ?? 'Title' }}</th>
+                        {% endif %}
+                        <th width="50">{{ widget.t('actions') ?? 'Actions' }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in storedItems %}
+                        <tr data-uuid="{{ item.uuid }}">
+                            {% if columns %}
+                                {% for column in columns %}
+                                    <td>
+                                        {% set fieldValue = attribute(item, column.key) %}
+                                        {% if column.type == 'date' and fieldValue %}
+                                            {{ fieldValue|date('d.m.Y') }}
+                                        {% elseif column.type == 'datetime' and fieldValue %}
+                                            {{ fieldValue|date('d.m.Y H:i') }}
+                                        {% else %}
+                                            {{ fieldValue }}
+                                        {% endif %}
+                                    </td>
+                                {% endfor %}
+                            {% else %}
+                                <td>{{ item.systitle ?? item.title ?? item.name ?? item.uuid }}</td>
+                            {% endif %}
+                            <td>
+                                <span class="relation-select-remove" 
+                                      data-uuid="{{ item.uuid }}"
+                                      title="{{ widget.t('removeItem') ?? 'Remove' }}">
+                                    ×
+                                </span>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+    
+    {# Simple list view for multiple selections (non-table) #}
+    {% if multiple and not tableView and storedItems %}
+        <div class="relation-select-list">
+            {% for item in storedItems %}
+                <div class="relation-select-item" data-uuid="{{ item.uuid }}">
+                    <span class="relation-select-item-title">
+                        {{ item.systitle ?? item.title ?? item.name ?? item.uuid }}
+                    </span>
+                    <span class="relation-select-remove" 
+                          data-uuid="{{ item.uuid }}"
+                          title="{{ widget.t('removeItem') ?? 'Remove' }}">
+                        ×
+                    </span>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+
+<style>
+.relation-select-container {
+    margin-bottom: 1rem;
+}
+
+.relation-select-dropdown {
+    width: 100%;
+    margin-bottom: 1rem;
+}
+
+.relation-select-table {
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    overflow: hidden;
+}
+
+.relation-select-table table {
+    width: 100%;
+    margin: 0;
+    border-collapse: collapse;
+}
+
+.relation-select-table th,
+.relation-select-table td {
+    padding: 0.75rem;
+    border-bottom: 1px solid #dee2e6;
+    text-align: left;
+}
+
+.relation-select-table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.relation-select-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.relation-select-table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.relation-select-list {
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 0.5rem;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.relation-select-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem;
+    margin-bottom: 0.25rem;
+    background-color: #f8f9fa;
+    border-radius: 0.25rem;
+}
+
+.relation-select-item:last-child {
+    margin-bottom: 0;
+}
+
+.relation-select-item-title {
+    flex: 1;
+}
+
+.relation-select-remove {
+    color: #dc3545;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-weight: bold;
+    font-size: 1.2em;
+    line-height: 1;
+}
+
+.relation-select-remove:hover {
+    background-color: #dc3545;
+    color: white;
+}
+
+/* Dark mode support */
+[data-theme="dark"] .relation-select-table {
+    border-color: #4a5568;
+}
+
+[data-theme="dark"] .relation-select-table th {
+    background-color: #2d3748;
+    color: #e2e8f0;
+    border-color: #4a5568;
+}
+
+[data-theme="dark"] .relation-select-table td {
+    border-color: #4a5568;
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .relation-select-table tbody tr:hover {
+    background-color: #4a5568;
+}
+
+[data-theme="dark"] .relation-select-list {
+    border-color: #4a5568;
+    background-color: #2d3748;
+}
+
+[data-theme="dark"] .relation-select-item {
+    background-color: #4a5568;
+    color: #e2e8f0;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const container = document.querySelector('.relation-select-container');
+    if (!container) return;
+    
+    const hiddenInput = container.querySelector('input[type="hidden"]');
+    const dropdown = container.querySelector('.relation-select-dropdown');
+    
+    // Initialize Select2 if available
+    if (typeof $ !== 'undefined' && $.fn.select2 && dropdown) {
+        const ctype = dropdown.dataset.ctype;
+        const apiEndpoint = dropdown.dataset.apiEndpoint;
+        const isMultiple = dropdown.dataset.multiple === 'true';
+        
+        $(dropdown).select2({
+            ajax: {
+                url: apiEndpoint,
+                dataType: 'json',
+                delay: 250,
+                data: function(params) {
+                    return {
+                        q: params.term,
+                        page: params.page || 1
+                    };
+                },
+                processResults: function(data) {
+                    return {
+                        results: (data.items || []).map(function(item) {
+                            return {
+                                id: item.uuid,
+                                text: item.systitle || item.title || item.name || item.uuid
+                            };
+                        }),
+                        pagination: {
+                            more: data.hasMore || false
+                        }
+                    };
+                }
+            },
+            placeholder: '{{ widget.t("selectItem") ?? "Select an item" }}',
+            minimumInputLength: 1,
+            allowClear: true
+        });
+        
+        // Handle selection changes
+        $(dropdown).on('change', function() {
+            const selectedValues = $(this).val() || [];
+            hiddenInput.value = JSON.stringify(isMultiple ? selectedValues : selectedValues[0] || '');
+            hiddenInput.dispatchEvent(new Event('change'));
+            
+            if (!isMultiple && selectedValues.length > 0) {
+                // Reload page or update display for single selection
+                location.reload();
+            }
+        });
+    }
+    
+    // Handle remove buttons
+    container.addEventListener('click', function(e) {
+        if (e.target.classList.contains('relation-select-remove')) {
+            const uuid = e.target.dataset.uuid;
+            const currentValue = JSON.parse(hiddenInput.value || '[]');
+            
+            let newValue;
+            if (Array.isArray(currentValue)) {
+                newValue = currentValue.filter(function(item) {
+                    return item !== uuid;
+                });
+            } else {
+                newValue = currentValue === uuid ? '' : currentValue;
+            }
+            
+            hiddenInput.value = JSON.stringify(newValue);
+            hiddenInput.dispatchEvent(new Event('change'));
+            
+            // Remove the row/item from display
+            const row = e.target.closest('tr') || e.target.closest('.relation-select-item');
+            if (row) {
+                row.remove();
+            }
+        }
+    });
+});
+</script>

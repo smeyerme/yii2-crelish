@@ -9,6 +9,12 @@ use yii\helpers\Html;
 use yii\helpers\Json;
 use yii\web\View;
 
+/**
+ * AssetConnector V1 Widget
+ * 
+ * @deprecated Use AssetConnectorV2 instead for better integration and features
+ * @see \giantbits\crelish\plugins\assetconnector\AssetConnectorV2
+ */
 class AssetConnector extends CrelishFormWidget
 {
   public $data;
@@ -21,6 +27,11 @@ class AssetConnector extends CrelishFormWidget
   public function init()
   {
     parent::init();
+    
+    // Log deprecation notice
+    if (YII_DEBUG) {
+      Yii::warning('AssetConnector V1 is deprecated. Please migrate to AssetConnectorV2 for better features and JsonStructureEditor support.', 'crelish.deprecated');
+    }
 
     if (!empty($this->data)) {
       $this->rawData = $this->data;

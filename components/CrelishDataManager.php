@@ -337,10 +337,14 @@ class CrelishDataManager extends Component
   /**
    * Get element definitions
    *
-   * @return \stdClass Element definitions
+   * @return false|\stdClass
    */
   public function getDefinitions(): \stdClass
   {
+    $definition = CrelishDynamicModel::loadElementDefinition($this->ctype);
+    if(empty($definition)) {
+      var_dump($this->ctype);
+    }
     return CrelishDynamicModel::loadElementDefinition($this->ctype);
   }
 

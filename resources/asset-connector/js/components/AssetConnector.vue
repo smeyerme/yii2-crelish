@@ -7,7 +7,25 @@
     
     <!-- File preview area - always visible -->
     <div class="file-preview-area">
-      <div v-if="currentImageUrl" class="selected-file">
+      <!-- Multiple files mode -->
+      <div v-if="multiple && selectedFiles.length > 0" class="selected-files-multiple">
+        <div v-for="(file, index) in selectedFiles" :key="file.uuid || index" class="selected-file-item">
+          <img v-if="file.preview_url" :src="file.preview_url" :alt="file.title || 'Selected file'" class="preview-img-small">
+          <div v-else class="file-icon">📄</div>
+          <div class="file-details-small">
+            <div class="file-title-small">{{ file.title || file.uuid }}</div>
+            <div class="file-type-small">{{ getFileTypeLabel(file.mime) }}</div>
+          </div>
+          <button @click="removeFile(index)" class="btn btn-sm btn-outline-danger remove-file-btn" type="button">×</button>
+        </div>
+        <div class="multiple-actions">
+          <button @click="openImageSelector" class="btn btn-sm btn-primary" type="button">{{ t('labelAddMoreFiles') }}</button>
+          <button @click="clearAllFiles" class="btn btn-sm btn-outline-danger" type="button">{{ t('labelClearAll') }}</button>
+        </div>
+      </div>
+      
+      <!-- Single file mode -->
+      <div v-else-if="!multiple && currentImageUrl" class="selected-file">
         <img :src="currentImageUrl" :key="'img-'+modelValue" :alt="selectedFileTitle || 'Selected file'" class="preview-img">
         <div class="file-details">
           <div v-if="selectedFileTitle" class="file-title">{{ selectedFileTitle }}</div>
@@ -18,6 +36,8 @@
           </div>
         </div>
       </div>
+      
+      <!-- Empty state -->
       <div v-else class="empty-preview">
         <div class="placeholder-icon">
           <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
@@ -25,9 +45,9 @@
             <polyline points="13 2 13 9 20 9"></polyline>
           </svg>
         </div>
-        <p class="placeholder-text">{{ t('labelNoFileSelected') }}</p>
+        <p class="placeholder-text">{{ multiple ? t('labelNoFilesSelected') : t('labelNoFileSelected') }}</p>
         <button @click="openImageSelector" class="btn btn-outline-primary" type="button">
-          {{ t('labelSelectFile') }} <span v-if="required" class="required-indicator">*</span>
+          {{ multiple ? t('labelSelectFiles') : t('labelSelectFile') }} <span v-if="required" class="required-indicator">*</span>
         </button>
       </div>
     </div>
@@ -93,12 +113,13 @@
                 v-for="item in filteredImages"
                 :key="item.uuid"
                 class="image-item"
-                :class="{'selected': tempSelectedId === item.uuid}"
+                :class="{'selected': multiple ? tempSelectedIds.includes(item.uuid) : tempSelectedId === item.uuid}"
                 @click="selectImage(item.uuid)"
             >
               <img :src="item.preview_url" :alt="item.title">
               <div class="image-title">{{ item.title }}</div>
               <div class="file-type">{{ getFileTypeLabel(item.mime) }}</div>
+              <div v-if="multiple && tempSelectedIds.includes(item.uuid)" class="selection-indicator">✓</div>
             </div>
           </div>
 
@@ -112,8 +133,13 @@
         </div>
 
         <div class="image-selector-footer">
+          <div v-if="multiple" class="selection-count">
+            {{ tempSelectedIds.length }} {{ tempSelectedIds.length === 1 ? t('labelFileSelected') : t('labelFilesSelected') }}
+          </div>
           <button @click="cancelImageSelection" class="btn btn-secondary" type="button">{{ t('labelCancel') }}</button>
-          <button @click="confirmImageSelection" class="btn btn-primary" :disabled="!tempSelectedId" type="button">{{ t('labelSelect') }}</button>
+          <button @click="confirmImageSelection" class="btn btn-primary" :disabled="multiple ? tempSelectedIds.length === 0 : !tempSelectedId" type="button">
+            {{ multiple ? t('labelSelectFiles') : t('labelSelect') }}
+          </button>
         </div>
       </div>
     </div>
@@ -124,8 +150,12 @@
 export default {
   props: {
     modelValue: {
-      type: [Number, String],
+      type: [Number, String, Array],
       default: null
+    },
+    multiple: {
+      type: Boolean,
+      default: false
     },
     fieldKey: {
       type: String,
@@ -159,6 +189,8 @@ export default {
     return {
       selectorOpen: false,
       tempSelectedId: null,
+      tempSelectedIds: [], // For multiple selection
+      selectedFiles: [], // Array of selected file objects for multiple mode
       searchTerm: '',
       mimeFilter: '',
       images: [],
@@ -201,7 +233,13 @@ export default {
         labelUploadingStatus: 'Uploading...',
         labelUploadSuccessful: 'Upload successful!',
         labelUploadFailed: 'Upload failed. Please try again.',
-        titleSelectFile: 'Select File'
+        titleSelectFile: 'Select File',
+        labelSelectFiles: 'Select Files',
+        labelNoFilesSelected: 'No files selected',
+        labelAddMoreFiles: 'Add More Files',
+        labelClearAll: 'Clear All',
+        labelFileSelected: 'file selected',
+        labelFilesSelected: 'files selected'
       }
     };
   },
@@ -224,31 +262,49 @@ export default {
     modelValue: {
       immediate: true,
       handler(newVal, oldVal) {
-        // Reset the currentImageUrl when modelValue changes
-        if (!newVal) {
-          this.currentImageUrl = null;
-          this.tempSelectedId = null;
-          this.selectedFileTitle = null;
-          this.selectedFileMime = null;
+        if (this.multiple) {
+          // Handle multiple selection
+          if (!newVal || !Array.isArray(newVal)) {
+            this.selectedFiles = [];
+            this.tempSelectedIds = [];
+          } else {
+            this.tempSelectedIds = [...newVal];
+            this.fetchMultipleFileDetails(newVal);
+          }
         } else {
-          this.fetchImageDetails(newVal);
-          this.tempSelectedId = newVal;
-        }
-        
-        // If the value is cleared, make sure to clear the cache for the old value
-        if (!newVal && oldVal && this.imageCache[oldVal]) {
-          delete this.imageCache[oldVal];
+          // Handle single selection
+          if (!newVal) {
+            this.currentImageUrl = null;
+            this.tempSelectedId = null;
+            this.selectedFileTitle = null;
+            this.selectedFileMime = null;
+          } else {
+            this.fetchImageDetails(newVal);
+            this.tempSelectedId = newVal;
+          }
+          
+          // If the value is cleared, make sure to clear the cache for the old value
+          if (!newVal && oldVal && this.imageCache[oldVal]) {
+            delete this.imageCache[oldVal];
+          }
         }
       }
     }
   },
 
   created() {
-    // Prefetch the selected image if available
-    this.prefetchImages();
-    
-    // Initialize tempSelectedId with modelValue
-    this.tempSelectedId = this.modelValue;
+    // Initialize based on mode
+    if (this.multiple) {
+      // Multiple mode initialization
+      if (Array.isArray(this.modelValue) && this.modelValue.length > 0) {
+        this.tempSelectedIds = [...this.modelValue];
+        this.fetchMultipleFileDetails(this.modelValue);
+      }
+    } else {
+      // Single mode initialization
+      this.tempSelectedId = this.modelValue;
+      this.prefetchImages();
+    }
     
     // If we have an initial value, make sure to call onUpdateValue
     if (this.modelValue && typeof this.onUpdateValue === 'function') {
@@ -303,26 +359,21 @@ export default {
     },
 
     prefetchImages() {
-      if (this.modelValue) {
-        this.fetchImageDetails(this.modelValue);
-        this.tempSelectedId = this.modelValue;
+      if (this.multiple) {
+        // Multiple mode prefetch
+        if (Array.isArray(this.modelValue) && this.modelValue.length > 0) {
+          this.tempSelectedIds = [...this.modelValue];
+          this.fetchMultipleFileDetails(this.modelValue);
+        }
+      } else {
+        // Single mode prefetch
+        if (this.modelValue) {
+          this.fetchImageDetails(this.modelValue);
+          this.tempSelectedId = this.modelValue;
+        }
       }
     },
 
-    openImageSelector() {
-      this.tempSelectedId = this.modelValue;
-      this.searchTerm = '';
-      this.mimeFilter = '';
-      this.page = 1;
-      this.selectorOpen = true;
-      this.searchImages();
-    },
-
-    cancelImageSelection() {
-      this.selectorOpen = false;
-      this.tempSelectedId = this.modelValue; // Reset to the current selection
-      this.uploadStatus = '';
-    },
 
     clearImage() {
       // Store the old value to clear from cache if needed
@@ -349,35 +400,70 @@ export default {
     },
 
     selectImage(imageId) {
-      this.tempSelectedId = imageId;
+      if (this.multiple) {
+        // Toggle selection for multiple mode
+        const index = this.tempSelectedIds.indexOf(imageId);
+        if (index > -1) {
+          this.tempSelectedIds.splice(index, 1);
+        } else {
+          this.tempSelectedIds.push(imageId);
+        }
+      } else {
+        // Single selection mode
+        this.tempSelectedId = imageId;
+      }
     },
 
     confirmImageSelection() {
-      if (this.tempSelectedId) {
-        // Get the selected image from the filtered images
-        const selectedImage = this.filteredImages.find(img => img.uuid === this.tempSelectedId);
-        
-        // If we have the image data, update the cache immediately
-        if (selectedImage) {
-          if (selectedImage.preview_url) {
-            this.imageCache[this.tempSelectedId] = selectedImage.preview_url;
-            this.currentImageUrl = selectedImage.preview_url;
+      if (this.multiple) {
+        // Handle multiple selection
+        if (this.tempSelectedIds.length > 0) {
+          // Update selected files array
+          this.selectedFiles = this.filteredImages.filter(img => this.tempSelectedIds.includes(img.uuid));
+          
+          // Cache the images
+          this.selectedFiles.forEach(file => {
+            if (file.preview_url) {
+              this.imageCache[file.uuid] = file.preview_url;
+            }
+          });
+          
+          // Update the model value with array of UUIDs
+          this.$emit('update:modelValue', [...this.tempSelectedIds]);
+          
+          // Call the onUpdateValue callback
+          if (typeof this.onUpdateValue === 'function') {
+            this.onUpdateValue([...this.tempSelectedIds]);
           }
-          this.selectedFileTitle = selectedImage.title;
-          this.selectedFileMime = selectedImage.mime;
         }
-        
-        // Update the model value
-        this.$emit('update:modelValue', this.tempSelectedId);
-        
-        // Call the onUpdateValue callback to ensure the hidden input is updated
-        if (typeof this.onUpdateValue === 'function') {
-          this.onUpdateValue(this.tempSelectedId);
-        }
-        
-        // If we don't have the image preview yet, fetch it
-        if (!this.currentImageUrl) {
-          this.fetchImageDetails(this.tempSelectedId);
+      } else {
+        // Handle single selection
+        if (this.tempSelectedId) {
+          // Get the selected image from the filtered images
+          const selectedImage = this.filteredImages.find(img => img.uuid === this.tempSelectedId);
+          
+          // If we have the image data, update the cache immediately
+          if (selectedImage) {
+            if (selectedImage.preview_url) {
+              this.imageCache[this.tempSelectedId] = selectedImage.preview_url;
+              this.currentImageUrl = selectedImage.preview_url;
+            }
+            this.selectedFileTitle = selectedImage.title;
+            this.selectedFileMime = selectedImage.mime;
+          }
+          
+          // Update the model value
+          this.$emit('update:modelValue', this.tempSelectedId);
+          
+          // Call the onUpdateValue callback to ensure the hidden input is updated
+          if (typeof this.onUpdateValue === 'function') {
+            this.onUpdateValue(this.tempSelectedId);
+          }
+          
+          // If we don't have the image preview yet, fetch it
+          if (!this.currentImageUrl) {
+            this.fetchImageDetails(this.tempSelectedId);
+          }
         }
       }
       
@@ -531,6 +617,116 @@ export default {
       } finally {
         this.loading = false;
       }
+    },
+
+    // Methods for multiple selection support
+    async fetchMultipleFileDetails(fileIds) {
+      if (!fileIds || !Array.isArray(fileIds) || fileIds.length === 0) {
+        this.selectedFiles = [];
+        return;
+      }
+      
+      // Clear existing selected files before fetching new ones
+      this.selectedFiles = [];
+      
+      // Debug logging
+      if (window.console && console.log) {
+        console.log('AssetConnector: Fetching multiple file details for', fileIds);
+      }
+      
+      for (const fileId of fileIds) {
+        if (!fileId) continue;
+        
+        try {
+          const response = await fetch(`/crelish/asset/api-get?uuid=${fileId}`);
+          if (response.ok) {
+            const data = await response.json();
+            const fileData = {
+              uuid: data.uuid,
+              title: data.title,
+              mime: data.mime,
+              preview_url: data.preview_url || data.full_url
+            };
+            
+            this.selectedFiles.push(fileData);
+            
+            // Cache the image
+            if (data.preview_url || data.full_url) {
+              this.imageCache[fileId] = data.preview_url || data.full_url;
+            }
+            
+            // Debug logging
+            if (window.console && console.log) {
+              console.log('AssetConnector: Loaded file details for', fileId, fileData);
+            }
+          } else {
+            console.warn('AssetConnector: Failed to fetch file details for', fileId, 'HTTP', response.status);
+          }
+        } catch (error) {
+          console.warn('AssetConnector: Error fetching file details for', fileId, error);
+        }
+      }
+      
+      // Debug logging
+      if (window.console && console.log) {
+        console.log('AssetConnector: Finished loading multiple files, total:', this.selectedFiles.length);
+      }
+    },
+
+    removeFile(index) {
+      this.selectedFiles.splice(index, 1);
+      this.tempSelectedIds.splice(index, 1);
+      
+      // Update the model value
+      this.$emit('update:modelValue', [...this.tempSelectedIds]);
+      
+      // Call the onUpdateValue callback
+      if (typeof this.onUpdateValue === 'function') {
+        this.onUpdateValue([...this.tempSelectedIds]);
+      }
+    },
+
+    clearAllFiles() {
+      this.selectedFiles = [];
+      this.tempSelectedIds = [];
+      
+      // Update the model value
+      this.$emit('update:modelValue', []);
+      
+      // Call the onUpdateValue callback
+      if (typeof this.onUpdateValue === 'function') {
+        this.onUpdateValue([]);
+      }
+    },
+
+    cancelImageSelection() {
+      this.selectorOpen = false;
+      this.uploadStatus = '';
+      
+      if (this.multiple) {
+        // Reset to current selection for multiple mode
+        this.tempSelectedIds = Array.isArray(this.modelValue) ? [...this.modelValue] : [];
+      } else {
+        // Reset to current selection for single mode
+        this.tempSelectedId = this.modelValue;
+      }
+    },
+
+    openImageSelector() {
+      this.searchTerm = '';
+      this.mimeFilter = '';
+      this.page = 1;
+      this.selectorOpen = true;
+      
+      if (this.multiple) {
+        // Set temp selection to current value for multiple mode
+        this.tempSelectedIds = Array.isArray(this.modelValue) ? [...this.modelValue] : [];
+      } else {
+        // Set temp selection to current value for single mode
+        this.tempSelectedId = this.modelValue;
+      }
+      
+      this.searchImages();
     }
   }
 };
@@ -870,10 +1066,132 @@ export default {
   cursor: not-allowed;
 }
 
+/* Multiple file styles */
+.selected-files-multiple {
+  border: 1px solid var(--border-color, #dee2e6);
+  border-radius: 0.375rem;
+  padding: 1rem;
+  background-color: var(--bg-secondary, #f8f9fa);
+  color: var(--text-color, inherit);
+}
+
+.selected-file-item {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem;
+  margin-bottom: 0.5rem;
+  background-color: var(--bg-primary, white);
+  border: 1px solid var(--border-color, #dee2e6);
+  border-radius: 0.25rem;
+  color: var(--text-color, inherit);
+}
+
+.selected-file-item:last-child {
+  margin-bottom: 0;
+}
+
+.preview-img-small {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 0.25rem;
+  margin-right: 0.75rem;
+}
+
+.file-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--bg-tertiary, #e9ecef);
+  border-radius: 0.25rem;
+  margin-right: 0.75rem;
+  font-size: 1.2rem;
+  color: var(--text-muted, #6c757d);
+}
+
+.file-details-small {
+  flex: 1;
+  min-width: 0;
+}
+
+.file-title-small {
+  font-weight: 500;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-type-small {
+  font-size: 0.8rem;
+  color: var(--text-muted, #6c757d);
+}
+
+.remove-file-btn {
+  margin-left: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.multiple-actions {
+  margin-top: 1rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.selection-indicator {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background-color: #28a745;
+  color: white;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+.selection-count {
+  font-size: 0.9rem;
+  color: var(--text-muted, #6c757d);
+  margin-right: auto;
+}
+
 .image-selector.required .image-selector-label::after {
   content: "*";
   color: #dc3545;
   margin-left: 2px;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .image-selector {
+    --bg-primary: #2d3748;
+    --bg-secondary: #1a202c;
+    --bg-tertiary: #4a5568;
+    --text-color: #e2e8f0;
+    --text-muted: #a0aec0;
+    --border-color: #4a5568;
+  }
+}
+
+/* Manual dark mode class support */
+[data-theme="dark"] .image-selector,
+.dark .image-selector,
+body.dark .image-selector {
+  --bg-primary: #2d3748;
+  --bg-secondary: #1a202c;
+  --bg-tertiary: #4a5568;
+  --text-color: #e2e8f0;
+  --text-muted: #a0aec0;
+  --border-color: #4a5568;
 }
 
 @media (max-width: 768px) {

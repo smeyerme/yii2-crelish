@@ -10,6 +10,7 @@ use yii\web\Controller;
 use yii\helpers\Html;
 use yii\helpers\Url;
 use yii\web\NotFoundHttpException;
+use giantbits\crelish\components\CrelishWidgetFactory;
 
 class CrelishBaseController extends Controller
 {
@@ -426,6 +427,78 @@ class CrelishBaseController extends Controller
     } elseif ($field->type == 'passwordInput') {
       return $this->buildPasswordField($form, $field, $fieldKey, $inputOptions, $fieldOptions);
     } else {
+      // Try using the CrelishWidgetFactory first (for V2 widgets)
+      if (CrelishWidgetFactory::isWidget($field->type)) {
+        try {
+          // Get field data safely - prevent accessing undefined array indices
+          $fieldData = null;
+          
+          // For translatable fields, try to get from i18n array
+          if (property_exists($field, 'translatable') && $field->translatable === true) {
+            $currentLang = $lang ?: Yii::$app->language;
+            
+            // Make sure i18n is initialized
+            if (!isset($this->model->i18n) || !is_array($this->model->i18n)) {
+              $this->model->i18n = [];
+            }
+            
+            // Make sure language array exists
+            if (!isset($this->model->i18n[$currentLang])) {
+              $this->model->i18n[$currentLang] = [];
+            }
+            
+            // Get field value if it exists, otherwise null
+            if (isset($this->model->i18n[$currentLang][$field->key])) {
+              $fieldData = $this->model->i18n[$currentLang][$field->key];
+            } elseif (isset($this->model->{$field->key})) {
+              // Fallback to non-translated field
+              $fieldData = $this->model->{$field->key};
+            }
+          } else {
+            // Try direct property access first
+            if (isset($this->model->{$field->key})) {
+              $fieldData = $this->model->{$field->key};
+            } elseif (isset($this->model[$fieldKey])) {
+              // Then try array access
+              $fieldData = $this->model[$fieldKey];
+            }
+          }
+
+          // Create widget using factory
+          $factory = new CrelishWidgetFactory();
+          
+          // Convert field to factory format
+          $fieldDef = [
+            'key' => $field->key,
+            'type' => $field->type,
+            'label' => $field->label ?? '',
+            'config' => isset($field->config) ? (array)$field->config : [],
+            'widgetOptions' => $widgetOptions
+          ];
+          
+          // Create and render widget
+          $widget = $factory->createWidget($fieldDef, $this->model, $fieldData);
+          $widget->attribute = $field->key; // Ensure the widget knows the correct model attribute
+          $widget->formKey = $fieldKey; // Keep the form key for input names
+          
+          // Apply field configuration properties to widget (like multiple, etc.)
+          if (isset($field->config)) {
+            foreach ((array)$field->config as $configKey => $configValue) {
+              if (property_exists($widget, $configKey)) {
+                $widget->$configKey = $configValue;
+              }
+            }
+          }
+          
+          return $factory->renderWidget($widget, ['context' => 'form']);
+          
+        } catch (\Exception $e) {
+          // Log error and fall back to direct class resolution
+          Yii::error("Widget factory failed for {$field->type}: " . $e->getMessage(), 'crelish.widget');
+        }
+      }
+      
+      // Fallback to direct class resolution (V1 widgets and backward compatibility)
       $class = 'giantbits\crelish\plugins\\' . strtolower($field->type) . '\\' . ucfirst($field->type);
       if (class_exists($class)) {
         // Get field data safely - prevent accessing undefined array indices

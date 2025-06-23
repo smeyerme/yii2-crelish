@@ -9,6 +9,12 @@ use yii\helpers\Json;
 use yii\web\View;
 use yii\web\JsExpression;
 
+/**
+ * RelationSelect V1 Widget
+ * 
+ * @deprecated Use RelationSelectV2 instead for better integration and features
+ * @see \giantbits\crelish\plugins\relationselect\RelationSelectV2
+ */
 class RelationSelect extends CrelishFormWidget
 {
   public $data;
@@ -73,6 +79,11 @@ class RelationSelect extends CrelishFormWidget
   public function init()
   {
     parent::init();
+    
+    // Log deprecation notice
+    if (YII_DEBUG) {
+      Yii::warning('RelationSelect V1 is deprecated. Please migrate to RelationSelectV2 for better features and JsonStructureEditor support.', 'crelish.deprecated');
+    }
 
     // Set the asset URL
     $this->assetUrl = Yii::$app->assetManager->getPublishedUrl('@vendor/giantbits/yii2-crelish/resources/relation-selector/dist');

@@ -40,6 +40,68 @@ class JsonStructureEditor extends CrelishFormWidget
     $this->registerAssets();
   }
 
+  /**
+   * Renders a widget field for use within JsonStructureEditor
+   * This allows any Crelish plugin to be used as a field type
+   */
+  public function renderWidgetField($fieldDef, $value, $path = '')
+  {
+    // Extract widget class from field definition
+    $widgetClass = null;
+    
+    if (!empty($fieldDef['widgetClass'])) {
+      $widgetClass = $fieldDef['widgetClass'];
+    } elseif (!empty($fieldDef['type']) && strpos($fieldDef['type'], 'widget_') === 0) {
+      // Support widget_ prefix format
+      $widgetClass = str_replace('widget_', '', $fieldDef['type']);
+    } elseif (!empty($fieldDef['type'])) {
+      // Try to find plugin by type name
+      $pluginClass = 'giantbits\\crelish\\plugins\\' . strtolower($fieldDef['type']) . '\\' . ucfirst($fieldDef['type']);
+      if (class_exists($pluginClass)) {
+        $widgetClass = $pluginClass;
+      }
+    }
+
+    if (!$widgetClass || !class_exists($widgetClass)) {
+      return '<div class="alert alert-warning">Widget class not found: ' . htmlspecialchars($widgetClass ?? 'undefined') . '</div>';
+    }
+
+    // Create a temporary model and field definition for the widget
+    $tempField = new \stdClass();
+    $tempField->key = $fieldDef['key'] ?? 'temp_field';
+    $tempField->label = $fieldDef['label'] ?? '';
+    $tempField->rules = $fieldDef['rules'] ?? [];
+    $tempField->config = isset($fieldDef['config']) ? (object)$fieldDef['config'] : new \stdClass();
+    
+    // Copy any other field properties
+    foreach ($fieldDef as $key => $val) {
+      if (!property_exists($tempField, $key)) {
+        $tempField->$key = $val;
+      }
+    }
+
+    // Create widget configuration
+    $widgetConfig = [
+      'model' => $this->model,
+      'attribute' => $tempField->key,
+      'formKey' => $tempField->key,
+      'field' => $tempField,
+      'data' => $value,
+      'value' => $value
+    ];
+
+    // Add any widget-specific options
+    if (!empty($fieldDef['widgetOptions'])) {
+      $widgetConfig = array_merge($widgetConfig, $fieldDef['widgetOptions']);
+    }
+
+    try {
+      return $widgetClass::widget($widgetConfig);
+    } catch (\Exception $e) {
+      return '<div class="alert alert-danger">Error rendering widget: ' . htmlspecialchars($e->getMessage()) . '</div>';
+    }
+  }
+
   private function loadSchema()
   {
     if (!empty($this->field->config->schemaFile)) {
@@ -752,71 +814,124 @@ class JsonStructureEditor extends CrelishFormWidget
                         const container = placeholder.querySelector('.asset-connector-container');
                         if (!container) return;
                         
-                        // Try to initialize using the same method as your standalone AssetConnector widget
-                        // This attempts to trigger whatever initialization your asset-connector.js does
+                        console.log('Initializing AssetConnector for:', fieldKey, 'with value:', value);
                         
-                        // Method 1: Try to trigger a DOM event that your asset-connector.js might listen for
-                        const event = new CustomEvent('assetConnectorInit', {
-                            detail: { container: container }
-                        });
-                        document.dispatchEvent(event);
-                        
-                        // Method 2: Try calling any global initialization functions
-                        if (typeof window.initializeAssetConnector === 'function') {
-                            window.initializeAssetConnector(container);
-                        } else if (typeof window.AssetConnector === 'function') {
-                            new window.AssetConnector(container);
-                        }
-                        
-                        // Method 3: Check if there's a Vue component and try to mount it
-                        if (typeof Vue !== 'undefined') {
+                        // Check if Vue.js and the AssetConnector component are available
+                        if (typeof Vue !== 'undefined' && window.assetConnectorTranslations) {
                             try {
-                                new Vue({
+                                // Create a unique ID for this instance
+                                const instanceId = 'asset-connector-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+                                container.id = instanceId;
+                                
+                                // Mount Vue component
+                                const vueInstance = new Vue({
                                     el: container,
-                                    data: {
-                                        fieldKey: fieldKey,
-                                        label: label,
-                                        inputName: inputName,
-                                        value: value,
-                                        required: required
+                                    data() {
+                                        return {
+                                            fieldKey: fieldKey,
+                                            label: label,
+                                            inputName: inputName || ('widget_' + instanceId),
+                                            value: value || '',
+                                            required: required || false,
+                                            translations: window.assetConnectorTranslations || {}
+                                        };
                                     },
                                     mounted() {
-                                        // Try to initialize the asset connector after Vue mounts
+                                        console.log('Vue AssetConnector mounted for:', this.fieldKey);
+                                        
+                                        // Try to trigger any global asset connector initialization
                                         if (typeof window.initializeAssetConnector === 'function') {
                                             window.initializeAssetConnector(this.\$el);
                                         }
+                                        
+                                        // Dispatch custom event to let the asset-connector.js know about this new instance
+                                        const event = new CustomEvent('assetConnectorMounted', {
+                                            detail: { 
+                                                container: this.\$el,
+                                                fieldKey: this.fieldKey,
+                                                value: this.value
+                                            }
+                                        });
+                                        document.dispatchEvent(event);
+                                    },
+                                    watch: {
+                                        value(newValue) {
+                                            // Update hidden input when value changes
+                                            const selector = \"input[name='\" + this.inputName + \"']\";
+                                            const hiddenInput = document.querySelector(selector);
+                                            if (hiddenInput) {
+                                                hiddenInput.value = newValue;
+                                                hiddenInput.dispatchEvent(new Event('input'));
+                                            }
+                                        }
                                     }
                                 });
+                                
+                                // Store Vue instance reference
+                                container._vueInstance = vueInstance;
+                                
                             } catch (e) {
                                 console.warn('Could not mount Vue component for AssetConnector:', e);
                                 this.createFallbackAssetUI(container, value, inputName);
                             }
                         } else {
-                            // If no Vue, create a simple fallback
+                            console.warn('Vue.js or AssetConnector translations not available, creating fallback UI');
                             this.createFallbackAssetUI(container, value, inputName);
                         }
-                    }, 100);
+                    }, 200);
                 }
                 
                 createFallbackAssetUI(container, value, inputName) {
+                    console.log('Creating fallback AssetConnector UI for:', inputName, 'with value:', value);
+                    
                     // Create a simple asset selector as fallback
+                    const fallbackId = 'fallback-' + Date.now();
+                    
                     container.innerHTML = `
-                        <div style=\"border: 2px dashed #ccc; padding: 15px; border-radius: 4px;\">
-                            <p><strong>Asset Selector</strong></p>
-                            <input type=\"text\" 
-                                   placeholder=\"Enter asset UUID or select...\" 
-                                   value=\"\${value}\" 
-                                   style=\"width: 100%; padding: 8px; margin: 5px 0;\"
-                                   onchange=\"
-                                       document.getElementById('\${inputName}').value = this.value; 
-                                       document.getElementById('\${inputName}').dispatchEvent(new Event('input'));
-                                   \">
-                            <button type=\"button\" onclick=\"alert('Asset browser would open here')\" 
-                                    style=\"padding: 8px 12px; background: #007cba; color: white; border: none; border-radius: 3px;\">
-                                Browse Assets
+                        <div style=\"border: 2px dashed #ccc; padding: 15px; border-radius: 4px; background: #f9f9f9;\">
+                            <div style=\"margin-bottom: 10px;\">
+                                <label style=\"display: block; font-weight: bold; margin-bottom: 5px;\">Asset UUID:</label>
+                                <input type=\"text\" 
+                                       id=\"\${fallbackId}\"
+                                       placeholder=\"Enter asset UUID...\" 
+                                       value=\"\${value || ''}\" 
+                                       style=\"width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;\">
+                            </div>
+                            <div style=\"font-size: 12px; color: #666; margin-bottom: 10px;\">
+                                Current value: <span id=\"\${fallbackId}-display\">\${value || 'None'}</span>
+                            </div>
+                            <button type=\"button\" 
+                                    onclick=\"alert('Asset browser integration pending. Please enter UUID manually.')\" 
+                                    style=\"padding: 8px 12px; background: #007cba; color: white; border: none; border-radius: 3px; cursor: pointer;\">
+                                Browse Assets (Manual)
                             </button>
                         </div>
                     `;
+                    
+                    // Add functionality to the input
+                    const input = container.querySelector('#' + fallbackId);
+                    const display = container.querySelector('#' + fallbackId + '-display');
+                    
+                    if (input && display) {
+                        const updateValue = function() {
+                            const newValue = input.value;
+                            display.textContent = newValue || 'None';
+                            
+                            // Find and update the hidden input
+                            const selector = \"input[name='\" + inputName + \"']\";
+                            const hiddenInput = document.querySelector(selector);
+                            if (hiddenInput) {
+                                hiddenInput.value = newValue;
+                                hiddenInput.dispatchEvent(new Event('input'));
+                                hiddenInput.dispatchEvent(new Event('change'));
+                            }
+                            
+                            console.log('Fallback AssetConnector value updated:', newValue);
+                        };
+                        
+                        input.addEventListener('input', updateValue);
+                        input.addEventListener('change', updateValue);
+                    }
                 }
                 
                 init() {
@@ -888,6 +1003,7 @@ class JsonStructureEditor extends CrelishFormWidget
                             html += '</select>';
                             break;
                             
+                        case 'widget':
                         case 'assetConnector':
                         case 'asset':
                             // Generate unique ID for widget field
@@ -899,14 +1015,34 @@ class JsonStructureEditor extends CrelishFormWidget
                             html += `data-value=\"\${this.escapeHtml(value)}\" `;
                             html += `data-label=\"\${this.escapeHtml(label)}\" `;
                             html += `data-widget-type=\"\${fieldDef.type}\" `;
+                            html += `data-widget-class=\"\${fieldDef.widgetClass || ''}\" `;
+                            html += `data-widget-config=\"\${this.escapeHtml(JSON.stringify(fieldDef.config || {}))}\" `;
                             html += `data-required=\"\${fieldDef.required ? 'true' : 'false'}\"></div>`;
                             break;
                             
                         default:
-                            html += `<input type=\"text\" id=\"\${fieldId}\" class=\"form-control structure-input\" `;
-                            html += `placeholder=\"\${this.escapeHtml(placeholder)}\" `;
-                            html += `data-field=\"\${fieldDef.key}\" data-path=\"\${path}\" `;
-                            html += `value=\"\${this.escapeHtml(value)}\">`;
+                            // Check if this is a plugin type
+                            if (fieldDef.type && fieldDef.type !== 'text' && fieldDef.type !== 'textarea' && fieldDef.type !== 'select') {
+                                // Treat as widget
+                                const widgetFieldId = `widget-field-\${++this.assetFieldCounter}`;
+                                html += `<div class=\"widget-field-placeholder\" `;
+                                html += `id=\"\${widgetFieldId}\" `;
+                                html += `data-field=\"\${fieldDef.key}\" `;
+                                html += `data-path=\"\${path}\" `;
+                                html += `data-value=\"\${this.escapeHtml(value)}\" `;
+                                html += `data-label=\"\${this.escapeHtml(label)}\" `;
+                                html += `data-widget-type=\"\${fieldDef.type}\" `;
+                                html += `data-widget-class=\"\${fieldDef.widgetClass || ''}\" `;
+                                html += `data-widget-config=\"\${this.escapeHtml(JSON.stringify(fieldDef.config || {}))}\" `;
+                                html += `data-required=\"\${fieldDef.required ? 'true' : 'false'}\"></div>`;
+                            } else {
+                                // Default text input
+                                html += `<input type=\"text\" id=\"\${fieldId}\" class=\"form-control structure-input\" `;
+                                html += `placeholder=\"\${this.escapeHtml(placeholder)}\" `;
+                                html += `data-field=\"\${fieldDef.key}\" data-path=\"\${path}\" `;
+                                html += `value=\"\${this.escapeHtml(value)}\">`;
+                            }
+                            break;
                     }
                     
                     html += '</div>';
@@ -997,12 +1133,36 @@ class JsonStructureEditor extends CrelishFormWidget
                     const value = placeholder.dataset.value || '';
                     const label = placeholder.dataset.label || 'Field';
                     const widgetType = placeholder.dataset.widgetType || 'assetConnector';
+                    const widgetClass = placeholder.dataset.widgetClass || '';
+                    const widgetConfig = placeholder.dataset.widgetConfig ? JSON.parse(placeholder.dataset.widgetConfig) : {};
                     const required = placeholder.dataset.required === 'true';
                     const uniqueId = placeholder.id;
                     
                     // Generate unique input name and field key for the form
                     const inputName = `widget_\${uniqueId}`;
                     const fieldKeyForForm = path ? `\${path}.\${fieldKey}` : fieldKey;
+                    
+                    // Check if this needs server-side rendering
+                    // Use server-side rendering for:
+                    // 1. Explicit widget types with widgetClass
+                    // 2. AssetConnector and asset types (for proper server-side rendering)
+                    // 3. Any unknown widget types
+                    if (widgetType === 'widget' || widgetClass || 
+                        widgetType === 'assetConnector' || widgetType === 'asset' ||
+                        (widgetType !== 'text' && widgetType !== 'textarea' && widgetType !== 'select')) {
+                        this.loadWidgetFromServer(placeholder, {
+                            fieldKey,
+                            path,
+                            value,
+                            label,
+                            widgetType,
+                            widgetClass,
+                            widgetConfig,
+                            required,
+                            inputName
+                        });
+                        return;
+                    }
                     
                     // Create a container that will hold the widget
                     let html = `<div class=\"json-widget-container\" `;
@@ -1060,6 +1220,181 @@ class JsonStructureEditor extends CrelishFormWidget
                             this.updateDataFromWidgetField(fieldKey, path, hiddenInput.value);
                         });
                     }
+                }
+                
+                loadWidgetFromServer(placeholder, config) {
+                    // Show loading state
+                    placeholder.innerHTML = '<div class=\"widget-loading\">Loading widget...</div>';
+                    
+                    // Prepare data for server request
+                    const requestData = {
+                        fieldDef: {
+                            key: config.fieldKey,
+                            label: config.label,
+                            type: config.widgetType,
+                            widgetClass: config.widgetClass,
+                            config: config.widgetConfig,
+                            required: config.required
+                        },
+                        value: config.value,
+                        path: config.path,
+                        editorId: this.container.dataset.uniqueId
+                    };
+                    
+                    // Make AJAX request to render widget
+                    fetch('/crelish/json-editor/render-widget', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: JSON.stringify(requestData)
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Load any required assets first
+                            if (data.assets && data.assets.length > 0) {
+                                this.loadAssets(data.assets).then(() => {
+                                    this.renderWidgetWithData(placeholder, config, data);
+                                }).catch(e => {
+                                    console.warn('Failed to load widget assets:', e);
+                                    this.renderWidgetWithData(placeholder, config, data);
+                                });
+                            } else {
+                                this.renderWidgetWithData(placeholder, config, data);
+                            }
+                        } else {
+                            placeholder.innerHTML = `<div class=\"alert alert-danger\">Error loading widget: \${data.error || 'Unknown error'}</div>`;
+                        }
+                    })
+                    .catch(error => {
+                        placeholder.innerHTML = `<div class=\"alert alert-danger\">Error loading widget: \${error.message}</div>`;
+                    });
+                }
+                
+                renderWidgetWithData(placeholder, config, data) {
+                    // Create container with the rendered widget
+                    let html = `<div class=\"json-widget-container\" `;
+                    html += `data-field-key=\"\${config.fieldKey}\" `;
+                    html += `data-path=\"\${config.path}\" `;
+                    html += `data-widget-type=\"\${config.widgetType}\" `;
+                    html += `data-value=\"\${config.value}\" `;
+                    html += `data-required=\"\${config.required}\">`;
+                    html += data.html;
+                    html += '</div>';
+                    
+                    placeholder.innerHTML = html;
+                    
+                    // Register translations if provided
+                    if (data.translations && Object.keys(data.translations).length > 0) {
+                        this.registerWidgetTranslations(data.translations);
+                    }
+                    
+                    // Execute any initialization scripts returned by the server
+                    if (data.scripts) {
+                        try {
+                            // Execute scripts in a safer way
+                            const script = document.createElement('script');
+                            script.textContent = data.scripts;
+                            document.head.appendChild(script);
+                            document.head.removeChild(script);
+                        } catch (e) {
+                            console.warn('Failed to execute widget initialization script:', e);
+                            // Fallback to eval if needed
+                            try {
+                                eval(data.scripts);
+                            } catch (evalError) {
+                                console.error('Widget script execution failed:', evalError);
+                            }
+                        }
+                    }
+                    
+                    // For V2 widgets, the initialization script should handle everything
+                    // For V1 widgets or fallback, use manual initialization
+                    if (data.widgetInfo && data.widgetInfo.version === 'v2') {
+                        // V2 widgets should initialize themselves via the script
+                        console.log('V2 widget initialized:', data.widgetInfo.type);
+                    } else if (config.widgetType === 'assetConnector' || config.widgetType === 'asset') {
+                        // Fallback for V1 AssetConnector
+                        this.initializeAssetConnectorFromHtml(placeholder, config);
+                    }
+                    
+                    // Set up value change listeners
+                    this.setupWidgetValueListeners(placeholder, config.fieldKey, config.path);
+                }
+                
+                loadAssets(assetUrls) {
+                    return Promise.all(assetUrls.map(url => {
+                        return new Promise((resolve, reject) => {
+                            // Check if asset is already loaded
+                            if (document.querySelector(`script[src=\"\${url}\"]`)) {
+                                resolve();
+                                return;
+                            }
+                            
+                            const script = document.createElement('script');
+                            script.src = url;
+                            script.onload = () => resolve();
+                            script.onerror = () => reject(new Error(`Failed to load asset: \${url}`));
+                            document.head.appendChild(script);
+                        });
+                    }));
+                }
+                
+                registerWidgetTranslations(translations) {
+                    // Register translations to global scope for widget access
+                    if (typeof window.assetConnectorTranslations === 'undefined') {
+                        window.assetConnectorTranslations = {};
+                    }
+                    Object.assign(window.assetConnectorTranslations, translations);
+                }
+                
+                initializeAssetConnectorFromHtml(placeholder, config) {
+                    // Find the asset-connector-container in the rendered HTML
+                    const container = placeholder.querySelector('.asset-connector-container');
+                    if (!container) return;
+                    
+                    // Update the container with proper data attributes for initialization
+                    container.setAttribute('data-field-key', config.fieldKey);
+                    container.setAttribute('data-label', config.label);
+                    container.setAttribute('data-value', config.value);
+                    container.setAttribute('data-required', config.required);
+                    
+                    // Find the hidden input that stores the value
+                    const hiddenInput = placeholder.querySelector('input[type=\"hidden\"]');
+                    if (hiddenInput) {
+                        container.setAttribute('data-input-name', hiddenInput.name);
+                    }
+                    
+                    // Try to initialize the AssetConnector
+                    this.initializeAssetConnector(placeholder, config.fieldKey, config.path, config.value, config.label, config.required, hiddenInput ? hiddenInput.name : '');
+                }
+                
+                setupWidgetValueListeners(container, fieldKey, path) {
+                    // Find all possible input elements that might store the value
+                    const inputs = container.querySelectorAll('input[type=\"hidden\"], input[type=\"text\"], textarea, select');
+                    
+                    inputs.forEach(input => {
+                        // Listen for changes
+                        input.addEventListener('change', () => {
+                            this.updateDataFromWidgetField(fieldKey, path, input.value);
+                        });
+                        
+                        input.addEventListener('input', () => {
+                            this.updateDataFromWidgetField(fieldKey, path, input.value);
+                        });
+                        
+                        // Also observe attribute changes
+                        const observer = new MutationObserver(() => {
+                            this.updateDataFromWidgetField(fieldKey, path, input.value);
+                        });
+                        
+                        observer.observe(input, {
+                            attributes: true,
+                            attributeFilter: ['value']
+                        });
+                    });
                 }
                 
                 updateDataFromWidgetField(field, path, value) {
