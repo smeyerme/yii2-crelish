@@ -348,8 +348,11 @@ class CrelishDbStorage implements CrelishDataStorage
    */
   public function createQuery(string $ctype): \yii\db\Query
   {
+    $modelClass = $this->getModelClass($ctype);
+    $tableName = $modelClass::tableName();
+    
     $query = new \yii\db\Query();
-    $query->from("{{%{$ctype}}}");
+    $query->from($tableName);
 
     return $query;
   }
