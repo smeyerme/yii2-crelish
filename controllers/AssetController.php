@@ -52,7 +52,7 @@ class AssetController extends CrelishBaseController
         'rules' => [
           [
             'allow' => true,
-            'actions' => ['login', 'glide', 'download', 'api-search', 'api-get', 'api-upload'],
+            'actions' => ['login', 'glide', 'download', 'api-search', 'api-get', 'api-upload', 'api-upload-chunk', 'api-finalize-upload', 'api-delete'],
             'roles' => ['?', '@'], // Allow both guests and authenticated users to access these endpoints
           ],
           [
@@ -1037,5 +1037,293 @@ class AssetController extends CrelishBaseController
       Yii::error("Failed to update asset record with thumbnail name", 'application');
       return false;
     }
+  }
+
+  /**
+   * Handle chunked file upload
+   * 
+   * @return array JSON response
+   */
+  public function actionApiUploadChunk()
+  {
+    Yii::$app->response->format = Response::FORMAT_JSON;
+    
+    try {
+      $sessionId = Yii::$app->request->post('sessionId');
+      $chunkIndex = (int) Yii::$app->request->post('chunkIndex');
+      $totalChunks = (int) Yii::$app->request->post('totalChunks');
+      $filename = Yii::$app->request->post('filename');
+      $filesize = (int) Yii::$app->request->post('filesize');
+      $filetype = Yii::$app->request->post('filetype');
+      
+      if (empty($sessionId) || !isset($_FILES['chunk'])) {
+        throw new \Exception('Missing required parameters');
+      }
+      
+      // Create upload directory for this session
+      $uploadDir = Yii::getAlias('@webroot/temp-uploads/' . $sessionId);
+      if (!is_dir($uploadDir)) {
+        mkdir($uploadDir, 0755, true);
+      }
+      
+      // Save chunk
+      $chunkFile = $uploadDir . '/chunk_' . str_pad($chunkIndex, 6, '0', STR_PAD_LEFT);
+      if (!move_uploaded_file($_FILES['chunk']['tmp_name'], $chunkFile)) {
+        throw new \Exception('Failed to save chunk');
+      }
+      
+      return [
+        'success' => true,
+        'chunkIndex' => $chunkIndex,
+        'message' => 'Chunk uploaded successfully'
+      ];
+      
+    } catch (\Exception $e) {
+      return [
+        'success' => false,
+        'error' => $e->getMessage()
+      ];
+    }
+  }
+  
+  /**
+   * Finalize chunked upload and create asset
+   * 
+   * @return array JSON response
+   */
+  public function actionApiFinalizeUpload()
+  {
+    Yii::$app->response->format = Response::FORMAT_JSON;
+    
+    try {
+      $sessionId = Yii::$app->request->post('sessionId');
+      $filename = Yii::$app->request->post('filename');
+      $filesize = (int) Yii::$app->request->post('filesize');
+      $filetype = Yii::$app->request->post('filetype');
+      
+      if (empty($sessionId) || empty($filename)) {
+        throw new \Exception('Missing required parameters');
+      }
+      
+      $uploadDir = Yii::getAlias('@webroot/temp-uploads/' . $sessionId);
+      if (!is_dir($uploadDir)) {
+        throw new \Exception('Upload session not found');
+      }
+      
+      // Combine chunks
+      $finalFile = $this->combineChunks($uploadDir, $filename);
+      
+      // Create asset using existing logic from actionApiUpload
+      $assetData = $this->createAssetFromFile($finalFile, $filename, $filetype, $filesize);
+      
+      // Cleanup temporary files
+      $this->cleanupTempFiles($uploadDir);
+      
+      return [
+        'success' => true,
+        'assetUuid' => $assetData['uuid'],
+        'asset' => $assetData,
+        'message' => 'Upload completed successfully'
+      ];
+      
+    } catch (\Exception $e) {
+      return [
+        'success' => false,
+        'error' => $e->getMessage()
+      ];
+    }
+  }
+  
+  /**
+   * Delete an asset via API
+   * 
+   * @return array JSON response
+   */
+  public function actionApiDelete()
+  {
+    Yii::$app->response->format = Response::FORMAT_JSON;
+    
+    try {
+      $uuid = Yii::$app->request->post('uuid');
+      
+      if (empty($uuid)) {
+        throw new \Exception('Missing UUID parameter');
+      }
+      
+      $modelProvider = new CrelishDynamicModel(['ctype' => 'asset', 'uuid' => $uuid]);
+      
+      if (!$modelProvider->uuid) {
+        throw new \Exception('Asset not found');
+      }
+      
+      // Delete file from filesystem
+      $filePath = Yii::getAlias('@webroot') . $modelProvider->src;
+      if (file_exists($filePath)) {
+        if (!@unlink($filePath)) {
+          throw new \Exception('Failed to delete file from filesystem');
+        }
+      }
+      
+      // Delete from database
+      if (!$modelProvider->delete()) {
+        throw new \Exception('Failed to delete asset record from database');
+      }
+      
+      return [
+        'success' => true,
+        'message' => 'Asset deleted successfully'
+      ];
+      
+    } catch (\Exception $e) {
+      return [
+        'success' => false,
+        'error' => $e->getMessage()
+      ];
+    }
+  }
+  
+  /**
+   * Combine uploaded chunks into final file
+   * 
+   * @param string $uploadDir
+   * @param string $originalFilename
+   * @return string Final file path
+   */
+  private function combineChunks($uploadDir, $originalFilename)
+  {
+    $chunks = glob($uploadDir . '/chunk_*');
+    if (empty($chunks)) {
+      throw new \Exception('No chunks found');
+    }
+    
+    // Sort chunks by name to ensure correct order
+    sort($chunks);
+    
+    // Create final file in uploads directory
+    $uploadsDir = Yii::getAlias('@webroot/uploads');
+    if (!is_dir($uploadsDir)) {
+      mkdir($uploadsDir, 0755, true);
+    }
+    
+    $slugger = new Slugify();
+    $pathInfo = pathinfo($originalFilename);
+    $prefix = bin2hex(random_bytes(6));
+    $cleanName = $slugger->slugify($pathInfo['filename']);
+    $finalFilename = $prefix . '_' . $cleanName . '.' . $pathInfo['extension'];
+    $finalPath = $uploadsDir . '/' . $finalFilename;
+    
+    // Combine chunks
+    $finalFile = fopen($finalPath, 'wb');
+    if (!$finalFile) {
+      throw new \Exception('Cannot create final file');
+    }
+    
+    foreach ($chunks as $chunkPath) {
+      $chunk = fopen($chunkPath, 'rb');
+      if ($chunk) {
+        stream_copy_to_stream($chunk, $finalFile);
+        fclose($chunk);
+      }
+    }
+    fclose($finalFile);
+    
+    return $finalPath;
+  }
+  
+  /**
+   * Create Asset model entry for uploaded file
+   * 
+   * @param string $filePath
+   * @param string $originalFilename
+   * @param string $mimeType
+   * @param int $fileSize
+   * @return array Asset data
+   */
+  private function createAssetFromFile($filePath, $originalFilename, $mimeType, $fileSize)
+  {
+    $fileName = basename($filePath);
+    
+    // Create the asset record using existing logic
+    $model = new CrelishDynamicModel(['ctype' => 'asset']);
+    $model->systitle = 'Partner Advertisement - ' . $originalFilename;
+    $model->title = $originalFilename;
+    $model->src = $fileName;
+    $model->fileName = $fileName;
+    $model->pathName = '/uploads/';
+    $model->mime = $mimeType;
+    $model->size = $fileSize;
+    $model->state = 2; // Active state
+    
+    // Try to get color information for images
+    if (in_array($mimeType, ['image/jpg', 'image/jpeg', 'image/png', 'image/bmp', 'image/gif'])) {
+      try {
+        $domColor = ColorThief::getColor($filePath, 20);
+        $palColor = ColorThief::getPalette($filePath);
+
+        $model->colormain_rgb = Json::encode($domColor);
+        $model->colormain_hex = '#' . sprintf('%02x', $domColor[0]) . sprintf('%02x', $domColor[1]) . sprintf('%02x', $domColor[2]);
+        $model->colorpalette = Json::encode($palColor);
+      } catch (Exception $e) {
+        // Silently ignore color extraction errors
+      }
+    }
+
+    // Try to generate thumbnail for pdf
+    if ($mimeType == 'application/pdf') {
+      try {
+        $this->generatePdfThumbnail($model, false);
+      } catch (Exception $e) {
+        // Silently ignore thumbnail generation errors
+      }
+    }
+    
+    if (!$model->save()) {
+      throw new \Exception('Failed to create asset: ' . implode(', ', $model->getErrorSummary(true)));
+    }
+    
+    // Generate preview URL based on mime type
+    $previewUrl = '';
+    switch ($mimeType) {
+      case 'image/jpg':
+      case 'image/jpeg':
+      case 'image/gif':
+      case 'image/png':
+      case 'image/webp':
+        $previewUrl = '/crelish/asset/glide?path=' . CrelishBaseHelper::getAssetUrl($model->pathName, $model->fileName) . '&w=180&h=150&f=fit';
+        break;
+      case 'image/svg+xml':
+        $previewUrl = $model->pathName . $model->src;
+        break;
+      case 'application/pdf':
+        $previewUrl = '/crelish/asset/glide?path=thumbs/' . $model->thumbnail . '&p=small';
+        break;
+      default:
+        $previewUrl = '/crelish/asset/glide?path=placeholders/file.png&w=180&h=150&f=fit';
+    }
+    
+    return [
+      'uuid' => $model->uuid,
+      'title' => $model->title ?? $model->systitle ?? 'Untitled',
+      'mime' => $model->mime,
+      'preview_url' => $previewUrl,
+      'full_url' => CrelishBaseHelper::getAssetUrl($model->pathName, $model->fileName),
+      'created' => $model->created
+    ];
+  }
+  
+  /**
+   * Clean up temporary upload files
+   * 
+   * @param string $uploadDir
+   */
+  private function cleanupTempFiles($uploadDir)
+  {
+    $files = glob($uploadDir . '/*');
+    foreach ($files as $file) {
+      if (is_file($file)) {
+        unlink($file);
+      }
+    }
+    rmdir($uploadDir);
   }
 }

@@ -110,6 +110,13 @@
 			// Process data and render.
 			Yii::$app->params['content'] = $this->data;
 			$data = CrelishBaseContentProcessor::processContent($this->entryPoint['ctype'], $this->data);
+			
+			// Check if any widget returned a Response object (e.g., redirect)
+			if (Yii::$app->has('widgetResponse')) {
+				$response = Yii::$app->get('widgetResponse');
+				Yii::$app->clear('widgetResponse'); // Clean up
+        return $response; // Return the response directly (redirect, etc.)
+			}
 
 			if (isset(Yii::$app->params['crelish']['pageTitleAttribute']) && isset($data[Yii::$app->params['crelish']['pageTitleAttribute']])) {
 				if (isset(Yii::$app->params['crelish']['pageTitle'])) {
