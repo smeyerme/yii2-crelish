@@ -233,11 +233,14 @@ class BotDetectionController extends Controller
 
     $db = Yii::$app->db;
     $totalUpdated = 0;
-    $batchSize = 100; // Process in small batches to avoid locks
+    $batchSize = 50; // Smaller batch size for safety
 
     try {
       // First, get all session IDs that need updating
       $this->stdout("Finding sessions that need updating...\n");
+
+      // Use READ UNCOMMITTED to avoid locking issues during SELECT
+      $db->createCommand("SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED")->execute();
 
       $sessionIds = $db->createCommand("
             SELECT DISTINCT s.session_id
@@ -247,8 +250,21 @@ class BotDetectionController extends Controller
             LIMIT :limit
         ")->bindValue(':limit', 10000)->queryColumn();
 
+      // Reset to default isolation level
+      $db->createCommand("SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ")->execute();
+
       if (empty($sessionIds)) {
         $this->stdout("No sessions need updating\n");
+        return;
+      }
+
+      // Validate session IDs
+      $sessionIds = array_filter($sessionIds, function($id) {
+        return !empty($id) && is_string($id);
+      });
+
+      if (empty($sessionIds)) {
+        $this->stdout("No valid session IDs found\n");
         return;
       }
 
@@ -262,18 +278,32 @@ class BotDetectionController extends Controller
       $chunks = array_chunk($sessionIds, $batchSize);
 
       foreach ($chunks as $index => $chunk) {
+        // Double-check chunk is not empty
+        if (empty($chunk)) {
+          continue;
+        }
+
         $transaction = $db->beginTransaction();
 
         try {
-          $placeholders = array_fill(0, count($chunk), '?');
-          $sql = "UPDATE analytics_sessions SET is_bot = 1 WHERE session_id IN (" . implode(',', $placeholders) . ")";
+          // Add additional safety check in WHERE clause
+          $updated = $db->createCommand()
+            ->update(
+              'analytics_sessions',
+              ['is_bot' => 1],
+              [
+                'AND',
+                ['session_id' => $chunk],
+                ['is_bot' => 0]  // Extra safety: only update if not already marked as bot
+              ]
+            )
+            ->execute();
 
-          $updated = $db->createCommand($sql)->bindValues($chunk)->execute();
           $totalUpdated += $updated;
-
           $transaction->commit();
 
-          if (($index + 1) % 10 === 0) {
+          // Progress reporting
+          if (($index + 1) % 10 === 0 || $index === count($chunks) - 1) {
             $this->stdout(sprintf(
               "Progress: %d/%d batches processed (%d sessions updated)\n",
               $index + 1,
@@ -282,13 +312,22 @@ class BotDetectionController extends Controller
             ));
           }
 
-          // Small delay to reduce database load
-          usleep(10000); // 10ms delay
+          // Slightly longer delay between batches
+          usleep(50000); // 50ms delay
 
         } catch (\Exception $e) {
           $transaction->rollBack();
           $this->stderr("Error updating batch: " . $e->getMessage() . "\n", Console::FG_RED);
-          throw $e;
+
+          // Log details for debugging
+          Yii::error([
+            'error' => $e->getMessage(),
+            'chunk_size' => count($chunk),
+            'sample_ids' => array_slice($chunk, 0, 5), // Log first 5 IDs only
+          ], __METHOD__);
+
+          // Continue with next batch instead of stopping completely
+          continue;
         }
       }
 
@@ -297,7 +336,7 @@ class BotDetectionController extends Controller
     }
 
     $this->stdout(sprintf(
-      "Updated %d sessions based on their page view bot status\n",
+      "Successfully updated %d sessions based on their page view bot status\n",
       $totalUpdated
     ), Console::FG_YELLOW);
   }
@@ -333,6 +372,11 @@ class BotDetectionController extends Controller
     // CCleaner
     if (strpos($userAgent, 'CCleaner') !== false) {
       return true;
+    }
+
+    // Any old IE
+    if (preg_match('/MSIE (?:[67]\.|8\.0|9\.0)/', $userAgent)) {
+      return true; // IE 9 and below
     }
 
     return false;
