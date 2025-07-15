@@ -15,7 +15,7 @@
   --color-bg-secondary: #e0e0e7;
   --color-text-dark: #2d3748;
   --color-text-muted: #64748b;
-  --color-text-light: #ffffff;
+  --color-text-light: #2d3748;
   --color-border: #e2e8f0;
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
   --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
@@ -53,7 +53,7 @@ html {
   --color-bg-main: #121926;
   --color-bg-secondary: #0d131d;
   --color-text-dark: #e2e8f0;
-  --color-text-muted: #94a3b8;
+  --color-text-muted: #bac6d6;
   --color-text-light: #ffffff;
   --color-border: #334155;
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
@@ -80,7 +80,7 @@ html {
 
 a {
   text-decoration: none;
-  color: var(--color-primary-dark);
+  color: var(--color-text-dark);
 
   &not(.c-button) {
     &:hover {
@@ -2547,4 +2547,12 @@ input[type="checkbox"]:checked::before {
 [data-theme="dark"] .content-table + .summary,
 [data-theme="dark"] #contentSelect > .u-window-box-medium .summary {
   color: var(--color-text-muted);
+}
+
+.text-muted {
+  color: var(--color-text-muted) !important;
+}
+
+.card-body {
+  color: var(--color-text-light);
 }
