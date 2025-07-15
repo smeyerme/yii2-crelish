@@ -232,24 +232,73 @@ class BotDetectionController extends Controller
     }
 
     $db = Yii::$app->db;
+    $totalUpdated = 0;
+    $batchSize = 100; // Process in small batches to avoid locks
 
-    // Find sessions that have bot page views but aren't marked as bots
-    $updated = $db->createCommand("
-            UPDATE analytics_sessions s
-            SET s.is_bot = 1
-            WHERE s.is_bot = 0
-            AND EXISTS (
-                SELECT 1 
-                FROM analytics_page_views pv 
-                WHERE pv.session_id = s.session_id 
-                AND pv.is_bot = 1
-                LIMIT 1
-            )
-        ")->execute();
+    try {
+      // First, get all session IDs that need updating
+      $this->stdout("Finding sessions that need updating...\n");
+
+      $sessionIds = $db->createCommand("
+            SELECT DISTINCT s.session_id
+            FROM analytics_sessions s
+            INNER JOIN analytics_page_views pv ON s.session_id = pv.session_id
+            WHERE s.is_bot = 0 AND pv.is_bot = 1
+            LIMIT :limit
+        ")->bindValue(':limit', 10000)->queryColumn();
+
+      if (empty($sessionIds)) {
+        $this->stdout("No sessions need updating\n");
+        return;
+      }
+
+      $this->stdout(sprintf(
+        "Found %d sessions to update, processing in batches of %d...\n",
+        count($sessionIds),
+        $batchSize
+      ));
+
+      // Process in batches
+      $chunks = array_chunk($sessionIds, $batchSize);
+
+      foreach ($chunks as $index => $chunk) {
+        $transaction = $db->beginTransaction();
+
+        try {
+          $placeholders = array_fill(0, count($chunk), '?');
+          $sql = "UPDATE analytics_sessions SET is_bot = 1 WHERE session_id IN (" . implode(',', $placeholders) . ")";
+
+          $updated = $db->createCommand($sql)->bindValues($chunk)->execute();
+          $totalUpdated += $updated;
+
+          $transaction->commit();
+
+          if (($index + 1) % 10 === 0) {
+            $this->stdout(sprintf(
+              "Progress: %d/%d batches processed (%d sessions updated)\n",
+              $index + 1,
+              count($chunks),
+              $totalUpdated
+            ));
+          }
+
+          // Small delay to reduce database load
+          usleep(10000); // 10ms delay
+
+        } catch (\Exception $e) {
+          $transaction->rollBack();
+          $this->stderr("Error updating batch: " . $e->getMessage() . "\n", Console::FG_RED);
+          throw $e;
+        }
+      }
+
+    } catch (\Exception $e) {
+      $this->stderr("Failed to update sessions: " . $e->getMessage() . "\n", Console::FG_RED);
+    }
 
     $this->stdout(sprintf(
       "Updated %d sessions based on their page view bot status\n",
-      $updated
+      $totalUpdated
     ), Console::FG_YELLOW);
   }
 
@@ -375,43 +424,33 @@ class BotDetectionController extends Controller
 
     if ($this->dryRun) {
       $this->stdout("Running in DRY RUN mode\n", Console::FG_YELLOW);
+      return ExitCode::OK;
     }
 
     $db = Yii::$app->db;
 
-    if (!$this->dryRun) {
-      // Update page views based on session bot status
+    // Update page views based on session bot status (usually faster)
+    $this->stdout("\n[1/2] Updating page views based on session bot status...\n");
+
+    try {
       $updated1 = $db->createCommand("
-                UPDATE analytics_page_views pv
-                INNER JOIN analytics_sessions s ON pv.session_id = s.session_id
-                SET pv.is_bot = 1
-                WHERE s.is_bot = 1 AND pv.is_bot = 0
-            ")->execute();
+            UPDATE analytics_page_views pv
+            INNER JOIN analytics_sessions s ON pv.session_id = s.session_id
+            SET pv.is_bot = 1
+            WHERE s.is_bot = 1 AND pv.is_bot = 0
+        ")->execute();
 
       $this->stdout(sprintf(
         "Updated %d page views based on session bot status\n",
         $updated1
       ));
-
-      // Update sessions based on page view bot status
-      $updated2 = $db->createCommand("
-                UPDATE analytics_sessions s
-                SET s.is_bot = 1
-                WHERE s.is_bot = 0
-                AND EXISTS (
-                    SELECT 1 
-                    FROM analytics_page_views pv 
-                    WHERE pv.session_id = s.session_id 
-                    AND pv.is_bot = 1
-                    LIMIT 1
-                )
-            ")->execute();
-
-      $this->stdout(sprintf(
-        "Updated %d sessions based on page view bot status\n",
-        $updated2
-      ));
+    } catch (\Exception $e) {
+      $this->stderr("Error updating page views: " . $e->getMessage() . "\n", Console::FG_RED);
     }
+
+    // Update sessions based on page view bot status (use batched approach)
+    $this->stdout("\n[2/2] Updating sessions based on page view bot status...\n");
+    $this->updateSessionsFromPageViews();
 
     return ExitCode::OK;
   }
