@@ -2,6 +2,7 @@
 
 namespace giantbits\crelish\components;
 
+use Jaybizzle\CrawlerDetect\CrawlerDetect;
 use Yii;
 use yii\base\Component;
 use yii\db\Query;
@@ -35,11 +36,19 @@ class CrelishAnalyticsComponent extends Component
   private $_sessionId;
 
   /**
+   * @var CrawlerDetect Bot detector instance
+   */
+  private $_botDetector;
+
+  /**
    * Initialize the component
    */
   public function init()
   {
     parent::init();
+
+    // Initialize bot detector
+    $this->_botDetector = new CrawlerDetect();
 
     // Start a session if not already started
     if (Yii::$app->session->isActive === false) {
@@ -73,10 +82,10 @@ class CrelishAnalyticsComponent extends Component
   public function trackPageView($pageData)
   {
 
-    // Check if the current request is from a bot
+    // Always track, but mark bot status correctly
     $isBot = $this->isBot();
 
-    if (!$this->enabled || $this->shouldExclude() || $isBot) {
+    if (!$this->enabled || $this->shouldExclude()) {
       return false;
     }
 
@@ -154,8 +163,15 @@ class CrelishAnalyticsComponent extends Component
 
     if ($session) {
       // Update existing session
+      $updateData = ['total_pages' => new Expression('total_pages + 1')];
+
+      // If existing session wasn't marked as bot but current request is bot, update it
+      if (!$session['is_bot'] && $data['is_bot']) {
+        $updateData['is_bot'] = 1;
+      }
+
       return Yii::$app->db->createCommand()->update('analytics_sessions',
-        ['total_pages' => new Expression('total_pages + 1')],
+        $updateData,
         ['session_id' => $this->_sessionId]
       )->execute();
     } else {
@@ -182,31 +198,52 @@ class CrelishAnalyticsComponent extends Component
 
   /**
    * Check if the current request is from a bot
+   * @param string|null $userAgent Optional user agent to check
    * @return bool
    */
-  /**
-   * Check if the current request is from a bot
-   * @return bool
-   */
-  public function isBot()
+  public function isBot($userAgent = null)
   {
-    $userAgent = Yii::$app->request->userAgent;
+    if ($userAgent === null) {
+      $userAgent = Yii::$app->request->userAgent;
+    }
 
     // Empty or very short user agents are suspicious
     if (empty($userAgent) || strlen($userAgent) < 30) {
       return true;
     }
 
-    // Check against the bot database
-    $botPattern = (new Query())
-      ->select('user_agent_pattern')
-      ->from('analytics_bots')
-      ->all();
+    // First check with the crawler-detect library
+    if ($this->_botDetector->isCrawler($userAgent)) {
+      return true;
+    }
 
-    foreach ($botPattern as $pattern) {
-      if (stripos($userAgent, $pattern['user_agent_pattern']) !== false) {
-        return true;
-      }
+    // Custom rules for edge cases not caught by crawler-detect
+
+    // Email in user agent
+    if (preg_match('/@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/', $userAgent)) {
+      return true;
+    }
+
+    // Very old Chrome/Firefox versions (< 100)
+    if (preg_match('/Chrome\/[0-9]{1,2}\./', $userAgent) ||
+      preg_match('/Firefox\/[0-9]{1,2}\./', $userAgent)) {
+      return true;
+    }
+
+    // Old Internet Explorer (6, 7, 8, 9)
+    if (preg_match('/MSIE [6789]\.0/', $userAgent)) {
+      return true;
+    }
+
+    // Incomplete Chrome user agents
+    if (strpos($userAgent, 'Chrome/') !== false &&
+      strpos($userAgent, 'Safari/537.36') === false) {
+      return true;
+    }
+
+    // CCleaner
+    if (strpos($userAgent, 'CCleaner') !== false) {
+      return true;
     }
 
     // Check for Chrome 100.0.x.x pattern (likely spoofed)
@@ -224,9 +261,20 @@ class CrelishAnalyticsComponent extends Component
       return true;
     }
 
-    // Additional bot detection logic
-    // 1. Check request frequency
-    // 2. Check behavior patterns
+    // Optional: Check against your custom bot database
+    // (You might want to remove this if using crawler-detect)
+    /*
+    $botPattern = (new Query())
+      ->select('user_agent_pattern')
+      ->from('analytics_bots')
+      ->all();
+
+    foreach ($botPattern as $pattern) {
+      if (stripos($userAgent, $pattern['user_agent_pattern']) !== false) {
+        return true;
+      }
+    }
+    */
 
     return false;
   }
@@ -409,5 +457,24 @@ class CrelishAnalyticsComponent extends Component
       default:
         return date('Y-m-d 00:00:00', strtotime('-30 days'));
     }
+  }
+
+  /**
+   * Check if a user agent string is a bot (public method for external use)
+   * @param string $userAgent
+   * @return bool
+   */
+  public function checkIsBot($userAgent)
+  {
+    return $this->isBot($userAgent);
+  }
+
+  /**
+   * Get the bot detector instance (for advanced usage)
+   * @return CrawlerDetect
+   */
+  public function getBotDetector()
+  {
+    return $this->_botDetector;
   }
 }
