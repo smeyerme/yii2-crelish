@@ -21,6 +21,32 @@ class BotDetectionController extends Controller
   public $dryRun = false;
 
   /**
+   * @var array Configurable thresholds for bot detection
+   */
+  protected $thresholds = [
+    // Volume-based thresholds
+    'session_requests_per_hour' => 500,
+    'session_requests_per_day' => 2000,
+    'ip_requests_per_hour' => 1000,
+    'ip_requests_per_day' => 5000,
+
+    // Timing-based thresholds
+    'min_human_interval_seconds' => 1,
+    'max_requests_per_minute' => 30,
+    'consistent_interval_threshold' => 2, // Standard deviation
+
+    // Pattern-based thresholds
+    'url_diversity_threshold' => 0.95, // 95% unique URLs = bot
+    'sequential_page_threshold' => 5,
+    'min_requests_for_pattern_detection' => 50,
+
+    // Browser version thresholds
+    'min_chrome_version' => 100,
+    'min_firefox_version' => 100,
+    'min_safari_version' => 600,
+  ];
+
+  /**
    * Define command options
    */
   public function options($actionID)
@@ -43,43 +69,61 @@ class BotDetectionController extends Controller
   }
 
   /**
-   * Detect and flag bot traffic in both analytics tables
-   *
-   * @return int Exit code
+   * Main entry point - runs all detection methods
    */
   public function actionIndex()
   {
-    $this->stdout("Starting bot detection process...\n", Console::FG_GREEN);
+    $this->stdout("Starting enhanced bot detection process...\n", Console::FG_GREEN);
 
     if ($this->dryRun) {
       $this->stdout("Running in DRY RUN mode - no changes will be made\n", Console::FG_YELLOW);
     }
 
-    // Process page views first
-    $this->stdout("\n[1/2] Processing analytics_page_views...\n", Console::FG_CYAN);
-    $pageViewsResult = $this->processPageViews();
+    // Load custom thresholds if available
+    $this->loadCustomThresholds();
 
-    // Then process sessions
-    $this->stdout("\n[2/2] Processing analytics_sessions...\n", Console::FG_CYAN);
-    $sessionsResult = $this->processSessions();
+    // 1. User agent based detection
+    $this->stdout("\n[1/5] Processing user agent-based detection...\n", Console::FG_CYAN);
+    $this->processPageViews();
+    $this->processSessions();
 
-    // Also update sessions based on their page views
-    $this->stdout("\nUpdating sessions based on page view bot status...\n", Console::FG_CYAN);
+    // 2. Volume-based anomaly detection
+    $this->stdout("\n[2/5] Detecting high-volume anomalies...\n", Console::FG_CYAN);
+    $this->detectVolumeAnomalies();
+
+    // 3. Timing pattern detection
+    $this->stdout("\n[3/5] Analyzing timing patterns...\n", Console::FG_CYAN);
+    $this->detectTimingPatterns();
+
+    // 4. Crawling pattern detection
+    $this->stdout("\n[4/5] Detecting crawling patterns...\n", Console::FG_CYAN);
+    $this->detectCrawlingPatterns();
+
+    // 5. Sync bot status between tables
+    $this->stdout("\n[5/5] Syncing bot status...\n", Console::FG_CYAN);
     $this->updateSessionsFromPageViews();
 
-    // Summary
-    $this->stdout("\n" . str_repeat('=', 50) . "\n", Console::FG_GREEN);
-    $this->stdout("Bot detection completed!\n", Console::FG_GREEN);
-
-    if ($this->dryRun) {
-      $this->stdout("\nDRY RUN - No changes were made to the database\n", Console::FG_YELLOW);
-    }
+    // Show summary
+    $this->showDetectionSummary();
 
     return ExitCode::OK;
   }
 
   /**
-   * Process page views table
+   * Load custom thresholds from config file if exists
+   */
+  protected function loadCustomThresholds()
+  {
+    $configFile = Yii::getAlias('@app/config/bot-detection-thresholds.php');
+    if (file_exists($configFile)) {
+      $customThresholds = require $configFile;
+      $this->thresholds = array_merge($this->thresholds, $customThresholds);
+      $this->stdout("Loaded custom thresholds from config file\n", Console::FG_YELLOW);
+    }
+  }
+
+  /**
+   * Process page views table (existing method stays the same)
    */
   protected function processPageViews()
   {
@@ -150,7 +194,7 @@ class BotDetectionController extends Controller
   }
 
   /**
-   * Process sessions table
+   * Process sessions table (existing method stays the same)
    */
   protected function processSessions()
   {
@@ -221,128 +265,187 @@ class BotDetectionController extends Controller
   }
 
   /**
-   * Update sessions based on their page views
-   * If a session has bot page views, mark the session as bot
+   * Detect volume-based anomalies
    */
-  protected function updateSessionsFromPageViews()
+  protected function detectVolumeAnomalies()
   {
-    if ($this->dryRun) {
-      $this->stdout("Skipping session updates in dry run mode\n");
-      return;
+    $db = Yii::$app->db;
+    $detectedBots = 0;
+
+    // Check hourly volumes
+    $this->stdout("Checking hourly request volumes...\n");
+    $hourlyAnomalies = $db->createCommand("
+            SELECT 
+                s.session_id,
+                COUNT(*) as request_count,
+                MIN(pv.created_at) as first_request,
+                MAX(pv.created_at) as last_request
+            FROM analytics_sessions s
+            JOIN analytics_page_views pv ON s.session_id = pv.session_id
+            WHERE s.is_bot = 0 
+                AND pv.is_bot = 0
+                AND pv.created_at >= DATE_SUB(NOW(), INTERVAL 1 HOUR)
+            GROUP BY s.session_id
+            HAVING request_count > :threshold
+        ")
+      ->bindValue(':threshold', $this->thresholds['session_requests_per_hour'])
+      ->queryAll();
+
+    foreach ($hourlyAnomalies as $anomaly) {
+      $this->markAsBot($anomaly['session_id'], 'high_volume_hourly');
+      $detectedBots++;
     }
 
-    $db = Yii::$app->db;
-    $totalUpdated = 0;
-    $batchSize = 50; // Smaller batch size for safety
-
-    try {
-      // First, get all session IDs that need updating
-      $this->stdout("Finding sessions that need updating...\n");
-
-      // Use READ UNCOMMITTED to avoid locking issues during SELECT
-      $db->createCommand("SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED")->execute();
-
-      $sessionIds = $db->createCommand("
-            SELECT DISTINCT s.session_id
+    // Check daily volumes
+    $this->stdout("Checking daily request volumes...\n");
+    $dailyAnomalies = $db->createCommand("
+            SELECT 
+                s.session_id,
+                COUNT(*) as request_count
             FROM analytics_sessions s
-            INNER JOIN analytics_page_views pv ON s.session_id = pv.session_id
-            WHERE s.is_bot = 0 AND pv.is_bot = 1
-            LIMIT :limit
-        ")->bindValue(':limit', 10000)->queryColumn();
+            JOIN analytics_page_views pv ON s.session_id = pv.session_id
+            WHERE s.is_bot = 0 
+                AND pv.is_bot = 0
+                AND pv.created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)
+            GROUP BY s.session_id
+            HAVING request_count > :threshold
+        ")
+      ->bindValue(':threshold', $this->thresholds['session_requests_per_day'])
+      ->queryAll();
 
-      // Reset to default isolation level
-      $db->createCommand("SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ")->execute();
+    foreach ($dailyAnomalies as $anomaly) {
+      $this->markAsBot($anomaly['session_id'], 'high_volume_daily');
+      $detectedBots++;
+    }
 
-      if (empty($sessionIds)) {
-        $this->stdout("No sessions need updating\n");
-        return;
-      }
+    // Check URL diversity (systematic crawlers)
+    $this->stdout("Checking URL diversity patterns...\n");
+    $crawlers = $db->createCommand("
+            SELECT 
+                s.session_id,
+                COUNT(*) as total_requests,
+                COUNT(DISTINCT pv.url) as unique_urls,
+                COUNT(DISTINCT pv.url) / COUNT(*) as url_diversity
+            FROM analytics_sessions s
+            JOIN analytics_page_views pv ON s.session_id = pv.session_id
+            WHERE s.is_bot = 0 
+                AND pv.is_bot = 0
+                AND pv.created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)
+            GROUP BY s.session_id
+            HAVING total_requests > :min_requests
+                AND url_diversity > :diversity_threshold
+        ")
+      ->bindValue(':min_requests', $this->thresholds['min_requests_for_pattern_detection'])
+      ->bindValue(':diversity_threshold', $this->thresholds['url_diversity_threshold'])
+      ->queryAll();
 
-      // Validate session IDs
-      $sessionIds = array_filter($sessionIds, function($id) {
-        return !empty($id) && is_string($id);
-      });
-
-      if (empty($sessionIds)) {
-        $this->stdout("No valid session IDs found\n");
-        return;
-      }
-
-      $this->stdout(sprintf(
-        "Found %d sessions to update, processing in batches of %d...\n",
-        count($sessionIds),
-        $batchSize
-      ));
-
-      // Process in batches
-      $chunks = array_chunk($sessionIds, $batchSize);
-
-      foreach ($chunks as $index => $chunk) {
-        // Double-check chunk is not empty
-        if (empty($chunk)) {
-          continue;
-        }
-
-        $transaction = $db->beginTransaction();
-
-        try {
-          // Add additional safety check in WHERE clause
-          $updated = $db->createCommand()
-            ->update(
-              'analytics_sessions',
-              ['is_bot' => 1],
-              [
-                'AND',
-                ['session_id' => $chunk],
-                ['is_bot' => 0]  // Extra safety: only update if not already marked as bot
-              ]
-            )
-            ->execute();
-
-          $totalUpdated += $updated;
-          $transaction->commit();
-
-          // Progress reporting
-          if (($index + 1) % 10 === 0 || $index === count($chunks) - 1) {
-            $this->stdout(sprintf(
-              "Progress: %d/%d batches processed (%d sessions updated)\n",
-              $index + 1,
-              count($chunks),
-              $totalUpdated
-            ));
-          }
-
-          // Slightly longer delay between batches
-          usleep(50000); // 50ms delay
-
-        } catch (\Exception $e) {
-          $transaction->rollBack();
-          $this->stderr("Error updating batch: " . $e->getMessage() . "\n", Console::FG_RED);
-
-          // Log details for debugging
-          Yii::error([
-            'error' => $e->getMessage(),
-            'chunk_size' => count($chunk),
-            'sample_ids' => array_slice($chunk, 0, 5), // Log first 5 IDs only
-          ], __METHOD__);
-
-          // Continue with next batch instead of stopping completely
-          continue;
-        }
-      }
-
-    } catch (\Exception $e) {
-      $this->stderr("Failed to update sessions: " . $e->getMessage() . "\n", Console::FG_RED);
+    foreach ($crawlers as $crawler) {
+      $this->markAsBot($crawler['session_id'], 'systematic_crawler');
+      $detectedBots++;
     }
 
     $this->stdout(sprintf(
-      "Successfully updated %d sessions based on their page view bot status\n",
-      $totalUpdated
+      "Volume anomaly detection: found %d bots\n",
+      $detectedBots
     ), Console::FG_YELLOW);
   }
 
   /**
-   * Check if user agent is a bot
+   * Detect timing-based patterns
+   */
+  protected function detectTimingPatterns()
+  {
+    $db = Yii::$app->db;
+    $detectedBots = 0;
+
+    $this->stdout("Analyzing request timing patterns...\n");
+
+    // Get sessions with consistent timing intervals
+    $timingAnomalies = $db->createCommand("
+            SELECT 
+                session_id,
+                AVG(time_diff) as avg_interval,
+                STDDEV(time_diff) as stddev_interval,
+                COUNT(*) as interval_count
+            FROM (
+                SELECT 
+                    session_id,
+                    TIMESTAMPDIFF(SECOND, 
+                        LAG(created_at) OVER (PARTITION BY session_id ORDER BY created_at),
+                        created_at
+                    ) as time_diff
+                FROM analytics_page_views
+                WHERE created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)
+                    AND is_bot = 0
+            ) as intervals
+            WHERE time_diff IS NOT NULL
+                AND time_diff < 300  -- Ignore gaps > 5 minutes
+            GROUP BY session_id
+            HAVING interval_count > 20  -- Need enough data points
+                AND avg_interval < :max_interval
+                AND stddev_interval < :consistency_threshold
+        ")
+      ->bindValue(':max_interval', 10)  // Max 10 seconds average
+      ->bindValue(':consistency_threshold', $this->thresholds['consistent_interval_threshold'])
+      ->queryAll();
+
+    foreach ($timingAnomalies as $anomaly) {
+      $this->stdout(sprintf(
+        "  Bot pattern: session %s, avg interval %.2fs (stddev: %.2f)\n",
+        substr($anomaly['session_id'], 0, 8),
+        $anomaly['avg_interval'],
+        $anomaly['stddev_interval']
+      ));
+      $this->markAsBot($anomaly['session_id'], 'robotic_timing');
+      $detectedBots++;
+    }
+
+    $this->stdout(sprintf(
+      "Timing pattern detection: found %d bots\n",
+      $detectedBots
+    ), Console::FG_YELLOW);
+  }
+
+  /**
+   * Detect crawling patterns
+   */
+  protected function detectCrawlingPatterns()
+  {
+    $db = Yii::$app->db;
+    $detectedBots = 0;
+
+    // Detect sequential pagination crawling
+    $this->stdout("Checking for sequential pagination patterns...\n");
+
+    $paginationCrawlers = $db->createCommand("
+            SELECT 
+                session_id,
+                GROUP_CONCAT(DISTINCT url ORDER BY created_at) as url_sequence
+            FROM analytics_page_views
+            WHERE is_bot = 0
+                AND created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)
+                AND (url LIKE '%page=%' OR url LIKE '%/page/%' OR url LIKE '%&p=%')
+            GROUP BY session_id
+            HAVING COUNT(*) > :threshold
+        ")
+      ->bindValue(':threshold', $this->thresholds['sequential_page_threshold'])
+      ->queryAll();
+
+    foreach ($paginationCrawlers as $crawler) {
+      if ($this->hasSequentialPattern($crawler['url_sequence'])) {
+        $this->markAsBot($crawler['session_id'], 'sequential_crawler');
+        $detectedBots++;
+      }
+    }
+
+    $this->stdout(sprintf(
+      "Crawling pattern detection: found %d bots\n",
+      $detectedBots
+    ), Console::FG_YELLOW);
+  }
+
+  /**
+   * Enhanced bot detection with configurable rules
    */
   protected function isBot($userAgent, CrawlerDetect $detector)
   {
@@ -351,15 +454,14 @@ class BotDetectionController extends Controller
       return true;
     }
 
-    // Custom rules for edge cases
-    // Email in user agent
-    if (preg_match('/@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/', $userAgent)) {
+    // Check for outdated browser versions
+    if ($this->hasOutdatedBrowser($userAgent)) {
       return true;
     }
 
-    // Very old Chrome/Firefox versions (< 100)
-    if (preg_match('/Chrome\/[0-9]{1,2}\./', $userAgent) ||
-      preg_match('/Firefox\/[0-9]{1,2}\./', $userAgent)) {
+    // Custom rules for edge cases
+    // Email in user agent
+    if (preg_match('/@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/', $userAgent)) {
       return true;
     }
 
@@ -376,10 +478,195 @@ class BotDetectionController extends Controller
 
     // Any old IE
     if (preg_match('/MSIE (?:[67]\.|8\.0|9\.0)/', $userAgent)) {
-      return true; // IE 9 and below
+      return true;
     }
 
     return false;
+  }
+
+  /**
+   * Check for outdated browser versions
+   */
+  protected function hasOutdatedBrowser($userAgent)
+  {
+    // Chrome version check
+    if (preg_match('/Chrome\/(\d+)\./', $userAgent, $matches)) {
+      if (intval($matches[1]) < $this->thresholds['min_chrome_version']) {
+        return true;
+      }
+    }
+
+    // Firefox version check
+    if (preg_match('/Firefox\/(\d+)\./', $userAgent, $matches)) {
+      if (intval($matches[1]) < $this->thresholds['min_firefox_version']) {
+        return true;
+      }
+    }
+
+    // Safari version check
+    if (preg_match('/Safari\/(\d+)\./', $userAgent, $matches)) {
+      if (intval($matches[1]) < $this->thresholds['min_safari_version']) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Check if URL sequence shows sequential pattern
+   */
+  protected function hasSequentialPattern($urlSequence)
+  {
+    $urls = explode(',', $urlSequence);
+    if (count($urls) < 3) return false;
+
+    // Extract page numbers from URLs
+    $pageNumbers = [];
+    foreach ($urls as $url) {
+      if (preg_match('/(?:page=|\/page\/|&p=)(\d+)/', $url, $matches)) {
+        $pageNumbers[] = intval($matches[1]);
+      }
+    }
+
+    if (count($pageNumbers) < 3) return false;
+
+    // Check if numbers are mostly sequential
+    $sequential = 0;
+    for ($i = 1; $i < count($pageNumbers); $i++) {
+      $diff = $pageNumbers[$i] - $pageNumbers[$i - 1];
+      if ($diff >= 0 && $diff <= 2) {
+        $sequential++;
+      }
+    }
+
+    return ($sequential / (count($pageNumbers) - 1)) > 0.7;
+  }
+
+  /**
+   * Mark session and page views as bot
+   */
+  protected function markAsBot($sessionId, $reason = null)
+  {
+    if ($this->dryRun) {
+      $this->stdout("Would mark session {$sessionId} as bot" . ($reason ? " (reason: {$reason})" : "") . "\n");
+      return;
+    }
+
+    $db = Yii::$app->db;
+    $transaction = $db->beginTransaction();
+
+    try {
+      // Update session
+      $updateData = ['is_bot' => 1];
+      if ($reason && $this->hasColumn('analytics_sessions', 'bot_reason')) {
+        $updateData['bot_reason'] = $reason;
+      }
+
+      $db->createCommand()
+        ->update('analytics_sessions', $updateData, ['session_id' => $sessionId])
+        ->execute();
+
+      // Update all page views
+      $db->createCommand()
+        ->update('analytics_page_views', ['is_bot' => 1], ['session_id' => $sessionId])
+        ->execute();
+
+      $transaction->commit();
+    } catch (\Exception $e) {
+      $transaction->rollBack();
+      $this->stderr("Error marking session as bot: " . $e->getMessage() . "\n", Console::FG_RED);
+    }
+  }
+
+  /**
+   * Check if table has a column
+   */
+  protected function hasColumn($table, $column)
+  {
+    try {
+      $schema = Yii::$app->db->getTableSchema($table);
+      return $schema && isset($schema->columns[$column]);
+    } catch (\Exception $e) {
+      return false;
+    }
+  }
+
+  /**
+   * Update sessions based on page view bot status
+   */
+  protected function updateSessionsFromPageViews()
+  {
+    if ($this->dryRun) {
+      $this->stdout("Skipping session updates in dry run mode\n");
+      return;
+    }
+
+    $db = Yii::$app->db;
+    $totalUpdated = 0;
+
+    try {
+      $updated = $db->createCommand("
+                UPDATE analytics_sessions s
+                INNER JOIN (
+                    SELECT DISTINCT session_id
+                    FROM analytics_page_views
+                    WHERE is_bot = 1
+                ) bot_pvs ON s.session_id = bot_pvs.session_id
+                SET s.is_bot = 1
+                WHERE s.is_bot = 0
+            ")->execute();
+
+      $totalUpdated = $updated;
+    } catch (\Exception $e) {
+      $this->stderr("Failed to update sessions: " . $e->getMessage() . "\n", Console::FG_RED);
+    }
+
+    $this->stdout(sprintf(
+      "Updated %d sessions based on page view bot status\n",
+      $totalUpdated
+    ), Console::FG_YELLOW);
+  }
+
+  /**
+   * Show detection summary
+   */
+  protected function showDetectionSummary()
+  {
+    $db = Yii::$app->db;
+
+    $this->stdout("\n" . str_repeat('=', 50) . "\n", Console::FG_GREEN);
+    $this->stdout("Bot Detection Summary\n", Console::FG_GREEN);
+    $this->stdout(str_repeat('=', 50) . "\n", Console::FG_GREEN);
+
+    // Get stats
+    $stats = $db->createCommand("
+            SELECT 
+                (SELECT COUNT(*) FROM analytics_sessions WHERE is_bot = 1) as bot_sessions,
+                (SELECT COUNT(*) FROM analytics_sessions WHERE is_bot = 0) as human_sessions,
+                (SELECT COUNT(*) FROM analytics_page_views WHERE is_bot = 1) as bot_page_views,
+                (SELECT COUNT(*) FROM analytics_page_views WHERE is_bot = 0) as human_page_views
+        ")->queryOne();
+
+    $this->stdout(sprintf(
+      "\nSessions:   %s bots / %s humans (%.1f%% bots)\n",
+      number_format($stats['bot_sessions']),
+      number_format($stats['human_sessions']),
+      $stats['bot_sessions'] / max(1, $stats['bot_sessions'] + $stats['human_sessions']) * 100
+    ));
+
+    $this->stdout(sprintf(
+      "Page Views: %s bots / %s humans (%.1f%% bots)\n",
+      number_format($stats['bot_page_views']),
+      number_format($stats['human_page_views']),
+      $stats['bot_page_views'] / max(1, $stats['bot_page_views'] + $stats['human_page_views']) * 100
+    ));
+
+    if ($this->dryRun) {
+      $this->stdout("\nDRY RUN completed - no changes were made\n", Console::FG_YELLOW);
+    } else {
+      $this->stdout("\nBot detection completed successfully!\n", Console::FG_GREEN);
+    }
   }
 
   /**
@@ -430,71 +717,25 @@ class BotDetectionController extends Controller
       $sessionStats['total_records'] > 0 ? ($sessionStats['human_records'] / $sessionStats['total_records'] * 100) : 0
     ));
 
-    // Top pages hit by bots
-    $this->stdout("\nTop 10 Pages Hit by Bots:\n", Console::FG_YELLOW);
-    $this->stdout(str_repeat('-', 50) . "\n");
+    // Bot reasons breakdown (if column exists)
+    if ($this->hasColumn('analytics_sessions', 'bot_reason')) {
+      $this->stdout("\nBot Detection Reasons:\n", Console::FG_YELLOW);
+      $reasons = $db->createCommand("
+                SELECT bot_reason, COUNT(*) as count
+                FROM analytics_sessions
+                WHERE is_bot = 1 AND bot_reason IS NOT NULL
+                GROUP BY bot_reason
+                ORDER BY count DESC
+            ")->queryAll();
 
-    $topPages = $db->createCommand("
-            SELECT 
-                url,
-                COUNT(*) as bot_hits,
-                COUNT(DISTINCT session_id) as bot_sessions
-            FROM analytics_page_views
-            WHERE is_bot = 1
-            GROUP BY url
-            ORDER BY bot_hits DESC
-            LIMIT 10
-        ")->queryAll();
-
-    foreach ($topPages as $i => $page) {
-      $this->stdout(sprintf(
-        "%2d. %s\n    Hits: %s | Sessions: %s\n",
-        $i + 1,
-        substr($page['url'], 0, 70) . (strlen($page['url']) > 70 ? '...' : ''),
-        number_format($page['bot_hits']),
-        number_format($page['bot_sessions'])
-      ));
+      foreach ($reasons as $reason) {
+        $this->stdout(sprintf(
+          "  %s: %s sessions\n",
+          str_pad($reason['bot_reason'], 20),
+          number_format($reason['count'])
+        ));
+      }
     }
-
-    return ExitCode::OK;
-  }
-
-  /**
-   * Sync bot status between tables (useful for maintenance)
-   */
-  public function actionSync()
-  {
-    $this->stdout("Syncing bot status between tables...\n", Console::FG_GREEN);
-
-    if ($this->dryRun) {
-      $this->stdout("Running in DRY RUN mode\n", Console::FG_YELLOW);
-      return ExitCode::OK;
-    }
-
-    $db = Yii::$app->db;
-
-    // Update page views based on session bot status (usually faster)
-    $this->stdout("\n[1/2] Updating page views based on session bot status...\n");
-
-    try {
-      $updated1 = $db->createCommand("
-            UPDATE analytics_page_views pv
-            INNER JOIN analytics_sessions s ON pv.session_id = s.session_id
-            SET pv.is_bot = 1
-            WHERE s.is_bot = 1 AND pv.is_bot = 0
-        ")->execute();
-
-      $this->stdout(sprintf(
-        "Updated %d page views based on session bot status\n",
-        $updated1
-      ));
-    } catch (\Exception $e) {
-      $this->stderr("Error updating page views: " . $e->getMessage() . "\n", Console::FG_RED);
-    }
-
-    // Update sessions based on page view bot status (use batched approach)
-    $this->stdout("\n[2/2] Updating sessions based on page view bot status...\n");
-    $this->updateSessionsFromPageViews();
 
     return ExitCode::OK;
   }
