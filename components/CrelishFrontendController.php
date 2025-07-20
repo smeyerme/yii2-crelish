@@ -126,14 +126,14 @@
 				}
 			}
 			
-			if (isset($data['metakeywords'])) {
+			if (isset($data['metakeywords']) && strlen($data['metakeywords']) > 4) {
 				\Yii::$app->view->registerMetaTag([
 					'name' => 'keywords',
 					'content' => $data['metakeywords']
 				]);
 			}
 			
-			if (isset($data['metadescription'])) {
+			if (isset($data['metadescription']) && strlen($data['metadescription']) > 4) {
 				\Yii::$app->view->registerMetaTag([
 					'name' => 'description',
 					'content' => $data['metadescription']
