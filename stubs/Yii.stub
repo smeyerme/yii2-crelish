@@ -1,0 +1,30 @@
+<?php
+
+namespace yii\web {
+    /**
+     * @property \yii\web\View $view
+     * @property \giantbits\crelish\components\CrelishAnalyticsComponent $crelishAnalytics
+     */
+    class Application extends \yii\base\Application
+    {
+    }
+}
+
+namespace yii\console {
+    /**
+     * @property \yii\console\View $view
+     */
+    class Application extends \yii\base\Application
+    {
+    }
+}
+
+namespace {
+    class Yii extends \yii\BaseYii
+    {
+        /**
+         * @var \yii\console\Application|\yii\web\Application
+         */
+        public static $app;
+    }
+}

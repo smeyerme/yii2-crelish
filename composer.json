@@ -8,7 +8,7 @@
     ],
     "type": "yii2-extension",
     "license": "BSD-3-Clause",
-    "version": "0.14.9",
+    "version": "0.14.10",
     "minimum-stability": "dev",
     "prefer-stable": true,
     "support": {
@@ -82,7 +82,8 @@
         },
         "allow-plugins": {
             "yiisoft/yii2-composer": true,
-            "php-http/discovery": true
+            "php-http/discovery": true,
+            "phpstan/extension-installer": true
         }
     },
     "repositories": [
@@ -90,5 +91,9 @@
             "type": "composer",
             "url": "https://asset-packagist.org"
         }
-    ]
+    ],
+    "require-dev": {
+        "yii2-extensions/phpstan": "^0.2.3",
+        "phpstan/extension-installer": "^1.4"
+    }
 }

@@ -4,9 +4,6 @@
  * Released under the MIT License
  * https://github.com/defunkt/jquery-pjax
  */
-console.log('Using Crelish fixed PJAX version');
-
-
 (function($){
 
 // When called on a container with a selector, fetches the href with

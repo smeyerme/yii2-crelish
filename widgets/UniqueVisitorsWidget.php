@@ -81,7 +81,6 @@ class UniqueVisitorsWidget extends CrelishDashboardWidget
     $totalVisitors = count($visitorsData);
     $newVisitors = $this->countNewVisitors($visitorsData);
     $returningVisitors = $totalVisitors - $newVisitors;
-    $returningPercentage = $totalVisitors > 0 ? round(($returningVisitors / $totalVisitors) * 100) : 0;
 
     // Create donut chart
     $chartContainerId = $this->id . '-chart';

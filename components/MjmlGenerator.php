@@ -537,11 +537,22 @@ MJML;
   private function renderEventsListSection($section)
   {
     $events = $section['content']['events'];
+    $colorScheme = $section['content']['bgColor'] ?? 'light';
     $eventsList = '';
+
+    $bgColor = '#FFFFFF';
+    $textColor = '#000000';
+    $divider = '<mj-divider padding="40px 0 0" border-width="1px" border-color="' . $textColor . '" />';
+
+    if ($colorScheme == 'dark') {
+      $bgColor = '#000000';
+      $textColor = '#FFFFFF';
+      $divider = '<mj-divider padding="20px 0 0" border-width="1px" border-color="' .$bgColor . '" />';
+    }
 
     foreach ($events as $event) {
       $eventsList .= <<<MJML
-        <mj-text padding="0 0 8px" color="#ffffff">
+        <mj-text padding="0 0 8px" color="{$textColor}">
           <strong>{$event['title']}</strong>
           <br>{$event['date']} | {$event['location']}
         </mj-text>
@@ -549,13 +560,14 @@ MJML;
     }
 
     return <<<MJML
-    <mj-section padding="0 20px" background-color="#000000">
+    <mj-section padding="0 20px" background-color="{$bgColor}">
       <mj-column padding="0 0" >
-        <mj-divider padding="0 0 40px" border-width="1px" border-color="#ffffff" />
-        <mj-text padding="0 0 20px"  color="#ffffff" font-size="24px" font-weight="bold">
+        <mj-divider padding="0 0 40px" border-width="1px" border-color="{$textColor}" />
+        <mj-text padding="0 0 20px"  color="{$textColor}" font-size="24px" font-weight="bold">
           Aktuelle Veranstaltungen von FORUM HOLZBAU
         </mj-text>        
 {$eventsList}
+         {$divider}
       </mj-column>
     </mj-section>
 MJML;
@@ -637,8 +649,8 @@ MJML;
   {
     // Extract content properties with defaults
     $title = $section['content']['title'] ?? 'Our Partners';
-    $backgroundColor = $section['content']['backgroundColor'] ?? '#000000';
-    $titleColor = $section['content']['titleColor'] ?? '#FFFFFF';
+    $backgroundColor = $section['content']['backgroundColor'] ?? '#FFFFFF';
+    $titleColor = $section['content']['titleColor'] ?? '#000000';
     $columnCount = $section['content']['columnCount'] ?? 4;
     $partners = $section['content']['partners'] ?? [];
 
