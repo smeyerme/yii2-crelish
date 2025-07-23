@@ -1,0 +1,26 @@
+parameters:
+    level: 5
+
+    bootstrapFiles:
+        - phpstan-bootstrap.php
+
+    stubFiles:
+        - stubs/Yii.stub
+
+    paths:
+        - actions
+        - controllers
+        - commands
+        - models
+        - extensions
+        - helpers
+        - messages
+        - modules
+        - plugins
+        - views
+        - widgets
+
+    tmpDir: %currentWorkingDirectory%/runtime
+
+    yii2:
+        config_path: config/phpstan-config.php

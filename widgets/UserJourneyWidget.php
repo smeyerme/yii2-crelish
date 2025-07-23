@@ -17,7 +17,7 @@ class UserJourneyWidget extends CrelishDashboardWidget
     public $sessionId = '';
     
     /**
-     * @var int User ID to track
+     * @var string User UUID to track
      */
     public $userId = '';
     
