@@ -83,7 +83,18 @@
               </div>
 
               <div class="form-group">
-                <label>Link URL (Optional)</label>
+                <label>Company Logo Link (Optional)</label>
+                <input
+                    type="text"
+                    v-model="element.companyLogoLink"
+                    class="form-control"
+                    placeholder="https://example.com/company-website"
+                    @input="updateSection"
+                />
+              </div>
+
+              <div class="form-group">
+                <label>Job Text Link (Optional)</label>
                 <input
                     type="text"
                     v-model="element.link"
@@ -174,6 +185,7 @@ export default {
         location: '',
         title: '',
         companyLogoId: null,
+        companyLogoLink: '',
         link: ''
       });
 

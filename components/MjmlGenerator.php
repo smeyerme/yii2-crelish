@@ -54,9 +54,10 @@ class MjmlGenerator
       .footer-link { color: #888888 }
       .section-text a, .section-footer a { color: inherit; text-decoration: none }
       .section-text a:hover, .section-footer a:hover { text-decoration: underline }
+      .section-social img { filter: invert(1) contrast(0.8) }
     </mj-style>
   </mj-head>
-  <mj-body background-color="#b5b6b8" width="640px">
+  <mj-body background-color="#ffffff" width="640px">
 MJML;
   }
 
@@ -147,7 +148,7 @@ MJML;
     $year = date('Y');
 
     return <<<MJML
-    <mj-section padding="0" background-color="#000000" css-class="social">    
+    <mj-section padding="0" background-color="#e6e6e6" css-class="social">    
         <mj-column padding="0" css-class="section-social">
           <mj-table width="160px" align="left" padding="20px">
             <tr>
@@ -170,9 +171,9 @@ MJML;
           </mj-table>
         </mj-column>
     </mj-section>
-    <mj-section padding="0 20px" background-color="#000000" css-class="footer">    
+    <mj-section padding="0 20px" background-color="#e6e6e6" css-class="footer">    
         <mj-column padding="0" css-class="section-footer">
-            <mj-text color="#ffffff" font-size="16px" line-height="20px" padding="0">
+            <mj-text color="#000000" font-size="16px" line-height="20px" padding="0">
                 <p>
                     Copyright © {$year} FORUM HOLZBAU | <a href="">Impressum</a> | <a href="">Datenschutz</a>
                 </p>
@@ -181,7 +182,7 @@ MJML;
                     <br><a href="#"><b>> Newsletter abmelden</b></a>
                 </p>
             </mj-text>
-            <mj-text color="#eeeeee" padding="0">
+            <mj-text color="#333333" padding="0">
                 <p>
                     <a href="#"><b>Oben ^</b></a>
                 </p>
@@ -328,25 +329,62 @@ MJML;
   private function renderNavigationSection($section)
   {
     $links = $section['content']['links'];
-    $columns = '';
-
-    foreach ($links as $link) {
-      $text = str_replace(' ', '</br>', $link['text']);
-      $columns .= <<<MJML
-      <mj-column width="50%" padding="0 10px 20px">
-          <mj-divider border-width="3px" border-color="#000000" padding="0" />
-          <mj-text font-weight="bold" font-size="28px" font-weight="900" padding="10px 0" color="#000000">
-              <a href="{$link['url']}" class="link-nostyle" target="_blank">{$text}</a>
-          </mj-text>
+    $linkCount = count($links);
+    
+    // Process links in groups of 4 using table for mobile compatibility
+    $result = '';
+    
+    for ($i = 0; $i < $linkCount; $i += 4) {
+      // Build table rows for each group of 4 links
+      $tableContent = '<tr>';
+      
+      // Process up to 4 items for this row
+      for ($j = 0; $j < 4; $j++) {
+        if ($i + $j < $linkCount) {
+          $link = $links[$i + $j];
+          $hasImage = !empty($link['imageId']);
+          
+          if ($hasImage) {
+            $imageUrl = $this->getImageUrl($link['imageId']);
+            $tableContent .= <<<HTML
+            <td style="width: 25%; padding: 0 5px; text-align: center;">
+              <a href="{$link['url']}" target="_blank" style="display: block;">
+                <img src="{$imageUrl}" alt="{$link['text']}" style="max-width: 100%; height: auto; display: block; margin: 0 auto;" />
+              </a>
+            </td>
+HTML;
+          } else {
+            $text = str_replace(' ', '<br/>', $link['text']);
+            $tableContent .= <<<HTML
+            <td style="width: 25%; padding: 0 5px; text-align: center;">
+              <div style="border-top: 3px solid #000000; margin-bottom: 10px;"></div>
+              <a href="{$link['url']}" target="_blank" style="color: #000000; text-decoration: none; font-weight: 900; font-size: 18px; display: block;">
+                {$text}
+              </a>
+            </td>
+HTML;
+          }
+        } else {
+          // Add empty cell to maintain 4-column grid
+          $tableContent .= '<td style="width: 25%;"></td>';
+        }
+      }
+      
+      $tableContent .= '</tr>';
+      
+      // Create section with table for this group of 4
+      $result .= <<<MJML
+    <mj-section padding="0 10px 20px" background-color="#ffffff">
+      <mj-column>
+        <mj-table>
+          {$tableContent}
+        </mj-table>
       </mj-column>
-MJML;
-    }
-
-    return <<<MJML
-    <mj-section padding="0 10px 40px" background-color="#ffffff">
-{$columns}
     </mj-section>
 MJML;
+    }
+    
+    return $result;
   }
 
   /**
@@ -434,70 +472,47 @@ MJML;
           {$text}
         </mj-text>
         <mj-text padding="0" color="#000000" font-size="14px">
-          <a href="{$article['link']}" class="link-nostyle">Mehr lesen →</a>
+          <a href="{$article['link']}" class="link-nostyle" style="background-color: #e6e6e6; padding: 5px 12px; display: inline-block; text-decoration: none;">Mehr lesen</a>
         </mj-text>
       </mj-column>
     </mj-section>
 MJML;
       }
     } else {
-      // Double column layout
-      // Process articles in pairs for 2-column layout
-      for ($i = 0; $i < $articleCount; $i += 2) {
-        $leftArticle = $articles[$i];
-        $leftImageUrl = $this->getImageUrl($leftArticle['imageId']);
-        $leftText = nl2br($leftArticle['text']);
+      // Double column layout - one article per row with image on left (45%) and text on right
+      foreach ($articles as $article) {
+        $imageUrl = $this->getImageUrl($article['imageId']);
+        $text = nl2br($article['text']);
 
-        // Create divider HTML if enabled
-        $divider = $showDivider ? '<mj-divider padding="0 0 10px" border-width="2px" border-color="#000000" />' : '';
-
-        $rightColumn = '';
-        if ($i + 1 < $articleCount) {
-          // If there's a second article for this row
-          $rightArticle = $articles[$i + 1];
-          $rightImageUrl = $this->getImageUrl($rightArticle['imageId']);
-          $rightText = nl2br($rightArticle['text']);
-
-          $rightColumn = <<<MJML
-      <mj-column padding="0 10px">
-        {$divider}
-        <mj-image padding="0 0 20px" src="{$rightImageUrl}" alt="{$rightArticle['title']}" fluid-on-mobile="true" />
-        <mj-text padding="0 0 20px" font-size="20px" font-weight="bold">
-          {$rightArticle['title']}
-        </mj-text>
-        <mj-text padding="0 0 20px">
-          {$rightText}
-        </mj-text>
-        <mj-text padding="0 0 20px" color="#000000" font-size="14px">
-          <a href="{$rightArticle['link']}" class="link-nostyle">Mehr lesen →</a>
-        </mj-text>
-      </mj-column>
-MJML;
-        } else {
-          // If this is the last article and it's odd-numbered, add an empty column
-          $rightColumn = <<<MJML
+        // Create full-width divider section if enabled
+        $dividerSection = '';
+        if ($showDivider) {
+          $dividerSection = <<<MJML
+    <mj-section padding="0 20px" background-color="#ffffff">
       <mj-column>
-        <!-- Empty column to ensure the last article aligns left -->
+        <mj-divider padding="0 0 10px" border-width="2px" border-color="#000000" />
       </mj-column>
+    </mj-section>
 MJML;
         }
 
         $result .= <<<MJML
-    <mj-section padding="0 10px 40px" background-color="#ffffff">
-      <mj-column padding="0 10px">
-        {$divider}
-        <mj-image padding="0 0 20px" src="{$leftImageUrl}" alt="{$leftArticle['title']}" fluid-on-mobile="true" />
-        <mj-text padding="0 0 20px" font-size="20px" font-weight="bold">
-          {$leftArticle['title']}
+{$dividerSection}
+    <mj-section padding="0 20px 60px" background-color="#ffffff">
+      <mj-column width="45%" padding="0 10px 0 0">
+        <mj-image padding="0" src="{$imageUrl}" alt="{$article['title']}" fluid-on-mobile="true" />
+      </mj-column>
+      <mj-column width="55%" padding="0 0 0 10px">
+        <mj-text padding="0 0 20px" font-size="20px" font-weight="bold" color="#000000">
+          {$article['title']}
         </mj-text>
-        <mj-text padding="0 0 20px">
-          {$leftText}
+        <mj-text padding="0 0 20px" color="#000000">
+          {$text}
         </mj-text>
-        <mj-text padding="0 0 20px" color="#000000" font-size="14px">
-          <a href="{$leftArticle['link']}" class="link-nostyle">Mehr lesen →</a>
+        <mj-text padding="0" color="#000000" font-size="14px">
+          <a href="{$article['link']}" class="link-nostyle" style="background-color: #e6e6e6; padding: 5px 12px; display: inline-block; text-decoration: none;">Mehr lesen</a>
         </mj-text>
       </mj-column>
-{$rightColumn}
     </mj-section>
 MJML;
       }
@@ -551,12 +566,27 @@ MJML;
     }
 
     foreach ($events as $event) {
-      $eventsList .= <<<MJML
+      $eventLink = $event['link'] ?? '';
+      
+      if (!empty($eventLink)) {
+        // Event with link - wrap entire content in link with no visible styling
+        $eventsList .= <<<MJML
+        <mj-text padding="0 0 8px" color="{$textColor}">
+          <a href="{$eventLink}" style="color: inherit; text-decoration: none;">
+            <strong>{$event['title']}</strong>
+            <br>{$event['date']} | {$event['location']}
+          </a>
+        </mj-text>
+MJML;
+      } else {
+        // Event without link - display as before
+        $eventsList .= <<<MJML
         <mj-text padding="0 0 8px" color="{$textColor}">
           <strong>{$event['title']}</strong>
           <br>{$event['date']} | {$event['location']}
         </mj-text>
 MJML;
+      }
     }
 
     return <<<MJML
@@ -587,26 +617,59 @@ MJML;
 
     foreach ($jobs as $index => $job) {
       $companyLogoUrl = $this->getImageUrl($job['companyLogoId']);
+      $companyLogoLink = $job['companyLogoLink'] ?? '';
+      $jobTextLink = $job['link'] ?? '';
 
-      $jobsList .= <<<MJML
-    <mj-section padding="0 0" background-color="#fae9d7">
+      // Create logo column with optional link
+      $logoColumn = '';
+      if (!empty($companyLogoLink)) {
+        $logoColumn = <<<MJML
+      <mj-column width="30%">
+        <mj-image src="{$companyLogoUrl}" alt="{$job['company']}" width="150px" href="{$companyLogoLink}" />
+      </mj-column>
+MJML;
+      } else {
+        $logoColumn = <<<MJML
       <mj-column width="30%">
         <mj-image src="{$companyLogoUrl}" alt="{$job['company']}" width="150px" />
       </mj-column>
+MJML;
+      }
+
+      // Create text column with optional link
+      $textColumn = '';
+      if (!empty($jobTextLink)) {
+        $textColumn = <<<MJML
       <mj-column width="70%">
         <mj-text>
-          <a href="{$job['link']}" class="link-nostyle">
+          <a href="{$jobTextLink}" class="link-nostyle">
           <strong>{$job['company']}, {$job['location']}</strong><br />
           &gt; {$job['title']}</a>
         </mj-text>
       </mj-column>
+MJML;
+      } else {
+        $textColumn = <<<MJML
+      <mj-column width="70%">
+        <mj-text>
+          <strong>{$job['company']}, {$job['location']}</strong><br />
+          &gt; {$job['title']}
+        </mj-text>
+      </mj-column>
+MJML;
+      }
+
+      $jobsList .= <<<MJML
+    <mj-section padding="0 0" background-color="#ffffff">
+{$logoColumn}
+{$textColumn}
     </mj-section>
 MJML;
 
       // Only add divider if this is not the last job
       if ($index < $jobCount - 1) {
         $jobsList .= <<<MJML
-    <mj-section background-color="#fae9d7">
+    <mj-section background-color="#ffffff">
       <mj-column>
         <mj-divider border-width="1px" border-color="#000000" />
       </mj-column>
@@ -622,13 +685,13 @@ MJML;
           {$title}
         </mj-text>
         <mj-divider padding="0" border-width="3px" border-color="#F7941D" />
-        <mj-divider padding="0" border-width="17px" border-color="#fae9d7" />
+        <mj-divider padding="0" border-width="17px" border-color="#ffffff" />
       </mj-column>
     </mj-section>
 {$jobsList}
-    <mj-section padding="0" background-color="#fae9d7">
+    <mj-section padding="0" background-color="#ffffff">
       <mj-column padding="0">
-        <mj-divider padding="0" border-width="20px" border-color="#fae9d7" />
+        <mj-divider padding="0" border-width="20px" border-color="#ffffff" />
       </mj-column>
     </mj-section>
     <mj-section padding="0" background-color="#ffffff">
@@ -678,17 +741,17 @@ MJML;
           $partnerName = $partner['name'] ?? '';
           $url = $partner['url'] ?? '';
 
-          // Create image tag with optional link
+          // Create image tag with optional link and subtle border
           if (!empty($url)) {
             $columns .= <<<MJML
       <mj-column padding="0">
-        <mj-image padding="0" src="{$logoUrl}" alt="{$partnerName}" href="{$url}" width="120px" background-color="white" padding="10px" />
+        <mj-image padding="0" src="{$logoUrl}" alt="{$partnerName}" href="{$url}" width="120px" background-color="white" padding="10px" border="1px solid #cccccc" />
       </mj-column>
 MJML;
           } else {
             $columns .= <<<MJML
       <mj-column padding="0">
-        <mj-image padding="0" src="{$logoUrl}" alt="{$partnerName}" width="120px" background-color="white" padding="10px" />
+        <mj-image padding="0" src="{$logoUrl}" alt="{$partnerName}" width="120px" background-color="white" padding="10px" border="1px solid #cccccc" />
       </mj-column>
 MJML;
           }
