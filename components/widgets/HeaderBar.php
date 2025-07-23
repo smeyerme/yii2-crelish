@@ -104,6 +104,16 @@ class HeaderBar extends Widget
         .navbar--controller .c-input-group select.c-field:not([multiple]) {
             border: none;
         }
+        
+        /* Test email input field styling to match search input */
+        .navbar--controller .c-field.test-email-input, 
+        .navbar--controller .test-email-input {
+            border: 1px solid var(--color-border);
+            border-radius: var(--border-radius-md);
+            padding: 0.5rem 1rem;
+            height: 40px;
+            transition: var(--transition-standard);
+        }
         CSS;
 
     Yii::$app->view->registerCss($css);
@@ -565,6 +575,101 @@ class HeaderBar extends Widget
           
           return $html;
         }
+      },
+      
+      // Test email component for newsletter testing
+      'test-email' => function () {
+        $html = '<div class="c-input-group" style="margin-right: 15px;">';
+        $html .= Html::textInput('test_email', '', [
+          'class' => 'c-field test-email-input',
+          'style' => 'width: 200px; margin-right: 5px;',
+          'placeholder' => \Yii::t('app', 'Enter email address...'),
+        ]);
+        $html .= '<button class="c-button c-button--primary test-email-send-btn" type="button">';
+        $html .= '<i class="fa-sharp fa-regular fa-envelope"></i>';
+        $html .= '</button>';
+        $html .= '</div>';
+
+        // Register JavaScript for test email functionality
+        $js = <<<JS
+        \$(document).ready(function() {
+            \$('.test-email-send-btn').on('click', function() {
+                var email = \$('.test-email-input').val();
+                var newsletterId = getNewsletterIdFromUrl();
+                
+                if (!email) {
+                    alert('Please enter an email address');
+                    return;
+                }
+                
+                if (!validateEmail(email)) {
+                    alert('Please enter a valid email address');
+                    return;
+                }
+                
+                if (!newsletterId) {
+                    alert('Newsletter ID not found. Please save the newsletter first.');
+                    return;
+                }
+                
+                // Disable button and show loading state
+                var btn = \$(this);
+                var originalHtml = btn.html();
+                btn.prop('disabled', true).html('<i class="fa-sharp fa-regular fa-spinner fa-spin"></i>');
+                
+                // Send test email
+                \$.ajax({
+                    url: '/crelish/newsletter/send-test',
+                    method: 'POST',
+                    data: {
+                        email: email,
+                        id: newsletterId
+                    },
+                    success: function(response) {
+                        if (response.status === 'success') {
+                            alert('Test email sent successfully!');
+                            \$('.test-email-input').val(''); // Clear the input
+                        } else {
+                            alert('Error: ' + response.message);
+                        }
+                    },
+                    error: function(xhr) {
+                        var response = xhr.responseJSON;
+                        var message = response && response.message ? response.message : 'Failed to send test email';
+                        alert('Error: ' + message);
+                    },
+                    complete: function() {
+                        // Re-enable button and restore original state
+                        btn.prop('disabled', false).html(originalHtml);
+                    }
+                });
+            });
+            
+            // Function to validate email format
+            function validateEmail(email) {
+                var re = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+\$/;
+                return re.test(email);
+            }
+            
+            // Function to get newsletter ID from URL
+            function getNewsletterIdFromUrl() {
+                var urlParams = new URLSearchParams(window.location.search);
+                return urlParams.get('uuid');
+            }
+            
+            // Handle Enter key in email input
+            \$('.test-email-input').on('keypress', function(e) {
+                if (e.which === 13) { // Enter key
+                    e.preventDefault();
+                    \$('.test-email-send-btn').click();
+                }
+            });
+        });
+        JS;
+
+        \Yii::$app->view->registerJs($js);
+
+        return $html;
       },
     ];
   }

@@ -36,6 +36,13 @@
                 />
               </div>
             </div>
+            <div class="form-group">
+              <label>Link Image (Optional)</label>
+              <ImageSelector
+                  :selected-id="element.imageId"
+                  @select="onImageSelected(index, $event)"
+              />
+            </div>
           </div>
           <button @click.stop="removeLink(index)" class="btn btn-sm btn-danger">×</button>
         </div>
@@ -50,10 +57,12 @@
 
 <script>
 import { VueDraggable } from 'vue-draggable-plus';
+import ImageSelector from '../common/ImageSelector.vue';
 
 export default {
   components: {
-    VueDraggable
+    VueDraggable,
+    ImageSelector
   },
 
   props: {
@@ -67,13 +76,19 @@ export default {
     addLink() {
       this.section.content.links.push({
         text: 'New Link',
-        url: 'https://'
+        url: 'https://',
+        imageId: null
       });
       this.updateSection();
     },
 
     removeLink(index) {
       this.section.content.links.splice(index, 1);
+      this.updateSection();
+    },
+
+    onImageSelected(index, imageId) {
+      this.section.content.links[index].imageId = imageId;
       this.updateSection();
     },
 

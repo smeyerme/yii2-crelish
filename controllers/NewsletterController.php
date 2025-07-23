@@ -24,7 +24,7 @@ class NewsletterController extends CrelishBaseController
     return [
       'access' => [
         'class' => AccessControl::class,
-        'only' => ['create', 'index', 'delete', 'update', 'export', 'draft', 'clone'],
+        'only' => ['create', 'index', 'delete', 'update', 'export', 'draft', 'clone', 'send-test'],
         'rules' => [
           [
             'allow' => true,
@@ -67,9 +67,14 @@ class NewsletterController extends CrelishBaseController
         break;
         
       case 'create':
-      case 'update':
-        // For create/update actions, add back button and save buttons
+        // For create action, add back button and save buttons
         $this->view->params['headerBarLeft'][] = 'back-button';
+        
+        // If we have a uuid parameter, this is update mode - add test email functionality
+        if (Yii::$app->request->get('uuid')) {
+          $this->view->params['headerBarLeft'][] = 'test-email';
+        }
+        
         $this->view->params['headerBarRight'] = ['save'];
         break;
         
@@ -389,6 +394,68 @@ class NewsletterController extends CrelishBaseController
       ];
     } catch (\Exception $e) {
       return $this->asError('Failed to publish newsletter: ' . $e->getMessage());
+    }
+  }
+
+  /**
+   * Send test email with newsletter content
+   */
+  public function actionSendTest(): array
+  {
+    Yii::$app->response->format = Response::FORMAT_JSON;
+    $data = Yii::$app->request->getBodyParams();
+
+    // Validate required fields
+    if (empty($data['email'])) {
+      return $this->asError('Email address is required');
+    }
+
+    if (empty($data['id'])) {
+      return $this->asError('Newsletter ID is required');
+    }
+
+    // Find the newsletter
+    $newsletter = Bulletin::findOne($data['id']);
+    if (!$newsletter) {
+      return $this->asError('Newsletter not found', 404);
+    }
+
+    try {
+      // Generate MJML code
+      $mjmlGenerator = new MjmlGenerator(
+        Yii::$app->assetManager,
+        Url::base(true)
+      );
+
+      $newsletterData = [
+        'title' => $newsletter->title,
+        'date' => $newsletter->date,
+        'sections' => Json::decode($newsletter->content),
+      ];
+      $mjml = $mjmlGenerator->generateMjml($newsletterData);
+
+      // Convert MJML to HTML
+      $mjmlService = new MjmlService();
+      $html = $mjmlService->renderMjml($mjml);
+
+      // Send test email
+      $mailer = Yii::$app->mailer;
+      $message = $mailer->compose()
+        ->setFrom(['noreply@forum-holzbau.com' => 'FORUM HOLZBAU Newsletter'])
+        ->setTo($data['email'])
+        ->setSubject('Test: ' . $newsletter->title)
+        ->setHtmlBody($html);
+
+      if ($message->send()) {
+        return [
+          'status' => 'success',
+          'message' => 'Test email sent successfully to ' . $data['email']
+        ];
+      } else {
+        return $this->asError('Failed to send test email');
+      }
+    } catch (\Exception $e) {
+      return $this->asError('Failed to send test email: ' . $e->getMessage());
     }
   }
 
