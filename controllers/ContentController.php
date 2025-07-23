@@ -105,6 +105,10 @@ class ContentController extends CrelishBaseController
     // Get the element definition
     $elementDefinition = $dataManager->getDefinitions();
 
+    if(empty($elementDefinition)) {
+      return $this->render('content.twig', []);
+    }
+
     // Get the data provider
     $dataProvider = null;
 
