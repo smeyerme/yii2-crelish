@@ -41,7 +41,8 @@ class CrelishBaseController extends Controller
 
     if ((Yii::$app->user->isGuest || Yii::$app->user->identity->role < 9)
       && Yii::$app->requestedRoute != 'crelish/user/login'
-      && Yii::$app->requestedRoute != 'crelish/asset/glide') {
+      && Yii::$app->requestedRoute != 'crelish/asset/glide'
+      && !str_starts_with(Yii::$app->requestedRoute, 'crelish/asset/api-')) {
       return Yii::$app->response->redirect(['/']);
     }
   }
