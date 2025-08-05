@@ -6,7 +6,6 @@
 <div class="u-window-box-medium">
 	{{ pjax_begin({'id':'registrationsList', 'enablePushState': false}) }}
 
-
 	{% set form = active_form_begin({
 		'id': 'speaker-registration-form',
 		'method': 'GET',
@@ -16,58 +15,56 @@
 			'data-pjax': false
 		}}) %}
 
-	<div class="c-card c-card--accordion" style="margin-bottom: 2.333rem;">
-		<button role="heading" aria-expanded="true" class="c-card__control">
-			Filter
-		</button>
-		<section class="c-card__item c-card__item--pane">
-			<div class="u-pillar-box-medium">
-				<div class="row">
-					<div class="col-sm">
-						{{ form.field(filterModel, 'company').label(t('app', 'Company')) | raw }}
-					</div>
-					<div class="col-sm">
-						{{ form.field(filterModel, 'salutation').label(t('app', 'Salutation')) | raw }}
-					</div>
-					<div class="col-sm">
-						{{ form.field(filterModel, 'nameFirst').label(t('app', 'First name')) | raw }}
-					</div>
-					<div class="col-sm">
-						{{ form.field(filterModel, 'nameLast').label(t('app', 'Last name')) | raw }}
-					</div>
+	<div class="card mb-4">
+		<div class="card-header">
+			<h5 class="mb-0">Filter</h5>
+		</div>
+		<div class="card-body">
+			<div class="row mb-2">
+				<div class="col-sm">
+					{{ form.field(filterModel, 'company').label(t('app', 'Company')) | raw }}
 				</div>
-				<div class="row">
-					<div class="col-sm">
-						{{ form.field(filterModel, 'email').label(t('app', 'Email')) | raw }}
-					</div>
-					<div class="col-sm">
-						{{ form.field(filterModel, 'eventCode').dropDownList({'BGT':'BGT', 'DHK':'DHK', 'EBH':'EBH', 'FLI':'FLI', 'HTK':'HTK', 'HTW':'HTW', 'IHF':'IHF', 'SHK':'SHK', 'WBE':'WBE', 'WBN':'WBN'}, {'custom': true,  'prompt': t('app', 'Select ...' )}).label(t('app', 'Event Code')) | raw }}
-					</div>
-					<div class="col-sm">
-						{{ form.field(filterModel, 'eventYear').label(t('app', 'Event Year')) | raw }}
-					</div>
-					<div class="col-sm">
-						{{ form.field(filterModel, 'exported').dropDownList({0:t('app', 'No'), 1:t('app', 'Yes')}, {'custom': true}).label(t('app', 'Exported')) | raw }}
-					</div>
+				<div class="col-sm">
+					{{ form.field(filterModel, 'salutation').label(t('app', 'Salutation')) | raw }}
 				</div>
-				<div class="row">
-					<div class="col-sm">
-						{{ form.field(filterModel, 'type').dropDownList({0:t('app', 'Alle'), 1:t('app', 'Teilnehmer'), 2:t('app', 'Referent'), 3:t('app', 'Partner-Teilnehmer')}, {'custom': true}).label(t('app', 'Type')) | raw }}
-					</div>
-					<div class="col-sm">
-					</div>
-					<div class="col-sm">
-					</div>
-					<div class="col-sm">
-					</div>
+				<div class="col-sm">
+					{{ form.field(filterModel, 'nameFirst').label(t('app', 'First name')) | raw }}
 				</div>
-				<div class="row">
-					<div class="col-sm">
-						{{ html.submitButton(t('app', 'Filter'), {'class':'btn btn-primary c-button--block mr-1', 'name':'export', 'value': false}) | raw }}
-					</div>
+				<div class="col-sm">
+					{{ form.field(filterModel, 'nameLast').label(t('app', 'Last name')) | raw }}
 				</div>
 			</div>
-		</section>
+			<div class="row mb-2">
+				<div class="col-sm">
+					{{ form.field(filterModel, 'email').label(t('app', 'Email')) | raw }}
+				</div>
+				<div class="col-sm">
+					{{ form.field(filterModel, 'eventCode').dropDownList({'BGT':'BGT', 'DHK':'DHK', 'EBH':'EBH', 'FLI':'FLI', 'HTK':'HTK', 'HTW':'HTW', 'IHF':'IHF', 'SHK':'SHK', 'WBE':'WBE', 'WBN':'WBN'}, {'custom': true,  'prompt': t('app', 'Select ...' )}).label(t('app', 'Event Code')) | raw }}
+				</div>
+				<div class="col-sm">
+					{{ form.field(filterModel, 'eventYear').label(t('app', 'Event Year')) | raw }}
+				</div>
+				<div class="col-sm">
+					{{ form.field(filterModel, 'exported').dropDownList({0:t('app', 'No'), 1:t('app', 'Yes')}, {'custom': true}).label(t('app', 'Exported')) | raw }}
+				</div>
+			</div>
+			<div class="row mb-2">
+				<div class="col-sm">
+					{{ form.field(filterModel, 'type').dropDownList({0:t('app', 'Alle'), 1:t('app', 'Teilnehmer'), 2:t('app', 'Referent'), 3:t('app', 'Partner-Teilnehmer')}, {'custom': true}).label(t('app', 'Type')) | raw }}
+				</div>
+				<div class="col-sm">
+				</div>
+				<div class="col-sm">
+				</div>
+				<div class="col-sm">
+				</div>
+			</div>
+			<div class="row mb-2">
+				<div class="col-sm">
+					{{ html.submitButton(t('app', 'Filter'), {'class':'btn btn-primary c-button--block mr-1', 'name':'export', 'value': false}) | raw }}
+				</div>
+			</div>
+		</div>
 	</div>
 
 	{{ grid_view_widget({
@@ -88,68 +85,6 @@
 	{{ html.submitButton(t('app', 'Mark as exported'), {'name': 'mark', 'value': 'true', 'data-pjax':false , 'class':'btn btn-danger c-button--block mr-1'}) | raw }}
 
 	{{ active_form_end() }}
-
-
-	<script>
-    $(document).ready(function () {
-
-      $('#cr_content_filter').on("blur", function (e) {
-        e.preventDefault();
-        if (window.location.href.indexOf('cr_content_filter') >= 0) {
-          $.pjax({
-            url: window.location.href.replace(/(cr_content_filter=).*?(&|$)/, '$1' + $(this).val() + '$2'),
-            container: '#userList'
-          });
-        } else {
-          var preFix = (window.location.href.indexOf("?") === -1) ? '?' : '&';
-          $.pjax({
-            url: window.location.href + preFix + "cr_content_filter=" + $(this).val(),
-            container: '#userList'
-          });
-        }
-      });
-
-      $('#cr_content_filter').on("keypress", function (e) {
-        if (e.which == 10 || e.which == 13) {
-          if (window.location.href.indexOf('cr_content_filter') >= 0) {
-            $.pjax({
-              url: window.location.href.replace(/(cr_content_filter=).*?(&|$)/, '$1' + $(this).val() + '$2'),
-              container: '#userList'
-            });
-          } else {
-            var preFix = (window.location.href.indexOf("?") === -1) ? '?' : '&';
-            $.pjax({
-              url: window.location.href + preFix + "cr_content_filter=" + $(this).val(),
-              container: '#userList'
-            });
-          }
-        }
-      });
-
-      $("input[name='selection[]'], .select-on-check-all").on("change", function () {
-        console.log($("#grid-form").serializeArray().length);
-        if ($("#grid-form").serializeArray().length > 1) {
-          $('.btn-delete-grid').removeClass("hidden");
-        } else {
-          $('.btn-delete-grid').addClass("hidden");
-        }
-      });
-
-      $(".btn-delete-grid").on("click", function () {
-        $('#grid-form').submit();
-      });
-
-      $('td input[type="checkbox"]').parent().on("click", function (e) {
-        e.stopPropagation();
-        return true;
-      });
-
-      $('td input[type="checkbox"]').on("click", function (e) {
-        e.stopPropagation();
-        return true;
-      });
-    });
-	</script>
 
 	{{ pjax_end() }}
 </div>
