@@ -401,6 +401,7 @@ class ComponentsConfig
 
     // Check if log target should be enabled
     $logTargetEnabled = Yii::$app->params['crelish']['sentry_log_target_enabled'] ?? true;
+
     if (!$logTargetEnabled) {
       return null;
     }
