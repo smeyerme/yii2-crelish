@@ -190,7 +190,7 @@ class CrelishSentryComponent extends Component
       if (!$user->isGuest && $user->identity) {
         Sentry\configureScope(function (Sentry\State\Scope $scope) use ($user) {
           $scope->setUser([
-            'id' => $user->id,
+            'id' => $user->uuid,
             'username' => $user->identity->username ?? 'unknown',
             'email' => $user->identity->email ?? null,
           ]);

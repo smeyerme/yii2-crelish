@@ -62,11 +62,6 @@ class CrelishSentryLogTarget extends Target
   {
     parent::init();
 
-    // Set default levels if not configured
-    if (empty($this->levels)) {
-      $this->levels = ['error', 'warning'];
-    }
-
     // Add exclude categories to the existing ones
     if (!empty($this->excludeCategories)) {
       $existingExcept = $this->except ?? [];
