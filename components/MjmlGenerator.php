@@ -444,7 +444,6 @@ MJML;
         <mj-text font-size="24px" font-weight="bold" padding="0 20px 10px">
           {$title}
         </mj-text>
-        <mj-divider padding="0 0 30px" border-width="3px" border-color="#000000" />
       </mj-column>
     </mj-section>
 MJML;
@@ -458,7 +457,7 @@ MJML;
         $text = nl2br($article['text']);
 
         // Create content with conditional divider
-        $divider = $showDivider ? '<mj-divider padding="0 0 10px" border-width="2px" border-color="#000000" />' : '';
+        $divider = $showDivider ? '<mj-divider padding="0 0 26px" border-width="2px" border-color="#000000" />' : '';
 
         $result .= <<<MJML
     <mj-section padding="0 20px 60px" background-color="#ffffff">
@@ -490,7 +489,7 @@ MJML;
           $dividerSection = <<<MJML
     <mj-section padding="0 20px" background-color="#ffffff">
       <mj-column>
-        <mj-divider padding="0 0 10px" border-width="2px" border-color="#000000" />
+        <mj-divider padding="0 0 26px" border-width="2px" border-color="#000000" />
       </mj-column>
     </mj-section>
 MJML;
@@ -624,13 +623,13 @@ MJML;
       $logoColumn = '';
       if (!empty($companyLogoLink)) {
         $logoColumn = <<<MJML
-      <mj-column width="30%">
+      <mj-column width="24%">
         <mj-image src="{$companyLogoUrl}" alt="{$job['company']}" width="150px" href="{$companyLogoLink}" />
       </mj-column>
 MJML;
       } else {
         $logoColumn = <<<MJML
-      <mj-column width="30%">
+      <mj-column width="24%">
         <mj-image src="{$companyLogoUrl}" alt="{$job['company']}" width="150px" />
       </mj-column>
 MJML;
@@ -641,9 +640,10 @@ MJML;
       if (!empty($jobTextLink)) {
         $textColumn = <<<MJML
       <mj-column width="70%">
-        <mj-text>
+        <mj-text padding="0 0">
           <a href="{$jobTextLink}" class="link-nostyle">
-          <strong>{$job['company']}, {$job['location']}</strong><br />
+          <strong>{$job['company']}</strong><br />
+          <strong>{$job['location']}</strong><br />
           &gt; {$job['title']}</a>
         </mj-text>
       </mj-column>
@@ -651,8 +651,9 @@ MJML;
       } else {
         $textColumn = <<<MJML
       <mj-column width="70%">
-        <mj-text>
-          <strong>{$job['company']}, {$job['location']}</strong><br />
+        <mj-text padding="0 0">
+          <strong>{$job['company']}</strong><br />
+          <strong>{$job['location']}</strong><br />
           &gt; {$job['title']}
         </mj-text>
       </mj-column>

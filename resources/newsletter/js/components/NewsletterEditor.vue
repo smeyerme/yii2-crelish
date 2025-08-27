@@ -597,7 +597,7 @@ export default {
         case 'job_postings':
           return 'Job Postings';
         case 'partners':
-          return section.content.isPremium ? 'Premium Partners' : 'Partners';
+          return section.content.columnCount === 3 ? 'Premium Partners' : 'Partners';
         case 'ad':
           return 'Banner';
         case 'text':
