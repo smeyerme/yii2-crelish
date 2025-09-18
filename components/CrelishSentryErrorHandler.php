@@ -99,6 +99,18 @@ class CrelishSentryErrorHandler extends ErrorHandler
    */
   protected function renderException($exception)
   {
+    // Debug: Log exception details to help troubleshoot
+    $logFile = Yii::getAlias('@runtime/sentry_error_debug.log');
+    $logMessage = "[" . date('Y-m-d H:i:s') . "] CrelishSentryErrorHandler - renderException\n";
+    $logMessage .= "YII_DEBUG: " . (YII_DEBUG ? 'true' : 'false') . "\n";
+    $logMessage .= "showUserFriendlyErrors: " . ($this->showUserFriendlyErrors ? 'true' : 'false') . "\n";
+    $logMessage .= "Exception Type: " . get_class($exception) . "\n";
+    $logMessage .= "Exception Message: " . $exception->getMessage() . "\n";
+    $logMessage .= "Exception File: " . $exception->getFile() . ":" . $exception->getLine() . "\n";
+    $logMessage .= "Stack Trace:\n" . $exception->getTraceAsString() . "\n";
+    $logMessage .= str_repeat('=', 80) . "\n\n";
+    @file_put_contents($logFile, $logMessage, FILE_APPEND | LOCK_EX);
+
     // In production mode with user-friendly errors enabled
     if (!YII_DEBUG && $this->showUserFriendlyErrors && Yii::$app instanceof \yii\web\Application) {
       $this->renderUserFriendlyException($exception);

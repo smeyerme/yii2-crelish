@@ -15,7 +15,7 @@ class CrelishJsonModel extends ActiveRecord
   public function __get($name)
   {
     $jsonConfig = static::getJsonConfig();
-    if (!empty($jsonConfig->jsonField) && $jsonConfig->jsonField != $name) {
+    if ($jsonConfig && !empty($jsonConfig->jsonField) && $jsonConfig->jsonField != $name) {
       $jsonField = $jsonConfig->jsonField;
       if (is_array($this->getAttribute($jsonField))) {
         if (array_key_exists($name, $this->getAttribute($jsonField))) {
@@ -29,7 +29,7 @@ class CrelishJsonModel extends ActiveRecord
   public function __set($name, $value)
   {
     $jsonConfig = static::getJsonConfig();
-    $jsonField = $jsonConfig->jsonField;
+    $jsonField = $jsonConfig ? $jsonConfig->jsonField : null;
 
     if (!empty($jsonField) && is_array($this->$jsonField) && array_key_exists($name, $this->$jsonField)) {
       $this->$jsonField[$name] = $value;
@@ -43,6 +43,9 @@ class CrelishJsonModel extends ActiveRecord
   {
     $attributes = [];
     $jsonConfig = static::getJsonConfig();
+    if ($jsonConfig === null || !isset($jsonConfig->fields)) {
+      return $attributes;
+    }
     foreach ($jsonConfig->fields as $field) {
       if (isset($field->jsonAttribute) && $field->jsonAttribute) {
         $attributes[] = $field->key;
@@ -64,6 +67,9 @@ class CrelishJsonModel extends ActiveRecord
     }
 
     $jsonConfig = static::getJsonConfig();
+    if (!$jsonConfig || !isset($jsonConfig->fields)) {
+      return true;
+    }
     $jsonField = $jsonConfig->jsonField;
     $jsonData = [];
 
@@ -90,6 +96,9 @@ class CrelishJsonModel extends ActiveRecord
     parent::afterFind();
 
     $jsonConfig = static::getJsonConfig();
+    if (!$jsonConfig) {
+      return;
+    }
     $jsonField = $jsonConfig->jsonField;
 
     if ($jsonField) {
@@ -122,16 +131,21 @@ class CrelishJsonModel extends ActiveRecord
 
     $rules = [];
     $jsonConfig = static::getJsonConfig();
+    if (!$jsonConfig || !isset($jsonConfig->fields)) {
+      return $rules;
+    }
     foreach ($jsonConfig->fields as $field) {
       $key = $field->key;
 
-      foreach ($field->rules as $ruleO) {
-        $rule = json_decode(json_encode($ruleO), true);
-        if (empty($rule[1])) {
-          $rules[] = [$key, $rule[0]];
-        } else {
-          static::decodeRule($rule);
-          $rules[] = array_merge([$key], $rule);
+      if (isset($field->rules) && is_array($field->rules)) {
+        foreach ($field->rules as $ruleO) {
+          $rule = json_decode(json_encode($ruleO), true);
+          if (empty($rule[1])) {
+            $rules[] = [$key, $rule[0]];
+          } else {
+            static::decodeRule($rule);
+            $rules[] = array_merge([$key], $rule);
+          }
         }
       }
     }
@@ -170,8 +184,13 @@ class CrelishJsonModel extends ActiveRecord
   {
     $labels = [];
     $jsonConfig = static::getJsonConfig();
+    if (!$jsonConfig || !isset($jsonConfig->fields)) {
+      return $labels;
+    }
     foreach ($jsonConfig->fields as $field) {
-      $labels[$field->key] = $field->label;
+      if (isset($field->key) && isset($field->label)) {
+        $labels[$field->key] = $field->label;
+      }
     }
     return $labels;
   }
@@ -179,13 +198,13 @@ class CrelishJsonModel extends ActiveRecord
   public static function formFields()
   {
     $jsonConfig = static::getJsonConfig();
-    return $jsonConfig->fields;
+    return $jsonConfig && isset($jsonConfig->fields) ? $jsonConfig->fields : [];
   }
 
   public static function formTabs()
   {
     $jsonConfig = static::getJsonConfig();
-    return $jsonConfig->tabs;
+    return $jsonConfig && isset($jsonConfig->tabs) ? $jsonConfig->tabs : [];
   }
 
   public function rules()
@@ -259,16 +278,16 @@ class CrelishJsonModel extends ActiveRecord
     $columns = [];
 
     foreach ($fields as $field) {
-      if ($field->visibleInGrid) {
+      if (isset($field->visibleInGrid) && $field->visibleInGrid) {
         $column = [
           'attribute' => $field->key,
-          'label' => $field->label,
+          'label' => isset($field->label) ? $field->label : $field->key,
         ];
 
         if (isset($field->jsonAttribute)) {
           $column['value'] = function ($model) use ($field) {
             $jsonConfig = $model::getJsonConfig();
-            if (is_array($model->{$jsonConfig->jsonField}))
+            if ($jsonConfig && isset($jsonConfig->jsonField) && is_array($model->{$jsonConfig->jsonField}))
               if (array_key_exists($field->key, $model->{$jsonConfig->jsonField})) {
                 return $model->{$jsonConfig->jsonField}[$field->key];
               }
@@ -285,15 +304,21 @@ class CrelishJsonModel extends ActiveRecord
   public function getMailProfile($type)
   {
     $config = static::getJsonConfig();
+    if (!$config || !isset($config->mailProfiles)) {
+      return null;
+    }
     $profiles = (array)$config->mailProfiles;
-    return $profiles[$type];
+    return isset($profiles[$type]) ? $profiles[$type] : null;
   }
 
   public function getExportProfile($type)
   {
     $config = static::getJsonConfig();
+    if (!$config || !isset($config->exportProfiles)) {
+      return null;
+    }
     $profiles = (array)$config->exportProfiles;
-    return $profiles[$type];
+    return isset($profiles[$type]) ? $profiles[$type] : null;
   }
 
   public function getTransformedValue($attribute)

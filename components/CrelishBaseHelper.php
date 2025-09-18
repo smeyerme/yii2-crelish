@@ -7,6 +7,7 @@ use Cocur\Slugify\Slugify;
 use MatthiasMullie\Minify\CSS;
 use Yii;
 use yii\helpers\Url;
+use yii\helpers\VarDumper;
 use yii\web\JsExpression;
 use yii\web\UploadedFile;
 
@@ -421,6 +422,548 @@ class CrelishBaseHelper
     }
     
     return false;
+  }
+
+  public static function dump($data, $level = 10, $formated = true) {
+    if(!YII_DEBUG) return;
+
+    // Generate unique ID for this dump instance
+    $dumpId = 'dump_' . uniqid();
+    
+    // Convert data to formatted HTML
+    $output = self::renderDumpHtml($data, $level, $dumpId);
+    
+    // Output the dump with styles and scripts
+    echo $output;
+  }
+  
+  /**
+   * Dump and die - outputs formatted dump and terminates execution
+   * 
+   * @param mixed $data Data to dump
+   * @param int $level Maximum depth level
+   * @param bool $formated Whether to format the output (legacy parameter, always true now)
+   */
+  public static function dd($data, $level = 10, $formated = true) {
+    if(!YII_DEBUG) return;
+
+    // Clean all existing output buffers
+    while (ob_get_level()) {
+      ob_end_clean();
+    }
+    
+    // Start fresh output buffering
+    ob_start();
+    
+    // Generate unique ID for this dump instance
+    $dumpId = 'dump_' . uniqid();
+    
+    // Add a special die indicator to the dump
+    $output = self::renderDumpHtml($data, $level, $dumpId, 0, true);
+    
+    // Clear any accidental output and send only our dump
+    ob_clean();
+    echo $output;
+    
+    // Terminate execution
+    die();
+  }
+  
+  /**
+   * Renders data as interactive HTML dump
+   */
+  private static function renderDumpHtml($data, $maxLevel = 10, $dumpId = null, $currentLevel = 0) {
+    if ($currentLevel === 0) {
+      // Root level - include styles and scripts
+      $html = self::getDumpStyles($dumpId);
+      $html .= self::getDumpScript($dumpId);
+      $html .= '<div class="crelish-dump" id="' . $dumpId . '">';
+      $html .= self::renderDumpValue($data, $maxLevel, $currentLevel);
+      $html .= '</div>';
+      return $html;
+    }
+    
+    return self::renderDumpValue($data, $maxLevel, $currentLevel);
+  }
+  
+  /**
+   * Renders a single value in the dump
+   */
+  private static function renderDumpValue($data, $maxLevel, $currentLevel) {
+    $type = gettype($data);
+    
+    if ($currentLevel >= $maxLevel) {
+      return '<span class="dump-max-depth">*MAX DEPTH*</span>';
+    }
+    
+    switch ($type) {
+      case 'NULL':
+        return '<span class="dump-null">null</span>';
+        
+      case 'boolean':
+        return '<span class="dump-bool">' . ($data ? 'true' : 'false') . '</span>';
+        
+      case 'integer':
+        return '<span class="dump-int">' . $data . '</span>';
+        
+      case 'double':
+        return '<span class="dump-float">' . $data . '</span>';
+        
+      case 'string':
+        $escaped = htmlspecialchars($data, ENT_QUOTES, 'UTF-8');
+        $length = mb_strlen($data);
+        if ($length > 80) {
+          $preview = htmlspecialchars(mb_substr($data, 0, 80), ENT_QUOTES, 'UTF-8');
+          $fullId = 'str_' . uniqid();
+          return '<span class="dump-string dump-expandable" data-full-id="' . $fullId . '">'
+            . '<span class="dump-string-preview">"' . $preview . '..."</span>'
+            . '<span class="dump-string-full" id="' . $fullId . '" style="display:none;">"' . $escaped . '"</span>'
+            . '<span class="dump-meta">(' . $length . ')</span>'
+            . '</span>';
+        }
+        return '<span class="dump-string">"' . $escaped . '"</span><span class="dump-meta">(' . $length . ')</span>';
+        
+      case 'array':
+        $count = count($data);
+        if ($count === 0) {
+          return '<span class="dump-array">array(0) []</span>';
+        }
+        
+        $isAssoc = array_keys($data) !== range(0, $count - 1);
+        $collapsed = $currentLevel > 0;
+        $html = '<div class="dump-array">';
+        $html .= '<span class="dump-toggle' . ($collapsed ? ' dump-collapsed' : '') . '" data-toggle="array">';
+        $html .= '<span class="dump-arrow">' . ($collapsed ? '▶' : '▼') . '</span> ';
+        $html .= 'array(' . $count . ')';
+        $html .= '</span>';
+        $html .= '<div class="dump-content"' . ($collapsed ? ' style="display:none;"' : '') . '>';
+        
+        foreach ($data as $key => $value) {
+          $html .= '<div class="dump-item">';
+          if ($isAssoc) {
+            $html .= '<span class="dump-key">' . htmlspecialchars($key) . '</span>';
+            $html .= '<span class="dump-arrow-right">⇒</span> ';
+          } else {
+            $html .= '<span class="dump-index">[' . $key . ']</span> ';
+          }
+          $html .= self::renderDumpValue($value, $maxLevel, $currentLevel + 1);
+          $html .= '</div>';
+        }
+        
+        $html .= '</div></div>';
+        return $html;
+        
+      case 'object':
+        $className = get_class($data);
+        $shortName = (new \ReflectionClass($data))->getShortName();
+        $properties = [];
+        
+        // Get all properties using reflection
+        $reflection = new \ReflectionClass($data);
+        foreach ($reflection->getProperties() as $prop) {
+          $prop->setAccessible(true);
+          $name = $prop->getName();
+          $modifiers = [];
+          if ($prop->isPrivate()) $modifiers[] = 'private';
+          if ($prop->isProtected()) $modifiers[] = 'protected';
+          if ($prop->isPublic()) $modifiers[] = 'public';
+          if ($prop->isStatic()) $modifiers[] = 'static';
+          
+          $properties[] = [
+            'name' => $name,
+            'value' => $prop->getValue($prop->isStatic() ? null : $data),
+            'modifiers' => implode(' ', $modifiers)
+          ];
+        }
+        
+        $collapsed = $currentLevel > 0;
+        $html = '<div class="dump-object">';
+        $html .= '<span class="dump-toggle' . ($collapsed ? ' dump-collapsed' : '') . '" data-toggle="object">';
+        $html .= '<span class="dump-arrow">' . ($collapsed ? '▶' : '▼') . '</span> ';
+        $html .= '<span class="dump-classname" title="' . htmlspecialchars($className) . '">' . htmlspecialchars($shortName) . '</span>';
+        $html .= '<span class="dump-meta">{' . count($properties) . '}</span>';
+        $html .= '</span>';
+        $html .= '<div class="dump-content"' . ($collapsed ? ' style="display:none;"' : '') . '>';
+        
+        foreach ($properties as $prop) {
+          $html .= '<div class="dump-item">';
+          $html .= '<span class="dump-modifier">' . $prop['modifiers'] . '</span> ';
+          $html .= '<span class="dump-property">$' . htmlspecialchars($prop['name']) . '</span>';
+          $html .= '<span class="dump-arrow-right">⇒</span> ';
+          $html .= self::renderDumpValue($prop['value'], $maxLevel, $currentLevel + 1);
+          $html .= '</div>';
+        }
+        
+        $html .= '</div></div>';
+        return $html;
+        
+      case 'resource':
+        $resourceType = get_resource_type($data);
+        return '<span class="dump-resource">resource(' . $resourceType . ')</span>';
+        
+      default:
+        return '<span class="dump-unknown">' . $type . '</span>';
+    }
+  }
+  
+  /**
+   * Returns CSS styles for the dump
+   */
+  private static function getDumpStyles($dumpId) {
+    return <<<CSS
+<style>
+#$dumpId.crelish-dump {
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 3px;
+  border-radius: 8px;
+  margin: 10px 0;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+#$dumpId.crelish-dump > * {
+  background: #1a1a2e;
+  border-radius: 6px;
+  padding: 15px;
+  color: #e8e8e8;
+}
+
+#$dumpId .dump-toggle {
+  cursor: pointer;
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+#$dumpId .dump-toggle:hover {
+  background: rgba(255,255,255,0.05);
+}
+
+#$dumpId .dump-arrow {
+  display: inline-block;
+  width: 12px;
+  color: #9ca3af;
+  transition: transform 0.2s;
+  font-size: 11px;
+}
+
+#$dumpId .dump-collapsed .dump-arrow {
+  transform: rotate(0deg);
+}
+
+#$dumpId .dump-content {
+  margin-left: 20px;
+  padding-left: 10px;
+  border-left: 1px solid rgba(255,255,255,0.1);
+  margin-top: 4px;
+}
+
+#$dumpId .dump-item {
+  margin: 4px 0;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+#$dumpId .dump-key {
+  color: #f472b6;
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+#$dumpId .dump-index {
+  color: #60a5fa;
+  margin-right: 4px;
+}
+
+#$dumpId .dump-property {
+  color: #a78bfa;
+  margin-right: 4px;
+}
+
+#$dumpId .dump-arrow-right {
+  color: #6b7280;
+  margin: 0 4px;
+  font-size: 11px;
+}
+
+#$dumpId .dump-string {
+  color: #86efac;
+}
+
+#$dumpId .dump-string-preview {
+  color: #86efac;
+}
+
+#$dumpId .dump-string-full {
+  color: #86efac;
+}
+
+#$dumpId .dump-string.dump-expandable {
+  cursor: pointer;
+  border-bottom: 1px dashed #4ade80;
+}
+
+#$dumpId .dump-string.dump-expandable:hover {
+  background: rgba(134, 239, 172, 0.1);
+  padding: 1px 3px;
+  border-radius: 3px;
+}
+
+#$dumpId .dump-int {
+  color: #fbbf24;
+  font-weight: 600;
+}
+
+#$dumpId .dump-float {
+  color: #fb923c;
+  font-weight: 600;
+}
+
+#$dumpId .dump-bool {
+  color: #c084fc;
+  font-weight: 600;
+  font-style: italic;
+}
+
+#$dumpId .dump-null {
+  color: #ef4444;
+  font-weight: 600;
+  font-style: italic;
+}
+
+#$dumpId .dump-array {
+  color: #60a5fa;
+}
+
+#$dumpId .dump-object {
+  color: #fbbf24;
+}
+
+#$dumpId .dump-classname {
+  color: #fbbf24;
+  font-weight: 600;
+  background: rgba(251, 191, 36, 0.1);
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+#$dumpId .dump-modifier {
+  color: #6b7280;
+  font-size: 11px;
+  background: rgba(107, 114, 128, 0.1);
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+#$dumpId .dump-meta {
+  color: #6b7280;
+  font-size: 11px;
+  margin-left: 4px;
+}
+
+#$dumpId .dump-resource {
+  color: #f97316;
+  font-style: italic;
+}
+
+#$dumpId .dump-unknown {
+  color: #dc2626;
+}
+
+#$dumpId .dump-max-depth {
+  color: #6b7280;
+  font-style: italic;
+  background: rgba(107, 114, 128, 0.1);
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+/* Animations */
+@keyframes dump-highlight {
+  0% { background: rgba(99, 102, 241, 0.3); }
+  100% { background: transparent; }
+}
+
+#$dumpId .dump-content.dump-expanding {
+  animation: dump-highlight 0.3s ease-out;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  #$dumpId.crelish-dump {
+    font-size: 12px;
+    margin: 5px 0;
+  }
+  
+  #$dumpId .dump-content {
+    margin-left: 15px;
+    padding-left: 8px;
+  }
+}
+
+/* Keyboard navigation highlight */
+#$dumpId .dump-toggle:focus {
+  outline: 2px solid #60a5fa;
+  outline-offset: 1px;
+}
+
+/* Copy button for strings */
+#$dumpId .dump-copy {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 6px;
+  background: rgba(99, 102, 241, 0.2);
+  border: 1px solid rgba(99, 102, 241, 0.4);
+  border-radius: 3px;
+  color: #a5b4fc;
+  font-size: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+#$dumpId .dump-copy:hover {
+  background: rgba(99, 102, 241, 0.3);
+  color: #c7d2fe;
+}
+
+#$dumpId .dump-copy.copied {
+  background: rgba(134, 239, 172, 0.2);
+  border-color: rgba(134, 239, 172, 0.4);
+  color: #86efac;
+}
+</style>
+CSS;
+  }
+  
+  /**
+   * Returns JavaScript for interactive features
+   */
+  private static function getDumpScript($dumpId) {
+    return <<<SCRIPT
+<script>
+(function() {
+  // Wait for DOM to be ready
+  function initDump() {
+    const dumpEl = document.getElementById('$dumpId');
+    if (!dumpEl) return;
+    
+    // Remove any existing listeners to prevent duplicates
+    const newDump = dumpEl.cloneNode(true);
+    dumpEl.parentNode.replaceChild(newDump, dumpEl);
+    const dumpElement = document.getElementById('$dumpId');
+    
+    // Handle toggle clicks using event delegation
+    dumpElement.addEventListener('click', function(e) {
+      // Check if we clicked on a toggle or its child
+      let toggle = e.target.closest('.dump-toggle');
+      if (toggle) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const content = toggle.nextElementSibling;
+        const arrow = toggle.querySelector('.dump-arrow');
+        const isCollapsed = toggle.classList.contains('dump-collapsed');
+        
+        if (isCollapsed) {
+          toggle.classList.remove('dump-collapsed');
+          if (content) {
+            content.style.display = 'block';
+            content.classList.add('dump-expanding');
+            setTimeout(() => {
+              if (content) content.classList.remove('dump-expanding');
+            }, 300);
+          }
+          if (arrow) arrow.textContent = '▼';
+        } else {
+          toggle.classList.add('dump-collapsed');
+          if (content) content.style.display = 'none';
+          if (arrow) arrow.textContent = '▶';
+        }
+        return false;
+      }
+      
+      // Handle expandable strings
+      const expandable = e.target.closest('.dump-string.dump-expandable');
+      if (expandable) {
+        e.preventDefault();
+        const preview = expandable.querySelector('.dump-string-preview');
+        const full = expandable.querySelector('.dump-string-full');
+        
+        if (full && preview) {
+          if (full.style.display === 'none') {
+            preview.style.display = 'none';
+            full.style.display = 'inline';
+          } else {
+            preview.style.display = 'inline';
+            full.style.display = 'none';
+          }
+        }
+        return false;
+      }
+    });
+    
+    // Keyboard navigation
+    dumpElement.addEventListener('keydown', function(e) {
+      const toggle = e.target;
+      if (toggle.classList.contains('dump-toggle') && (e.key === 'Enter' || e.key === ' ')) {
+        e.preventDefault();
+        toggle.click();
+      }
+    });
+    
+    // Add tabindex to toggles for keyboard navigation
+    dumpElement.querySelectorAll('.dump-toggle').forEach(toggle => {
+      toggle.setAttribute('tabindex', '0');
+    });
+    
+    // Global keyboard shortcuts for this dump
+    const keyHandler = function(e) {
+      if (e.altKey && e.shiftKey) {
+        if (e.key === 'C') {
+          // Collapse all in this dump
+          dumpElement.querySelectorAll('.dump-toggle:not(.dump-collapsed)').forEach(toggle => {
+            const content = toggle.nextElementSibling;
+            const arrow = toggle.querySelector('.dump-arrow');
+            toggle.classList.add('dump-collapsed');
+            if (content) content.style.display = 'none';
+            if (arrow) arrow.textContent = '▶';
+          });
+          e.preventDefault();
+        } else if (e.key === 'E') {
+          // Expand all in this dump
+          dumpElement.querySelectorAll('.dump-toggle.dump-collapsed').forEach(toggle => {
+            const content = toggle.nextElementSibling;
+            const arrow = toggle.querySelector('.dump-arrow');
+            toggle.classList.remove('dump-collapsed');
+            if (content) content.style.display = 'block';
+            if (arrow) arrow.textContent = '▼';
+          });
+          e.preventDefault();
+        }
+      }
+    };
+    
+    // Store handler reference for cleanup
+    dumpElement._keyHandler = keyHandler;
+    document.addEventListener('keydown', keyHandler);
+  }
+  
+  // Initialize immediately if DOM is ready, otherwise wait
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initDump);
+  } else {
+    initDump();
+  }
+})();
+</script>
+SCRIPT;
   }
   
   /**
