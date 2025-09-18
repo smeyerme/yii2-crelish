@@ -31,9 +31,26 @@ class CrelishJsonModel extends ActiveRecord
     $jsonConfig = static::getJsonConfig();
     $jsonField = $jsonConfig ? $jsonConfig->jsonField : null;
 
-    if (!empty($jsonField) && is_array($this->$jsonField) && array_key_exists($name, $this->$jsonField)) {
-      $this->$jsonField[$name] = $value;
-      $this->$name = $value;
+    if (!empty($jsonField) && is_array($this->getAttribute($jsonField)) && array_key_exists($name, $this->getAttribute($jsonField))) {
+      $jsonData = $this->getAttribute($jsonField);
+      $jsonData[$name] = $value;
+      $this->setAttribute($jsonField, $jsonData);
+
+      // Check if this is a defined JSON attribute to avoid creating dynamic properties
+      $isJsonAttribute = false;
+      if ($jsonConfig && isset($jsonConfig->fields)) {
+        foreach ($jsonConfig->fields as $field) {
+          if (isset($field->key) && $field->key === $name &&
+              isset($field->jsonAttribute) && $field->jsonAttribute) {
+            $isJsonAttribute = true;
+            break;
+          }
+        }
+      }
+
+      if (property_exists($this, $name) || $isJsonAttribute) {
+        $this->setAttribute($name, $value);
+      }
     } else {
       parent::__set($name, $value);
     }
@@ -107,7 +124,9 @@ class CrelishJsonModel extends ActiveRecord
       if (is_array($this->$jsonField)) {
         foreach ($this->$jsonField as $key => $value) {
           // Get transformer.
-          $this->$key = $value;
+          if (property_exists($this, $key) || in_array($key, $this->attributes())) {
+            $this->$key = $value;
+          }
         }
       }
     }
