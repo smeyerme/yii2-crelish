@@ -1,6 +1,6 @@
 <?php
 
-namespace giantbits\crelish\plugins\jsoneditor;
+namespace giantbits\crelish\plugins\formiojsoneditor;
 
 use giantbits\crelish\components\transformer\CrelishFieldTransformerJson;
 use Yii;
@@ -8,10 +8,10 @@ use yii\base\Component;
 use yii\helpers\Json;
 
 /**
- * JSON Editor content processor
+ * Formio JSON Editor content processor
  * Handles transformations for JSON data when saving and retrieving
  */
-class JsonEditorContentProcessor extends Component
+class FormioJsonEditorContentProcessor extends Component
 {
   /**
    * Process data during standard processing
@@ -24,7 +24,7 @@ class JsonEditorContentProcessor extends Component
     // Just set the value in the processed data array
     $processedData[$key] = $value;
   }
-  
+
   /**
    * Process JSON data
    * @param string $ctype Content type
@@ -39,10 +39,10 @@ class JsonEditorContentProcessor extends Component
       // Convert JSON string to array/object
       $value = Json::decode($value);
     }
-    
+
     $finalArr[$key] = $value;
   }
-  
+
   /**
    * Process field during save operation
    * @param string $key Field key
@@ -53,17 +53,17 @@ class JsonEditorContentProcessor extends Component
   public static function processSave($key, $value, $field)
   {
     // Debug logging to track the issue
-    \Yii::debug("JsonEditor processSave - Key: $key, Value type: " . gettype($value) . ", Value: " . (is_scalar($value) ? (string)$value : json_encode($value)), 'jsoneditor');
+    Yii::debug("FormioJsonEditor processSave - Key: $key, Value type: " . gettype($value) . ", Value: " . (is_scalar($value) ? (string)$value : json_encode($value)), 'formiojsoneditor');
 
     // If value is already a JSON string, return it
     if (is_string($value) && self::isJson($value)) {
-      \Yii::debug("JsonEditor processSave - Returning existing JSON string for key: $key", 'jsoneditor');
+      Yii::debug("FormioJsonEditor processSave - Returning existing JSON string for key: $key", 'formiojsoneditor');
       return $value;
     }
-    
+
     // If value is null or empty, use default or empty structure
     if ($value === null || (is_string($value) && trim($value) === '')) {
-      if (property_exists($field, 'schema')) {
+      if ($field && property_exists($field, 'schema')) {
         if ($field->schema->type === 'array') {
           $value = [];
         } else {
@@ -73,9 +73,9 @@ class JsonEditorContentProcessor extends Component
         $value = new \stdClass();
       }
     }
-    
+
     // Handle translatable fields
-    if (property_exists($field, 'translatable') && $field->translatable === true) {
+    if ($field && property_exists($field, 'translatable') && $field->translatable === true) {
       // Process each language version if it's an array with language keys
       if (is_array($value) && !empty($value)) {
         foreach ($value as $lang => $langValue) {
@@ -94,10 +94,10 @@ class JsonEditorContentProcessor extends Component
         $value = Json::encode($value);
       }
     }
-    
+
     return $value;
   }
-  
+
   /**
    * Process field during find operation
    * @param string $key Field key
@@ -108,7 +108,7 @@ class JsonEditorContentProcessor extends Component
   public static function processFind($key, $value, $field)
   {
     // Handle translatable fields
-    if (property_exists($field, 'translatable') && $field->translatable === true) {
+    if ($field && property_exists($field, 'translatable') && $field->translatable === true) {
       // Process each language version if it's an array with language keys
       if (is_array($value) && !empty($value)) {
         foreach ($value as $lang => $langValue) {
@@ -122,10 +122,10 @@ class JsonEditorContentProcessor extends Component
       // Convert JSON string to array/object
       $value = Json::decode($value);
     }
-    
+
     return $value;
   }
-  
+
   /**
    * Check if a string is valid JSON
    * @param string $string String to check
@@ -136,8 +136,8 @@ class JsonEditorContentProcessor extends Component
     if (!is_string($string)) {
       return false;
     }
-    
+
     json_decode($string);
     return (json_last_error() == JSON_ERROR_NONE);
   }
-} 
+}

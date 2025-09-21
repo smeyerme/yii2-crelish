@@ -441,11 +441,16 @@ class ContentController extends CrelishBaseController
         $this->view->params['headerBarLeft'][] = 'back-button';
         $this->view->params['headerBarRight'] = [['save', true, false]]; // Show save and return, no delete
         break;
-        
+
       case 'update':
         // For update actions, add back button and save buttons (with delete)
         $this->view->params['headerBarLeft'][] = 'back-button';
         $this->view->params['headerBarRight'] = [['save', true, true]]; // Show save and return, with delete
+        break;
+
+      case 'selector':
+        // For update actions, add back button and save buttons (with delete)
+        $this->view->params['headerBarLeft'][] = 'search';
         break;
 
       default:

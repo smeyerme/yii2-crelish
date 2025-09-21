@@ -19,7 +19,11 @@ class CrelishAsset extends AssetBundle
 {
   public $sourcePath = '@app/vendor/giantbits/yii2-crelish/assets';
   public $css = [
-    'css/all.min.css'
+    //'css/all.min.css',
+    'css/crelish-modern.css',
+    'css/fontawesome.min.css',
+    'css/sharp-regular.min.css',
+    'css/svg-with-js.min.css',
   ];
   public $js = [
     'https://cdn.jsdelivr.net/dropzone/4.3.0/dropzone.min.js',

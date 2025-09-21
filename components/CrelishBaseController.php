@@ -548,6 +548,49 @@ class CrelishBaseController extends Controller
   private function buildWidgetField($form, $field, $fieldKey, $inputOptions, $widgetOptions)
   {
     $widget = str_replace('widget_', '', $field->type);
+
+    // Add field definition and form key to widget options only for custom Crelish widgets
+    if (str_contains($widget, 'giantbits\\crelish\\')) {
+      $widgetOptions['field'] = $field;
+      $widgetOptions['formKey'] = $fieldKey;
+
+      // Get field data for custom Crelish widgets (same logic as buildCustomOrDefaultField)
+      $fieldData = null;
+
+      // For translatable fields, try to get from i18n array
+      if (property_exists($field, 'translatable') && $field->translatable === true) {
+        $currentLang = Yii::$app->language;
+
+        // Make sure i18n is initialized
+        if (!isset($this->model->i18n) || !is_array($this->model->i18n)) {
+          $this->model->i18n = [];
+        }
+
+        // Make sure language array exists
+        if (!isset($this->model->i18n[$currentLang])) {
+          $this->model->i18n[$currentLang] = [];
+        }
+
+        // Get field value if it exists, otherwise null
+        if (isset($this->model->i18n[$currentLang][$field->key])) {
+          $fieldData = $this->model->i18n[$currentLang][$field->key];
+        } elseif (isset($this->model->{$field->key})) {
+          // Fallback to non-translated field
+          $fieldData = $this->model->{$field->key};
+        }
+      } else {
+        // Try direct property access first
+        if (isset($this->model->{$field->key})) {
+          $fieldData = $this->model->{$field->key};
+        } elseif (isset($this->model->attributes[$field->key])) {
+          // Then try attributes array access
+          $fieldData = $this->model->attributes[$field->key];
+        }
+      }
+
+      $widgetOptions['data'] = $fieldData;
+    }
+
     return $form->field($this->model, $fieldKey, $inputOptions)
       ->widget($widget::className(), $widgetOptions)
       ->label($field->label);

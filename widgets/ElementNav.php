@@ -2,6 +2,7 @@
 
 namespace giantbits\crelish\widgets;
 
+use giantbits\crelish\components\CrelishBaseHelper;
 use giantbits\crelish\components\CrelishDynamicModel;
 use yii\base\Widget;
 use yii\db\Exception;
@@ -19,6 +20,8 @@ class ElementNav extends Widget
 	
 	private $target = '#contentSelector';
 
+  private $cet;
+
   public function __construct($config = [])
   {
 		if (count($config) > 0) {
@@ -32,6 +35,8 @@ class ElementNav extends Widget
         ->getQueryParam($this->selector)) ? \Yii::$app->getRequest()
         ->getQueryParam($this->selector) : 'page';
     }
+
+    $this->cet = (empty($config['cet'])) ? $this->cet : $config['cet'];
 
     parent::__construct();
   }
@@ -92,6 +97,10 @@ class ElementNav extends Widget
 
     foreach (\Yii::$app->getRequest()->getQueryParams() as $param => $value) {
       $params[$param] = $value;
+    }
+
+    if(!empty($this->cet)){
+      $params['cet'] = $this->cet;
     }
 
     foreach ($elements as $element) {

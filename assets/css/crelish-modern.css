@@ -31,6 +31,7 @@
 /* Apply transitions to theme-aware elements */
 html {
   transition: color 0.3s ease, background-color 0.3s ease;
+  font-size: 14px;
 }
 
 /* Fix bootstrap table hover and focus styles */
@@ -1101,7 +1102,6 @@ a.c-button:hover {
 [data-theme="dark"] .relation-selector .select2-selection__clear:hover {
   color: var(--color-text-light) !important;
   background-color: rgba(255, 255, 255, 0.1) !important;
-}
   border-color: var(--color-border);
 }
 
@@ -1161,8 +1161,9 @@ a.c-button:hover {
 }
 
 .modal-header {
+  font-size: var(--font-size-lg) !important;
   background: var(--gradient-primary) !important;
-  color: var(--color-text-light) !important;
+  color: #fff !important;
   border-bottom: none !important;
   padding: 1.25rem 1.5rem !important;
 }
@@ -1186,6 +1187,10 @@ a.c-button:hover {
   padding: 1.5rem !important;
   background-color: var(--color-bg-main) !important;
   color: var(--color-text-dark) !important;
+}
+
+.modal-body:has(iframe)  {
+  padding: 0 !important;
 }
 
 .modal-footer {
@@ -1852,7 +1857,7 @@ a.c-button:hover {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: var(--color-text-light);
+  color: #fff;
   margin: 0;
 
   background: linear-gradient(135deg, #1a2b4a 0%, #00766c 100%) !important;
@@ -2494,7 +2499,7 @@ input[type="checkbox"]:checked::before {
 #contentSelect > .u-window-box-medium .pagination > li.active > a,
 #contentSelect > .u-window-box-medium .pagination > li.active > span {
   background: var(--gradient-primary);
-  color: var(--color-text-light) !important;
+  color: #fff !important;
   box-shadow: var(--shadow-md);
   font-weight: 600;
 }

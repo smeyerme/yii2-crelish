@@ -28,7 +28,7 @@
   {{ html.endForm() | raw }}
 </div>
 
-<script>
+{% apply registerJs %}
   $(document).ready(function () {
     // Apply style enhancements to the content table
     enhanceContentTable();
@@ -144,7 +144,7 @@
   $(document).on('pjax:complete', function() {
     enhanceContentTable();
   });
-</script>
+{% endapply %}
 
 {{ pjax_end() }}
 
@@ -274,7 +274,7 @@
 #contentSelect > .u-window-box-medium .pagination > li.active > a,
 #contentSelect > .u-window-box-medium .pagination > li.active > span {
   background: var(--gradient-primary);
-  color: var(--color-text-light) !important;
+  color: #fff !important;
   box-shadow: var(--shadow-md);
   font-weight: 600;
 }

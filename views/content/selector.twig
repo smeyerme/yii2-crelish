@@ -4,73 +4,275 @@
 
 {{ pjax_begin({'id':'contentSelect', 'enablePushState': false}) }}
 
-<div class="o-grid gc-bc--palette-clouds">
-  <div class="o-grid__cell o-grid__cell--width-20">
-    <h6>Type filter</h6>
+<div class="filter-top">
     <ul role="menu" class="content-filter">
-      {{ element_nav_widget({'ctype':'page', 'selector':'cet', 'action': 'update', 'target': '#contentSelector'}) }}
+        {{ element_nav_widget({'ctype':'page', 'selector':'cet', 'action': 'update', 'target': '#contentSelector'}) }}
     </ul>
-  </div>
-  <div class="o-grid__cell">
+</div>
+<div class="content-selector">
     <h6>{{ t('app', 'Content') }}</h6>
     {{ grid_view_widget({
-      'dataProvider': dataProvider,
-      'columns': columns,
-      'tableOptions': {'class':'table table-striped'}
+        'dataProvider': dataProvider,
+        'columns': columns,
+        'tableOptions': {'class':'table table-striped'}
     }) | raw }}
-  </div>
 </div>
 
-  {{ pjax_end() }}
+
+{{ pjax_end() }}
 
 
 {% apply registerCss %}
 #cr-left-pane {
-  display: none;
+    display: none;
+}
+
+#cr-right-pane {
+    width: 100%;
 }
 
 #contentSelect {
-  padding-top: 1.333rem;
+    padding-top: 1.333rem;
 }
 
 .layout-grid button > svg,
 .layout-controls button > svg {
-  width: 1.333rem;
-  height: 1.333rem;
-  overflow: visible;
-  color: #494a4b;
-  pointer-events: none;
+    width: 1.333rem;
+    height: 1.333rem;
+    overflow: visible;
+    color: #494a4b;
+    pointer-events: none;
 }
 
 .layout-grid button:has(svg),
 .layout-controls button:has(svg) {
-  background: lightgrey !important;
+    background: lightgrey !important;
 }
 
 .content-filter {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  font-weight: 600;
-  flex-wrap: wrap;
-  flex-direction: column;
-  gap: 0;
+    display: flex;
+    flex-wrap: nowrap;
+    margin: 0;
+    padding: 0.5rem 0;
+    list-style: none;
 }
 
 .content-filter li {
-  padding: 0;
+    padding: 0;
 }
 
 #contentSelect .content-filter li a {
-  padding: 0;
+    padding: 0;
 }
 
 .layout-row {
-  padding-bottom: 2rem;
+    padding-bottom: 2rem;
 }
 
 .row-controls {
-  flex-basis: min-content;
+    flex-basis: min-content;
+}
+
+/* Content list view styling */
+#contentSelect {
+    margin-top: 1rem;
+}
+
+.filter-top {
+    background-color: var(--color-bg-light);
+    border-radius: 0.8rem;
+    padding: 0.5rem 1rem;
+    box-shadow: var(--shadow-sm);
+    overflow-x: scroll;
+    margin-bottom: 1.333rem;
+}
+
+.content-filter {
+    display: flex;
+    flex-wrap: nowrap;
+    margin: 0;
+    padding: 0.5rem 0;
+    list-style: none;
+}
+
+.content-filter li {
+    margin: 0 0.5rem 0 0;
+    white-space: nowrap;
+}
+
+.content-filter li a {
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    color: var(--color-text-muted);
+    font-weight: 500;
+}
+
+.content-filter li a:hover {
+    background-color: rgba(0, 0, 0, 0.03);
+    color: var(--color-primary-dark);
+}
+
+.content-filter li.gc-active-filter a {
+    background-color: rgba(var(--color-primary-light-rgb), 0.1);
+    color: var(--color-primary-light);
+    font-weight: 600;
+}
+
+
+/* Status badges styling */
+.content-table .status-badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-badge.draft {
+    background-color: rgba(245, 158, 11, 0.15);
+    color: #d97706;
+}
+
+.status-badge.online {
+    background-color: rgba(16, 185, 129, 0.15);
+    color: #059669;
+}
+
+.status-badge.offline {
+    background-color: rgba(107, 114, 128, 0.15);
+    color: #4b5563;
+}
+
+.status-badge.archived {
+    background-color: rgba(139, 92, 246, 0.15);
+    color: #7c3aed;
+}
+
+/* Pagination styling - more specific selectors */
+.content-table + .summary + .pagination,
+#contentSelect > .u-window-box-medium .pagination {
+    margin-top: 1.5rem;
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    padding: 0;
+}
+
+.content-table + .summary + .pagination > li,
+#contentSelect > .u-window-box-medium .pagination > li {
+    display: inline-flex;
+    margin: 0 0.25rem;
+}
+
+.content-table + .summary + .pagination > li > a,
+.content-table + .summary + .pagination > li > span,
+#contentSelect > .u-window-box-medium .pagination > li > a,
+#contentSelect > .u-window-box-medium .pagination > li > span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.5rem;
+    height: 2.5rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    background-color: var(--color-bg-main);
+    color: var(--color-text-dark);
+    font-weight: 500;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.2s ease;
+    width: 100%;
+}
+
+.content-table + .summary + .pagination > li > a:hover,
+#contentSelect > .u-window-box-medium .pagination > li > a:hover {
+    background-color: var(--color-bg-light);
+    transform: translateY(-2px);
+    text-decoration: none;
+}
+
+.content-table + .summary + .pagination > li.active > a,
+.content-table + .summary + .pagination > li.active > span,
+#contentSelect > .u-window-box-medium .pagination > li.active > a,
+#contentSelect > .u-window-box-medium .pagination > li.active > span {
+    background: var(--gradient-primary);
+    color: #fff !important;
+    box-shadow: var(--shadow-md);
+    font-weight: 600;
+}
+
+/* Summary text styling */
+.content-table + .summary,
+#contentSelect > .u-window-box-medium .summary {
+    color: var(--color-text-muted);
+    font-size: 0.875rem;
+    margin-bottom: 1rem;
+    font-style: italic;
+}
+
+/* Create content modal styling */
+.modal-content {
+    border-radius: 12px;
+    overflow: hidden;
+    border: none;
+}
+
+.modal-header {
+    background: var(--gradient-primary);
+    padding: 1.25rem 1.5rem;
+    border-bottom: none;
+}
+
+.modal-header h4 {
+    color: var(--color-text-light);
+    font-weight: 600;
+    margin: 0;
+}
+
+.modal-header .close {
+    color: var(--color-text-light);
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+}
+
+.modal-header .close:hover {
+    opacity: 1;
+}
+
+.content-dropper-subnav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    padding: 1rem;
+    margin: 0;
+    list-style: none;
+}
+
+.content-dropper-subnav li {
+    flex: 1 0 calc(50% - 0.5rem);
+}
+
+.content-dropper-subnav li a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem 1rem;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    background-color: var(--color-bg-light);
+    color: var(--color-text-dark);
+    font-weight: 500;
+    text-decoration: none;
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-sm);
+    height: 100%;
+}
+
+.content-dropper-subnav li a:hover {
+    background-color: rgba(var(--color-primary-light-rgb), 0.1);
+    color: var(--color-primary-light);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
 }
 {% endapply %}
