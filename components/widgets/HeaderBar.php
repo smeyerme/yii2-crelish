@@ -141,15 +141,20 @@ class HeaderBar extends Widget
         $(document).ready(function() {
             // Function to submit search
             function submitSearch(searchTerm) {
-                if (window.location.href.indexOf('cr_content_filter') >= 0) {
-                    $.pjax({
-                        url: window.location.href.replace(/(cr_content_filter=).*?(&|$)/, '$1' + searchTerm + '$2'),
-                        container: '{$containerId}'
-                    });
-                } else {
-                    var preFix = (window.location.href.indexOf("?") >= 0) ? '&' : '?';
-                    $.pjax({url: window.location.href + preFix + "cr_content_filter=" + searchTerm, container: '{$containerId}'});
-                }
+                // Get current URL parameters
+                var urlParams = new URLSearchParams(window.location.search);
+
+                // Update or add cr_content_filter
+                urlParams.set('cr_content_filter', searchTerm);
+
+                // Build the new URL preserving all parameters including 'cet' if present
+                var baseUrl = window.location.href.split('?')[0];
+                var newUrl = baseUrl + '?' + urlParams.toString();
+
+                $.pjax({
+                    url: newUrl,
+                    container: '{$containerId}'
+                });
             }
             
             // Handle search input

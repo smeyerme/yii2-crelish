@@ -8,6 +8,36 @@
 </div>
 <span class="badge text-bg-secondary">{{ uuid }} : {{ ctype }}</span>
 
+{% apply registerCss %}
+	.page-builder .editor-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 10000;
+	display: flex;
+	align-items: flex-end;
+	justify-content: center;
+	flex-direction: column;
+	}
+
+	.page-builder .overlay-container {
+	position: relative;
+	width: 55vw;
+	height: 100vh;
+	background-color: white;
+	border-radius: 0;
+	box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	z-index: 1;
+	right: 0;
+	}
+
+{% endapply %}
+
 
 {% apply registerCss %}
 

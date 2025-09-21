@@ -2,3 +2,16 @@
   {{ content | raw }}
 </div>
 <span class="badge text-bg-secondary">{{  uuid ? uuid : t('app', 'new') }} : {{ ctype }}</span>
+
+{% if app.request.get('overlay') == 1 %}
+
+  {% apply registerCss %}
+    #cr-left-pane {
+    display: none;
+    }
+
+    #cr-right-pane {
+    width: 100%;
+    }
+  {% endapply %}
+{% endif %}

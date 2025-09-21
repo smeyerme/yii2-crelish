@@ -312,11 +312,9 @@ class CrelishDynamicModel extends DynamicModel
       if ($fieldDefinition && property_exists($fieldDefinition, 'transform')) {
         $transformer = 'giantbits\crelish\components\transformer\CrelishFieldTransformer' . ucfirst($fieldDefinition->transform);
         $transformer::beforeSave($modelArray[$attribute]);
-      } else if ($fieldDefinition && property_exists($fieldDefinition, 'type') && $fieldDefinition->type === 'jsonEditor') {
-        // Special handling for jsonEditor fields - apply JSON transformer
-        $transformer = 'giantbits\crelish\components\transformer\CrelishFieldTransformerJson';
-        $transformer::beforeSave($modelArray[$attribute]);
       }
+      // Note: jsonEditor fields are already processed by JsonEditorContentProcessor
+      // No need to apply additional JSON transformer to avoid double-encoding
 
       if ($attribute == "created" && $this->isNew) {
         $modelArray[$attribute] = time();
