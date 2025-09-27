@@ -1,5 +1,5 @@
 {% set crelishBundle = register_asset_bundle('giantbits/crelish/CrelishAsset', true) %}
-{{ use('yii/widgets/ActiveForm') }}
+{{ use('kartik/form/ActiveForm') }}
 
 <div class="modal">
   <div class="image-section">
@@ -94,8 +94,7 @@
     </div>
 
     {% set form = active_form_begin({
-      'id': 'login',
-      'options' : {'class' : ''}
+      'id': 'login'
     }) %}
 
       {{ form.errorSummary(model) | raw }}
@@ -128,7 +127,6 @@ body {
   align-items: center;
   justify-content: center;
   background-color: #f1f5f9;
-  font-family: inherit;
   padding: 1rem;
   position: relative;
   overflow: hidden;
@@ -315,7 +313,7 @@ span {
     min-height: 150px;
     max-height: 280px;
   }
-  
+
   .image-section svg {
     height: 100%;
     width: 100%;
@@ -327,19 +325,19 @@ span {
   .form-section {
     padding: 1.5rem;
   }
-  
+
   .header {
     margin-bottom: 1.5rem;
   }
-  
+
   .header img {
     width: 140px;
   }
-  
+
   .form-group {
     margin-bottom: 0.75rem;
   }
-  
+
   button {
     margin-top: 0.75rem;
     padding: 0.85rem;
@@ -351,19 +349,19 @@ span {
   body {
     padding: 0.5rem;
   }
-  
+
   .modal {
     border-radius: 6px;
   }
-  
+
   .image-section {
     min-height: 120px;
   }
-  
+
   .form-section {
     padding: 1.25rem;
   }
-  
+
   .form-group input {
     padding: 0.65rem;
   }
