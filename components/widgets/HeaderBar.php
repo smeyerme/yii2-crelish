@@ -290,7 +290,7 @@ class HeaderBar extends Widget
     // Define the components
     $this->_components = [
       'toggle-sidebar' => function () {
-        return '<div class="menu-btn-4 toggle-sidenav"><span></span></div>';
+        return '<div class="toggle-sidenav"><i class="fa-sharp  fa-regular fa-bars"></i></div>';
       },
       'back-button' => function ($controller = null) {
 

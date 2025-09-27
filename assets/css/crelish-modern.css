@@ -1278,7 +1278,7 @@ a.c-button:hover {
 }
 
 /* Improved toggle sidebar button */
-.navbar--controller .menu-btn-4.toggle-sidenav {
+.navbar--controller .toggle-sidenav {
   display: none; /* Hide by default on desktop */
   align-items: center;
   justify-content: center;
@@ -1288,15 +1288,16 @@ a.c-button:hover {
   border-radius: var(--border-radius-md);
   margin-right: 1rem;
   transition: var(--transition-standard);
+  color: var(--color-text-dark);
 }
 
-.navbar--controller .menu-btn-4.toggle-sidenav:hover {
+.navbar--controller .toggle-sidenav:hover {
   background-color: var(--color-bg-light);
 }
 
 /* Responsive styles for mobile */
 @media (max-width: 991px) {
-  .navbar--controller .menu-btn-4.toggle-sidenav {
+  .navbar--controller .toggle-sidenav {
     display: flex; /* Only show on mobile */
   }
   
@@ -2332,7 +2333,7 @@ a.c-button:hover {
 
 /* Main content area */
 #cr-right-pane {
-  width: calc(100% - 240px);
+  width: 100vw;
   transition: width 0.3s ease, margin-left 0.3s ease, background-color 0.3s ease;
   background-color: var(--color-bg-secondary);
   padding: 0 1rem 2rem;
