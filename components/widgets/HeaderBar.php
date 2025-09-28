@@ -2,6 +2,7 @@
 
 namespace giantbits\crelish\components\widgets;
 
+use giantbits\crelish\components\CrelishBaseHelper;
 use Yii;
 use yii\base\Widget;
 use yii\helpers\Html;
@@ -292,22 +293,31 @@ class HeaderBar extends Widget
       'toggle-sidebar' => function () {
         return '<div class="toggle-sidenav"><i class="fa-sharp  fa-regular fa-bars"></i></div>';
       },
-      'back-button' => function ($controller = null) {
+      'back-button' => function ($controller = null, $path = null) {
 
-        if(empty($controller)) {
-          $controller = \Yii::$app->controller->id;
+        if(!empty(Yii::$app->request->get('useRef')) && Yii::$app->request->get('useRef') == true) {
+          $finalUrl = Yii::$app->request->referrer;
+        } elseif (!empty($path)) {
+
+          $finalUrl = $path;
+        } else {
+          if(empty($controller)) {
+            $controller = \Yii::$app->controller->id;
+          }
+          $module = \Yii::$app->controller->module->id;
+
+          // Create a proper URL array with module and controller
+          $url = ["/{$module}/{$controller}/index"];
+
+          // Add ctype parameter if it exists in the session
+          if (\Yii::$app->session->has('ctype')) {
+            $url['ctype'] = \Yii::$app->session->get('ctype');
+          }
+
+          $finalUrl = \Yii::$app->urlManager->createUrl($url);
         }
-        $module = \Yii::$app->controller->module->id;
 
-        // Create a proper URL array with module and controller
-        $url = ["/{$module}/{$controller}/index"];
-
-        // Add ctype parameter if it exists in the session
-        if (\Yii::$app->session->has('ctype')) {
-          $url['ctype'] = \Yii::$app->session->get('ctype');
-        }
-
-        return '<a class="c-button" href="' . \Yii::$app->urlManager->createUrl($url) . '">
+        return '<a class="c-button" href="' . $finalUrl . '">
                     <i class="fa-sharp fa-solid fa-arrow-left"></i> ' . Yii::t('app', 'Back') . '
                 </a>';
       },
