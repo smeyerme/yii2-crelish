@@ -73,7 +73,7 @@ class BotDetectionController extends Controller
    */
   public function actionIndex()
   {
-    $this->stdout("Starting enhanced bot detection and cleanup process...\n", Console::FG_GREEN);
+    $this->stdout("Starting enhanced bot detection process...\n", Console::FG_GREEN);
 
     if ($this->dryRun) {
       $this->stdout("Running in DRY RUN mode - no changes will be made\n", Console::FG_YELLOW);
@@ -82,46 +82,33 @@ class BotDetectionController extends Controller
     // Load custom thresholds if available
     $this->loadCustomThresholds();
 
-    // Track deletion stats
-    $totalDeleted = [
-      'page_views' => 0,
-      'sessions' => 0,
-    ];
-
     // 1. User agent based detection
     $this->stdout("\n[1/5] Processing user agent-based detection...\n", Console::FG_CYAN);
-    $result = $this->processPageViews();
-    $totalDeleted['page_views'] += $result['deleted'];
-
-    $result = $this->processSessions();
-    $totalDeleted['sessions'] += $result['deleted'];
+    $this->processPageViews();
+    $this->processSessions();
 
     // 2. Volume-based anomaly detection
     $this->stdout("\n[2/5] Detecting high-volume anomalies...\n", Console::FG_CYAN);
-    $deleted = $this->detectVolumeAnomalies();
-    $totalDeleted['page_views'] += $deleted['page_views'];
-    $totalDeleted['sessions'] += $deleted['sessions'];
+    $this->detectVolumeAnomalies();
 
     // 3. Timing pattern detection
     $this->stdout("\n[3/5] Analyzing timing patterns...\n", Console::FG_CYAN);
-    $deleted = $this->detectTimingPatterns();
-    $totalDeleted['page_views'] += $deleted['page_views'];
-    $totalDeleted['sessions'] += $deleted['sessions'];
+    $this->detectTimingPatterns();
 
     // 4. Crawling pattern detection
     $this->stdout("\n[4/5] Detecting crawling patterns...\n", Console::FG_CYAN);
-    $deleted = $this->detectCrawlingPatterns();
-    $totalDeleted['page_views'] += $deleted['page_views'];
-    $totalDeleted['sessions'] += $deleted['sessions'];
+    $this->detectCrawlingPatterns();
 
-    // 5. Clean up orphaned records
-    $this->stdout("\n[5/5] Cleaning up orphaned records...\n", Console::FG_CYAN);
-    $deleted = $this->cleanupOrphanedRecords();
-    $totalDeleted['page_views'] += $deleted['page_views'];
-    $totalDeleted['sessions'] += $deleted['sessions'];
+    // 5. Sync bot status between tables
+    $this->stdout("\n[5/5] Syncing bot status...\n", Console::FG_CYAN);
+    $this->updateSessionsFromPageViews();
+
+    // 6. Delete all bot traffic from database
+    $this->stdout("\n[6/6] Deleting bot traffic from database...\n", Console::FG_CYAN);
+    $this->deleteBotTraffic();
 
     // Show summary
-    $this->showDetectionSummary($totalDeleted);
+    $this->showDetectionSummary();
 
     return ExitCode::OK;
   }
@@ -140,7 +127,7 @@ class BotDetectionController extends Controller
   }
 
   /**
-   * Process page views table - delete bot traffic
+   * Process page views table (existing method stays the same)
    */
   protected function processPageViews()
   {
@@ -148,13 +135,14 @@ class BotDetectionController extends Controller
     $db = Yii::$app->db;
 
     $totalProcessed = 0;
-    $totalDeleted = 0;
+    $totalBotsFound = 0;
     $offset = 0;
 
     do {
       $records = $db->createCommand("
-                SELECT id, user_agent
-                FROM analytics_page_views
+                SELECT id, user_agent 
+                FROM analytics_page_views 
+                WHERE is_bot = 0 
                 LIMIT :limit OFFSET :offset
             ")
         ->bindValue(':limit', $this->batchSize)
@@ -165,55 +153,52 @@ class BotDetectionController extends Controller
         break;
       }
 
-      $deletedInBatch = 0;
+      $botsInBatch = 0;
       $transaction = $db->beginTransaction();
 
       try {
-        $idsToDelete = [];
         foreach ($records as $record) {
           if ($this->isBot($record['user_agent'], $detector)) {
-            $idsToDelete[] = $record['id'];
-            $deletedInBatch++;
-            $totalDeleted++;
+            if (!$this->dryRun) {
+              $db->createCommand()
+                ->update('analytics_page_views', ['is_bot' => 1], ['id' => $record['id']])
+                ->execute();
+            }
+            $botsInBatch++;
+            $totalBotsFound++;
           }
-        }
-
-        if (!empty($idsToDelete) && !$this->dryRun) {
-          $db->createCommand()
-            ->delete('analytics_page_views', ['in', 'id', $idsToDelete])
-            ->execute();
         }
 
         $transaction->commit();
       } catch (\Exception $e) {
         $transaction->rollBack();
         $this->stderr("Error processing page views batch: " . $e->getMessage() . "\n", Console::FG_RED);
-        return ['processed' => 0, 'deleted' => 0];
+        return false;
       }
 
       $totalProcessed += count($records);
       $offset += $this->batchSize;
 
       $this->stdout(sprintf(
-        "Processed %d page view records (deleted %d bots)\n",
+        "Processed %d page view records (found %d bots)\n",
         $totalProcessed,
-        $deletedInBatch
+        $botsInBatch
       ));
 
     } while (count($records) == $this->batchSize);
 
     $this->stdout(sprintf(
-      "Page views: %d records processed, %d bots deleted (%.2f%%)\n",
+      "Page views: %d records processed, %d bots found (%.2f%%)\n",
       $totalProcessed,
-      $totalDeleted,
-      $totalProcessed > 0 ? ($totalDeleted / $totalProcessed * 100) : 0
+      $totalBotsFound,
+      $totalProcessed > 0 ? ($totalBotsFound / $totalProcessed * 100) : 0
     ), Console::FG_YELLOW);
 
-    return ['processed' => $totalProcessed, 'deleted' => $totalDeleted];
+    return ['processed' => $totalProcessed, 'bots' => $totalBotsFound];
   }
 
   /**
-   * Process sessions table - delete bot traffic
+   * Process sessions table (existing method stays the same)
    */
   protected function processSessions()
   {
@@ -221,13 +206,14 @@ class BotDetectionController extends Controller
     $db = Yii::$app->db;
 
     $totalProcessed = 0;
-    $totalDeleted = 0;
+    $totalBotsFound = 0;
     $offset = 0;
 
     do {
       $records = $db->createCommand("
-                SELECT session_id, user_agent
-                FROM analytics_sessions
+                SELECT session_id, user_agent 
+                FROM analytics_sessions 
+                WHERE is_bot = 0 
                 LIMIT :limit OFFSET :offset
             ")
         ->bindValue(':limit', $this->batchSize)
@@ -238,76 +224,71 @@ class BotDetectionController extends Controller
         break;
       }
 
-      $deletedInBatch = 0;
+      $botsInBatch = 0;
       $transaction = $db->beginTransaction();
 
       try {
-        $sessionIdsToDelete = [];
         foreach ($records as $record) {
           if ($this->isBot($record['user_agent'], $detector)) {
-            $sessionIdsToDelete[] = $record['session_id'];
-            $deletedInBatch++;
-            $totalDeleted++;
+            if (!$this->dryRun) {
+              $db->createCommand()
+                ->update('analytics_sessions', ['is_bot' => 1], ['session_id' => $record['session_id']])
+                ->execute();
+            }
+            $botsInBatch++;
+            $totalBotsFound++;
           }
-        }
-
-        if (!empty($sessionIdsToDelete) && !$this->dryRun) {
-          // Delete page views first (foreign key constraint)
-          $db->createCommand()
-            ->delete('analytics_page_views', ['in', 'session_id', $sessionIdsToDelete])
-            ->execute();
-
-          // Then delete sessions
-          $db->createCommand()
-            ->delete('analytics_sessions', ['in', 'session_id', $sessionIdsToDelete])
-            ->execute();
         }
 
         $transaction->commit();
       } catch (\Exception $e) {
         $transaction->rollBack();
         $this->stderr("Error processing sessions batch: " . $e->getMessage() . "\n", Console::FG_RED);
-        return ['processed' => 0, 'deleted' => 0];
+        return false;
       }
 
       $totalProcessed += count($records);
       $offset += $this->batchSize;
 
       $this->stdout(sprintf(
-        "Processed %d session records (deleted %d bots)\n",
+        "Processed %d session records (found %d bots)\n",
         $totalProcessed,
-        $deletedInBatch
+        $botsInBatch
       ));
 
     } while (count($records) == $this->batchSize);
 
     $this->stdout(sprintf(
-      "Sessions: %d records processed, %d bots deleted (%.2f%%)\n",
+      "Sessions: %d records processed, %d bots found (%.2f%%)\n",
       $totalProcessed,
-      $totalDeleted,
-      $totalProcessed > 0 ? ($totalDeleted / $totalProcessed * 100) : 0
+      $totalBotsFound,
+      $totalProcessed > 0 ? ($totalBotsFound / $totalProcessed * 100) : 0
     ), Console::FG_YELLOW);
 
-    return ['processed' => $totalProcessed, 'deleted' => $totalDeleted];
+    return ['processed' => $totalProcessed, 'bots' => $totalBotsFound];
   }
 
   /**
-   * Detect volume-based anomalies and delete
+   * Detect volume-based anomalies
    */
   protected function detectVolumeAnomalies()
   {
     $db = Yii::$app->db;
-    $sessionIdsToDelete = [];
+    $detectedBots = 0;
 
     // Check hourly volumes
     $this->stdout("Checking hourly request volumes...\n");
     $hourlyAnomalies = $db->createCommand("
-            SELECT
+            SELECT 
                 s.session_id,
-                COUNT(*) as request_count
+                COUNT(*) as request_count,
+                MIN(pv.created_at) as first_request,
+                MAX(pv.created_at) as last_request
             FROM analytics_sessions s
             JOIN analytics_page_views pv ON s.session_id = pv.session_id
-            WHERE pv.created_at >= DATE_SUB(NOW(), INTERVAL 1 HOUR)
+            WHERE s.is_bot = 0 
+                AND pv.is_bot = 0
+                AND pv.created_at >= DATE_SUB(NOW(), INTERVAL 1 HOUR)
             GROUP BY s.session_id
             HAVING request_count > :threshold
         ")
@@ -315,18 +296,21 @@ class BotDetectionController extends Controller
       ->queryAll();
 
     foreach ($hourlyAnomalies as $anomaly) {
-      $sessionIdsToDelete[$anomaly['session_id']] = true;
+      $this->markAsBot($anomaly['session_id'], 'high_volume_hourly');
+      $detectedBots++;
     }
 
     // Check daily volumes
     $this->stdout("Checking daily request volumes...\n");
     $dailyAnomalies = $db->createCommand("
-            SELECT
+            SELECT 
                 s.session_id,
                 COUNT(*) as request_count
             FROM analytics_sessions s
             JOIN analytics_page_views pv ON s.session_id = pv.session_id
-            WHERE pv.created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)
+            WHERE s.is_bot = 0 
+                AND pv.is_bot = 0
+                AND pv.created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)
             GROUP BY s.session_id
             HAVING request_count > :threshold
         ")
@@ -334,20 +318,23 @@ class BotDetectionController extends Controller
       ->queryAll();
 
     foreach ($dailyAnomalies as $anomaly) {
-      $sessionIdsToDelete[$anomaly['session_id']] = true;
+      $this->markAsBot($anomaly['session_id'], 'high_volume_daily');
+      $detectedBots++;
     }
 
     // Check URL diversity (systematic crawlers)
     $this->stdout("Checking URL diversity patterns...\n");
     $crawlers = $db->createCommand("
-            SELECT
+            SELECT 
                 s.session_id,
                 COUNT(*) as total_requests,
                 COUNT(DISTINCT pv.url) as unique_urls,
                 COUNT(DISTINCT pv.url) / COUNT(*) as url_diversity
             FROM analytics_sessions s
             JOIN analytics_page_views pv ON s.session_id = pv.session_id
-            WHERE pv.created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)
+            WHERE s.is_bot = 0 
+                AND pv.is_bot = 0
+                AND pv.created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)
             GROUP BY s.session_id
             HAVING total_requests > :min_requests
                 AND url_diversity > :diversity_threshold
@@ -357,45 +344,43 @@ class BotDetectionController extends Controller
       ->queryAll();
 
     foreach ($crawlers as $crawler) {
-      $sessionIdsToDelete[$crawler['session_id']] = true;
+      $this->markAsBot($crawler['session_id'], 'systematic_crawler');
+      $detectedBots++;
     }
 
-    $deletedCount = $this->deleteBotSessions(array_keys($sessionIdsToDelete));
-
     $this->stdout(sprintf(
-      "Volume anomaly detection: deleted %d bot sessions\n",
-      $deletedCount
+      "Volume anomaly detection: found %d bots\n",
+      $detectedBots
     ), Console::FG_YELLOW);
-
-    return $deletedCount;
   }
 
   /**
-   * Detect timing-based patterns and delete
+   * Detect timing-based patterns
    */
   protected function detectTimingPatterns()
   {
     $db = Yii::$app->db;
-    $sessionIdsToDelete = [];
+    $detectedBots = 0;
 
     $this->stdout("Analyzing request timing patterns...\n");
 
     // Get sessions with consistent timing intervals
     $timingAnomalies = $db->createCommand("
-            SELECT
+            SELECT 
                 session_id,
                 AVG(time_diff) as avg_interval,
                 STDDEV(time_diff) as stddev_interval,
                 COUNT(*) as interval_count
             FROM (
-                SELECT
+                SELECT 
                     session_id,
-                    TIMESTAMPDIFF(SECOND,
+                    TIMESTAMPDIFF(SECOND, 
                         LAG(created_at) OVER (PARTITION BY session_id ORDER BY created_at),
                         created_at
                     ) as time_diff
                 FROM analytics_page_views
                 WHERE created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)
+                    AND is_bot = 0
             ) as intervals
             WHERE time_diff IS NOT NULL
                 AND time_diff < 300  -- Ignore gaps > 5 minutes
@@ -415,36 +400,34 @@ class BotDetectionController extends Controller
         $anomaly['avg_interval'],
         $anomaly['stddev_interval']
       ));
-      $sessionIdsToDelete[] = $anomaly['session_id'];
+      $this->markAsBot($anomaly['session_id'], 'robotic_timing');
+      $detectedBots++;
     }
 
-    $deletedCount = $this->deleteBotSessions($sessionIdsToDelete);
-
     $this->stdout(sprintf(
-      "Timing pattern detection: deleted %d bot sessions\n",
-      $deletedCount
+      "Timing pattern detection: found %d bots\n",
+      $detectedBots
     ), Console::FG_YELLOW);
-
-    return $deletedCount;
   }
 
   /**
-   * Detect crawling patterns and delete
+   * Detect crawling patterns
    */
   protected function detectCrawlingPatterns()
   {
     $db = Yii::$app->db;
-    $sessionIdsToDelete = [];
+    $detectedBots = 0;
 
     // Detect sequential pagination crawling
     $this->stdout("Checking for sequential pagination patterns...\n");
 
     $paginationCrawlers = $db->createCommand("
-            SELECT
+            SELECT 
                 session_id,
                 GROUP_CONCAT(DISTINCT url ORDER BY created_at) as url_sequence
             FROM analytics_page_views
-            WHERE created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)
+            WHERE is_bot = 0
+                AND created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)
                 AND (url LIKE '%page=%' OR url LIKE '%/page/%' OR url LIKE '%&p=%')
             GROUP BY session_id
             HAVING COUNT(*) > :threshold
@@ -454,18 +437,15 @@ class BotDetectionController extends Controller
 
     foreach ($paginationCrawlers as $crawler) {
       if ($this->hasSequentialPattern($crawler['url_sequence'])) {
-        $sessionIdsToDelete[] = $crawler['session_id'];
+        $this->markAsBot($crawler['session_id'], 'sequential_crawler');
+        $detectedBots++;
       }
     }
 
-    $deletedCount = $this->deleteBotSessions($sessionIdsToDelete);
-
     $this->stdout(sprintf(
-      "Crawling pattern detection: deleted %d bot sessions\n",
-      $deletedCount
+      "Crawling pattern detection: found %d bots\n",
+      $detectedBots
     ), Console::FG_YELLOW);
-
-    return $deletedCount;
   }
 
   /**
@@ -568,118 +548,162 @@ class BotDetectionController extends Controller
   }
 
   /**
-   * Delete bot sessions and their associated page views
+   * Mark session and page views as bot
    */
-  protected function deleteBotSessions($sessionIds)
+  protected function markAsBot($sessionId, $reason = null)
   {
-    if (empty($sessionIds)) {
-      return ['page_views' => 0, 'sessions' => 0];
-    }
-
     if ($this->dryRun) {
-      $this->stdout(sprintf("Would delete %d bot sessions\n", count($sessionIds)));
-      return ['page_views' => 0, 'sessions' => 0];
+      $this->stdout("Would mark session {$sessionId} as bot" . ($reason ? " (reason: {$reason})" : "") . "\n");
+      return;
     }
 
     $db = Yii::$app->db;
     $transaction = $db->beginTransaction();
 
     try {
-      // Count page views before deletion for reporting
-      $pageViewCount = $db->createCommand("
-                SELECT COUNT(*) FROM analytics_page_views
-                WHERE session_id IN (" . implode(',', array_fill(0, count($sessionIds), '?')) . ")
-            ")
-        ->bindValues($sessionIds)
-        ->queryScalar();
+      // Update session
+      $updateData = ['is_bot' => 1];
+      if ($reason && $this->hasColumn('analytics_sessions', 'bot_reason')) {
+        $updateData['bot_reason'] = $reason;
+      }
 
-      // Delete page views first (foreign key constraint)
       $db->createCommand()
-        ->delete('analytics_page_views', ['in', 'session_id', $sessionIds])
+        ->update('analytics_sessions', $updateData, ['session_id' => $sessionId])
         ->execute();
 
-      // Then delete sessions
+      // Update all page views
       $db->createCommand()
-        ->delete('analytics_sessions', ['in', 'session_id', $sessionIds])
+        ->update('analytics_page_views', ['is_bot' => 1], ['session_id' => $sessionId])
         ->execute();
 
       $transaction->commit();
-
-      return [
-        'page_views' => $pageViewCount,
-        'sessions' => count($sessionIds)
-      ];
     } catch (\Exception $e) {
       $transaction->rollBack();
-      $this->stderr("Error deleting bot sessions: " . $e->getMessage() . "\n", Console::FG_RED);
-      return ['page_views' => 0, 'sessions' => 0];
+      $this->stderr("Error marking session as bot: " . $e->getMessage() . "\n", Console::FG_RED);
     }
   }
 
   /**
-   * Clean up orphaned records
+   * Check if table has a column
    */
-  protected function cleanupOrphanedRecords()
+  protected function hasColumn($table, $column)
+  {
+    try {
+      $schema = Yii::$app->db->getTableSchema($table);
+      return $schema && isset($schema->columns[$column]);
+    } catch (\Exception $e) {
+      return false;
+    }
+  }
+
+  /**
+   * Update sessions based on page view bot status
+   */
+  protected function updateSessionsFromPageViews()
   {
     if ($this->dryRun) {
-      $this->stdout("Skipping orphaned record cleanup in dry run mode\n");
-      return ['page_views' => 0, 'sessions' => 0];
+      $this->stdout("Skipping session updates in dry run mode\n");
+      return;
     }
 
     $db = Yii::$app->db;
-    $deletedPageViews = 0;
-    $deletedSessions = 0;
+    $totalUpdated = 0;
 
     try {
-      // Delete page views with no matching session
-      $deletedPageViews = $db->createCommand("
-                DELETE pv FROM analytics_page_views pv
-                LEFT JOIN analytics_sessions s ON pv.session_id = s.session_id
-                WHERE s.session_id IS NULL
+      $updated = $db->createCommand("
+                UPDATE analytics_sessions s
+                INNER JOIN (
+                    SELECT DISTINCT session_id
+                    FROM analytics_page_views
+                    WHERE is_bot = 1
+                ) bot_pvs ON s.session_id = bot_pvs.session_id
+                SET s.is_bot = 1
+                WHERE s.is_bot = 0
             ")->execute();
 
-      $this->stdout(sprintf("Deleted %d orphaned page views\n", $deletedPageViews));
+      $totalUpdated = $updated;
     } catch (\Exception $e) {
-      $this->stderr("Error cleaning up orphaned page views: " . $e->getMessage() . "\n", Console::FG_RED);
+      $this->stderr("Failed to update sessions: " . $e->getMessage() . "\n", Console::FG_RED);
     }
 
-    return ['page_views' => $deletedPageViews, 'sessions' => $deletedSessions];
+    $this->stdout(sprintf(
+      "Updated %d sessions based on page view bot status\n",
+      $totalUpdated
+    ), Console::FG_YELLOW);
+  }
+
+  /**
+   * Delete all bot traffic from database
+   */
+  protected function deleteBotTraffic()
+  {
+    if ($this->dryRun) {
+      $this->stdout("Skipping bot deletion in dry run mode\n");
+      return;
+    }
+
+    $db = Yii::$app->db;
+
+    try {
+      // Get counts before deletion for reporting
+      $botPageViewsCount = $db->createCommand("
+                SELECT COUNT(*) FROM analytics_page_views WHERE is_bot = 1
+            ")->queryScalar();
+
+      $botSessionsCount = $db->createCommand("
+                SELECT COUNT(*) FROM analytics_sessions WHERE is_bot = 1
+            ")->queryScalar();
+
+      // Delete bot page views
+      $deletedPageViews = $db->createCommand("
+                DELETE FROM analytics_page_views WHERE is_bot = 1
+            ")->execute();
+
+      $this->stdout(sprintf("Deleted %d bot page views\n", $deletedPageViews), Console::FG_YELLOW);
+
+      // Delete bot sessions
+      $deletedSessions = $db->createCommand("
+                DELETE FROM analytics_sessions WHERE is_bot = 1
+            ")->execute();
+
+      $this->stdout(sprintf("Deleted %d bot sessions\n", $deletedSessions), Console::FG_YELLOW);
+
+    } catch (\Exception $e) {
+      $this->stderr("Error deleting bot traffic: " . $e->getMessage() . "\n", Console::FG_RED);
+    }
   }
 
   /**
    * Show detection summary
    */
-  protected function showDetectionSummary($totalDeleted)
+  protected function showDetectionSummary()
   {
     $db = Yii::$app->db;
 
     $this->stdout("\n" . str_repeat('=', 50) . "\n", Console::FG_GREEN);
-    $this->stdout("Bot Detection and Cleanup Summary\n", Console::FG_GREEN);
+    $this->stdout("Bot Detection Summary\n", Console::FG_GREEN);
     $this->stdout(str_repeat('=', 50) . "\n", Console::FG_GREEN);
 
-    // Show deletion stats
+    // Get stats - only human traffic remains after deletion
+    $stats = $db->createCommand("
+            SELECT
+                (SELECT COUNT(*) FROM analytics_sessions) as total_sessions,
+                (SELECT COUNT(*) FROM analytics_page_views) as total_page_views
+        ")->queryOne();
+
     $this->stdout(sprintf(
-      "\nDeleted: %s sessions, %s page views\n",
-      number_format($totalDeleted['sessions']),
-      number_format($totalDeleted['page_views'])
-    ), Console::FG_YELLOW);
+      "\nRemaining (human traffic only):\n"
+    ));
 
-    // Get current stats
-    try {
-      $stats = $db->createCommand("
-                SELECT
-                    (SELECT COUNT(*) FROM analytics_sessions) as total_sessions,
-                    (SELECT COUNT(*) FROM analytics_page_views) as total_page_views
-            ")->queryOne();
+    $this->stdout(sprintf(
+      "Sessions:   %s\n",
+      number_format($stats['total_sessions'])
+    ));
 
-      $this->stdout(sprintf(
-        "\nRemaining: %s sessions, %s page views\n",
-        number_format($stats['total_sessions']),
-        number_format($stats['total_page_views'])
-      ));
-    } catch (\Exception $e) {
-      $this->stderr("Error retrieving final stats: " . $e->getMessage() . "\n", Console::FG_RED);
-    }
+    $this->stdout(sprintf(
+      "Page Views: %s\n",
+      number_format($stats['total_page_views'])
+    ));
 
     if ($this->dryRun) {
       $this->stdout("\nDRY RUN completed - no changes were made\n", Console::FG_YELLOW);
@@ -689,11 +713,11 @@ class BotDetectionController extends Controller
   }
 
   /**
-   * Show statistics about current data
+   * Show statistics about bot traffic
    */
   public function actionStats()
   {
-    $this->stdout("Analytics Statistics\n", Console::FG_GREEN);
+    $this->stdout("Bot Traffic Statistics\n", Console::FG_GREEN);
     $this->stdout(str_repeat('=', 50) . "\n");
 
     $db = Yii::$app->db;
@@ -701,54 +725,60 @@ class BotDetectionController extends Controller
     // Page views stats
     $this->stdout("\nPage Views:\n", Console::FG_CYAN);
     $pvStats = $db->createCommand("
-            SELECT COUNT(*) as total_records
+            SELECT 
+                COUNT(*) as total_records,
+                SUM(CASE WHEN is_bot = 1 THEN 1 ELSE 0 END) as bot_records,
+                SUM(CASE WHEN is_bot = 0 THEN 1 ELSE 0 END) as human_records
             FROM analytics_page_views
         ")->queryOne();
 
     $this->stdout(sprintf(
-      "  Total: %s page views\n",
-      number_format($pvStats['total_records'])
+      "  Total: %s | Bots: %s (%.2f%%) | Humans: %s (%.2f%%)\n",
+      number_format($pvStats['total_records']),
+      number_format($pvStats['bot_records']),
+      $pvStats['total_records'] > 0 ? ($pvStats['bot_records'] / $pvStats['total_records'] * 100) : 0,
+      number_format($pvStats['human_records']),
+      $pvStats['total_records'] > 0 ? ($pvStats['human_records'] / $pvStats['total_records'] * 100) : 0
     ));
 
     // Sessions stats
     $this->stdout("\nSessions:\n", Console::FG_CYAN);
     $sessionStats = $db->createCommand("
-            SELECT COUNT(*) as total_records
+            SELECT 
+                COUNT(*) as total_records,
+                SUM(CASE WHEN is_bot = 1 THEN 1 ELSE 0 END) as bot_records,
+                SUM(CASE WHEN is_bot = 0 THEN 1 ELSE 0 END) as human_records
             FROM analytics_sessions
         ")->queryOne();
 
     $this->stdout(sprintf(
-      "  Total: %s sessions\n",
-      number_format($sessionStats['total_records'])
+      "  Total: %s | Bots: %s (%.2f%%) | Humans: %s (%.2f%%)\n",
+      number_format($sessionStats['total_records']),
+      number_format($sessionStats['bot_records']),
+      $sessionStats['total_records'] > 0 ? ($sessionStats['bot_records'] / $sessionStats['total_records'] * 100) : 0,
+      number_format($sessionStats['human_records']),
+      $sessionStats['total_records'] > 0 ? ($sessionStats['human_records'] / $sessionStats['total_records'] * 100) : 0
     ));
 
-    // Recent activity
-    $this->stdout("\nRecent Activity:\n", Console::FG_CYAN);
-    try {
-      $recentStats = $db->createCommand("
-                SELECT
-                    (SELECT COUNT(*) FROM analytics_page_views WHERE created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)) as last_24h_views,
-                    (SELECT COUNT(*) FROM analytics_sessions WHERE created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)) as last_24h_sessions,
-                    (SELECT COUNT(*) FROM analytics_page_views WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)) as last_7d_views,
-                    (SELECT COUNT(*) FROM analytics_sessions WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)) as last_7d_sessions
-            ")->queryOne();
+    // Bot reasons breakdown (if column exists)
+    if ($this->hasColumn('analytics_sessions', 'bot_reason')) {
+      $this->stdout("\nBot Detection Reasons:\n", Console::FG_YELLOW);
+      $reasons = $db->createCommand("
+                SELECT bot_reason, COUNT(*) as count
+                FROM analytics_sessions
+                WHERE is_bot = 1 AND bot_reason IS NOT NULL
+                GROUP BY bot_reason
+                ORDER BY count DESC
+            ")->queryAll();
 
-      $this->stdout(sprintf(
-        "  Last 24 hours: %s page views, %s sessions\n",
-        number_format($recentStats['last_24h_views']),
-        number_format($recentStats['last_24h_sessions'])
-      ));
-
-      $this->stdout(sprintf(
-        "  Last 7 days: %s page views, %s sessions\n",
-        number_format($recentStats['last_7d_views']),
-        number_format($recentStats['last_7d_sessions'])
-      ));
-    } catch (\Exception $e) {
-      $this->stderr("Error retrieving recent stats: " . $e->getMessage() . "\n", Console::FG_RED);
+      foreach ($reasons as $reason) {
+        $this->stdout(sprintf(
+          "  %s: %s sessions\n",
+          str_pad($reason['bot_reason'], 20),
+          number_format($reason['count'])
+        ));
+      }
     }
-
-    $this->stdout("\nNote: All bot traffic has been removed from the database.\n", Console::FG_YELLOW);
 
     return ExitCode::OK;
   }
