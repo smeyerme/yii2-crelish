@@ -1,5 +1,7 @@
 <?php
 
+namespace giantbits\crelish\migrations;
+
 use yii\db\Migration;
 
 /**
