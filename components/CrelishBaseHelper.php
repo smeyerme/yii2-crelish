@@ -363,10 +363,10 @@ class CrelishBaseHelper
   
   /**
    * Track a content element view for analytics
-   * 
+   *
    * Usage in templates:
    * {{ chelper.trackElementView(element.uuid, element.ctype, 'list') }}
-   * 
+   *
    * @param string $elementUuid The UUID of the element to track
    * @param string $elementType The type of the element
    * @param string|null $viewType Optional view type ('list', 'detail', etc.)
@@ -375,13 +375,13 @@ class CrelishBaseHelper
   public static function trackElementView($elementUuid, $elementType, $viewType = null): void
   {
     // Skip if analytics component isn't available or no page UUID
-    if (!isset(Yii::$app->crelishAnalytics) || 
+    if (!isset(Yii::$app->crelishAnalytics) ||
         !isset(Yii::$app->controller->entryPoint['uuid']) ||
-        empty($elementUuid) || 
+        empty($elementUuid) ||
         empty($elementType)) {
       return;
     }
-    
+
     // Track the element view
     Yii::$app->crelishAnalytics->trackElementView(
       $elementUuid,
@@ -389,6 +389,75 @@ class CrelishBaseHelper
       Yii::$app->controller->entryPoint['uuid'],
       $viewType
     );
+  }
+
+  /**
+   * Generate a secure token for click tracking
+   *
+   * This token is used to verify that click tracking requests are legitimate
+   * and prevents unauthorized tracking spam.
+   *
+   * Usage in templates:
+   * <a href="https://example.com"
+   *    ping="{{ chelper.getClickTrackingUrl(element.uuid, element.ctype) }}">
+   *   Link Text
+   * </a>
+   *
+   * @param string $uuid Element UUID
+   * @return string Secure token
+   */
+  public static function generateClickToken($uuid): string
+  {
+    $timestamp = time();
+    $secret = Yii::$app->security->passwordHashStrategy;
+    $hash = substr(hash_hmac('sha256', $uuid . $timestamp, $secret), 0, 16);
+    $timeBase36 = str_pad(base_convert($timestamp, 10, 36), 10, '0', STR_PAD_LEFT);
+
+    return $hash . $timeBase36;
+  }
+
+  /**
+   * Generate a complete click tracking URL for use with HTML ping attribute
+   *
+   * Usage in templates:
+   * <a href="https://example.com"
+   *    ping="{{ chelper.getClickTrackingUrl(element.uuid, element.ctype) }}">
+   *   Link Text
+   * </a>
+   *
+   * Or for multiple pings:
+   * <a href="https://example.com"
+   *    ping="{{ chelper.getClickTrackingUrl(element.uuid, element.ctype) }} https://other-tracker.com/ping">
+   *   Link Text
+   * </a>
+   *
+   * @param string $uuid Element UUID
+   * @param string $type Element type (e.g., 'ad', 'link', 'banner')
+   * @param string|null $pageUuid Optional page UUID (defaults to current page)
+   * @return string Complete tracking URL
+   */
+  public static function getClickTrackingUrl($uuid, $type = 'link', $pageUuid = null): string
+  {
+    // Generate secure token
+    $token = self::generateClickToken($uuid);
+
+    // Get page UUID
+    if (empty($pageUuid)) {
+      $pageUuid = Yii::$app->controller->entryPoint['uuid'] ?? null;
+    }
+
+    // Build tracking URL
+    $params = [
+      'uuid' => $uuid,
+      'type' => $type,
+      'token' => $token,
+    ];
+
+    if (!empty($pageUuid)) {
+      $params['page'] = $pageUuid;
+    }
+
+    return Url::to(array_merge(['/crelish/track/click'], $params), true);
   }
 
   /**
@@ -1223,9 +1292,9 @@ SCRIPT;
       
       // Calculate missing dimension
       if ($options['width'] && !$options['height']) {
-        $options['height'] = round($options['width'] / $aspectRatio);
+        $options['height'] = round($options['width'] / $aspectRatio, 0, PHP_ROUND_HALF_UP);
       } elseif ($options['height'] && !$options['width']) {
-        $options['width'] = round($options['height'] * $aspectRatio);
+        $options['width'] = round($options['height'] * $aspectRatio, 0, PHP_ROUND_HALF_UP);
       }
     }
     

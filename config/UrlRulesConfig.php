@@ -133,6 +133,13 @@ class UrlRulesConfig
                 'pattern' => 'site/<action:[\w\-]+>',
                 'route' => 'site/<action>'
             ],
+            // Click tracking endpoint (must come before generic crelish rules)
+            [
+                'class' => 'yii\web\UrlRule',
+                'pattern' => 'crelish/track/click',
+                'route' => 'crelish/track/click',
+                'verb' => ['GET', 'POST']
+            ],
             // Crelish base rule
             [
                 'class' => 'giantbits\crelish\components\CrelishBaseUrlRule'

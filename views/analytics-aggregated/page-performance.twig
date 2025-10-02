@@ -1,0 +1,246 @@
+{# Page Performance Detail View #}
+
+<div class="page-performance-view">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h2 class="mb-0">{{ t('crelish', 'Page Performance') }}</h2>
+                            <p class="text-muted mb-0" id="page-title">{{ t('crelish', 'Loading...') }}</p>
+                        </div>
+                        <a href="{{ url(['/crelish/analytics-aggregated/index']) }}" class="btn btn-outline-secondary">
+                            <i class="fa-sharp fa-regular fa-arrow-left"></i> {{ t('crelish', 'Back to Dashboard') }}
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label>{{ t('crelish', 'Time Period') }}</label>
+                            <select id="period-filter" class="form-select">
+                                <option value="week">{{ t('crelish', 'Last 7 Days') }}</option>
+                                <option value="month" selected>{{ t('crelish', 'Last 30 Days') }}</option>
+                                <option value="quarter">{{ t('crelish', 'Last 90 Days') }}</option>
+                                <option value="year">{{ t('crelish', 'Last Year') }}</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# KPI Cards for this page #}
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card kpi-card">
+                <div class="card-body">
+                    <div class="kpi-label">{{ t('crelish', 'Total Views') }}</div>
+                    <div class="kpi-value" id="kpi-total-views">-</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card kpi-card">
+                <div class="card-body">
+                    <div class="kpi-label">{{ t('crelish', 'Unique Sessions') }}</div>
+                    <div class="kpi-value" id="kpi-unique-sessions">-</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card kpi-card">
+                <div class="card-body">
+                    <div class="kpi-label">{{ t('crelish', 'Unique Users') }}</div>
+                    <div class="kpi-value" id="kpi-unique-users">-</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card kpi-card">
+                <div class="card-body">
+                    <div class="kpi-label">{{ t('crelish', 'Avg. Views/Session') }}</div>
+                    <div class="kpi-value" id="kpi-avg-views">-</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Page Views Trend #}
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3>{{ t('crelish', 'Views Over Time') }}</h3>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="page-trend-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Elements on this page #}
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3>{{ t('crelish', 'Elements on this Page') }}</h3>
+                </div>
+                <div class="card-body">
+                    <div id="elements-table-container">
+                        <div class="text-center">
+                            <div class="spinner-border" role="status"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const pageUuid = urlParams.get('page_uuid');
+    let currentPeriod = 'month';
+
+    if (!pageUuid) {
+        alert('{{ t("crelish", "Page UUID is required") }}');
+        window.location.href = '{{ url(["/crelish/analytics-aggregated/index"]) }}';
+        return;
+    }
+
+    const performanceUrl = '{{ url(["/crelish/analytics-aggregated/page-performance"]) }}';
+
+    document.getElementById('period-filter').addEventListener('change', function() {
+        currentPeriod = this.value;
+        loadPagePerformance();
+    });
+
+    loadPagePerformance();
+
+    let trendChart = null;
+
+    function loadPagePerformance() {
+        fetch(performanceUrl + '?page_uuid=' + pageUuid + '&period=' + currentPeriod)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+
+                // Calculate totals
+                let totalViews = 0;
+                let totalSessions = 0;
+                let totalUsers = 0;
+
+                data.trend.forEach(item => {
+                    totalViews += parseInt(item.total_views) || 0;
+                    totalSessions += parseInt(item.unique_sessions) || 0;
+                    totalUsers += parseInt(item.unique_users) || 0;
+                });
+
+                // Update KPIs
+                document.getElementById('kpi-total-views').textContent = formatNumber(totalViews);
+                document.getElementById('kpi-unique-sessions').textContent = formatNumber(totalSessions);
+                document.getElementById('kpi-unique-users').textContent = formatNumber(totalUsers);
+                document.getElementById('kpi-avg-views').textContent =
+                    totalSessions > 0 ? (totalViews / totalSessions).toFixed(2) : '0';
+
+                // Render trend chart
+                renderTrendChart(data.trend);
+
+                // Render elements table
+                renderElementsTable(data.elements);
+            })
+            .catch(error => {
+                console.error('Error loading page performance:', error);
+                alert('{{ t("crelish", "Failed to load page performance data") }}');
+            });
+    }
+
+    function renderTrendChart(trend) {
+        const ctx = document.getElementById('page-trend-chart').getContext('2d');
+
+        if (trendChart) {
+            trendChart.destroy();
+        }
+
+        trendChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: trend.map(d => d.date),
+                datasets: [{
+                    label: '{{ t("crelish", "Total Views") }}',
+                    data: trend.map(d => d.total_views),
+                    borderColor: 'rgb(75, 192, 192)',
+                    tension: 0.1,
+                    fill: false
+                }, {
+                    label: '{{ t("crelish", "Unique Sessions") }}',
+                    data: trend.map(d => d.unique_sessions),
+                    borderColor: 'rgb(255, 99, 132)',
+                    tension: 0.1,
+                    fill: false
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+
+    function renderElementsTable(elements) {
+        const container = document.getElementById('elements-table-container');
+
+        if (!elements || elements.length === 0) {
+            container.innerHTML = '<p class="text-muted">{{ t("crelish", "No elements found on this page") }}</p>';
+            return;
+        }
+
+        let html = '<table class="table insights-table">';
+        html += '<thead><tr>';
+        html += '<th>{{ t("crelish", "Element") }}</th>';
+        html += '<th>{{ t("crelish", "Type") }}</th>';
+        html += '<th>{{ t("crelish", "Event") }}</th>';
+        html += '<th class="text-end">{{ t("crelish", "Views") }}</th>';
+        html += '<th class="text-end">{{ t("crelish", "Sessions") }}</th>';
+        html += '</tr></thead><tbody>';
+
+        elements.forEach(element => {
+            html += '<tr>';
+            html += '<td>' + escapeHtml(element.title) + '</td>';
+            html += '<td><span class="badge bg-secondary">' + escapeHtml(element.element_type) + '</span></td>';
+            html += '<td><span class="badge bg-info">' + escapeHtml(element.event_type) + '</span></td>';
+            html += '<td class="text-end"><span class="badge bg-primary badge-metric">' + formatNumber(element.total_views) + '</span></td>';
+            html += '<td class="text-end"><span class="badge bg-success badge-metric">' + formatNumber(element.unique_sessions) + '</span></td>';
+            html += '</tr>';
+        });
+
+        html += '</tbody></table>';
+        container.innerHTML = html;
+    }
+
+    function formatNumber(num) {
+        return new Intl.NumberFormat().format(num);
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+});
+</script>

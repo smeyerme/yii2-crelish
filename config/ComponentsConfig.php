@@ -40,6 +40,9 @@ class ComponentsConfig
       'dashboardManager' => [
         'class' => 'giantbits\crelish\components\CrelishDashboardManager',
       ],
+      'partnerAnalytics' => [
+        'class' => 'giantbits\crelish\components\PartnerAnalyticsService',
+      ],
     ];
 
     // Add Sentry components if enabled

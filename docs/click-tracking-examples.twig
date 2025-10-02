@@ -1,0 +1,229 @@
+{#
+  Click Tracking Examples
+
+  This file contains usage examples for the click tracking system.
+  Copy these examples into your templates as needed.
+
+  IMPORTANT: Include the ClickTrackingAsset in your layout:
+  {% do giantbits.crelish.assets.ClickTrackingAsset.register(this) %}
+#}
+
+{# Example 1: Basic External Link Tracking (RECOMMENDED METHOD) #}
+<a href="https://external-website.com"
+   target="_blank"
+   rel="noopener noreferrer"
+   data-track-click="{{ chelper.getClickTrackingUrl(element.uuid, 'link') }}">
+  Visit External Site
+</a>
+
+{# Example 1b: Using HTML ping (NOT RECOMMENDED - blocked by Firefox, ad blockers) #}
+<a href="https://external-website.com"
+   target="_blank"
+   rel="noopener noreferrer"
+   ping="{{ chelper.getClickTrackingUrl(element.uuid, 'link') }}">
+  Visit External Site (less reliable)
+</a>
+
+{# Example 2: Tracking Ad Banner Clicks #}
+{% for ad in advertisements %}
+  <div class="ad-banner">
+    <a href="{{ ad.targetUrl }}"
+       target="_blank"
+       rel="noopener noreferrer"
+       data-track-click="{{ chelper.getClickTrackingUrl(ad.uuid, 'ad') }}">
+      <img src="{{ ad.imageUrl }}" alt="{{ ad.title }}" class="img-fluid">
+      <span class="ad-label">{{ ad.title }}</span>
+    </a>
+  </div>
+{% endfor %}
+
+{# Example 3: Call-to-Action Button #}
+<a href="/signup"
+   class="btn btn-primary btn-lg"
+   data-track-click="{{ chelper.getClickTrackingUrl(ctaButton.uuid, 'cta') }}">
+  Get Started Today
+</a>
+
+{# Example 4: Partner/Sponsor Links #}
+<div class="sponsors">
+  {% for sponsor in sponsors %}
+    <a href="{{ sponsor.website }}"
+       class="sponsor-link"
+       target="_blank"
+       rel="noopener noreferrer"
+       data-track-click="{{ chelper.getClickTrackingUrl(sponsor.uuid, 'sponsor') }}">
+      <img src="{{ sponsor.logo }}" alt="{{ sponsor.name }}">
+    </a>
+  {% endfor %}
+</div>
+
+{# Example 5: Newsletter/Social Media Links #}
+<div class="social-links">
+  <a href="https://twitter.com/yourcompany"
+     target="_blank"
+     rel="noopener noreferrer"
+     data-track-click="{{ chelper.getClickTrackingUrl(socialLinks.twitter.uuid, 'social') }}">
+    <i class="fab fa-twitter"></i> Follow us on Twitter
+  </a>
+
+  <a href="https://facebook.com/yourcompany"
+     target="_blank"
+     rel="noopener noreferrer"
+     data-track-click="{{ chelper.getClickTrackingUrl(socialLinks.facebook.uuid, 'social') }}">
+    <i class="fab fa-facebook"></i> Like us on Facebook
+  </a>
+</div>
+
+{# Example 6: Download Link (Combined with Asset Tracking) #}
+{# Note: For actual file downloads, DownloadAction already tracks them.
+   Use this for external download links or informational pages about downloads #}
+<a href="{{ chelper.getTrackedDownloadUrl(asset.uuid) }}"
+   download
+   data-track-click="{{ chelper.getClickTrackingUrl(asset.uuid, 'download-link') }}">
+  <i class="fas fa-download"></i> Download {{ asset.fileName }}
+</a>
+
+{# Example 7: Banner with Tracking #}
+<a href="{{ banner.destinationUrl }}"
+   target="_blank"
+   rel="noopener noreferrer"
+   data-track-click="{{ chelper.getClickTrackingUrl(banner.uuid, 'banner') }}">
+  <img src="{{ banner.imageUrl }}" alt="{{ banner.title }}" class="banner-image">
+</a>
+
+{# Example 8: Article Outbound Links (Track which external resources users visit) #}
+<div class="article-content">
+  <p>
+    For more information, visit
+    <a href="https://example.com/resource"
+       target="_blank"
+       rel="noopener noreferrer"
+       data-track-click="{{ chelper.getClickTrackingUrl(article.uuid ~ '-resource-1', 'outbound') }}">
+      this excellent resource
+    </a>.
+  </p>
+</div>
+
+{# Example 9: Footer Links (Track which footer links are most popular) #}
+<footer>
+  <nav class="footer-nav">
+    <a href="https://status.yoursite.com"
+       data-track-click="{{ chelper.getClickTrackingUrl('footer-status', 'footer-link') }}">
+      System Status
+    </a>
+    <a href="https://blog.yoursite.com"
+       data-track-click="{{ chelper.getClickTrackingUrl('footer-blog', 'footer-link') }}">
+      Blog
+    </a>
+    <a href="https://careers.yoursite.com"
+       data-track-click="{{ chelper.getClickTrackingUrl('footer-careers', 'footer-link') }}">
+      Careers
+    </a>
+  </nav>
+</footer>
+
+{# Example 10: Conditional Tracking (Only track for certain user types) #}
+{% if shouldTrackClicks %}
+  <a href="{{ externalLink.url }}"
+     target="_blank"
+     rel="noopener noreferrer"
+     data-track-click="{{ chelper.getClickTrackingUrl(externalLink.uuid, externalLink.type) }}">
+    {{ externalLink.title }}
+  </a>
+{% else %}
+  <a href="{{ externalLink.url }}"
+     target="_blank"
+     rel="noopener noreferrer">
+    {{ externalLink.title }}
+  </a>
+{% endif %}
+
+{# Example 11: Product Affiliate Links #}
+{% for product in affiliateProducts %}
+  <div class="product-card">
+    <img src="{{ product.image }}" alt="{{ product.name }}">
+    <h3>{{ product.name }}</h3>
+    <p>{{ product.description }}</p>
+    <a href="{{ product.affiliateUrl }}"
+       class="btn btn-success"
+       target="_blank"
+       rel="noopener noreferrer sponsored"
+       data-track-click="{{ chelper.getClickTrackingUrl(product.uuid, 'affiliate') }}">
+      Buy Now - ${{ product.price }}
+    </a>
+  </div>
+{% endfor %}
+
+{# Example 12: Email Signup Link with Tracking #}
+<a href="/newsletter/subscribe"
+   class="newsletter-cta"
+   data-track-click="{{ chelper.getClickTrackingUrl('newsletter-cta-' ~ page.uuid, 'newsletter-signup') }}">
+  📧 Subscribe to our Newsletter
+</a>
+
+{# Example 13: Dynamic Element ID Generation #}
+{# Useful when you don't have a UUID but want to track clicks #}
+{% set elementId = 'banner-' ~ banner.position ~ '-' ~ page.slug %}
+<a href="{{ banner.url }}"
+   data-track-click="{{ chelper.getClickTrackingUrl(elementId, 'dynamic-banner') }}">
+  <img src="{{ banner.image }}" alt="Advertisement">
+</a>
+
+{# Example 14: Navigation Menu External Links #}
+<nav class="main-nav">
+  <ul>
+    {% for item in menuItems %}
+      {% if item.isExternal %}
+        <li>
+          <a href="{{ item.url }}"
+             target="_blank"
+             rel="noopener noreferrer"
+             data-track-click="{{ chelper.getClickTrackingUrl(item.uuid, 'nav-external') }}">
+            {{ item.label }}
+            <i class="fas fa-external-link-alt"></i>
+          </a>
+        </li>
+      {% else %}
+        <li>
+          <a href="{{ item.url }}">{{ item.label }}</a>
+        </li>
+      {% endif %}
+    {% endfor %}
+  </ul>
+</nav>
+
+{# Example 15: Event Registration Link #}
+<div class="event-card">
+  <h3>{{ event.title }}</h3>
+  <p>{{ event.description }}</p>
+  <a href="{{ event.registrationUrl }}"
+     class="btn btn-primary"
+     target="_blank"
+     rel="noopener noreferrer"
+     data-track-click="{{ chelper.getClickTrackingUrl(event.uuid, 'event-registration') }}">
+    Register Now
+  </a>
+</div>
+
+{#
+  Pro Tips:
+
+  1. RELIABILITY: Use data-track-click (JavaScript) instead of ping (HTML) attribute
+     - ping is blocked by Firefox, ad blockers, and privacy tools
+     - data-track-click uses Beacon API with fallbacks for maximum reliability
+
+  2. Element Types: Use descriptive types ('ad', 'banner', 'cta', 'social', 'affiliate')
+     to segment your analytics data effectively.
+
+  3. UUID Strategy:
+     - Use actual database UUIDs when available
+     - Use generated IDs (e.g., 'footer-careers') for static elements
+     - Combine multiple identifiers (e.g., article.uuid ~ '-resource-1') for sub-elements
+
+  4. Privacy: Always include rel="noopener noreferrer" for external links
+
+  5. Target: Use target="_blank" for external links to open in new tab
+
+  6. Asset Registration: Don't forget to register ClickTrackingAsset in your layout:
+     {% do giantbits.crelish.assets.ClickTrackingAsset.register(this) %}
+#}

@@ -1,0 +1,483 @@
+{# Analytics Insights Dashboard - Index View #}
+
+<div class="analytics-insights-dashboard">
+    {# Header with Filters #}
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h2 class="mb-0">{{ t('crelish', 'Analytics Insights') }}</h2>
+                            <p class="text-muted mb-0">{{ t('crelish', 'Performance metrics based on aggregated data') }}</p>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <div class="btn-group" role="group">
+                                <a href="{{ url('/crelish/analytics-aggregated/export', {'type': 'pages', 'period': period}) }}"
+                                   class="btn btn-outline-primary btn-sm">
+                                    <i class="fa-sharp fa-regular fa-download"></i> {{ t('crelish', 'Export Pages') }}
+                                </a>
+                                <a href="{{ url('/crelish/analytics-aggregated/export', {'type': 'elements', 'period': period}) }}"
+                                   class="btn btn-outline-primary btn-sm">
+                                    <i class="fa-sharp fa-regular fa-download"></i> {{ t('crelish', 'Export Elements') }}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="analytics-filters">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <label>{{ t('crelish', 'Time Period') }}</label>
+                                <select id="period-filter" class="form-select">
+                                    <option value="today" {{ period == 'today' ? 'selected' : '' }}>{{ t('crelish', 'Today') }}</option>
+                                    <option value="yesterday" {{ period == 'yesterday' ? 'selected' : '' }}>{{ t('crelish', 'Yesterday') }}</option>
+                                    <option value="week" {{ period == 'week' ? 'selected' : '' }}>{{ t('crelish', 'Last 7 Days') }}</option>
+                                    <option value="month" {{ period == 'month' ? 'selected' : '' }}>{{ t('crelish', 'Last 30 Days') }}</option>
+                                    <option value="quarter" {{ period == 'quarter' ? 'selected' : '' }}>{{ t('crelish', 'Last 90 Days') }}</option>
+                                    <option value="year" {{ period == 'year' ? 'selected' : '' }}>{{ t('crelish', 'Last Year') }}</option>
+                                    <option value="all" {{ period == 'all' ? 'selected' : '' }}>{{ t('crelish', 'All Time') }}</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label>{{ t('crelish', 'Granularity') }}</label>
+                                <select id="granularity-filter" class="form-select">
+                                    <option value="daily">{{ t('crelish', 'Daily') }}</option>
+                                    <option value="monthly">{{ t('crelish', 'Monthly') }}</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# KPI Cards #}
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card kpi-card">
+                <div class="card-body">
+                    <div class="kpi-label">{{ t('crelish', 'Total Page Views') }}</div>
+                    <div class="kpi-value" id="kpi-page-views">
+                        <div class="spinner-border spinner-border-sm" role="status"></div>
+                    </div>
+                    <div class="kpi-change" id="kpi-page-views-change"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card kpi-card">
+                <div class="card-body">
+                    <div class="kpi-label">{{ t('crelish', 'Unique Sessions') }}</div>
+                    <div class="kpi-value" id="kpi-sessions">
+                        <div class="spinner-border spinner-border-sm" role="status"></div>
+                    </div>
+                    <div class="kpi-change" id="kpi-sessions-change"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card kpi-card">
+                <div class="card-body">
+                    <div class="kpi-label">{{ t('crelish', 'Element Views') }}</div>
+                    <div class="kpi-value" id="kpi-element-views">
+                        <div class="spinner-border spinner-border-sm" role="status"></div>
+                    </div>
+                    <div class="kpi-change" id="kpi-element-views-change"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card kpi-card">
+                <div class="card-body">
+                    <div class="kpi-label">{{ t('crelish', 'Unique Pages') }}</div>
+                    <div class="kpi-value" id="kpi-unique-pages">
+                        <div class="spinner-border spinner-border-sm" role="status"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Page Views Trend Chart #}
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3>{{ t('crelish', 'Page Views Trend') }}</h3>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="page-views-trend-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Top Pages and Top Elements #}
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3>{{ t('crelish', 'Top Pages') }}</h3>
+                    <button class="btn btn-sm btn-outline-primary" id="refresh-top-pages">
+                        <i class="fa-sharp fa-regular fa-refresh"></i>
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="top-pages-container">
+                        <div class="text-center">
+                            <div class="spinner-border" role="status"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3>{{ t('crelish', 'Top Elements') }}</h3>
+                    <div class="d-flex gap-2">
+                        <select id="event-type-filter" class="form-select form-select-sm" style="width: auto;">
+                            <option value="">{{ t('crelish', 'All Events') }}</option>
+                            <option value="list">{{ t('crelish', 'List Views') }}</option>
+                            <option value="detail">{{ t('crelish', 'Detail Views') }}</option>
+                            <option value="click">{{ t('crelish', 'Clicks') }}</option>
+                            <option value="download">{{ t('crelish', 'Downloads') }}</option>
+                        </select>
+                        <button class="btn btn-sm btn-outline-primary" id="refresh-top-elements">
+                            <i class="fa-sharp fa-regular fa-refresh"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="top-elements-container">
+                        <div class="text-center">
+                            <div class="spinner-border" role="status"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Element and Event Type Distribution #}
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3>{{ t('crelish', 'Content Type Distribution') }}</h3>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="max-height: 300px;">
+                        <canvas id="element-type-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3>{{ t('crelish', 'Event Type Distribution') }}</h3>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="max-height: 300px;">
+                        <canvas id="event-type-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let currentPeriod = '{{ period }}';
+    let currentGranularity = 'daily';
+
+    // API URLs
+    const overviewStatsUrl = '{{ url('/crelish/analytics-aggregated/overview-stats') }}';
+    const pageViewsTrendUrl = '{{ url('/crelish/analytics-aggregated/page-views-trend') }}';
+    const topPagesUrl = '{{ url('/crelish/analytics-aggregated/top-pages') }}';
+    const topElementsUrl = '{{ url('/crelish/analytics-aggregated/top-elements') }}';
+    const elementTypeDistUrl = '{{ url('/crelish/analytics-aggregated/element-type-distribution') }}';
+    const eventTypeDistUrl = '{{ url('/crelish/analytics-aggregated/event-type-distribution') }}';
+
+    // Filter handlers
+    document.getElementById('period-filter').addEventListener('change', function() {
+        currentPeriod = this.value;
+        refreshAllData();
+    });
+
+    document.getElementById('granularity-filter').addEventListener('change', function() {
+        currentGranularity = this.value;
+        loadPageViewsTrend();
+    });
+
+    document.getElementById('event-type-filter').addEventListener('change', function() {
+        loadTopElements();
+    });
+
+    document.getElementById('refresh-top-pages').addEventListener('click', loadTopPages);
+    document.getElementById('refresh-top-elements').addEventListener('click', loadTopElements);
+
+    // Initialize
+    refreshAllData();
+
+    function refreshAllData() {
+        loadOverviewStats();
+        loadPageViewsTrend();
+        loadTopPages();
+        loadTopElements();
+        loadElementTypeDistribution();
+        loadEventTypeDistribution();
+    }
+
+    function loadOverviewStats() {
+        fetch(overviewStatsUrl + '?period=' + currentPeriod)
+            .then(response => response.json())
+            .then(data => {
+                // Update KPIs
+                document.getElementById('kpi-page-views').textContent =
+                    formatNumber(data.pageStats.total_views || 0);
+                document.getElementById('kpi-sessions').textContent =
+                    formatNumber(data.pageStats.total_sessions || 0);
+                document.getElementById('kpi-element-views').textContent =
+                    formatNumber(data.elementStats.total_views || 0);
+                document.getElementById('kpi-unique-pages').textContent =
+                    formatNumber(data.pageStats.unique_pages || 0);
+            })
+            .catch(error => console.error('Error loading overview stats:', error));
+    }
+
+    function loadPageViewsTrend() {
+        fetch(pageViewsTrendUrl + '?period=' + currentPeriod + '&granularity=' + currentGranularity)
+            .then(response => response.json())
+            .then(data => {
+                renderPageViewsTrendChart(data);
+            })
+            .catch(error => console.error('Error loading page views trend:', error));
+    }
+
+    function loadTopPages() {
+        const container = document.getElementById('top-pages-container');
+        container.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div></div>';
+
+        fetch(topPagesUrl + '?period=' + currentPeriod + '&limit=10')
+            .then(response => response.json())
+            .then(data => {
+                renderTopPages(data);
+            })
+            .catch(error => {
+                console.error('Error loading top pages:', error);
+                container.innerHTML = '<div class="alert alert-danger">{{ t("crelish", "Failed to load data") }}</div>';
+            });
+    }
+
+    function loadTopElements() {
+        const container = document.getElementById('top-elements-container');
+        const eventType = document.getElementById('event-type-filter').value;
+
+        container.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div></div>';
+
+        let url = topElementsUrl + '?period=' + currentPeriod + '&limit=10';
+        if (eventType) {
+            url += '&event_type=' + eventType;
+        }
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                renderTopElements(data);
+            })
+            .catch(error => {
+                console.error('Error loading top elements:', error);
+                container.innerHTML = '<div class="alert alert-danger">{{ t("crelish", "Failed to load data") }}</div>';
+            });
+    }
+
+    function loadElementTypeDistribution() {
+        fetch(elementTypeDistUrl + '?period=' + currentPeriod)
+            .then(response => response.json())
+            .then(data => {
+                renderElementTypeChart(data);
+            })
+            .catch(error => console.error('Error loading element type distribution:', error));
+    }
+
+    function loadEventTypeDistribution() {
+        fetch(eventTypeDistUrl + '?period=' + currentPeriod)
+            .then(response => response.json())
+            .then(data => {
+                renderEventTypeChart(data);
+            })
+            .catch(error => console.error('Error loading event type distribution:', error));
+    }
+
+    // Chart rendering functions
+    let pageViewsTrendChart = null;
+    let elementTypeChart = null;
+    let eventTypeChart = null;
+
+    function renderPageViewsTrendChart(data) {
+        const ctx = document.getElementById('page-views-trend-chart').getContext('2d');
+
+        if (pageViewsTrendChart) {
+            pageViewsTrendChart.destroy();
+        }
+
+        pageViewsTrendChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.map(d => d.period),
+                datasets: [{
+                    label: '{{ t("crelish", "Total Views") }}',
+                    data: data.map(d => d.total_views),
+                    borderColor: 'rgb(75, 192, 192)',
+                    tension: 0.1
+                }, {
+                    label: '{{ t("crelish", "Unique Sessions") }}',
+                    data: data.map(d => d.unique_sessions),
+                    borderColor: 'rgb(255, 99, 132)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+
+    function renderTopPages(data) {
+        const container = document.getElementById('top-pages-container');
+
+        if (!data || data.length === 0) {
+            container.innerHTML = '<p class="text-muted">{{ t("crelish", "No data available") }}</p>';
+            return;
+        }
+
+        let html = '<table class="table table-sm insights-table">';
+        html += '<thead><tr>';
+        html += '<th>{{ t("crelish", "Page") }}</th>';
+        html += '<th class="text-end">{{ t("crelish", "Views") }}</th>';
+        html += '<th class="text-end">{{ t("crelish", "Sessions") }}</th>';
+        html += '</tr></thead><tbody>';
+
+        data.forEach(page => {
+            html += '<tr>';
+            html += '<td><small>' + escapeHtml(page.title || page.page_url) + '</small></td>';
+            html += '<td class="text-end"><span class="badge bg-primary badge-metric">' + formatNumber(page.total_views) + '</span></td>';
+            html += '<td class="text-end"><span class="badge bg-info badge-metric">' + formatNumber(page.unique_sessions) + '</span></td>';
+            html += '</tr>';
+        });
+
+        html += '</tbody></table>';
+        container.innerHTML = html;
+    }
+
+    function renderTopElements(data) {
+        const container = document.getElementById('top-elements-container');
+
+        if (!data || data.length === 0) {
+            container.innerHTML = '<p class="text-muted">{{ t("crelish", "No data available") }}</p>';
+            return;
+        }
+
+        let html = '<table class="table table-sm insights-table">';
+        html += '<thead><tr>';
+        html += '<th>{{ t("crelish", "Element") }}</th>';
+        html += '<th>{{ t("crelish", "Type") }}</th>';
+        html += '<th class="text-end">{{ t("crelish", "Views") }}</th>';
+        html += '</tr></thead><tbody>';
+
+        data.forEach(element => {
+            html += '<tr>';
+            html += '<td><small>' + escapeHtml(element.title) + '</small></td>';
+            html += '<td><span class="badge bg-secondary">' + escapeHtml(element.event_type) + '</span></td>';
+            html += '<td class="text-end"><span class="badge bg-primary badge-metric">' + formatNumber(element.total_views) + '</span></td>';
+            html += '</tr>';
+        });
+
+        html += '</tbody></table>';
+        container.innerHTML = html;
+    }
+
+    function renderElementTypeChart(data) {
+        const ctx = document.getElementById('element-type-chart').getContext('2d');
+
+        if (elementTypeChart) {
+            elementTypeChart.destroy();
+        }
+
+        elementTypeChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: data.map(d => d.element_type),
+                datasets: [{
+                    data: data.map(d => d.total_views),
+                    backgroundColor: [
+                        'rgb(255, 99, 132)',
+                        'rgb(54, 162, 235)',
+                        'rgb(255, 205, 86)',
+                        'rgb(75, 192, 192)',
+                        'rgb(153, 102, 255)',
+                        'rgb(255, 159, 64)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    }
+
+    function renderEventTypeChart(data) {
+        const ctx = document.getElementById('event-type-chart').getContext('2d');
+
+        if (eventTypeChart) {
+            eventTypeChart.destroy();
+        }
+
+        eventTypeChart = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: data.map(d => d.event_type),
+                datasets: [{
+                    data: data.map(d => d.total_views),
+                    backgroundColor: [
+                        'rgb(75, 192, 192)',
+                        'rgb(255, 99, 132)',
+                        'rgb(255, 205, 86)',
+                        'rgb(54, 162, 235)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    }
+
+    // Utility functions
+    function formatNumber(num) {
+        return new Intl.NumberFormat().format(num);
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+});
+</script>

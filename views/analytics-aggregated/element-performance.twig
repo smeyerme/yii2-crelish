@@ -1,0 +1,329 @@
+{# Element Performance Detail View #}
+
+<div class="element-performance-view">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h2 class="mb-0">{{ t('crelish', 'Element Performance') }}</h2>
+                            <p class="text-muted mb-0" id="element-title">{{ t('crelish', 'Loading...') }}</p>
+                        </div>
+                        <a href="{{ url(['/crelish/analytics-aggregated/index']) }}" class="btn btn-outline-secondary">
+                            <i class="fa-sharp fa-regular fa-arrow-left"></i> {{ t('crelish', 'Back to Dashboard') }}
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label>{{ t('crelish', 'Time Period') }}</label>
+                            <select id="period-filter" class="form-select">
+                                <option value="week">{{ t('crelish', 'Last 7 Days') }}</option>
+                                <option value="month" selected>{{ t('crelish', 'Last 30 Days') }}</option>
+                                <option value="quarter">{{ t('crelish', 'Last 90 Days') }}</option>
+                                <option value="year">{{ t('crelish', 'Last Year') }}</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# KPI Cards for this element #}
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card kpi-card">
+                <div class="card-body">
+                    <div class="kpi-label">{{ t('crelish', 'Total Views') }}</div>
+                    <div class="kpi-value" id="kpi-total-views">-</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card kpi-card">
+                <div class="card-body">
+                    <div class="kpi-label">{{ t('crelish', 'Unique Sessions') }}</div>
+                    <div class="kpi-value" id="kpi-unique-sessions">-</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card kpi-card">
+                <div class="card-body">
+                    <div class="kpi-label">{{ t('crelish', 'Unique Users') }}</div>
+                    <div class="kpi-value" id="kpi-unique-users">-</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card kpi-card">
+                <div class="card-body">
+                    <div class="kpi-label">{{ t('crelish', 'Pages Shown On') }}</div>
+                    <div class="kpi-value" id="kpi-page-count">-</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Element Views Trend by Event Type #}
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3>{{ t('crelish', 'Views Over Time by Event Type') }}</h3>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="element-trend-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Event Type Distribution #}
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3>{{ t('crelish', 'Event Type Distribution') }}</h3>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="max-height: 300px;">
+                        <canvas id="event-distribution-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3>{{ t('crelish', 'Pages Where Element Appears') }}</h3>
+                </div>
+                <div class="card-body">
+                    <div id="pages-table-container">
+                        <div class="text-center">
+                            <div class="spinner-border" role="status"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const elementUuid = urlParams.get('element_uuid');
+    let currentPeriod = 'month';
+
+    if (!elementUuid) {
+        alert('{{ t("crelish", "Element UUID is required") }}');
+        window.location.href = '{{ url(["/crelish/analytics-aggregated/index"]) }}';
+        return;
+    }
+
+    const performanceUrl = '{{ url(["/crelish/analytics-aggregated/element-performance"]) }}';
+
+    document.getElementById('period-filter').addEventListener('change', function() {
+        currentPeriod = this.value;
+        loadElementPerformance();
+    });
+
+    loadElementPerformance();
+
+    let trendChart = null;
+    let distributionChart = null;
+
+    function loadElementPerformance() {
+        fetch(performanceUrl + '?element_uuid=' + elementUuid + '&period=' + currentPeriod)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+
+                // Calculate totals by event type
+                const eventTypeTotals = {};
+                let totalViews = 0;
+                let totalSessions = 0;
+                let totalUsers = 0;
+
+                data.trend.forEach(item => {
+                    const eventType = item.event_type;
+                    if (!eventTypeTotals[eventType]) {
+                        eventTypeTotals[eventType] = {
+                            views: 0,
+                            sessions: 0,
+                            users: 0
+                        };
+                    }
+
+                    eventTypeTotals[eventType].views += parseInt(item.total_views) || 0;
+                    eventTypeTotals[eventType].sessions += parseInt(item.unique_sessions) || 0;
+                    eventTypeTotals[eventType].users += parseInt(item.unique_users) || 0;
+
+                    totalViews += parseInt(item.total_views) || 0;
+                    totalSessions += parseInt(item.unique_sessions) || 0;
+                    totalUsers += parseInt(item.unique_users) || 0;
+                });
+
+                // Update KPIs
+                document.getElementById('kpi-total-views').textContent = formatNumber(totalViews);
+                document.getElementById('kpi-unique-sessions').textContent = formatNumber(totalSessions);
+                document.getElementById('kpi-unique-users').textContent = formatNumber(totalUsers);
+                document.getElementById('kpi-page-count').textContent = formatNumber(data.pages.length);
+
+                // Render charts
+                renderTrendChart(data.trend);
+                renderEventDistribution(eventTypeTotals);
+
+                // Render pages table
+                renderPagesTable(data.pages);
+            })
+            .catch(error => {
+                console.error('Error loading element performance:', error);
+                alert('{{ t("crelish", "Failed to load element performance data") }}');
+            });
+    }
+
+    function renderTrendChart(trend) {
+        const ctx = document.getElementById('element-trend-chart').getContext('2d');
+
+        // Group data by event type
+        const dataByEventType = {};
+
+        trend.forEach(item => {
+            const eventType = item.event_type;
+            if (!dataByEventType[eventType]) {
+                dataByEventType[eventType] = [];
+            }
+            dataByEventType[eventType].push({
+                date: item.date,
+                views: parseInt(item.total_views) || 0
+            });
+        });
+
+        // Get unique dates
+        const dates = [...new Set(trend.map(d => d.date))].sort();
+
+        // Create datasets
+        const colors = {
+            'list': 'rgb(75, 192, 192)',
+            'detail': 'rgb(255, 99, 132)',
+            'click': 'rgb(255, 205, 86)',
+            'download': 'rgb(54, 162, 235)'
+        };
+
+        const datasets = Object.keys(dataByEventType).map(eventType => {
+            const eventData = dataByEventType[eventType];
+            const dataMap = {};
+            eventData.forEach(d => {
+                dataMap[d.date] = d.views;
+            });
+
+            return {
+                label: eventType.charAt(0).toUpperCase() + eventType.slice(1),
+                data: dates.map(date => dataMap[date] || 0),
+                borderColor: colors[eventType] || 'rgb(153, 102, 255)',
+                tension: 0.1,
+                fill: false
+            };
+        });
+
+        if (trendChart) {
+            trendChart.destroy();
+        }
+
+        trendChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: dates,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+
+    function renderEventDistribution(eventTypeTotals) {
+        const ctx = document.getElementById('event-distribution-chart').getContext('2d');
+
+        const labels = Object.keys(eventTypeTotals);
+        const data = labels.map(label => eventTypeTotals[label].views);
+
+        if (distributionChart) {
+            distributionChart.destroy();
+        }
+
+        distributionChart = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: labels.map(l => l.charAt(0).toUpperCase() + l.slice(1)),
+                datasets: [{
+                    data: data,
+                    backgroundColor: [
+                        'rgb(75, 192, 192)',
+                        'rgb(255, 99, 132)',
+                        'rgb(255, 205, 86)',
+                        'rgb(54, 162, 235)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    }
+
+    function renderPagesTable(pages) {
+        const container = document.getElementById('pages-table-container');
+
+        if (!pages || pages.length === 0) {
+            container.innerHTML = '<p class="text-muted">{{ t("crelish", "Element not found on any pages") }}</p>';
+            return;
+        }
+
+        let html = '<table class="table table-sm insights-table">';
+        html += '<thead><tr>';
+        html += '<th>{{ t("crelish", "Page") }}</th>';
+        html += '<th>{{ t("crelish", "Event") }}</th>';
+        html += '<th class="text-end">{{ t("crelish", "Views") }}</th>';
+        html += '</tr></thead><tbody>';
+
+        pages.forEach(page => {
+            html += '<tr>';
+            html += '<td><small>' + escapeHtml(page.title) + '</small></td>';
+            html += '<td><span class="badge bg-info">' + escapeHtml(page.event_type) + '</span></td>';
+            html += '<td class="text-end"><span class="badge bg-primary badge-metric">' + formatNumber(page.total_views) + '</span></td>';
+            html += '</tr>';
+        });
+
+        html += '</tbody></table>';
+        container.innerHTML = html;
+    }
+
+    function formatNumber(num) {
+        return new Intl.NumberFormat().format(num);
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+});
+</script>
