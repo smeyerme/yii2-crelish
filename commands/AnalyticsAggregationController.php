@@ -201,8 +201,8 @@ class AnalyticsAggregationController extends Controller
 
         $db = Yii::$app->db;
 
-        // Check if we have daily aggregates for this month
-        $dailyCount = $db->createCommand("
+        // Check if we have daily aggregates for this month (elements)
+        $elementDailyCount = $db->createCommand("
             SELECT COUNT(*)
             FROM {{%analytics_element_daily}}
             WHERE YEAR(date) = :year AND MONTH(date) = :month
@@ -211,13 +211,23 @@ class AnalyticsAggregationController extends Controller
             ->bindValue(':month', $month)
             ->queryScalar();
 
-        if ($dailyCount == 0) {
+        // Check if we have daily aggregates for this month (pages)
+        $pageDailyCount = $db->createCommand("
+            SELECT COUNT(*)
+            FROM {{%analytics_page_daily}}
+            WHERE YEAR(date) = :year AND MONTH(date) = :month
+        ")
+            ->bindValue(':year', $year)
+            ->bindValue(':month', $month)
+            ->queryScalar();
+
+        if ($elementDailyCount == 0 && $pageDailyCount == 0) {
             $this->stdout("No daily aggregates found for {$year}-{$month}\n", Console::FG_YELLOW);
             $this->stdout("Run daily aggregation first!\n", Console::FG_YELLOW);
             return ExitCode::DATAERR;
         }
 
-        $this->stdout("Found {$dailyCount} daily aggregate records\n");
+        $this->stdout("Found {$elementDailyCount} element daily records and {$pageDailyCount} page daily records\n");
 
         if ($this->dryRun) {
             $this->stdout("Would create monthly aggregates (dry run)\n", Console::FG_YELLOW);
