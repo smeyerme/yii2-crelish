@@ -82,21 +82,28 @@ class AnalyticsAggregationController extends Controller
 
         $db = Yii::$app->db;
 
-        // Check if we have data for this date
+        // Check if we have element view data for this date
         // Note: analytics_element_views doesn't have is_bot, we join with sessions
-        $recordCount = $db->createCommand("
+        $elementViewCount = $db->createCommand("
             SELECT COUNT(*)
             FROM {{%analytics_element_views}} ev
             LEFT JOIN {{%analytics_sessions}} s ON ev.session_id = s.session_id
             WHERE DATE(ev.created_at) = :date AND (s.is_bot = 0 OR s.is_bot IS NULL)
         ")->bindValue(':date', $targetDate)->queryScalar();
 
-        if ($recordCount == 0) {
-            $this->stdout("No element view data found for {$targetDate}\n", Console::FG_YELLOW);
+        // Check if we have page view data for this date
+        $pageViewCount = $db->createCommand("
+            SELECT COUNT(*)
+            FROM {{%analytics_page_views}}
+            WHERE DATE(created_at) = :date AND is_bot = 0
+        ")->bindValue(':date', $targetDate)->queryScalar();
+
+        if ($elementViewCount == 0 && $pageViewCount == 0) {
+            $this->stdout("No data found for {$targetDate}\n", Console::FG_YELLOW);
             return ExitCode::OK;
         }
 
-        $this->stdout("Found {$recordCount} element view records to aggregate\n");
+        $this->stdout("Found {$elementViewCount} element view records and {$pageViewCount} page view records\n");
 
         if ($this->dryRun) {
             $this->stdout("Would aggregate this data (dry run)\n", Console::FG_YELLOW);
@@ -104,45 +111,45 @@ class AnalyticsAggregationController extends Controller
         }
 
         // Aggregate element views by date, element, and event type
-        // Filter out bot sessions by joining with analytics_sessions
-        try {
-            $aggregated = $db->createCommand("
-                INSERT INTO {{%analytics_element_daily}}
-                (date, element_uuid, element_type, page_uuid, event_type, total_views, unique_sessions, unique_users)
-                SELECT
-                    DATE(ev.created_at) as date,
-                    ev.element_uuid,
-                    ev.element_type,
-                    ev.page_uuid,
-                    ev.type as event_type,
-                    COUNT(*) as total_views,
-                    COUNT(DISTINCT ev.session_id) as unique_sessions,
-                    COUNT(DISTINCT CASE WHEN ev.user_id IS NOT NULL AND ev.user_id > 0 THEN ev.user_id END) as unique_users
-                FROM {{%analytics_element_views}} ev
-                LEFT JOIN {{%analytics_sessions}} s ON ev.session_id = s.session_id
-                WHERE DATE(ev.created_at) = :date
-                    AND (s.is_bot = 0 OR s.is_bot IS NULL)
-                GROUP BY DATE(ev.created_at), ev.element_uuid, ev.element_type, ev.page_uuid, ev.type
-                ON DUPLICATE KEY UPDATE
-                    total_views = VALUES(total_views),
-                    unique_sessions = VALUES(unique_sessions),
-                    unique_users = VALUES(unique_users),
-                    updated_at = NOW()
-            ")->bindValue(':date', $targetDate)->execute();
+        if ($elementViewCount > 0) {
+            try {
+                $aggregated = $db->createCommand("
+                    INSERT INTO {{%analytics_element_daily}}
+                    (date, element_uuid, element_type, page_uuid, event_type, total_views, unique_sessions, unique_users)
+                    SELECT
+                        DATE(ev.created_at) as date,
+                        ev.element_uuid,
+                        ev.element_type,
+                        ev.page_uuid,
+                        ev.type as event_type,
+                        COUNT(*) as total_views,
+                        COUNT(DISTINCT ev.session_id) as unique_sessions,
+                        COUNT(DISTINCT CASE WHEN ev.user_id IS NOT NULL AND ev.user_id > 0 THEN ev.user_id END) as unique_users
+                    FROM {{%analytics_element_views}} ev
+                    LEFT JOIN {{%analytics_sessions}} s ON ev.session_id = s.session_id
+                    WHERE DATE(ev.created_at) = :date
+                        AND (s.is_bot = 0 OR s.is_bot IS NULL)
+                    GROUP BY DATE(ev.created_at), ev.element_uuid, ev.element_type, ev.page_uuid, ev.type
+                    ON DUPLICATE KEY UPDATE
+                        total_views = VALUES(total_views),
+                        unique_sessions = VALUES(unique_sessions),
+                        unique_users = VALUES(unique_users),
+                        updated_at = NOW()
+                ")->bindValue(':date', $targetDate)->execute();
 
-            $this->stdout("✓ Aggregated {$aggregated} element view records\n", Console::FG_GREEN);
+                $this->stdout("✓ Aggregated {$aggregated} element view records\n", Console::FG_GREEN);
 
-            // Also aggregate page views for the same date
-            $pageViewCount = $db->createCommand("
-                SELECT COUNT(*)
-                FROM {{%analytics_page_views}}
-                WHERE DATE(created_at) = :date AND is_bot = 0
-            ")->bindValue(':date', $targetDate)->queryScalar();
+            } catch (\Exception $e) {
+                $this->stderr("✗ Error aggregating element data: " . $e->getMessage() . "\n", Console::FG_RED);
+                return ExitCode::UNSPECIFIED_ERROR;
+            }
+        } else {
+            $this->stdout("No element view data for this date\n", Console::FG_YELLOW);
+        }
 
-            if ($pageViewCount > 0) {
-                $this->stdout("Found {$pageViewCount} page view records\n");
-
-                // Aggregate page views by date and page
+        // Aggregate page views for the same date (independent of element aggregation)
+        if ($pageViewCount > 0) {
+            try {
                 $pageAggregated = $db->createCommand("
                     INSERT INTO {{%analytics_page_daily}}
                     (date, page_uuid, page_url, total_views, unique_sessions, unique_users)
@@ -164,11 +171,13 @@ class AnalyticsAggregationController extends Controller
                 ")->bindValue(':date', $targetDate)->execute();
 
                 $this->stdout("✓ Aggregated {$pageAggregated} page view records\n", Console::FG_GREEN);
-            }
 
-        } catch (\Exception $e) {
-            $this->stderr("✗ Error aggregating data: " . $e->getMessage() . "\n", Console::FG_RED);
-            return ExitCode::UNSPECIFIED_ERROR;
+            } catch (\Exception $e) {
+                $this->stderr("✗ Error aggregating page data: " . $e->getMessage() . "\n", Console::FG_RED);
+                return ExitCode::UNSPECIFIED_ERROR;
+            }
+        } else {
+            $this->stdout("No page view data for this date\n", Console::FG_YELLOW);
         }
 
         $this->stdout("\nDaily aggregation completed successfully\n", Console::FG_GREEN);
@@ -234,48 +243,47 @@ class AnalyticsAggregationController extends Controller
             return ExitCode::OK;
         }
 
-        // Aggregate from daily data (more efficient than raw data)
-        try {
-            $aggregated = $db->createCommand("
-                INSERT INTO {{%analytics_element_monthly}}
-                (year, month, element_uuid, element_type, event_type, total_views, unique_sessions, unique_users)
-                SELECT
-                    :year as year,
-                    :month as month,
-                    element_uuid,
-                    element_type,
-                    event_type,
-                    SUM(total_views) as total_views,
-                    SUM(unique_sessions) as unique_sessions,
-                    SUM(unique_users) as unique_users
-                FROM {{%analytics_element_daily}}
-                WHERE YEAR(date) = :year AND MONTH(date) = :month
-                GROUP BY element_uuid, element_type, event_type
-                ON DUPLICATE KEY UPDATE
-                    total_views = VALUES(total_views),
-                    unique_sessions = VALUES(unique_sessions),
-                    unique_users = VALUES(unique_users),
-                    updated_at = NOW()
-            ")
-                ->bindValue(':year', $year)
-                ->bindValue(':month', $month)
-                ->execute();
+        // Aggregate element views from daily data
+        if ($elementDailyCount > 0) {
+            try {
+                $aggregated = $db->createCommand("
+                    INSERT INTO {{%analytics_element_monthly}}
+                    (year, month, element_uuid, element_type, event_type, total_views, unique_sessions, unique_users)
+                    SELECT
+                        :year as year,
+                        :month as month,
+                        element_uuid,
+                        element_type,
+                        event_type,
+                        SUM(total_views) as total_views,
+                        SUM(unique_sessions) as unique_sessions,
+                        SUM(unique_users) as unique_users
+                    FROM {{%analytics_element_daily}}
+                    WHERE YEAR(date) = :year AND MONTH(date) = :month
+                    GROUP BY element_uuid, element_type, event_type
+                    ON DUPLICATE KEY UPDATE
+                        total_views = VALUES(total_views),
+                        unique_sessions = VALUES(unique_sessions),
+                        unique_users = VALUES(unique_users),
+                        updated_at = NOW()
+                ")
+                    ->bindValue(':year', $year)
+                    ->bindValue(':month', $month)
+                    ->execute();
 
-            $this->stdout("✓ Aggregated {$aggregated} element monthly records\n", Console::FG_GREEN);
+                $this->stdout("✓ Aggregated {$aggregated} element monthly records\n", Console::FG_GREEN);
 
-            // Also aggregate page views from daily data
-            $pagesDailyCount = $db->createCommand("
-                SELECT COUNT(*)
-                FROM {{%analytics_page_daily}}
-                WHERE YEAR(date) = :year AND MONTH(date) = :month
-            ")
-                ->bindValue(':year', $year)
-                ->bindValue(':month', $month)
-                ->queryScalar();
+            } catch (\Exception $e) {
+                $this->stderr("✗ Error creating element monthly aggregates: " . $e->getMessage() . "\n", Console::FG_RED);
+                return ExitCode::UNSPECIFIED_ERROR;
+            }
+        } else {
+            $this->stdout("No element daily data to aggregate for this month\n", Console::FG_YELLOW);
+        }
 
-            if ($pagesDailyCount > 0) {
-                $this->stdout("Found {$pagesDailyCount} daily page view aggregates\n");
-
+        // Aggregate page views from daily data (independent of element aggregation)
+        if ($pageDailyCount > 0) {
+            try {
                 $pageAggregated = $db->createCommand("
                     INSERT INTO {{%analytics_page_monthly}}
                     (year, month, page_uuid, page_url, total_views, unique_sessions, unique_users)
@@ -301,11 +309,13 @@ class AnalyticsAggregationController extends Controller
                     ->execute();
 
                 $this->stdout("✓ Aggregated {$pageAggregated} page monthly records\n", Console::FG_GREEN);
-            }
 
-        } catch (\Exception $e) {
-            $this->stderr("✗ Error creating monthly aggregates: " . $e->getMessage() . "\n", Console::FG_RED);
-            return ExitCode::UNSPECIFIED_ERROR;
+            } catch (\Exception $e) {
+                $this->stderr("✗ Error creating page monthly aggregates: " . $e->getMessage() . "\n", Console::FG_RED);
+                return ExitCode::UNSPECIFIED_ERROR;
+            }
+        } else {
+            $this->stdout("No page daily data to aggregate for this month\n", Console::FG_YELLOW);
         }
 
         $this->stdout("\nMonthly aggregation completed successfully\n", Console::FG_GREEN);
