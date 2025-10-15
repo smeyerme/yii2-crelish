@@ -66,15 +66,15 @@ class UrlRulesConfig
                 'pattern' => 'document/secure/<id:[\w\-]+>',
                 'route' => 'document/secure'
             ],
-            // Legacy API routes
+            // Legacy API routes (exclude versioned APIs like /api/v1/, /api/v2/, etc.)
             [
                 'class' => 'yii\web\UrlRule',
-                'pattern' => 'api/<action:[\w\-]+>',
+                'pattern' => 'api/<action:(?!v\d+)[\w\-]+>',
                 'route' => 'api/<action>'
             ],
             [
                 'class' => 'yii\web\UrlRule',
-                'pattern' => 'api/<action:[\w\-]+>/<id:[\w\-]+>',
+                'pattern' => 'api/<action:(?!v\d+)[\w\-]+>/<id:[\w\-]+>',
                 'route' => 'api/<action>'
             ],
             // REST API rules

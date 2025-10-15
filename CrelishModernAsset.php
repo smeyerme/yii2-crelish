@@ -27,4 +27,4 @@ class CrelishModernAsset extends AssetBundle
   public $depends = [
     'giantbits\crelish\CrelishAsset'
   ];
-} 
+}

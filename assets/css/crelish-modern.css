@@ -65,6 +65,7 @@ html {
 
 .row {
   margin-block-end: 2.333rem;
+  row-gap: 1.666rem;
 }
 
 .c-button--brand {
@@ -2561,4 +2562,8 @@ input[type="checkbox"]:checked::before {
 
 .card-body {
   color: var(--color-text-light);
+}
+
+.tbl-responsive {
+  overflow-x: scroll;
 }

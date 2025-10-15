@@ -435,6 +435,7 @@ class CrelishDataManager extends Component
    */
   public function setRelations(&$query): void
   {
+
     if (!$this->definitions) {
       return;
     }
@@ -444,7 +445,7 @@ class CrelishDataManager extends Component
         $config = $field->config;
 
         if (property_exists($config, 'ctype')) {
-          $query->joinWith($field->key);
+          $query->joinWith($config->ctype ?? $field->key);
         }
       }
     }
