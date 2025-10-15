@@ -174,6 +174,10 @@ class Bootstrap implements BootstrapInterface
       $components['analytics'] = $analyticsConfig;
     }
 
+    // Preserve existing urlManager configuration from web.php
+    // Remove urlManager from Crelish components to avoid overwriting application config
+    unset($components['urlManager']);
+
     $app->setComponents($components);
   }
 

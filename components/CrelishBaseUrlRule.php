@@ -21,7 +21,8 @@ class CrelishBaseUrlRule implements UrlRuleInterface
   {
     $pathInfo = $request->getPathInfo();
 
-    if (str_starts_with($pathInfo, 'crelish/')) {
+    // Skip Crelish admin routes and API routes
+    if (str_starts_with($pathInfo, 'crelish/') || str_starts_with($pathInfo, 'api/')) {
       return false;
     }
 
