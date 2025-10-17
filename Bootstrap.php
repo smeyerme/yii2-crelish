@@ -174,9 +174,19 @@ class Bootstrap implements BootstrapInterface
       $components['analytics'] = $analyticsConfig;
     }
 
-    // Preserve existing urlManager configuration from web.php
-    // Remove urlManager from Crelish components to avoid overwriting application config
-    unset($components['urlManager']);
+    // Smart merge of urlManager configuration
+    // If application has urlManager config, merge it with Crelish defaults (app config takes precedence)
+    // If no app config exists, use Crelish defaults as fallback
+    if (isset($components['urlManager'])) {
+      $crelishUrlManager = $components['urlManager'];
+      $existingUrlManager = $app->components['urlManager'] ?? [];
+
+      // Merge configurations: existing app config overrides Crelish defaults
+      if (!empty($existingUrlManager)) {
+        $components['urlManager'] = \yii\helpers\ArrayHelper::merge($crelishUrlManager, $existingUrlManager);
+      }
+      // If no existing config, use Crelish defaults (already set in $components)
+    }
 
     $app->setComponents($components);
   }
