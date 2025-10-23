@@ -27,7 +27,6 @@ class CrelishStorageFactory
         // Get the element definition
         $definition = CrelishDynamicModel::loadElementDefinition($ctype);
 
-
         // Determine the storage type
         $storageType = $definition->storage ?? 'json';
 
