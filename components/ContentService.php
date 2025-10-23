@@ -50,21 +50,24 @@ class ContentService extends Component
      */
     public function getContentTypeDefinition(string $type): array
     {
+
+        $type = ucfirst($type);
+
         // Check cache first
         if (isset($this->contentTypeCache[$type])) {
             return $this->contentTypeCache[$type];
         }
         
         // Get content type definition using CrelishDynamicModel
-        $definition = CrelishDynamicModel::loadElementDefinition(ucfirst($type));
+        $definition = CrelishDynamicModel::loadElementDefinition($type);
         
         if (!$definition) {
-            throw new NotFoundHttpException("Content type '{ucfirst($type)}' not found");
+            throw new NotFoundHttpException("Content type '{$type}' not found");
         }
         
         // Convert to array and cache
         $definitionArray = json_decode(json_encode($definition), true);
-        $this->contentTypeCache[ucfirst($type)] = $definitionArray;
+        $this->contentTypeCache[$type] = $definitionArray;
         
         return $definitionArray;
     }
