@@ -6,7 +6,6 @@ use Yii;
 use yii\data\ActiveDataProvider;
 use yii\data\DataProviderInterface;
 use yii\db\ActiveRecord;
-use yii\helpers\Inflector;
 use yii\helpers\Json;
 
 /**
@@ -303,7 +302,10 @@ class CrelishDbStorage implements CrelishDataStorage
    */
   public function getModelClass(string $ctype): string
   {
-    $className = Inflector::id2camel($ctype, '_');
+    // Simply capitalize first letter of ctype to match class names
+    // 'eventprogram' -> 'Eventprogram', 'partner' -> 'Partner', etc.
+    // This works consistently across case-sensitive and case-insensitive filesystems
+    $className = ucfirst($ctype);
     $modelClass = "app\\workspace\\models\\$className";
 
     if (!class_exists($modelClass)) {

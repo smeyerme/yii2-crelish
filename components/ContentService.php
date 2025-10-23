@@ -33,7 +33,7 @@ class ContentService extends Component
     public function contentTypeExists(string $type): bool
     {
         try {
-            $definition = CrelishDynamicModel::loadElementDefinition($type);
+            $definition = CrelishDynamicModel::loadElementDefinition(ucfirst($type));
             return $definition !== null;
         } catch (\Exception $e) {
             Yii::error("Content type check failed: " . $e->getMessage(), __METHOD__);
