@@ -445,7 +445,7 @@ class CrelishDataManager extends Component
         $config = $field->config;
 
         if (property_exists($config, 'ctype')) {
-          $query->joinWith($config->ctype ?? $field->key);
+          $query->joinWith($field->key);
         }
       }
     }
