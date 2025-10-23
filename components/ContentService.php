@@ -56,15 +56,15 @@ class ContentService extends Component
         }
         
         // Get content type definition using CrelishDynamicModel
-        $definition = CrelishDynamicModel::loadElementDefinition($type);
+        $definition = CrelishDynamicModel::loadElementDefinition(ucfirst($type));
         
         if (!$definition) {
-            throw new NotFoundHttpException("Content type '{$type}' not found");
+            throw new NotFoundHttpException("Content type '{ucfirst($type)}' not found");
         }
         
         // Convert to array and cache
         $definitionArray = json_decode(json_encode($definition), true);
-        $this->contentTypeCache[$type] = $definitionArray;
+        $this->contentTypeCache[ucfirst($type)] = $definitionArray;
         
         return $definitionArray;
     }
@@ -78,13 +78,13 @@ class ContentService extends Component
     public function getQuery(string $type): Query
     {
         // Create a data manager for this content type
-        $dataManager = new CrelishDataManager($type);
+        $dataManager = new CrelishDataManager(ucfirst($type));
         
         // Get the storage implementation
-        $storage = CrelishStorageFactory::getStorage($type);
+        $storage = CrelishStorageFactory::getStorage(ucfirst($type));
         
         // Return the query
-        return $storage->createQuery($type);
+        return $storage->createQuery(ucfirst($type));
     }
     
     /**
@@ -151,7 +151,7 @@ class ContentService extends Component
     public function getContentById(string $type, string $id): ?array
     {
         // Create a data manager for this content type and ID
-        $dataManager = new CrelishDataManager($type, [], $id);
+        $dataManager = new CrelishDataManager(ucfirst($type), [], $id);
         
         // Get the item
         return $dataManager->one();
