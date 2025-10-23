@@ -33,7 +33,7 @@ class ContentService extends Component
     public function contentTypeExists(string $type): bool
     {
         try {
-            $definition = CrelishDynamicModel::loadElementDefinition(ucfirst($type));
+            $definition = CrelishDynamicModel::loadElementDefinition($type);
             return $definition !== null;
         } catch (\Exception $e) {
             Yii::error("Content type check failed: " . $e->getMessage(), __METHOD__);
@@ -50,8 +50,6 @@ class ContentService extends Component
      */
     public function getContentTypeDefinition(string $type): array
     {
-
-        $type = ucfirst($type);
 
         // Check cache first
         if (isset($this->contentTypeCache[$type])) {
@@ -81,13 +79,13 @@ class ContentService extends Component
     public function getQuery(string $type): Query
     {
         // Create a data manager for this content type
-        $dataManager = new CrelishDataManager(ucfirst($type));
+        $dataManager = new CrelishDataManager($type);
         
         // Get the storage implementation
-        $storage = CrelishStorageFactory::getStorage(ucfirst($type));
+        $storage = CrelishStorageFactory::getStorage($type);
         
         // Return the query
-        return $storage->createQuery(ucfirst($type));
+        return $storage->createQuery($type);
     }
     
     /**
@@ -154,7 +152,7 @@ class ContentService extends Component
     public function getContentById(string $type, string $id): ?array
     {
         // Create a data manager for this content type and ID
-        $dataManager = new CrelishDataManager(ucfirst($type), [], $id);
+        $dataManager = new CrelishDataManager($type, [], $id);
         
         // Get the item
         return $dataManager->one();
