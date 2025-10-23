@@ -60,6 +60,7 @@ class ContentController extends BaseController
     ?string $filter = null
   ): array
   {
+
     try {
       // Get content service
       $contentService = Yii::$app->get('contentService');
