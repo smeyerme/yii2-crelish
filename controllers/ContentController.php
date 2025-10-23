@@ -147,8 +147,8 @@ class ContentController extends CrelishBaseController
                   $relationCtype = $config->ctype;
                   $labelField = property_exists($config, 'labelField') ? $config->labelField : 'systitle';
 
-                  // Make sure the relation is joined
-                  $query->joinWith($field->key);
+                  // Make sure the relation is joined (use ctype as it maps to the relation method name)
+                  $query->joinWith($config->ctype ?? $field->key);
 
                   // Create an AND condition for each related field
                   $relationFieldCondition = ['and'];
@@ -189,7 +189,8 @@ class ContentController extends CrelishBaseController
           'pageSize' => 25,
           'route' => Yii::$app->request->pathInfo,
           'pageParam' => 'list-page'
-        ]
+        ],
+        'sort' => $dataManager->getSorting()
       ]);
 
     } elseif ($elementDefinition->storage === 'json') {

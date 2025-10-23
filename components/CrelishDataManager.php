@@ -444,8 +444,8 @@ class CrelishDataManager extends Component
       if (property_exists($field, 'type') && $field->type === 'relationSelect' && property_exists($field, 'config')) {
         $config = $field->config;
 
-        if (property_exists($config, 'ctype')) {
-          $query->joinWith($field->key);
+        if (property_exists($config, 'ctype') && !empty($config->ctype)) {
+          $query->joinWith($config->ctype ?? $field->key);
         }
       }
     }
