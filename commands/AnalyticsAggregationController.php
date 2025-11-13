@@ -84,11 +84,12 @@ class AnalyticsAggregationController extends Controller
 
         // Check if we have element view data for this date
         // Note: analytics_element_views doesn't have is_bot, we join with sessions
+        // IMPORTANT: Use INNER JOIN to exclude orphaned element views without valid sessions
         $elementViewCount = $db->createCommand("
             SELECT COUNT(*)
             FROM {{%analytics_element_views}} ev
-            LEFT JOIN {{%analytics_sessions}} s ON ev.session_id = s.session_id
-            WHERE DATE(ev.created_at) = :date AND (s.is_bot = 0 OR s.is_bot IS NULL)
+            INNER JOIN {{%analytics_sessions}} s ON ev.session_id = s.session_id
+            WHERE DATE(ev.created_at) = :date AND s.is_bot = 0
         ")->bindValue(':date', $targetDate)->queryScalar();
 
         // Check if we have page view data for this date
@@ -111,6 +112,7 @@ class AnalyticsAggregationController extends Controller
         }
 
         // Aggregate element views by date, element, and event type
+        // IMPORTANT: Use INNER JOIN to exclude orphaned element views
         if ($elementViewCount > 0) {
             try {
                 $aggregated = $db->createCommand("
@@ -126,9 +128,9 @@ class AnalyticsAggregationController extends Controller
                         COUNT(DISTINCT ev.session_id) as unique_sessions,
                         COUNT(DISTINCT CASE WHEN ev.user_id IS NOT NULL AND ev.user_id > 0 THEN ev.user_id END) as unique_users
                     FROM {{%analytics_element_views}} ev
-                    LEFT JOIN {{%analytics_sessions}} s ON ev.session_id = s.session_id
+                    INNER JOIN {{%analytics_sessions}} s ON ev.session_id = s.session_id
                     WHERE DATE(ev.created_at) = :date
-                        AND (s.is_bot = 0 OR s.is_bot IS NULL)
+                        AND s.is_bot = 0
                     GROUP BY DATE(ev.created_at), ev.element_uuid, ev.element_type, ev.page_uuid, ev.type
                     ON DUPLICATE KEY UPDATE
                         total_views = VALUES(total_views),

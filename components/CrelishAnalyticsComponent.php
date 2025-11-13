@@ -81,6 +81,10 @@ class CrelishAnalyticsComponent extends Component
    */
   public function trackPageView($pageData)
   {
+    // Don't track 404 pages
+    if (Yii::$app->response->statusCode === 404) {
+      return false;
+    }
 
     // Always track, but mark bot status correctly
     $isBot = $this->isBot();
@@ -191,7 +195,22 @@ class CrelishAnalyticsComponent extends Component
       return true;
     }
 
-    // You can add more exclusion rules here
+    // Exclude requests that look like static files
+    $url = Yii::$app->request->url;
+    $staticExtensions = ['.css', '.js', '.png', '.jpg', '.jpeg', '.gif', '.ico', '.svg', '.woff', '.woff2', '.ttf', '.eot', '.pdf', '.zip', '.txt', '.xml', '.json'];
+    foreach ($staticExtensions as $ext) {
+      if (stripos($url, $ext) !== false) {
+        return true;
+      }
+    }
+
+    // Exclude security/config file scans (common bot patterns)
+    $securityPatterns = ['/.well-known/', '/env.', '/.env', '/config.', '/.git', '/apple-touch-icon', '/favicon', '/robots.txt', '/sitemap.xml'];
+    foreach ($securityPatterns as $pattern) {
+      if (stripos($url, $pattern) !== false) {
+        return true;
+      }
+    }
 
     return false;
   }
