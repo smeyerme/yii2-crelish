@@ -658,6 +658,23 @@ class BotDetectionController extends Controller
                 SELECT COUNT(*) FROM analytics_sessions WHERE is_bot = 1
             ")->queryScalar();
 
+      // Count element views from bot sessions
+      $botElementViewsCount = $db->createCommand("
+                SELECT COUNT(*)
+                FROM analytics_element_views ev
+                INNER JOIN analytics_sessions s ON ev.session_id = s.session_id
+                WHERE s.is_bot = 1
+            ")->queryScalar();
+
+      // Delete element views from bot sessions FIRST (before deleting sessions)
+      $deletedElementViews = $db->createCommand("
+                DELETE ev FROM analytics_element_views ev
+                INNER JOIN analytics_sessions s ON ev.session_id = s.session_id
+                WHERE s.is_bot = 1
+            ")->execute();
+
+      $this->stdout(sprintf("Deleted %d bot element views\n", $deletedElementViews), Console::FG_YELLOW);
+
       // Delete bot page views
       $deletedPageViews = $db->createCommand("
                 DELETE FROM analytics_page_views WHERE is_bot = 1
@@ -665,7 +682,7 @@ class BotDetectionController extends Controller
 
       $this->stdout(sprintf("Deleted %d bot page views\n", $deletedPageViews), Console::FG_YELLOW);
 
-      // Delete bot sessions
+      // Delete bot sessions (do this LAST after element views are deleted)
       $deletedSessions = $db->createCommand("
                 DELETE FROM analytics_sessions WHERE is_bot = 1
             ")->execute();
