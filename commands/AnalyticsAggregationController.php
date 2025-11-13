@@ -243,24 +243,28 @@ class AnalyticsAggregationController extends Controller
             return ExitCode::OK;
         }
 
-        // Aggregate element views from daily data
+        // Aggregate element views from raw data to ensure accurate unique counts
+        // Note: Cannot sum unique_sessions/unique_users from daily data as it would overcount
         if ($elementDailyCount > 0) {
             try {
                 $aggregated = $db->createCommand("
                     INSERT INTO {{%analytics_element_monthly}}
                     (year, month, element_uuid, element_type, event_type, total_views, unique_sessions, unique_users)
                     SELECT
-                        :year as year,
-                        :month as month,
-                        element_uuid,
-                        element_type,
-                        event_type,
-                        SUM(total_views) as total_views,
-                        SUM(unique_sessions) as unique_sessions,
-                        SUM(unique_users) as unique_users
-                    FROM {{%analytics_element_daily}}
-                    WHERE YEAR(date) = :year AND MONTH(date) = :month
-                    GROUP BY element_uuid, element_type, event_type
+                        YEAR(ev.created_at) as year,
+                        MONTH(ev.created_at) as month,
+                        ev.element_uuid,
+                        ev.element_type,
+                        ev.type as event_type,
+                        COUNT(*) as total_views,
+                        COUNT(DISTINCT ev.session_id) as unique_sessions,
+                        COUNT(DISTINCT CASE WHEN ev.user_id IS NOT NULL AND ev.user_id > 0 THEN ev.user_id END) as unique_users
+                    FROM {{%analytics_element_views}} ev
+                    INNER JOIN {{%analytics_sessions}} s ON ev.session_id = s.session_id
+                    WHERE YEAR(ev.created_at) = :year
+                        AND MONTH(ev.created_at) = :month
+                        AND s.is_bot = 0
+                    GROUP BY YEAR(ev.created_at), MONTH(ev.created_at), ev.element_uuid, ev.element_type, ev.type
                     ON DUPLICATE KEY UPDATE
                         total_views = VALUES(total_views),
                         unique_sessions = VALUES(unique_sessions),
@@ -281,23 +285,26 @@ class AnalyticsAggregationController extends Controller
             $this->stdout("No element daily data to aggregate for this month\n", Console::FG_YELLOW);
         }
 
-        // Aggregate page views from daily data (independent of element aggregation)
+        // Aggregate page views from raw data to ensure accurate unique counts
+        // Note: Cannot sum unique_sessions/unique_users from daily data as it would overcount
         if ($pageDailyCount > 0) {
             try {
                 $pageAggregated = $db->createCommand("
                     INSERT INTO {{%analytics_page_monthly}}
                     (year, month, page_uuid, page_url, total_views, unique_sessions, unique_users)
                     SELECT
-                        :year as year,
-                        :month as month,
+                        YEAR(created_at) as year,
+                        MONTH(created_at) as month,
                         page_uuid,
-                        page_url,
-                        SUM(total_views) as total_views,
-                        SUM(unique_sessions) as unique_sessions,
-                        SUM(unique_users) as unique_users
-                    FROM {{%analytics_page_daily}}
-                    WHERE YEAR(date) = :year AND MONTH(date) = :month
-                    GROUP BY page_uuid, page_url
+                        url,
+                        COUNT(*) as total_views,
+                        COUNT(DISTINCT session_id) as unique_sessions,
+                        COUNT(DISTINCT CASE WHEN user_id IS NOT NULL AND user_id > 0 THEN user_id END) as unique_users
+                    FROM {{%analytics_page_views}}
+                    WHERE YEAR(created_at) = :year
+                        AND MONTH(created_at) = :month
+                        AND is_bot = 0
+                    GROUP BY YEAR(created_at), MONTH(created_at), page_uuid, url
                     ON DUPLICATE KEY UPDATE
                         total_views = VALUES(total_views),
                         unique_sessions = VALUES(unique_sessions),
@@ -418,6 +425,8 @@ class AnalyticsAggregationController extends Controller
     /**
      * Generate statistics for a specific partner element
      *
+     * Note: Queries raw data to get accurate unique counts (cannot sum from daily aggregates)
+     *
      * @param int $partnerId Partner/Owner ID
      * @param string $elementUuid Element UUID
      * @param string $elementType Element type
@@ -437,16 +446,20 @@ class AnalyticsAggregationController extends Controller
 
         foreach ($periods as $periodType => $periodStart) {
             foreach ($eventTypes as $eventType) {
+                // Query raw data for accurate unique counts
+                // Summing unique_sessions/unique_users from daily aggregates would overcount
                 $stats = $db->createCommand("
                     SELECT
-                        COALESCE(SUM(total_views), 0) as total_views,
-                        COALESCE(SUM(unique_sessions), 0) as unique_sessions,
-                        COALESCE(SUM(unique_users), 0) as unique_users
-                    FROM {{%analytics_element_daily}}
-                    WHERE element_uuid = :uuid
-                        AND element_type = :type
-                        AND event_type = :event
-                        AND date >= :start
+                        COUNT(*) as total_views,
+                        COUNT(DISTINCT ev.session_id) as unique_sessions,
+                        COUNT(DISTINCT CASE WHEN ev.user_id IS NOT NULL AND ev.user_id > 0 THEN ev.user_id END) as unique_users
+                    FROM {{%analytics_element_views}} ev
+                    INNER JOIN {{%analytics_sessions}} s ON ev.session_id = s.session_id
+                    WHERE ev.element_uuid = :uuid
+                        AND ev.element_type = :type
+                        AND ev.type = :event
+                        AND DATE(ev.created_at) >= :start
+                        AND s.is_bot = 0
                 ")
                     ->bindValue(':uuid', $elementUuid)
                     ->bindValue(':type', $elementType)

@@ -366,21 +366,23 @@ class BotDetectionController extends Controller
 
     // Get sessions with consistent timing intervals
     $timingAnomalies = $db->createCommand("
-            SELECT 
+            SELECT
                 session_id,
                 AVG(time_diff) as avg_interval,
                 STDDEV(time_diff) as stddev_interval,
                 COUNT(*) as interval_count
             FROM (
-                SELECT 
-                    session_id,
-                    TIMESTAMPDIFF(SECOND, 
-                        LAG(created_at) OVER (PARTITION BY session_id ORDER BY created_at),
-                        created_at
+                SELECT
+                    pv.session_id,
+                    TIMESTAMPDIFF(SECOND,
+                        LAG(pv.created_at) OVER (PARTITION BY pv.session_id ORDER BY pv.created_at),
+                        pv.created_at
                     ) as time_diff
-                FROM analytics_page_views
-                WHERE created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)
-                    AND is_bot = 0
+                FROM analytics_page_views pv
+                INNER JOIN analytics_sessions s ON pv.session_id = s.session_id
+                WHERE pv.created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)
+                    AND pv.is_bot = 0
+                    AND s.is_bot = 0
             ) as intervals
             WHERE time_diff IS NOT NULL
                 AND time_diff < 300  -- Ignore gaps > 5 minutes
@@ -422,14 +424,16 @@ class BotDetectionController extends Controller
     $this->stdout("Checking for sequential pagination patterns...\n");
 
     $paginationCrawlers = $db->createCommand("
-            SELECT 
-                session_id,
-                GROUP_CONCAT(DISTINCT url ORDER BY created_at) as url_sequence
-            FROM analytics_page_views
-            WHERE is_bot = 0
-                AND created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)
-                AND (url LIKE '%page=%' OR url LIKE '%/page/%' OR url LIKE '%&p=%')
-            GROUP BY session_id
+            SELECT
+                pv.session_id,
+                GROUP_CONCAT(DISTINCT pv.url ORDER BY pv.created_at) as url_sequence
+            FROM analytics_page_views pv
+            INNER JOIN analytics_sessions s ON pv.session_id = s.session_id
+            WHERE pv.is_bot = 0
+                AND s.is_bot = 0
+                AND pv.created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)
+                AND (pv.url LIKE '%page=%' OR pv.url LIKE '%/page/%' OR pv.url LIKE '%&p=%')
+            GROUP BY pv.session_id
             HAVING COUNT(*) > :threshold
         ")
       ->bindValue(':threshold', $this->thresholds['sequential_page_threshold'])
