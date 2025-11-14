@@ -611,6 +611,235 @@ class AnalyticsAggregatedController extends CrelishBaseController
   }
 
   /**
+   * Get conversion rate analysis (list views -> detail views)
+   */
+  public function actionConversionRates()
+  {
+    Yii::$app->response->format = Response::FORMAT_JSON;
+
+    $period = Yii::$app->request->get('period', 'month');
+    $limit = Yii::$app->request->get('limit', 20);
+    list($startDate, $endDate) = $this->getPeriodDates($period);
+
+    // Get list and detail views grouped by element
+    $elementStats = (new Query())
+      ->select([
+        'element_uuid',
+        'element_type',
+        'list_views' => 'SUM(CASE WHEN event_type = "list" THEN total_views ELSE 0 END)',
+        'detail_views' => 'SUM(CASE WHEN event_type = "detail" THEN total_views ELSE 0 END)',
+      ])
+      ->from('{{%analytics_element_daily}}')
+      ->where(['>=', 'date', $startDate])
+      ->andWhere(['<=', 'date', $endDate])
+      ->groupBy(['element_uuid', 'element_type'])
+      ->having(['>', 'list_views', 0]) // Only include elements with list views
+      ->orderBy(['list_views' => SORT_DESC])
+      ->limit($limit)
+      ->all();
+
+    // Calculate conversion rates and enrich with titles
+    foreach ($elementStats as &$element) {
+      $listViews = (int)$element['list_views'];
+      $detailViews = (int)$element['detail_views'];
+
+      $element['conversion_rate'] = $listViews > 0
+        ? round(($detailViews / $listViews) * 100, 2)
+        : 0;
+
+      $element['title'] = $this->getElementTitle($element['element_uuid'], $element['element_type'])
+        ?? ucfirst($element['element_type']) . ': ' . $element['element_uuid'];
+    }
+
+    // Sort by conversion rate
+    usort($elementStats, function($a, $b) {
+      return $b['conversion_rate'] <=> $a['conversion_rate'];
+    });
+
+    return $elementStats;
+  }
+
+  /**
+   * Get day-of-week traffic patterns
+   */
+  public function actionDayOfWeekPatterns()
+  {
+    Yii::$app->response->format = Response::FORMAT_JSON;
+
+    $period = Yii::$app->request->get('period', 'month');
+    list($startDate, $endDate) = $this->getPeriodDates($period);
+
+    // Get page views by day of week
+    $patterns = (new Query())
+      ->select([
+        'day_of_week' => new Expression('DAYOFWEEK(date)'),
+        'day_name' => new Expression('DAYNAME(date)'),
+        'avg_views' => 'AVG(total_views)',
+        'avg_sessions' => 'AVG(unique_sessions)',
+        'total_days' => 'COUNT(DISTINCT date)'
+      ])
+      ->from('{{%analytics_page_daily}}')
+      ->where(['>=', 'date', $startDate])
+      ->andWhere(['<=', 'date', $endDate])
+      ->groupBy(['day_of_week', 'day_name'])
+      ->orderBy(['day_of_week' => SORT_ASC])
+      ->all();
+
+    // Round averages
+    foreach ($patterns as &$pattern) {
+      $pattern['avg_views'] = round($pattern['avg_views'], 0);
+      $pattern['avg_sessions'] = round($pattern['avg_sessions'], 0);
+    }
+
+    return $patterns;
+  }
+
+  /**
+   * Get content freshness analysis
+   */
+  public function actionContentFreshness()
+  {
+    Yii::$app->response->format = Response::FORMAT_JSON;
+
+    $period = Yii::$app->request->get('period', 'month');
+    $limit = Yii::$app->request->get('limit', 20);
+    list($startDate, $endDate) = $this->getPeriodDates($period);
+
+    // Get element performance with creation dates
+    $elements = (new Query())
+      ->select([
+        'ed.element_uuid',
+        'ed.element_type',
+        'total_views' => 'SUM(ed.total_views)',
+        'unique_sessions' => 'SUM(ed.unique_sessions)',
+        'days_in_period' => new Expression('COUNT(DISTINCT ed.date)')
+      ])
+      ->from('{{%analytics_element_daily}} ed')
+      ->where(['>=', 'ed.date', $startDate])
+      ->andWhere(['<=', 'ed.date', $endDate])
+      ->groupBy(['ed.element_uuid', 'ed.element_type'])
+      ->orderBy(['total_views' => SORT_DESC])
+      ->limit($limit * 2) // Get more to filter later
+      ->all();
+
+    // Try to get creation dates and calculate age
+    foreach ($elements as &$element) {
+      try {
+        $modelClass = 'app\\workspace\\models\\' . ucfirst($element['element_type']);
+        if (class_exists($modelClass)) {
+          $elementModel = call_user_func($modelClass . '::find')
+            ->select(['uuid', 'systitle', 'title', 'created_at'])
+            ->where(['uuid' => $element['element_uuid']])
+            ->one();
+
+          if ($elementModel) {
+            $element['title'] = $elementModel['systitle'] ?? $elementModel['title'] ?? 'Untitled';
+
+            if (isset($elementModel['created_at'])) {
+              $createdAt = is_string($elementModel['created_at'])
+                ? strtotime($elementModel['created_at'])
+                : $elementModel['created_at'];
+
+              $element['age_days'] = floor((time() - $createdAt) / 86400);
+              $element['avg_views_per_day'] = $element['age_days'] > 0
+                ? round($element['total_views'] / $element['age_days'], 2)
+                : 0;
+            }
+          }
+        }
+      } catch (\Exception $e) {
+        // Skip if we can't load the model
+      }
+
+      // Set defaults if not found
+      if (!isset($element['title'])) {
+        $element['title'] = ucfirst($element['element_type']) . ': ' . $element['element_uuid'];
+      }
+      if (!isset($element['age_days'])) {
+        $element['age_days'] = null;
+        $element['avg_views_per_day'] = null;
+      }
+    }
+
+    // Filter out elements without age data and limit
+    $elements = array_filter($elements, function($el) {
+      return $el['age_days'] !== null;
+    });
+
+    $elements = array_slice($elements, 0, $limit);
+
+    return array_values($elements);
+  }
+
+  /**
+   * Get partner comparison rankings
+   */
+  public function actionPartnerRankings()
+  {
+    Yii::$app->response->format = Response::FORMAT_JSON;
+
+    $period = Yii::$app->request->get('period', 'month');
+    list($startDate, $endDate) = $this->getPeriodDates($period);
+
+    // Get all element types to analyze
+    $elementTypes = (new Query())
+      ->select(['element_type'])
+      ->from('{{%analytics_element_daily}}')
+      ->where(['>=', 'date', $startDate])
+      ->andWhere(['<=', 'date', $endDate])
+      ->groupBy(['element_type'])
+      ->column();
+
+    $partnerStats = [];
+
+    foreach ($elementTypes as $elementType) {
+      // Get stats grouped by element for this type
+      $elements = (new Query())
+        ->select([
+          'element_uuid',
+          'total_views' => 'SUM(total_views)',
+          'unique_sessions' => 'SUM(unique_sessions)',
+          'list_views' => 'SUM(CASE WHEN event_type = "list" THEN total_views ELSE 0 END)',
+          'detail_views' => 'SUM(CASE WHEN event_type = "detail" THEN total_views ELSE 0 END)',
+        ])
+        ->from('{{%analytics_element_daily}}')
+        ->where(['>=', 'date', $startDate])
+        ->andWhere(['<=', 'date', $endDate])
+        ->andWhere(['element_type' => $elementType])
+        ->groupBy(['element_uuid'])
+        ->all();
+
+      if (empty($elements)) {
+        continue;
+      }
+
+      // Calculate aggregate stats for this element type
+      $totalViews = array_sum(array_column($elements, 'total_views'));
+      $totalSessions = array_sum(array_column($elements, 'unique_sessions'));
+      $totalListViews = array_sum(array_column($elements, 'list_views'));
+      $totalDetailViews = array_sum(array_column($elements, 'detail_views'));
+
+      $partnerStats[] = [
+        'element_type' => $elementType,
+        'total_elements' => count($elements),
+        'total_views' => (int)$totalViews,
+        'total_sessions' => (int)$totalSessions,
+        'avg_views_per_element' => round($totalViews / count($elements), 2),
+        'avg_sessions_per_element' => round($totalSessions / count($elements), 2),
+        'views_per_session' => $totalSessions > 0 ? round($totalViews / $totalSessions, 2) : 0,
+        'conversion_rate' => $totalListViews > 0 ? round(($totalDetailViews / $totalListViews) * 100, 2) : 0,
+      ];
+    }
+
+    // Sort by total views
+    usort($partnerStats, function($a, $b) {
+      return $b['total_views'] <=> $a['total_views'];
+    });
+
+    return $partnerStats;
+  }
+
+  /**
    * Get period dates (start and end)
    * @param string $period
    * @return array [startDate, endDate]

@@ -191,6 +191,78 @@
             </div>
         </div>
     </div>
+
+    {# NEW INSIGHTS SECTION #}
+
+    {# Day of Week Patterns #}
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3>{{ t('crelish', 'Traffic by Day of Week') }}</h3>
+                    <p class="text-muted small mb-0">{{ t('crelish', 'Average sessions and views per weekday') }}</p>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="day-of-week-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Conversion Rates and Partner Rankings #}
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3>{{ t('crelish', 'Top Content by Conversion Rate') }}</h3>
+                    <p class="text-muted small mb-0">{{ t('crelish', 'List views → Detail views conversion') }}</p>
+                </div>
+                <div class="card-body">
+                    <div id="conversion-rates-container">
+                        <div class="text-center">
+                            <div class="spinner-border" role="status"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3>{{ t('crelish', 'Content Type Performance') }}</h3>
+                    <p class="text-muted small mb-0">{{ t('crelish', 'Compare performance by content type') }}</p>
+                </div>
+                <div class="card-body">
+                    <div id="partner-rankings-container">
+                        <div class="text-center">
+                            <div class="spinner-border" role="status"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Content Freshness Analysis #}
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3>{{ t('crelish', 'Content Performance by Age') }}</h3>
+                    <p class="text-muted small mb-0">{{ t('crelish', 'Identify evergreen content and trending pieces') }}</p>
+                </div>
+                <div class="card-body">
+                    <div id="content-freshness-container">
+                        <div class="text-center">
+                            <div class="spinner-border" role="status"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -205,6 +277,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const topElementsUrl = '{{ url('/crelish/analytics-aggregated/top-elements') }}';
     const elementTypeDistUrl = '{{ url('/crelish/analytics-aggregated/element-type-distribution') }}';
     const eventTypeDistUrl = '{{ url('/crelish/analytics-aggregated/event-type-distribution') }}';
+    const conversionRatesUrl = '{{ url('/crelish/analytics-aggregated/conversion-rates') }}';
+    const dayOfWeekUrl = '{{ url('/crelish/analytics-aggregated/day-of-week-patterns') }}';
+    const contentFreshnessUrl = '{{ url('/crelish/analytics-aggregated/content-freshness') }}';
+    const partnerRankingsUrl = '{{ url('/crelish/analytics-aggregated/partner-rankings') }}';
 
     // Filter handlers
     document.getElementById('period-filter').addEventListener('change', function() {
@@ -234,6 +310,10 @@ document.addEventListener('DOMContentLoaded', function() {
         loadTopElements();
         loadElementTypeDistribution();
         loadEventTypeDistribution();
+        loadConversionRates();
+        loadDayOfWeekPatterns();
+        loadContentFreshness();
+        loadPartnerRankings();
     }
 
     function loadOverviewStats() {
@@ -467,6 +547,194 @@ document.addEventListener('DOMContentLoaded', function() {
                 maintainAspectRatio: false
             }
         });
+    }
+
+    // NEW INSIGHTS LOADING FUNCTIONS
+
+    let dayOfWeekChart = null;
+
+    function loadConversionRates() {
+        const container = document.getElementById('conversion-rates-container');
+        container.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div></div>';
+
+        fetch(conversionRatesUrl + '?period=' + currentPeriod + '&limit=10')
+            .then(response => response.json())
+            .then(data => {
+                renderConversionRates(data);
+            })
+            .catch(error => {
+                console.error('Error loading conversion rates:', error);
+                container.innerHTML = '<div class="alert alert-danger">{{ t("crelish", "Failed to load data") }}</div>';
+            });
+    }
+
+    function renderConversionRates(data) {
+        const container = document.getElementById('conversion-rates-container');
+
+        if (!data || data.length === 0) {
+            container.innerHTML = '<p class="text-muted">{{ t("crelish", "No data available") }}</p>';
+            return;
+        }
+
+        let html = '<table class="table table-sm insights-table">';
+        html += '<thead><tr>';
+        html += '<th>{{ t("crelish", "Content") }}</th>';
+        html += '<th class="text-end">{{ t("crelish", "List") }}</th>';
+        html += '<th class="text-end">{{ t("crelish", "Detail") }}</th>';
+        html += '<th class="text-end">{{ t("crelish", "Rate") }}</th>';
+        html += '</tr></thead><tbody>';
+
+        data.forEach(item => {
+            html += '<tr>';
+            html += '<td><small>' + escapeHtml(item.title) + '</small></td>';
+            html += '<td class="text-end"><small>' + formatNumber(item.list_views) + '</small></td>';
+            html += '<td class="text-end"><small>' + formatNumber(item.detail_views) + '</small></td>';
+            html += '<td class="text-end"><span class="badge bg-' +
+                (item.conversion_rate >= 50 ? 'success' : item.conversion_rate >= 25 ? 'warning' : 'secondary') +
+                ' badge-metric">' + item.conversion_rate + '%</span></td>';
+            html += '</tr>';
+        });
+
+        html += '</tbody></table>';
+        container.innerHTML = html;
+    }
+
+    function loadDayOfWeekPatterns() {
+        fetch(dayOfWeekUrl + '?period=' + currentPeriod)
+            .then(response => response.json())
+            .then(data => {
+                renderDayOfWeekChart(data);
+            })
+            .catch(error => console.error('Error loading day of week patterns:', error));
+    }
+
+    function renderDayOfWeekChart(data) {
+        const ctx = document.getElementById('day-of-week-chart').getContext('2d');
+
+        if (dayOfWeekChart) {
+            dayOfWeekChart.destroy();
+        }
+
+        dayOfWeekChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.map(d => d.day_name),
+                datasets: [{
+                    label: '{{ t("crelish", "Avg Sessions") }}',
+                    data: data.map(d => d.avg_sessions),
+                    backgroundColor: 'rgba(75, 192, 192, 0.7)',
+                    borderColor: 'rgb(75, 192, 192)',
+                    borderWidth: 1
+                }, {
+                    label: '{{ t("crelish", "Avg Views") }}',
+                    data: data.map(d => d.avg_views),
+                    backgroundColor: 'rgba(255, 99, 132, 0.7)',
+                    borderColor: 'rgb(255, 99, 132)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+
+    function loadContentFreshness() {
+        const container = document.getElementById('content-freshness-container');
+        container.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div></div>';
+
+        fetch(contentFreshnessUrl + '?period=' + currentPeriod + '&limit=15')
+            .then(response => response.json())
+            .then(data => {
+                renderContentFreshness(data);
+            })
+            .catch(error => {
+                console.error('Error loading content freshness:', error);
+                container.innerHTML = '<div class="alert alert-danger">{{ t("crelish", "Failed to load data") }}</div>';
+            });
+    }
+
+    function renderContentFreshness(data) {
+        const container = document.getElementById('content-freshness-container');
+
+        if (!data || data.length === 0) {
+            container.innerHTML = '<p class="text-muted">{{ t("crelish", "No data available") }}</p>';
+            return;
+        }
+
+        let html = '<table class="table table-sm insights-table">';
+        html += '<thead><tr>';
+        html += '<th>{{ t("crelish", "Content") }}</th>';
+        html += '<th>{{ t("crelish", "Type") }}</th>';
+        html += '<th class="text-end">{{ t("crelish", "Age (days)") }}</th>';
+        html += '<th class="text-end">{{ t("crelish", "Total Views") }}</th>';
+        html += '<th class="text-end">{{ t("crelish", "Avg/Day") }}</th>';
+        html += '</tr></thead><tbody>';
+
+        data.forEach(item => {
+            html += '<tr>';
+            html += '<td><small>' + escapeHtml(item.title) + '</small></td>';
+            html += '<td><span class="badge bg-secondary">' + escapeHtml(item.element_type) + '</span></td>';
+            html += '<td class="text-end"><small>' + formatNumber(item.age_days) + '</small></td>';
+            html += '<td class="text-end"><span class="badge bg-primary badge-metric">' + formatNumber(item.total_views) + '</span></td>';
+            html += '<td class="text-end"><span class="badge bg-info badge-metric">' + item.avg_views_per_day + '</span></td>';
+            html += '</tr>';
+        });
+
+        html += '</tbody></table>';
+        container.innerHTML = html;
+    }
+
+    function loadPartnerRankings() {
+        const container = document.getElementById('partner-rankings-container');
+        container.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div></div>';
+
+        fetch(partnerRankingsUrl + '?period=' + currentPeriod)
+            .then(response => response.json())
+            .then(data => {
+                renderPartnerRankings(data);
+            })
+            .catch(error => {
+                console.error('Error loading partner rankings:', error);
+                container.innerHTML = '<div class="alert alert-danger">{{ t("crelish", "Failed to load data") }}</div>';
+            });
+    }
+
+    function renderPartnerRankings(data) {
+        const container = document.getElementById('partner-rankings-container');
+
+        if (!data || data.length === 0) {
+            container.innerHTML = '<p class="text-muted">{{ t("crelish", "No data available") }}</p>';
+            return;
+        }
+
+        let html = '<table class="table table-sm insights-table">';
+        html += '<thead><tr>';
+        html += '<th>{{ t("crelish", "Type") }}</th>';
+        html += '<th class="text-end">{{ t("crelish", "Items") }}</th>';
+        html += '<th class="text-end">{{ t("crelish", "Views") }}</th>';
+        html += '<th class="text-end">{{ t("crelish", "Conv%") }}</th>';
+        html += '</tr></thead><tbody>';
+
+        data.forEach(item => {
+            html += '<tr>';
+            html += '<td><strong>' + escapeHtml(item.element_type) + '</strong></td>';
+            html += '<td class="text-end"><small>' + formatNumber(item.total_elements) + '</small></td>';
+            html += '<td class="text-end"><span class="badge bg-primary badge-metric">' + formatNumber(item.total_views) + '</span></td>';
+            html += '<td class="text-end"><span class="badge bg-' +
+                (item.conversion_rate >= 40 ? 'success' : item.conversion_rate >= 20 ? 'warning' : 'secondary') +
+                ' badge-metric">' + item.conversion_rate + '%</span></td>';
+            html += '</tr>';
+        });
+
+        html += '</tbody></table>';
+        container.innerHTML = html;
     }
 
     // Utility functions
