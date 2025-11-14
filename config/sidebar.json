@@ -38,21 +38,21 @@
     {
       "id": "analytics",
       "label": "Analytics",
-      "url": "crelish/analytics/index",
+      "url": "crelish/analytics-aggregated/index",
       "icon": "fa-sharp fa-regular fa-chart-mixed",
       "order": 60,
       "children": [
         {
           "id": "analytics-dashboard",
           "label": "Dashboard",
-          "url": "crelish/analytics/dashboard",
+          "url": "crelish/analytics-aggregated/dashboard",
           "icon": "fa-sharp fa-regular fa-chart-line",
           "order": 10
         },
         {
           "id": "analytics-sessions",
           "label": "User Sessions",
-          "url": "crelish/analytics/sessions",
+          "url": "crelish/analytics-aggregated/sessions",
           "icon": "fa-sharp fa-regular fa-timeline",
           "order": 20
         }
