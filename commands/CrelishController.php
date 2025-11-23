@@ -9,6 +9,11 @@ use yii\console\ExitCode;
 class CrelishController extends Controller
 {
     /**
+     * @var string The User model class to use
+     */
+    public $userClass = 'app\workspace\models\User';
+
+    /**
      * Creates a default admin user for the Crelish CMS system
      *
      * This action creates a user with:
@@ -21,12 +26,12 @@ class CrelishController extends Controller
      */
     public function actionCreateDefaultAdmin()
     {
-        $userClass = \Yii::$app->user->identityClass;
-
-        if (!$userClass) {
-            $this->stdout("Error: User identity class not configured.\n");
+        if (!class_exists($this->userClass)) {
+            $this->stdout("Error: User class '{$this->userClass}' not found.\n");
             return ExitCode::CONFIG;
         }
+
+        $userClass = $this->userClass;
 
         // Check if admin user already exists
         $existingUser = $userClass::findOne(['email' => 'admin@local.host']);
