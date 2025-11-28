@@ -6,7 +6,7 @@ use giantbits\crelish\components\CrelishBaseHelper;
 use yii\console\Controller;
 use yii\console\ExitCode;
 
-class CrelishController extends Controller
+class AdminController extends Controller
 {
     /**
      * @var string The User model class to use
@@ -14,11 +14,9 @@ class CrelishController extends Controller
     public $userClass = 'app\workspace\models\User';
 
     /**
-     * Creates a default admin user for the Crelish CMS system
+     * Creates an admin user for the Crelish CMS system
      *
-     * This action creates a user with:
-     * - Email: admin@local.host
-     * - Password: basta!
+     * This action prompts for user information and creates an admin user with:
      * - Role: 9 (admin)
      * - State: 2 (active)
      *
@@ -33,44 +31,58 @@ class CrelishController extends Controller
 
         $userClass = $this->userClass;
 
-        // Check if admin user already exists
-        $existingUser = $userClass::findOne(['email' => 'admin@local.host']);
+        $this->stdout("\n=== Create Admin User ===\n\n");
+
+        // Prompt for user information
+        $email = $this->prompt('Email:', ['required' => true]);
+
+        // Check if user with this email already exists
+        $existingUser = $userClass::findOne(['email' => $email]);
         if ($existingUser) {
-            $this->stdout("Admin user with email 'admin@local.host' already exists.\n");
-            return ExitCode::OK;
+            $this->stdout("\nError: User with email '$email' already exists.\n");
+            return ExitCode::DATAERR;
         }
+
+        $password = $this->prompt('Password:', ['required' => true]);
+        $nameFirst = $this->prompt('First Name:', ['required' => true]);
+        $nameLast = $this->prompt('Last Name:', ['required' => true]);
+        $salutation = $this->prompt('Salutation:', ['required' => true]);
 
         // Create new admin user
         $user = new $userClass();
-        $user->email = 'admin@local.host';
-        $user->password = \Yii::$app->getSecurity()->generatePasswordHash('basta!');
+        $user->email = $email;
+        $user->password = \Yii::$app->getSecurity()->generatePasswordHash($password);
         $user->role = 9;
         $user->state = 2;
         $user->authKey = \Yii::$app->security->generateRandomString();
         $user->uuid = CrelishBaseHelper::GUIDv4();
 
-        // Set default required fields if they exist
+        // Set the provided user information
         if ($user->hasAttribute('nameFirst')) {
-            $user->nameFirst = 'Admin';
+            $user->nameFirst = $nameFirst;
         }
         if ($user->hasAttribute('nameLast')) {
-            $user->nameLast = 'User';
+            $user->nameLast = $nameLast;
         }
         if ($user->hasAttribute('salutation')) {
-            $user->salutation = 'Herr';
+            $user->salutation = $salutation;
         }
 
         // Save without validation to bypass required field checks
         if ($user->save(false)) {
-            $this->stdout("Successfully created admin user:\n");
-            $this->stdout("  Email: admin@local.host\n");
-            $this->stdout("  Password: basta!\n");
+            $this->stdout("\n=== Success! ===\n");
+            $this->stdout("Admin user created successfully:\n");
+            $this->stdout("  Email: $email\n");
+            $this->stdout("  Password: $password\n");
+            $this->stdout("  First Name: $nameFirst\n");
+            $this->stdout("  Last Name: $nameLast\n");
+            $this->stdout("  Salutation: $salutation\n");
             $this->stdout("  Role: 9 (admin)\n");
             $this->stdout("  State: 2 (active)\n");
-            $this->stdout("  UUID: {$user->uuid}\n");
+            $this->stdout("  UUID: {$user->uuid}\n\n");
             return ExitCode::OK;
         } else {
-            $this->stdout("Error: Failed to create admin user.\n");
+            $this->stdout("\nError: Failed to create admin user.\n");
             if ($user->hasErrors()) {
                 foreach ($user->getErrors() as $attribute => $errors) {
                     $this->stdout("  $attribute: " . implode(', ', $errors) . "\n");
