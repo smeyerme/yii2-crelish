@@ -76,9 +76,9 @@ class ContentController extends CrelishBaseController
     ];
 
     // Handle bulk delete actions
-    $modelClass = '\app\workspace\models\\' . ucfirst($this->ctype);
     if (!empty($_POST['selection'])) {
-      if (class_exists($modelClass)) {
+      if (\giantbits\crelish\components\CrelishModelResolver::modelExists($this->ctype)) {
+        $modelClass = \giantbits\crelish\components\CrelishModelResolver::getModelClass($this->ctype);
         foreach ($_POST['selection'] as $selection) {
           $delModel = $modelClass::findOne($selection);
           $delModel->delete();
@@ -113,7 +113,13 @@ class ContentController extends CrelishBaseController
     // Get the data provider
     $dataProvider = null;
 
-    if ($elementDefinition->storage === 'db' && class_exists($modelClass)) {
+    // Get model class for db storage
+    $modelClass = null;
+    if ($elementDefinition->storage === 'db' && \giantbits\crelish\components\CrelishModelResolver::modelExists($this->ctype)) {
+      $modelClass = \giantbits\crelish\components\CrelishModelResolver::getModelClass($this->ctype);
+    }
+
+    if ($elementDefinition->storage === 'db' && $modelClass !== null) {
       $query = $modelClass::find();
 
       // Apply filters

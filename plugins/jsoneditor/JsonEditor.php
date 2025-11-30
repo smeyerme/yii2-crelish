@@ -28,7 +28,8 @@ class JsonEditor extends CrelishFormWidget
    * @var object The field definition
    */
   public $field;
-  
+  public $attribute;
+
   /**
    * Initialize the widget
    */

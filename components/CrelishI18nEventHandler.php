@@ -51,9 +51,9 @@ class CrelishI18nEventHandler
     
     // Check if target language is same as source language
     $sourceLanguage = Yii::$app->sourceLanguage ?? 'en';
-    if ($event->language === $sourceLanguage || 
-        strpos($event->language, $sourceLanguage) === 0 || 
-        strpos($sourceLanguage, $event->language) === 0) {
+    if ($event->language === $sourceLanguage ||
+      str_starts_with($event->language, $sourceLanguage) ||
+      str_starts_with($sourceLanguage, $event->language)) {
       // Same language, no need to translate
       $event->translatedMessage = $event->message;
       return;

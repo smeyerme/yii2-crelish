@@ -2,6 +2,7 @@
 
 namespace giantbits\crelish\plugins\matrixconnector;
 
+use giantbits\crelish\components\CrelishBaseHelper;
 use giantbits\crelish\components\CrelishDataManager;
 use giantbits\crelish\components\CrelishDataResolver;
 use giantbits\crelish\components\CrelishDynamicModel;

@@ -318,12 +318,12 @@ class UserJourneyWidget extends CrelishDashboardWidget
                 
             // Try to get page title
             try {
-                $modelClass = 'app\workspace\models\\' . ucfirst($pageView['page_type']);
-                if (class_exists($modelClass)) {
-                    $pageModel = call_user_func($modelClass . '::find')
+                if (\giantbits\crelish\components\CrelishModelResolver::modelExists($pageView['page_type'])) {
+                    $modelClass = \giantbits\crelish\components\CrelishModelResolver::getModelClass($pageView['page_type']);
+                    $pageModel = $modelClass::find()
                         ->where(['uuid' => $pageView['page_uuid']])
                         ->one();
-                        
+
                     if ($pageModel && isset($pageModel['systitle'])) {
                         $pageView['title'] = $pageModel['systitle'];
                     }
@@ -331,16 +331,16 @@ class UserJourneyWidget extends CrelishDashboardWidget
             } catch (\Exception $e) {
                 // Skip title enrichment if model not found
             }
-            
+
             // Enrich elements with titles
             foreach ($pageView['elements'] as &$element) {
                 try {
-                    $modelClass = 'app\workspace\models\\' . ucfirst($element['element_type']);
-                    if (class_exists($modelClass)) {
-                        $elementModel = call_user_func($modelClass . '::find')
+                    if (\giantbits\crelish\components\CrelishModelResolver::modelExists($element['element_type'])) {
+                        $modelClass = \giantbits\crelish\components\CrelishModelResolver::getModelClass($element['element_type']);
+                        $elementModel = $modelClass::find()
                             ->where(['uuid' => $element['element_uuid']])
                             ->one();
-                            
+
                         if ($elementModel && isset($elementModel['systitle'])) {
                             $element['title'] = $elementModel['systitle'];
                         }

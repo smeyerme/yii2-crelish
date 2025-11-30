@@ -175,7 +175,8 @@ class CrelishDynamicModel extends DynamicModel
     // Fetch from source.
     switch ($this->_elementDefinition->storage) {
       case 'db':
-        $rawData = call_user_func('app\workspace\models\\' . ucfirst($this->_ctype) . '::find')->where(['uuid' => $this->_uuid])->one();
+        $modelClass = CrelishModelResolver::getModelClass($this->_ctype);
+        $rawData = $modelClass::find()->where(['uuid' => $this->_uuid])->one();
 
         if ($rawData && $rawData->hasMethod('loadAllTranslations')) {
           $this->allTranslations = $rawData->loadAllTranslations();

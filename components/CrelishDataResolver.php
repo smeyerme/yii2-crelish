@@ -25,7 +25,8 @@ class CrelishDataResolver
 		// Handle database models with db: prefix
 		if (str_contains($ctype, 'db:')) {
 			$ctype = str_replace('db:', '', $ctype);
-			return call_user_func_array('app\workspace\models\\' . ucfirst($ctype) . '::find', ['uuid' => $uuid])->one();
+			$modelClass = CrelishModelResolver::getModelClass($ctype);
+			return $modelClass::find()->where(['uuid' => $uuid])->one();
 		}
 		
 		// Use the storage factory to get the appropriate storage implementation

@@ -93,7 +93,8 @@ class RelationSelect extends CrelishFormWidget
 
     // Get stored items for the model if it's not new
     if (!empty($this->model->uuid)) {
-      $model = call_user_func('app\workspace\models\\' . ucfirst($this->model->ctype) . '::find')->where(['uuid' => $this->model->uuid])->one();
+      $modelClass = \giantbits\crelish\components\CrelishModelResolver::getModelClass($this->model->ctype);
+      $model = $modelClass::find()->where(['uuid' => $this->model->uuid])->one();
 
       if ($model) {
         $currentValue = $model->{$this->field->key};

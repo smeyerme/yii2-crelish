@@ -82,7 +82,7 @@
 					$dataItems[][$this->formKey] = $option;
 				}
 			} else {
-				$modelClass = '\app\workspace\models\\' . ucfirst($this->includeDataType);
+				$modelClass = \giantbits\crelish\components\CrelishModelResolver::getModelClass($this->includeDataType);
 				$dataItems = $modelClass::find()->asArray()->select($this->field->key)->distinct()->orderBy([$this->field->key => 'asc'])->all();
 			}
 			
