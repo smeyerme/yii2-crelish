@@ -431,9 +431,9 @@ JS;
       } else {
         // Try to get element title from database based on type
         try {
-          $modelClass = 'app\workspace\models\\' . ucfirst($element['element_type']);
-          if (class_exists($modelClass)) {
-            $elementModel = call_user_func($modelClass . '::find')
+          if (\giantbits\crelish\components\CrelishModelResolver::modelExists($element['element_type'])) {
+            $modelClass = \giantbits\crelish\components\CrelishModelResolver::getModelClass($element['element_type']);
+            $elementModel = $modelClass::find()
               ->where(['uuid' => $element['element_uuid']])
               ->one();
 

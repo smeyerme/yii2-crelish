@@ -494,9 +494,9 @@ JS;
     if (!empty($this->contentType)) {
       foreach ($result as &$item) {
         try {
-          $modelClass = 'app\workspace\models\\' . ucfirst($this->contentType);
-          if (class_exists($modelClass)) {
-            $contentModel = call_user_func($modelClass . '::find')
+          if (\giantbits\crelish\components\CrelishModelResolver::modelExists($this->contentType)) {
+            $modelClass = \giantbits\crelish\components\CrelishModelResolver::getModelClass($this->contentType);
+            $contentModel = $modelClass::find()
               ->where(['uuid' => $item['page_uuid']])
               ->one();
 

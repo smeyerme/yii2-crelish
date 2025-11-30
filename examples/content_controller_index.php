@@ -22,8 +22,8 @@ public function actionIndex()
     ];
 
     // Handle bulk delete actions
-    $modelClass = '\app\workspace\models\\' . ucfirst($this->ctype);
-    if (!empty($_POST['selection']) && class_exists($modelClass)) {
+    if (!empty($_POST['selection']) && \giantbits\crelish\components\CrelishModelResolver::modelExists($this->ctype)) {
+        $modelClass = \giantbits\crelish\components\CrelishModelResolver::getModelClass($this->ctype);
         foreach ($_POST['selection'] as $selection) {
             $delModel = $modelClass::findOne($selection);
             $delModel->delete();
@@ -141,7 +141,7 @@ public function actionIndex()
     // Get filters for the grid
     $filters = new \giantbits\crelish\components\CrelishDynamicModel(['ctype' => $this->ctype]);
     
-    return $this->render('content.twig', [
+    return Yii::$app->view->render('content.twig', [
         'dataProvider' => $dataProvider,
         'filterProvider' => $filters,
         'columns' => $columns,

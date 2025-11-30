@@ -302,17 +302,7 @@ class CrelishDbStorage implements CrelishDataStorage
    */
   public function getModelClass(string $ctype): string
   {
-    // Simply capitalize first letter of ctype to match class names
-    // 'eventprogram' -> 'Eventprogram', 'partner' -> 'Partner', etc.
-    // This works consistently across case-sensitive and case-insensitive filesystems
-    $className = ucfirst($ctype);
-    $modelClass = "app\\workspace\\models\\$className";
-
-    if (!class_exists($modelClass)) {
-      throw new \Exception("Model class not found for content type '$ctype': $modelClass");
-    }
-
-    return $modelClass;
+    return CrelishModelResolver::getModelClass($ctype);
   }
 
   /**

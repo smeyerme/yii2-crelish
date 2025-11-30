@@ -142,9 +142,9 @@
         ]
       ];
 			
-			$modelClass = '\app\workspace\models\\' . ucfirst($this->ctype);
 			if (!empty($_POST['selection'])) {
-				if (class_exists($modelClass)) {
+				if (\giantbits\crelish\components\CrelishModelResolver::modelExists($this->ctype)) {
+					$modelClass = \giantbits\crelish\components\CrelishModelResolver::getModelClass($this->ctype);
 					foreach ($_POST['selection'] as $selection) {
 						$delModel = $modelClass::findOne($selection);
 						$delModel->delete();
@@ -177,7 +177,8 @@
       // Get the data provider
       $dataProvider = null;
 
-      if ($elementDefinition->storage === 'db' && class_exists($modelClass)) {
+      $modelClass = \giantbits\crelish\components\CrelishModelResolver::getModelClass($this->ctype);
+      if ($elementDefinition->storage === 'db' && $modelClass && class_exists($modelClass)) {
         $query = $modelClass::find();
 
         // Apply filters

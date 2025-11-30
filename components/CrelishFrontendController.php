@@ -94,7 +94,8 @@
 				\Yii::$app->language = \Yii::$app->request->getQueryParams()['language'];
 			}
 			
-			$this->data = call_user_func('app\workspace\models\\' . ucfirst($this->entryPoint['ctype']) . '::find')->where(['uuid' => $this->entryPoint['uuid']])->one();
+			$modelClass = CrelishModelResolver::getModelClass($this->entryPoint['ctype']);
+			$this->data = $modelClass::find()->where(['uuid' => $this->entryPoint['uuid']])->one();
 
       // Track page view if analytics component is available
       if (isset(Yii::$app->crelishAnalytics) && $this->entryPoint['uuid']) {

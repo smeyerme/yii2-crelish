@@ -106,7 +106,8 @@ class AnalyticsController extends CrelishBaseController
     foreach ($pages as &$page) {
 
       // Try to get page title from database
-      $pageModel = call_user_func('app\workspace\models\\' . ucfirst($page['page_type']) . '::find')
+      $modelClass = \giantbits\crelish\components\CrelishModelResolver::getModelClass($page['page_type']);
+      $pageModel = $modelClass::find()
         ->where(['uuid' => $page['page_uuid']])
         ->one();
 
@@ -151,9 +152,9 @@ class AnalyticsController extends CrelishBaseController
       } else {
         // Try to get element title from database based on type
         try {
-          $modelClass = 'app\workspace\models\\' . ucfirst($element['element_type']);
-          if (class_exists($modelClass)) {
-            $elementModel = call_user_func($modelClass . '::find')
+          if (\giantbits\crelish\components\CrelishModelResolver::modelExists($element['element_type'])) {
+            $modelClass = \giantbits\crelish\components\CrelishModelResolver::getModelClass($element['element_type']);
+            $elementModel = $modelClass::find()
               ->where(['uuid' => $element['element_uuid']])
               ->one();
 
@@ -555,12 +556,12 @@ class AnalyticsController extends CrelishBaseController
           ->one();
           
         if ($firstPageView) {
-          $modelClass = 'app\workspace\models\\' . ucfirst($firstPageView['page_type']);
-          if (class_exists($modelClass)) {
-            $pageModel = call_user_func($modelClass . '::find')
+          if (\giantbits\crelish\components\CrelishModelResolver::modelExists($firstPageView['page_type'])) {
+            $modelClass = \giantbits\crelish\components\CrelishModelResolver::getModelClass($firstPageView['page_type']);
+            $pageModel = $modelClass::find()
               ->where(['uuid' => $firstPageView['page_uuid']])
               ->one();
-              
+
             if ($pageModel && isset($pageModel['systitle'])) {
               $session['first_page_title'] = $pageModel['systitle'];
               $session['first_page_type'] = $firstPageView['page_type'];
