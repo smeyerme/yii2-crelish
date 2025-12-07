@@ -17,8 +17,6 @@
 	use yii\helpers\FileHelper;
 	use yii\helpers\Json;
 	use yii\widgets\LinkPager;
-	use function _\filter;
-	use function _\get;
 	
 	/**
 	 * @deprecated since version 2.0.0, use CrelishDataManager instead.

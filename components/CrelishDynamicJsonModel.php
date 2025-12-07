@@ -4,8 +4,6 @@ namespace giantbits\crelish\components;
 
 use yii\helpers\FileHelper;
 use yii\helpers\Json;
-use function _\filter;
-use function _\find;
 
 /**
  * @deprecated since version 2.0.0, use CrelishDynamicModel instead.
@@ -92,7 +90,7 @@ class CrelishDynamicJsonModel extends \yii\base\DynamicModel
 			}
 			
 			// Check for transformer.
-			$fieldDefinitionLook = filter($this->fieldDefinitions->fields, function ($value) use ($attribute) {
+			$fieldDefinitionLook = CrelishArrayHelper::filter($this->fieldDefinitions->fields, function ($value) use ($attribute) {
 				return $value->key == $attribute;
 			});
 			

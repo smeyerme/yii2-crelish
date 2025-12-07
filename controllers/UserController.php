@@ -14,9 +14,8 @@
   use Yii;
   use yii\data\ActiveDataProvider;
   use yii\filters\AccessControl;
+	use giantbits\crelish\components\CrelishArrayHelper;
 	use yii\helpers\Url;
-	use function _\find;
-	use function _\map;
 	
 	class UserController extends CrelishBaseController
 	{

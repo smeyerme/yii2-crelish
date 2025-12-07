@@ -5,8 +5,6 @@
  */
 namespace giantbits\crelish\components;
 
-use function _\upperCase;
-
 class MjmlGenerator
 {
   private $assetManager;
@@ -434,7 +432,7 @@ MJML;
     $showDivider = ($section['content']['showDivider'] == "false");
     $result = '';
 
-    $title = upperCase($title);
+    $title = CrelishArrayHelper::upperCase($title);
 
     // Add section title if provided
     if (!empty($title)) {

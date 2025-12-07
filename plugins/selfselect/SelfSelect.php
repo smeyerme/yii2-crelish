@@ -2,9 +2,9 @@
 	
 	namespace giantbits\crelish\plugins\selfselect;
 	
+	use giantbits\crelish\components\CrelishArrayHelper;
 	use giantbits\crelish\components\CrelishFormWidget;
   use yii\helpers\VarDumper;
-  use function _\find;
 	
 	
 	class SelfSelect extends CrelishFormWidget
@@ -52,7 +52,7 @@
 		public function run()
 		{
 			
-			$isRequired = find($this->field->rules, function ($rule) {
+			$isRequired = CrelishArrayHelper::find($this->field->rules, function ($rule) {
 				foreach ($rule as $set) {
 					if ($set == 'required') {
 						return true;

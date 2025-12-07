@@ -5,7 +5,6 @@ namespace giantbits\crelish\components;
 use Yii;
 use yii\db\ActiveRecord;
 use yii\helpers\Json;
-use function _\find;
 
 class CrelishJsonModel extends ActiveRecord
 {
@@ -263,7 +262,7 @@ class CrelishJsonModel extends ActiveRecord
 
   public static function getFieldConfig($field)
   {
-    $config = find(static::formFields(), function ($itm) use ($field) {
+    $config = CrelishArrayHelper::find(static::formFields(), function ($itm) use ($field) {
       return $itm->key === $field;
     });
 

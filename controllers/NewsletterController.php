@@ -13,7 +13,7 @@ use yii\helpers\Json;
 use yii\helpers\Url;
 use yii\web\BadRequestHttpException;
 use yii\web\Response;
-use function _\map;
+use giantbits\crelish\components\CrelishArrayHelper;
 
 class NewsletterController extends CrelishBaseController
 {
@@ -116,7 +116,7 @@ class NewsletterController extends CrelishBaseController
 
     $columns = array_merge($checkCol, $columns);
 
-    $columns = map($columns, function ($item) {
+    $columns = CrelishArrayHelper::map($columns, function ($item) {
 
       if (key_exists('attribute', $item) && $item['attribute'] === 'status') {
         $item['format'] = 'raw';
