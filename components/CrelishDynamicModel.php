@@ -7,8 +7,6 @@ use Yii;
 use yii\base\DynamicModel;
 use yii\helpers\FileHelper;
 use yii\helpers\Json;
-use function _\filter;
-use function _\find;
 
 /**
  *
@@ -304,7 +302,7 @@ class CrelishDynamicModel extends DynamicModel
       $modelArray[$attribute] = $this->{$attribute};
 
       // Check for transformer
-      $fieldDefinitionLook = filter($this->fieldDefinitions->fields, function ($value) use ($attribute) {
+      $fieldDefinitionLook = CrelishArrayHelper::filter($this->fieldDefinitions->fields, function ($value) use ($attribute) {
         return $value->key == $attribute;
       });
 
@@ -482,28 +480,28 @@ class CrelishDynamicModel extends DynamicModel
     $usePublishingMeta = !((!property_exists($elementDefinition, 'usePublishingMeta') || $elementDefinition->usePublishingMeta === false));
 
     // Add core fields.
-    if (empty(find($elementDefinition->fields, function ($elem) {
+    if (empty(CrelishArrayHelper::find($elementDefinition->fields, function ($elem) {
       return $elem->key == "uuid";
     }))
     ) {
       $elementDefinition->fields[] = Json::decode('{ "label": "UUID", "key": "uuid", "type": "textInput", "visibleInGrid": true, "rules": [["string", {"max": 128}]], "options": {"disabled":true}}', false);
     }
 
-    if (empty(find($elementDefinition->fields, function ($elem) {
+    if (empty(CrelishArrayHelper::find($elementDefinition->fields, function ($elem) {
       return $elem->key == "state";
     }))
     ) {
       $elementDefinition->fields[] = Json::decode('{ "label": "State", "key": "state",  "type": "dropDownList", "transform": "state", "visibleInGrid": true, "rules": [["required"], ["integer"]], "items": {"0":"Offline", "1":"Draft", "2":"Online", "3":"Archived"}}', false);
     }
 
-    if (empty(find($elementDefinition->fields, function ($elem) {
+    if (empty(CrelishArrayHelper::find($elementDefinition->fields, function ($elem) {
       return $elem->key == "created";
     }))
     ) {
       $elementDefinition->fields[] = Json::decode('{ "label": "Created", "key": "created", "type": "textInput", "visibleInGrid": true, "format": "date", "transform": "datetime", "rules": [["safe"]]}', false);
     }
 
-    if (empty(find($elementDefinition->fields, function ($elem) {
+    if (empty(CrelishArrayHelper::find($elementDefinition->fields, function ($elem) {
       return $elem->key == "updated";
     }))
     ) {
@@ -511,14 +509,14 @@ class CrelishDynamicModel extends DynamicModel
     }
 
     if ($usePublishingMeta) {
-      if (empty(find($elementDefinition->fields, function ($elem) {
+      if (empty(CrelishArrayHelper::find($elementDefinition->fields, function ($elem) {
         return $elem->key == "from";
       }))
       ) {
         $elementDefinition->fields[] = Json::decode('{ "label": "Publish from", "key": "from", "type": "textInput", "visibleInGrid": true, "format": "date", "transform": "date", "rules": [["string", {"max": 128}]]}', false);
       }
 
-      if (empty(find($elementDefinition->fields, function ($elem) {
+      if (empty(CrelishArrayHelper::find($elementDefinition->fields, function ($elem) {
         return $elem->key == "to";
       }))
       ) {

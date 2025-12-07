@@ -28,7 +28,7 @@ use yii\web\UploadedFile;
 use yii\helpers\Url;
 use giantbits\crelish\components\CrelishDataManager;
 use yii\filters\AccessControl;
-use function _\map;
+use giantbits\crelish\components\CrelishArrayHelper;
 
 class ExtractModel extends Model
 {
@@ -197,7 +197,7 @@ class AssetController extends CrelishBaseController
       ]
     ];
     $columns = array_merge($checkCol, $dataManager->getColumns());
-    $columns = map($columns, function ($item) use ($dataManager) {
+    $columns = CrelishArrayHelper::map($columns, function ($item) use ($dataManager) {
       if (key_exists('attribute', $item) && $item['attribute'] === 'state') {
         $item['format'] = 'raw';
         $item['label'] = 'Status';

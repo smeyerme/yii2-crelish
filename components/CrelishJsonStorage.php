@@ -7,7 +7,6 @@ use yii\data\ArrayDataProvider;
 use yii\data\DataProviderInterface;
 use yii\helpers\FileHelper;
 use yii\helpers\Json;
-use function _\filter;
 
 /**
  * JSON file-based storage implementation for Crelish CMS

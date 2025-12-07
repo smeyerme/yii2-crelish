@@ -6,7 +6,7 @@ use giantbits\crelish\components\CrelishDataProvider;
 use giantbits\crelish\components\CrelishDynamicModel;
 use giantbits\crelish\components\CrelishBaseController;
 use yii\filters\AccessControl;
-use function _\map;
+use giantbits\crelish\components\CrelishArrayHelper;
 use Yii;
 
 class PageController extends CrelishBaseController
@@ -155,7 +155,7 @@ class PageController extends CrelishBaseController
       ],
     ]);
 
-    $columns = map($columns, function ($item) {
+    $columns = CrelishArrayHelper::map($columns, function ($item) {
 
       if (key_exists('attribute', $item) && $item['attribute'] === 'state') {
         $item['format'] = 'raw';

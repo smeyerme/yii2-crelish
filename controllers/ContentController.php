@@ -17,8 +17,7 @@ use yii\grid\ActionColumn;
 use yii\helpers\Html;
 use yii\helpers\Json;
 use yii\web\View;
-use function _\find;
-use function _\map;
+use giantbits\crelish\components\CrelishArrayHelper;
 
 class ContentController extends CrelishBaseController
 {

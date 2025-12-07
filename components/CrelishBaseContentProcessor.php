@@ -4,7 +4,6 @@ namespace giantbits\crelish\components;
 use stdClass;
 use yii\base\Component;
 use yii\helpers\VarDumper;
-use function _\find;
 
 class CrelishBaseContentProcessor extends Component
 {
@@ -31,7 +30,7 @@ class CrelishBaseContentProcessor extends Component
 		  }
 
       foreach ($data as $key => $content) {
-        $fieldTypeOrig = find($elementDefinition->fields, function ($def) use ($key) {
+        $fieldTypeOrig = CrelishArrayHelper::find($elementDefinition->fields, function ($def) use ($key) {
           return $def->key == $key;
         });
 

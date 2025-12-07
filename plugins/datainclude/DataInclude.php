@@ -4,9 +4,9 @@ namespace giantbits\crelish\plugins\datainclude;
 
 use giantbits\crelish\components\CrelishDynamicModel;
 use giantbits\crelish\components\CrelishDataProvider;
+use giantbits\crelish\components\CrelishArrayHelper;
 use yii\base\Widget;
 use yii\helpers\Json;
-use function _\find;
 
 class DataInclude extends Widget
 {
@@ -79,7 +79,7 @@ class DataInclude extends Widget
 
   public function run()
   {
-		$isRequired = find($this->field->rules, function ($rule) {
+		$isRequired = CrelishArrayHelper::find($this->field->rules, function ($rule) {
       foreach ($rule as $set) {
         if ($set == 'required') {
           return true;

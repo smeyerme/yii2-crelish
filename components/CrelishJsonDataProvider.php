@@ -14,9 +14,6 @@
 	use yii\helpers\FileHelper;
 	use yii\helpers\Json;
 	use yii\widgets\LinkPager;
-	use function _\filter;
-	use function _\flatten;
-	use function _\get;
 	
 	/**
 	 * @deprecated since version 2.0.0, use CrelishDataManager instead.
@@ -270,7 +267,7 @@
 					foreach ($data as $key => $row) {
 						
 						if (strpos($field, ".") !== FALSE) {
-							$tmp[$key] = \_\get($row, $field);
+							$tmp[$key] = CrelishArrayHelper::get($row, $field);
 						} else {
 							$tmp[$key] = $row[$field];
 						}

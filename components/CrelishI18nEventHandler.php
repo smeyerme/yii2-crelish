@@ -11,7 +11,6 @@ use Scn\DeeplApiConnector\Exception\RequestException;
 use Scn\DeeplApiConnector\Model\TranslationConfig;
 use Yii;
 use yii\i18n\MissingTranslationEvent;
-use function _\upperCase;
 
 /**
  * Event handler for missing translations in Crelish CMS
