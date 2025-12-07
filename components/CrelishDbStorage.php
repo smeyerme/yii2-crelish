@@ -45,34 +45,7 @@ class CrelishDbStorage implements CrelishDataStorage
     $query = $this->getModelClass($ctype)::find();
 
     // Apply filters
-    if (!empty($filter)) {
-      foreach ($filter as $attribute => $value) {
-        if ($attribute === 'freesearch') {
-          // Handle freesearch by searching across all fields
-          $searchFragments = explode(" ", trim($value));
-          $orConditions = ['or'];
-
-          // Get the table schema to find all searchable columns
-          $modelClass = $this->getModelClass($ctype);
-          $tableSchema = $modelClass::getTableSchema();
-
-          foreach ($tableSchema->columns as $column) {
-            // Only search in string/text columns
-            if (in_array($column->type, ['string', 'text', 'char'])) {
-              foreach ($searchFragments as $fragment) {
-                $orConditions[] = ['like', $column->name, $fragment];
-              }
-            }
-          }
-
-          $query->andWhere($orConditions);
-        } elseif (is_array($value) && isset($value[0]) && $value[0] === 'strict') {
-          $query->andWhere([$attribute => $value[1]]);
-        } else {
-          $query->andWhere(['like', $attribute, $value]);
-        }
-      }
-    }
+    $this->applyFilters($query, $ctype, $filter);
 
     // Apply sorting - handle both array format and defaultOrder format
     if (!empty($sort)) {
@@ -246,34 +219,7 @@ class CrelishDbStorage implements CrelishDataStorage
     $query = $this->getModelClass($ctype)::find();
 
     // Apply filters
-    if (!empty($filter)) {
-      foreach ($filter as $attribute => $value) {
-        if ($attribute === 'freesearch') {
-          // Handle freesearch by searching across all fields
-          $searchFragments = explode(" ", trim($value));
-          $orConditions = ['or'];
-
-          // Get the table schema to find all searchable columns
-          $modelClass = $this->getModelClass($ctype);
-          $tableSchema = $modelClass::getTableSchema();
-
-          foreach ($tableSchema->columns as $column) {
-            // Only search in string/text columns
-            if (in_array($column->type, ['string', 'text', 'char'])) {
-              foreach ($searchFragments as $fragment) {
-                $orConditions[] = ['like', $column->name, $fragment];
-              }
-            }
-          }
-
-          $query->andWhere($orConditions);
-        } elseif (is_array($value) && isset($value[0]) && $value[0] === 'strict') {
-          $query->andWhere([$attribute => $value[1]]);
-        } else {
-          $query->andWhere(['like', $attribute, $value]);
-        }
-      }
-    }
+    $this->applyFilters($query, $ctype, $filter);
 
     // Prepare sort configuration
     $sortConfig = [];
@@ -342,10 +288,89 @@ class CrelishDbStorage implements CrelishDataStorage
   {
     $modelClass = $this->getModelClass($ctype);
     $tableName = $modelClass::tableName();
-    
+
     $query = new \yii\db\Query();
     $query->from($tableName);
 
     return $query;
+  }
+
+  /**
+   * Apply filters to a query
+   *
+   * @param \yii\db\ActiveQuery $query Query to apply filters to
+   * @param string $ctype Content type
+   * @param array $filter Filter criteria
+   * @return void
+   */
+  private function applyFilters($query, string $ctype, array $filter): void
+  {
+    if (empty($filter)) {
+      return;
+    }
+
+    $modelClass = $this->getModelClass($ctype);
+    $tableName = $modelClass::tableName();
+
+    foreach ($filter as $attribute => $value) {
+      // Handle legacy filter format: [['state', 2]] or [['field', 'operator', 'value']]
+      if (is_int($attribute) && is_array($value)) {
+        // This is a legacy indexed array filter like ['state', 2] or ['field', 'operator', 'value']
+        if (count($value) === 2) {
+          // Simple equality: ['state', 2] means state = 2
+          $field = $value[0];
+          $fieldValue = $value[1];
+          if (strpos($field, '.') === false) {
+            $field = $tableName . '.' . $field;
+          }
+          $query->andWhere([$field => $fieldValue]);
+        } elseif (count($value) === 3) {
+          // With operator: ['field', 'operator', 'value']
+          $field = $value[0];
+          $operator = $value[1];
+          $fieldValue = $value[2];
+          if (strpos($field, '.') === false) {
+            $field = $tableName . '.' . $field;
+          }
+          $query->andWhere([$operator, $field, $fieldValue]);
+        }
+        continue;
+      }
+
+      if ($attribute === 'freesearch') {
+        // Handle freesearch by searching across all fields
+        $searchFragments = explode(" ", trim($value));
+        $orConditions = ['or'];
+
+        // Get the table schema to find all searchable columns
+        $tableSchema = $modelClass::getTableSchema();
+
+        foreach ($tableSchema->columns as $column) {
+          // Only search in string/text columns
+          if (in_array($column->type, ['string', 'text', 'char'])) {
+            foreach ($searchFragments as $fragment) {
+              // Use table-qualified column names to avoid ambiguity when joins are used
+              $orConditions[] = ['like', $tableName . '.' . $column->name, $fragment];
+            }
+          }
+        }
+
+        $query->andWhere($orConditions);
+      } elseif (is_array($value) && isset($value[0]) && $value[0] === 'strict') {
+        // Handle strict equality filter: ['strict', value]
+        if (strpos($attribute, '.') !== false) {
+          $query->andWhere([$attribute => $value[1]]);
+        } else {
+          $query->andWhere([$tableName . '.' . $attribute => $value[1]]);
+        }
+      } else {
+        // Handle regular like filter
+        if (strpos($attribute, '.') !== false) {
+          $query->andWhere(['like', $attribute, $value]);
+        } else {
+          $query->andWhere(['like', $tableName . '.' . $attribute, $value]);
+        }
+      }
+    }
   }
 } 
