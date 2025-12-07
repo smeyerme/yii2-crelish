@@ -91,7 +91,7 @@ class CrelishBaseContentProcessor extends Component
     $fieldType = 'textInput';
 
     // Get type of field.
-    $field = find($elementDefinition->fields, function ($value) use ($attr) {
+    $field = CrelishArrayHelper::find($elementDefinition->fields, function ($value) use ($attr) {
       return $value->key == $attr;
     });
 		
