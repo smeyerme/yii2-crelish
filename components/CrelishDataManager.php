@@ -240,22 +240,35 @@ class CrelishDataManager extends Component
           foreach ($filter as $attribute => $value) {
             if ($attribute === 'freesearch') {
               // Handle freesearch (implementation should match storage class)
+              // Each search fragment must match at least one column (AND between fragments, OR across columns)
               $searchFragments = explode(" ", trim($value));
-              $orConditions = ['or'];
-              
+
               $modelClass = $this->storage->getModelClass($this->ctype);
               $tableSchema = $modelClass::getTableSchema();
-              
+              $textColumns = [];
+
               foreach ($tableSchema->columns as $column) {
                 if (in_array($column->type, ['string', 'text', 'char'])) {
-                  foreach ($searchFragments as $fragment) {
-                    // Use table qualified column names to avoid ambiguous column errors
-                    $orConditions[] = ['like', $this->ctype . '.' . $column->name, $fragment];
-                  }
+                  $textColumns[] = $this->ctype . '.' . $column->name;
                 }
               }
-              
-              $query->andWhere($orConditions);
+
+              // For each fragment, create an OR condition across all text columns
+              // Then AND all fragment conditions together (more terms = narrower results)
+              foreach ($searchFragments as $fragment) {
+                $fragment = trim($fragment);
+                if (empty($fragment)) {
+                  continue;
+                }
+
+                $fragmentConditions = ['or'];
+                foreach ($textColumns as $columnName) {
+                  $fragmentConditions[] = ['like', $columnName, $fragment];
+                }
+
+                // Each fragment must match somewhere (AND between fragments)
+                $query->andWhere($fragmentConditions);
+              }
             } elseif (is_array($value) && isset($value[0]) && $value[0] === 'strict') {
               // Handle dot notation for relations (e.g., company.systitle)
               if (strpos($attribute, '.') !== false) {
