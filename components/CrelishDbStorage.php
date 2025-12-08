@@ -339,23 +339,36 @@ class CrelishDbStorage implements CrelishDataStorage
 
       if ($attribute === 'freesearch') {
         // Handle freesearch by searching across all fields
+        // Each search fragment must match at least one column (AND between fragments, OR across columns)
         $searchFragments = explode(" ", trim($value));
-        $orConditions = ['or'];
 
         // Get the table schema to find all searchable columns
         $tableSchema = $modelClass::getTableSchema();
+        $textColumns = [];
 
         foreach ($tableSchema->columns as $column) {
           // Only search in string/text columns
           if (in_array($column->type, ['string', 'text', 'char'])) {
-            foreach ($searchFragments as $fragment) {
-              // Use table-qualified column names to avoid ambiguity when joins are used
-              $orConditions[] = ['like', $tableName . '.' . $column->name, $fragment];
-            }
+            $textColumns[] = $tableName . '.' . $column->name;
           }
         }
 
-        $query->andWhere($orConditions);
+        // For each fragment, create an OR condition across all text columns
+        // Then AND all fragment conditions together (more terms = narrower results)
+        foreach ($searchFragments as $fragment) {
+          $fragment = trim($fragment);
+          if (empty($fragment)) {
+            continue;
+          }
+
+          $fragmentConditions = ['or'];
+          foreach ($textColumns as $columnName) {
+            $fragmentConditions[] = ['like', $columnName, $fragment];
+          }
+
+          // Each fragment must match somewhere (AND between fragments)
+          $query->andWhere($fragmentConditions);
+        }
       } elseif (is_array($value) && isset($value[0]) && $value[0] === 'strict') {
         // Handle strict equality filter: ['strict', value]
         if (strpos($attribute, '.') !== false) {
