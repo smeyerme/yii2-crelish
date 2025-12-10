@@ -13,7 +13,7 @@ To authenticate using Bearer tokens, you need to:
 1. Obtain a token by logging in:
 
 ```
-POST /api/auth/login
+POST /crelish-api/auth/login
 Content-Type: application/json
 
 {
@@ -39,7 +39,7 @@ Response:
 2. Use the token in subsequent requests:
 
 ```
-GET /api/content/page
+GET /crelish-api/content/page
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
@@ -50,7 +50,7 @@ Tokens expire after 1 hour by default.
 You can also authenticate by including an access token in the query string:
 
 ```
-GET /api/content/page?access-token=YOUR_ACCESS_TOKEN
+GET /crelish-api/content/page?access-token=YOUR_ACCESS_TOKEN
 ```
 
 ## Content API
@@ -60,7 +60,7 @@ The Content API allows you to manage content items in the CMS.
 ### Base URL
 
 ```
-/api/content/{type}
+/crelish-api/content/{type}
 ```
 
 Where `{type}` is the content type (e.g., `page`, `article`, `product`).
@@ -70,7 +70,7 @@ Where `{type}` is the content type (e.g., `page`, `article`, `product`).
 #### List Content Items
 
 ```
-GET /api/content/{type}
+GET /crelish-api/content/{type}
 ```
 
 Query parameters:
@@ -84,7 +84,7 @@ Query parameters:
 Example:
 
 ```
-GET /api/content/page?filter=status:eq:published&sort=created&order=desc&page=1&pageSize=10
+GET /crelish-api/content/page?filter=status:eq:published&sort=created&order=desc&page=1&pageSize=10
 ```
 
 Response:
@@ -119,13 +119,13 @@ Response:
 #### Get a Single Content Item
 
 ```
-GET /api/content/{type}/{id}
+GET /crelish-api/content/{type}/{id}
 ```
 
 Example:
 
 ```
-GET /api/content/page/123
+GET /crelish-api/content/page/123
 ```
 
 Response:
@@ -149,7 +149,7 @@ Response:
 #### Create a Content Item
 
 ```
-POST /api/content/{type}
+POST /crelish-api/content/{type}
 Content-Type: application/json
 
 {
@@ -180,7 +180,7 @@ Response:
 #### Update a Content Item
 
 ```
-PUT /api/content/{type}/{id}
+PUT /crelish-api/content/{type}/{id}
 Content-Type: application/json
 
 {
@@ -210,7 +210,7 @@ Response:
 #### Delete a Content Item
 
 ```
-DELETE /api/content/{type}/{id}
+DELETE /crelish-api/content/{type}/{id}
 ```
 
 Response:

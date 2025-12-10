@@ -4,15 +4,29 @@ Welcome to the Crelish CMS documentation. This folder contains comprehensive doc
 
 ## Table of Contents
 
+### Getting Started
 - [Getting Started](./getting-started.md) - Installation and basic setup
-- [API Documentation](./API.md) - RESTful API reference
 - [Content Types](./content-types.md) - Working with content types
-- [Authentication](./authentication.md) - Authentication and authorization
-- [Extending Crelish](./extending.md) - Creating plugins and extensions
+- [Troubleshooting](./troubleshooting.md) - Solutions for common issues
+
+### Templates & Frontend
+- [Twig Reference](./twig-reference.md) - Template filters, functions, and helpers
+- [Responsive Images](./responsive-images.md) - Image presets and srcset generation
 - [Frontend Integration](./frontend-integration.md) - Integrating with frontend frameworks
 - [Widgets](./widgets.md) - Working with built-in and custom widgets
+
+### API & Authentication
+- [API Documentation](./API.md) - RESTful API reference
+- [Authentication](./authentication.md) - Authentication and authorization
+
+### Features
+- [Newsletter System](./newsletter.md) - MJML email template generation
+- [Analytics](./analytics.md) - Page views, element tracking, and dashboards
+- [Click Tracking](./click-tracking.md) - Link and element click tracking
+
+### Advanced
+- [Extending Crelish](./extending.md) - Hooks, custom controllers, sidebar navigation, widgets, and plugins
 - [Documentation Viewer](./documentation-viewer.md) - Using and customizing the documentation viewer
-- [Troubleshooting](./troubleshooting.md) - Solutions for common issues
 
 ## About Crelish CMS
 
@@ -20,16 +34,29 @@ Crelish is a modern, flexible content management system built on the Yii2 framew
 
 ## Key Features
 
+### Content Management
 - **Headless Architecture**: Separate your content from presentation
 - **RESTful API**: Comprehensive API for content management
-- **Content Types**: Define custom content types with JSON schemas in your application's workspace/elements directory
-- **Element Management**: Create and manage content type definitions through the ElementsController or directly with JSON files
-- **Content Generator**: Generate database tables and model classes from your content type definitions
-- **Multilingual**: Built-in support for multiple languages
-- **Extensible**: Plugin system for adding custom functionality
+- **Content Types**: Define custom content types with JSON schemas
+- **Content Generator**: Generate database tables and model classes from definitions
+- **Multilingual**: Built-in support for multiple languages with translation management
+
+### Media & Templates
+- **Media Library**: Integrated asset management with Glide image processing
+- **Responsive Images**: Automatic srcset generation with predefined presets
+- **Twig Templates**: Rich templating with custom filters and helpers
+
+### Marketing & Analytics
+- **Newsletter System**: MJML-based email template generator with visual editor
+- **First-Party Analytics**: Page views, element tracking, session management
+- **Click Tracking**: Track link clicks and conversions
+- **Bot Detection**: Sophisticated bot filtering for accurate metrics
+
+### Administration
 - **User Management**: Role-based access control
-- **Media Management**: Integrated media library with image processing
+- **Translation Editor**: In-admin translation file management
 - **Built-in Documentation**: Access documentation directly from the admin interface
+- **Extensible**: Plugin system for adding custom functionality
 
 ## System Requirements
 

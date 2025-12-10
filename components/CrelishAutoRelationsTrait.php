@@ -92,11 +92,12 @@ trait CrelishAutoRelationsTrait
      *
      * @param string $name Property name
      * @param bool $checkVars Whether to check member variables
+     * @param bool $checkBehaviors Whether to check behaviors
      * @return bool
      */
-    public function canGetProperty($name, $checkVars = true)
+    public function canGetProperty($name, $checkVars = true, $checkBehaviors = true)
     {
-        if (parent::canGetProperty($name, $checkVars)) {
+        if (parent::canGetProperty($name, $checkVars, $checkBehaviors)) {
             return true;
         }
 
