@@ -22,7 +22,7 @@ There are several approaches to integrating Crelish with frontend applications:
 ```javascript
 // Using fetch API
 async function getPages() {
-  const response = await fetch('https://your-domain.com/api/content/page', {
+  const response = await fetch('https://your-domain.com/crelish-api/content/page', {
     headers: {
       'Authorization': 'Bearer YOUR_TOKEN_HERE'
     }
@@ -299,7 +299,7 @@ export default function Home({ pages }) {
 
 export async function getServerSideProps() {
   try {
-    const response = await axios.get('https://your-domain.com/api/content/page', {
+    const response = await axios.get('https://your-domain.com/crelish-api/content/page', {
       headers: {
         'Authorization': 'Bearer YOUR_TOKEN_HERE'
       }
@@ -337,7 +337,7 @@ export default function Page({ page }) {
 
 export async function getServerSideProps({ params }) {
   try {
-    const response = await axios.get(`https://your-domain.com/api/content/page?filter=slug:eq:${params.slug}`, {
+    const response = await axios.get(`https://your-domain.com/crelish-api/content/page?filter=slug:eq:${params.slug}`, {
       headers: {
         'Authorization': 'Bearer YOUR_TOKEN_HERE'
       }
@@ -372,7 +372,7 @@ exports.createPages = async ({ actions }) => {
   const { createPage } = actions;
   
   try {
-    const response = await axios.get('https://your-domain.com/api/content/page', {
+    const response = await axios.get('https://your-domain.com/crelish-api/content/page', {
       headers: {
         'Authorization': 'Bearer YOUR_TOKEN_HERE'
       }
@@ -434,7 +434,7 @@ export default {
 export default {
   async asyncData({ $axios }) {
     try {
-      const response = await $axios.get('https://your-domain.com/api/content/page', {
+      const response = await $axios.get('https://your-domain.com/crelish-api/content/page', {
         headers: {
           'Authorization': 'Bearer YOUR_TOKEN_HERE'
         }
@@ -464,7 +464,7 @@ export default {
 export default {
   async asyncData({ params, $axios, error }) {
     try {
-      const response = await $axios.get(`https://your-domain.com/api/content/page?filter=slug:eq:${params.slug}`, {
+      const response = await $axios.get(`https://your-domain.com/crelish-api/content/page?filter=slug:eq:${params.slug}`, {
         headers: {
           'Authorization': 'Bearer YOUR_TOKEN_HERE'
         }
@@ -501,9 +501,9 @@ const app = express();
 
 const API_TOKEN = process.env.API_TOKEN; // Store token in environment variable
 
-app.get('/api/content/:type', async (req, res) => {
+app.get('/crelish-api/content/:type', async (req, res) => {
   try {
-    const response = await axios.get(`https://your-domain.com/api/content/${req.params.type}`, {
+    const response = await axios.get(`https://your-domain.com/crelish-api/content/${req.params.type}`, {
       headers: {
         'Authorization': `Bearer ${API_TOKEN}`
       },
@@ -587,7 +587,7 @@ const client = redis.createClient();
 const getAsync = promisify(client.get).bind(client);
 const setAsync = promisify(client.set).bind(client);
 
-app.get('/api/content/:type', async (req, res) => {
+app.get('/crelish-api/content/:type', async (req, res) => {
   const cacheKey = `content:${req.params.type}:${JSON.stringify(req.query)}`;
   
   try {
@@ -599,7 +599,7 @@ app.get('/api/content/:type', async (req, res) => {
     }
     
     // If not in cache, fetch from API
-    const response = await axios.get(`https://your-domain.com/api/content/${req.params.type}`, {
+    const response = await axios.get(`https://your-domain.com/crelish-api/content/${req.params.type}`, {
       headers: {
         'Authorization': `Bearer ${process.env.API_TOKEN}`
       },

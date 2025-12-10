@@ -182,7 +182,7 @@ The default login credentials are:
 You can access your content via the API:
 
 ```
-GET https://your-domain.com/api/content/page
+GET https://your-domain.com/crelish-api/content/page
 ```
 
 See the [API Documentation](./API.md) for more details.

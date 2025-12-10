@@ -121,7 +121,7 @@ To authenticate API requests using Bearer tokens:
 1. Obtain a token by logging in:
 
 ```
-POST /api/auth/login
+POST /crelish-api/auth/login
 Content-Type: application/json
 
 {
@@ -146,7 +146,7 @@ Response:
 2. Use the token in subsequent requests:
 
 ```
-GET /api/content/page
+GET /crelish-api/content/page
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
@@ -155,7 +155,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 You can also authenticate by including an access token in the query string:
 
 ```
-GET /api/content/page?access-token=YOUR_ACCESS_TOKEN
+GET /crelish-api/content/page?access-token=YOUR_ACCESS_TOKEN
 ```
 
 ### Token Management
