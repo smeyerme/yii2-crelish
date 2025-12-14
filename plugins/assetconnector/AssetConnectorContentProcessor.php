@@ -35,15 +35,30 @@ class AssetConnectorContentProcessor extends Component
 
   public static function processJson($ctype, $key, $data, &$processedData)
   {
-    $definition = CrelishDynamicModel::loadElementDefinition('asset');
+    if (empty($data)) {
+      return;
+    }
 
-    // Get relation ctype.
-    if ($data) {
-      $sourceData = new CrelishDynamicModel( ['ctype' => 'asset', 'uuid' => $data]);
+    // Check if this is a multiple asset field (JSON array of UUIDs)
+    // If data starts with '[', it's a JSON array string - pass through as-is
+    if (is_string($data) && str_starts_with(trim($data), '[')) {
+      // Multiple mode: keep the JSON string as-is for the plugin to handle
+      $processedData[$key] = $data;
+      return;
+    }
 
-      if ($sourceData) {
-        $processedData[$key] = $sourceData;
-      }
+    // Check if it's already an array
+    if (is_array($data)) {
+      // Multiple mode with decoded array - re-encode as JSON
+      $processedData[$key] = Json::encode($data);
+      return;
+    }
+
+    // Single UUID mode: load the asset model
+    $sourceData = new CrelishDynamicModel(['ctype' => 'asset', 'uuid' => $data]);
+
+    if ($sourceData) {
+      $processedData[$key] = $sourceData;
     }
   }
 }
