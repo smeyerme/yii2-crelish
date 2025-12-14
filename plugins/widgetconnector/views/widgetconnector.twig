@@ -251,6 +251,7 @@ html[data-theme="dark"] .widget-connector .widget-config-fields .config-field .f
             'relation': function(key, config, value) {
                 var ctype = config.ctype || 'page';
                 var displayField = config.displayField || 'systitle';
+                var isMultiple = config.multiple || false;
                 var selectId = '{{ fieldId }}_opt_' + key;
 
                 var html = '<div class="config-field config-field--relation">' +
@@ -260,12 +261,22 @@ html[data-theme="dark"] .widget-connector .widget-config-fields .config-field .f
                     'data-key="' + key + '" ' +
                     'data-ctype="' + ctype + '" ' +
                     'data-display-field="' + displayField + '" ' +
-                    (config.required ? 'required' : '') + '>' +
-                    '<option value="">{{ t('app', '-- Bitte wählen --') }}</option>';
+                    'data-multiple="' + (isMultiple ? 'true' : 'false') + '" ' +
+                    (isMultiple ? 'multiple ' : '') +
+                    (config.required ? 'required' : '') + '>';
 
-                // If we have a current value, add it as a selected option (will be populated by AJAX)
+                if (!isMultiple) {
+                    html += '<option value="">{{ t('app', '-- Bitte wählen --') }}</option>';
+                }
+
+                // If we have current value(s), add them as selected options (will be populated by AJAX)
                 if (value) {
-                    html += '<option value="' + escapeHtml(value) + '" selected data-loading="true">{{ t('app', 'Laden...') }}</option>';
+                    var values = Array.isArray(value) ? value : [value];
+                    values.forEach(function(v) {
+                        if (v) {
+                            html += '<option value="' + escapeHtml(v) + '" selected data-loading="true">{{ t('app', 'Laden...') }}</option>';
+                        }
+                    });
                 }
 
                 html += '</select>' +
@@ -332,6 +343,7 @@ html[data-theme="dark"] .widget-connector .widget-config-fields .config-field .f
                 var $select = $(this);
                 var ctype = $select.data('ctype');
                 var displayField = $select.data('display-field') || 'systitle';
+                var isMultiple = $select.data('multiple') === true || $select.data('multiple') === 'true';
                 var currentValue = $select.val();
 
                 // Function to initialize Select2
@@ -340,6 +352,7 @@ html[data-theme="dark"] .widget-connector .widget-config-fields .config-field .f
                         theme: 'krajee-bs5',
                         width: '100%',
                         allowClear: true,
+                        multiple: isMultiple,
                         placeholder: '{{ t('app', '-- Bitte wählen --') }}',
                         ajax: {
                             url: '/crelish-api/content/' + ctype,
@@ -379,22 +392,24 @@ html[data-theme="dark"] .widget-connector .widget-config-fields .config-field .f
                     });
                 }
 
-                // If we have a current value, load the display text first, then init Select2
-                if (currentValue) {
-                    $.ajax({
-                        url: '/crelish-api/content/' + ctype,
-                        data: { filter: 'uuid:' + currentValue },
-                        dataType: 'json'
-                    }).then(function(data) {
-                        if (data.success && data.data && data.data.items && data.data.items.length > 0) {
-                            var item = data.data.items[0];
-                            var text = item[displayField] || item.systitle || item.title || item.uuid;
-                            // Update the option text before initializing Select2
-                            $select.find('option[value="' + currentValue + '"]').text(text).removeAttr('data-loading');
-                        }
-                        initSelect2();
-                    }).fail(function() {
-                        // Initialize anyway on failure
+                // If we have current value(s), load the display text first, then init Select2
+                if (currentValue && (Array.isArray(currentValue) ? currentValue.length > 0 : currentValue !== '')) {
+                    var values = Array.isArray(currentValue) ? currentValue : [currentValue];
+                    var loadPromises = values.map(function(uuid) {
+                        return $.ajax({
+                            url: '/crelish-api/content/' + ctype,
+                            data: { filter: 'uuid:' + uuid },
+                            dataType: 'json'
+                        }).then(function(data) {
+                            if (data.success && data.data && data.data.items && data.data.items.length > 0) {
+                                var item = data.data.items[0];
+                                var text = item[displayField] || item.systitle || item.title || item.uuid;
+                                $select.find('option[value="' + uuid + '"]').text(text).removeAttr('data-loading');
+                            }
+                        });
+                    });
+
+                    $.when.apply($, loadPromises).always(function() {
                         initSelect2();
                     });
                 } else {
@@ -409,31 +424,49 @@ html[data-theme="dark"] .widget-connector .widget-config-fields .config-field .f
             var isConfigurable = option.data('configurable') === true || option.data('configurable') === 'true';
 
             var options = {};
+            var processedKeys = {};
 
             if (isConfigurable) {
                 // Gather values from config fields
                 configContainer.find('[data-key]').each(function() {
                     var $el = $(this);
                     var key = $el.data('key');
+
+                    // Skip if already processed (for radios with same key)
+                    if (processedKeys[key]) return;
+
                     var value;
 
                     if ($el.is(':checkbox')) {
                         value = $el.is(':checked');
+                        options[key] = value;
+                        processedKeys[key] = true;
+                        return;
                     } else if ($el.is(':radio')) {
-                        if ($el.is(':checked')) {
-                            value = $el.val();
-                        } else {
-                            return; // Skip unchecked radios
+                        var $checked = configContainer.find('[data-key="' + key + '"]:checked');
+                        if ($checked.length) {
+                            options[key] = $checked.val();
                         }
+                        processedKeys[key] = true;
+                        return;
                     } else if ($el.attr('type') === 'number') {
                         value = $el.val() !== '' ? parseFloat($el.val()) : null;
+                    } else if ($el.is('select') && $el.attr('multiple')) {
+                        // Multiple select returns array
+                        value = $el.val();
+                        if (Array.isArray(value) && value.length > 0) {
+                            options[key] = value;
+                        }
+                        processedKeys[key] = true;
+                        return;
                     } else {
                         value = $el.val();
                     }
 
-                    if (value !== null && value !== '') {
+                    if (value !== null && value !== '' && value !== undefined) {
                         options[key] = value;
                     }
+                    processedKeys[key] = true;
                 });
             } else {
                 // Use legacy JSON
