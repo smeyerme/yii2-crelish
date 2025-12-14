@@ -47,7 +47,7 @@
 		public function init()
 		{
 			parent::init();
-			
+
 			// Create nonce.
 			if (!YII_DEBUG && 1 == 2) {
 				$this->nonce = base64_encode(random_bytes(16));
@@ -155,30 +155,55 @@
 			$ctype = (empty(\Yii::$app->params['crelish']['entryPoint']['ctype'])) ? 'page' : \Yii::$app->params['crelish']['entryPoint']['ctype'];
 			
 			$this->requestUrl = \Yii::$app->request->getPathInfo();
-			
+
+			// Track if we need to show 404 due to unsupported language
+			$unsupportedLanguage = false;
+			$requestedLanguage = null;
+
 			if (!empty($params = \Yii::$app->request->getQueryParams())) {
-				$slug = $params['pathRequested'];
-				// Make sure the language from query params is set in application
+				$slug = $params['pathRequested'] ?? $slug;
+				// Check language from query params
 				if (isset($params['language']) && !empty($params['language'])) {
-					\Yii::$app->language = $params['language'];
+					$requestedLanguage = $params['language'];
 				}
 			}
-			
+
+			// Also check URL path for language prefix (e.g., /ru/page) as fallback
+			if ($requestedLanguage === null) {
+				$pathInfo = \Yii::$app->request->getPathInfo();
+				if (preg_match('/^([a-z]{2})(?:\/|$)/', $pathInfo, $matches)) {
+					$requestedLanguage = $matches[1];
+				}
+			}
+
+      // Validate and set language
+			if ($requestedLanguage !== null) {
+				if ($this->isLanguageSupported($requestedLanguage)) {
+					\Yii::$app->language = $requestedLanguage;
+				} else {
+					// Unsupported language - will show 404 page
+					$unsupportedLanguage = true;
+				}
+			}
+
 			// Get the current language for model loading
 			$langCode = \Yii::$app->language;
 			// Extract 2-letter code from full code like 'en-US'
 			if (preg_match('/([a-z]{2})-[A-Z]{2}/', $langCode, $sub)) {
 				$langCode = $sub[1];
 			}
-			
-			$entryDataJoint = new CrelishDataManager($ctype, ['filter' => ['slug' => ['strict', $slug]]]);
-			if (empty($entryDataJoint->getProvider()->models[0])) {
-				$entryModel = null;
-			} else {
-				$entryModel = $entryDataJoint->getProvider()->models[0];
+
+			$entryModel = null;
+
+			// Only look for content if language is supported
+			if (!$unsupportedLanguage) {
+				$entryDataJoint = new CrelishDataManager($ctype, ['filter' => ['slug' => ['strict', $slug]]]);
+				if (!empty($entryDataJoint->getProvider()->models[0])) {
+					$entryModel = $entryDataJoint->getProvider()->models[0];
+				}
 			}
 
-			// 404 Not found fallback
+			// 404 Not found fallback (also handles unsupported language)
 			if ($entryModel == null && isset(Yii::$app->params['crelish']['404slug'])) {
 				$slug = Yii::$app->params['crelish']['404slug'];
 				$entryModel = Page::find()->where(['=', 'slug', $slug])->one();
@@ -235,12 +260,41 @@
 		public function afterAction($action, $result)
 		{
 			$result = parent::afterAction($action, $result);
-			
+
 			if (!YII_DEBUG && 1 == 2) {
 				$nonce = Yii::$app->controller->nonce;
 				Yii::$app->response->headers->add('Content-Security-Policy', "base-uri 'self'; script-src 'nonce-{$nonce}' 'strict-dynamic'; style-src 'unsafe-inline'; object-src 'none';");
 			}
-			
+
 			return $result;
+		}
+
+		/**
+		 * Check if the requested language is in the list of supported languages.
+		 *
+		 * @param string $language The language code to check
+		 * @return bool True if language is supported, false otherwise
+		 */
+		protected function isLanguageSupported(string $language): bool
+		{
+			// Get supported languages from params (check both locations for flexibility)
+			$supportedLanguages = Yii::$app->params['crelish']['languages']
+				?? Yii::$app->params['languages']
+				?? [];
+
+			// If no languages configured, allow all (backwards compatibility)
+			if (empty($supportedLanguages)) {
+				return true;
+			}
+
+			// Normalize language code (handle cases like 'en-US' -> 'en')
+			$normalizedLanguage = $language;
+			if (preg_match('/^([a-z]{2})-[A-Z]{2}$/', $language, $matches)) {
+				$normalizedLanguage = $matches[1];
+			}
+
+			// Check if language is supported
+			return in_array($normalizedLanguage, $supportedLanguages, true) ||
+				in_array($language, $supportedLanguages, true);
 		}
 	}
