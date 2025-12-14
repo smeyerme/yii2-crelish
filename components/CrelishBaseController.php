@@ -24,8 +24,6 @@ class CrelishBaseController extends Controller
 
     parent::init();
 
-    Yii::$app->sourceLanguage = 'en';
-
     Yii::$app->view->title = ucfirst($this->id);
     
     // Handle common session and query parameters
@@ -310,8 +308,183 @@ class CrelishBaseController extends Controller
       ]);
     }
     $html .= '</select>';
+
+    // Add auto-translate button if translation service is available
+    if (CrelishTranslationService::isAvailable()) {
+      $sourceLanguage = Yii::$app->sourceLanguage ?? 'de';
+      $ctype = $this->ctype ?? '';
+      $uuid = $this->uuid ?? '';
+
+      $html .= Html::button(
+        '<i class="fa fa-language"></i> ' . Yii::t('app', 'Auto-translate'),
+        [
+          'id' => 'auto-translate-btn',
+          'class' => 'btn btn-sm btn-outline-primary ms-2',
+          'data-source-language' => $sourceLanguage,
+          'data-ctype' => $ctype,
+          'data-uuid' => $uuid,
+          'style' => 'display: none;', // Hidden by default, shown via JS when non-source language selected
+          'title' => Yii::t('app', 'Translate all fields from {source} to selected language', ['source' => strtoupper($sourceLanguage)])
+        ]
+      );
+
+      // Register the translation JavaScript
+      $this->registerTranslationScript($sourceLanguage);
+    }
+
     $html .= Html::endTag('div');
     return $html;
+  }
+
+  /**
+   * Register JavaScript for handling auto-translation
+   */
+  private function registerTranslationScript(string $sourceLanguage): void
+  {
+    $translateUrl = Url::to(['/crelish/translation/translate']);
+    $loadingText = Yii::t('app', 'Translating...');
+    $errorText = Yii::t('app', 'Translation failed. Please try again.');
+    $successText = Yii::t('app', 'Fields translated successfully!');
+
+    $js = <<<JS
+(function() {
+    var sourceLanguage = '{$sourceLanguage}';
+    var translateBtn = document.getElementById('auto-translate-btn');
+    var languageSelect = document.getElementById('language-select');
+
+    if (!translateBtn || !languageSelect) return;
+
+    // Show/hide translate button based on selected language
+    function updateTranslateButtonVisibility() {
+        var selectedLang = languageSelect.value;
+        if (selectedLang !== sourceLanguage && !selectedLang.startsWith(sourceLanguage)) {
+            translateBtn.style.display = 'inline-block';
+        } else {
+            translateBtn.style.display = 'none';
+        }
+    }
+
+    // Set value to a target field, handling WYSIWYG editors
+    function setFieldValue(fieldKey, targetLanguage, value) {
+        var targetSelector = '[name*="[' + targetLanguage + '][' + fieldKey + ']"]';
+        var targetInput = document.querySelector(targetSelector);
+
+        if (!targetInput) return false;
+
+        var finalValue = typeof value === 'object' ? JSON.stringify(value) : value;
+
+        // Set the textarea/input value
+        targetInput.value = finalValue;
+
+        // Handle Trumbowyg WYSIWYG editor
+        if (typeof jQuery !== 'undefined' && jQuery.fn.trumbowyg) {
+            var jqTarget = jQuery(targetInput);
+            if (jqTarget.data('trumbowyg')) {
+                jqTarget.trumbowyg('html', finalValue);
+            }
+        }
+
+        // Handle CKEditor
+        if (typeof CKEDITOR !== 'undefined' && CKEDITOR.instances[targetInput.id]) {
+            CKEDITOR.instances[targetInput.id].setData(finalValue);
+        }
+
+        // Handle TinyMCE
+        if (typeof tinymce !== 'undefined') {
+            var editor = tinymce.get(targetInput.id);
+            if (editor) {
+                editor.setContent(finalValue);
+            }
+        }
+
+        // Trigger change event for any listeners
+        targetInput.dispatchEvent(new Event('change', { bubbles: true }));
+        targetInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+        return true;
+    }
+
+    // Initial visibility check
+    updateTranslateButtonVisibility();
+
+    // Update visibility when language changes
+    languageSelect.addEventListener('change', updateTranslateButtonVisibility);
+
+    // Handle translate button click
+    translateBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+
+        var targetLanguage = languageSelect.value;
+        var ctype = translateBtn.dataset.ctype;
+        var uuid = translateBtn.dataset.uuid;
+
+        if (!ctype) {
+            alert('Content type not available');
+            return;
+        }
+
+        if (!uuid) {
+            alert('Please save the content first before translating.');
+            return;
+        }
+
+        // Show loading state
+        var originalText = translateBtn.innerHTML;
+        translateBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> {$loadingText}';
+        translateBtn.disabled = true;
+
+        // Send translation request - server loads source data from stored model
+        fetch('{$translateUrl}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content || ''
+            },
+            body: JSON.stringify({
+                ctype: ctype,
+                uuid: uuid,
+                targetLanguage: targetLanguage
+            })
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            translateBtn.innerHTML = originalText;
+            translateBtn.disabled = false;
+
+            if (data.success && data.translations) {
+                var fieldsPopulated = 0;
+
+                // Populate translated values into target language fields
+                Object.keys(data.translations).forEach(function(fieldKey) {
+                    if (setFieldValue(fieldKey, targetLanguage, data.translations[fieldKey])) {
+                        fieldsPopulated++;
+                    }
+                });
+
+                // Show success message
+                var flashContainer = document.querySelector('.flash-messages') || document.querySelector('.container-fluid');
+                if (flashContainer) {
+                    var alert = document.createElement('div');
+                    alert.className = 'alert alert-success alert-dismissible fade show';
+                    alert.innerHTML = '{$successText} (' + fieldsPopulated + ' fields) <button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+                    flashContainer.insertBefore(alert, flashContainer.firstChild);
+                    setTimeout(function() { alert.remove(); }, 5000);
+                }
+            } else {
+                alert(data.error || '{$errorText}');
+            }
+        })
+        .catch(function(error) {
+            translateBtn.innerHTML = originalText;
+            translateBtn.disabled = false;
+            console.error('Translation error:', error);
+            alert('{$errorText}');
+        });
+    });
+})();
+JS;
+
+    Yii::$app->view->registerJs($js, \yii\web\View::POS_END);
   }
 
   private function renderTabs($form, $settings): string

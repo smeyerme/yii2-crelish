@@ -221,8 +221,16 @@ class ComponentsConfig
           'fileMap' => ['content' => 'content.php'],
           'on missingTranslation' => $handler
         ],
+        'widgets*' => [
+          'class' => 'yii\i18n\PhpMessageSource',
+          'basePath' => '@app/messages',
+          'fileMap' => ['widgets' => 'widgets.php'],
+          'on missingTranslation' => $handler
+        ],
         '*' => [
           'class' => 'yii\i18n\PhpMessageSource',
+          'basePath' => '@app/messages',
+          'on missingTranslation' => $handler
         ],
       ],
     ];

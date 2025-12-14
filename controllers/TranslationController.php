@@ -1,8 +1,9 @@
 <?php
-	
+
 namespace giantbits\crelish\controllers;
 
 use giantbits\crelish\components\CrelishBaseController;
+use giantbits\crelish\components\CrelishTranslationService;
 use Yii;
 use yii\helpers\Html;
 use yii\web\Response;
@@ -98,5 +99,133 @@ class TranslationController extends CrelishBaseController
 			$translations[$category] = include($filePath);
 		}
 		return $translations;
+	}
+
+	/**
+	 * AJAX action to translate model fields using DeepL
+	 *
+	 * Expects JSON POST data with:
+	 * - ctype: Content type (element type)
+	 * - uuid: UUID of the model to translate
+	 * - targetLanguage: Target language code
+	 *
+	 * @return array JSON response with translations or error
+	 */
+	public function actionTranslate()
+	{
+		Yii::$app->response->format = Response::FORMAT_JSON;
+
+		// Disable CSRF validation for AJAX requests
+		$this->enableCsrfValidation = false;
+
+		// Check if request is POST
+		if (!Yii::$app->request->isPost) {
+			return [
+				'success' => false,
+				'error' => Yii::t('app', 'Invalid request method')
+			];
+		}
+
+		// Get JSON input
+		$rawInput = Yii::$app->request->rawBody;
+		$input = json_decode($rawInput, true);
+
+		if (json_last_error() !== JSON_ERROR_NONE) {
+			return [
+				'success' => false,
+				'error' => Yii::t('app', 'Invalid JSON data')
+			];
+		}
+
+		$ctype = $input['ctype'] ?? null;
+		$uuid = $input['uuid'] ?? null;
+		$targetLanguage = $input['targetLanguage'] ?? null;
+
+		// Validate required parameters
+		if (empty($ctype)) {
+			return [
+				'success' => false,
+				'error' => Yii::t('app', 'Content type is required')
+			];
+		}
+
+		if (empty($uuid)) {
+			return [
+				'success' => false,
+				'error' => Yii::t('app', 'Please save the content first before translating')
+			];
+		}
+
+		if (empty($targetLanguage)) {
+			return [
+				'success' => false,
+				'error' => Yii::t('app', 'Target language is required')
+			];
+		}
+
+		// Check if translation service is available
+		if (!CrelishTranslationService::isAvailable()) {
+			return [
+				'success' => false,
+				'error' => Yii::t('app', 'Translation service is not available. Please check your configuration.')
+			];
+		}
+
+		// Check if we should offer translation for this language
+		if (!CrelishTranslationService::shouldOfferTranslation($targetLanguage)) {
+			return [
+				'success' => false,
+				'error' => Yii::t('app', 'Translation to this language is not supported')
+			];
+		}
+
+		try {
+			$translationService = new CrelishTranslationService();
+			$translations = $translationService->translateModel($ctype, $uuid, $targetLanguage);
+
+			if (empty($translations)) {
+				return [
+					'success' => false,
+					'error' => Yii::t('app', 'No translatable fields found or translation failed')
+				];
+			}
+
+			return [
+				'success' => true,
+				'translations' => $translations,
+				'targetLanguage' => $targetLanguage,
+				'fieldsTranslated' => count($translations)
+			];
+
+		} catch (\Exception $e) {
+			Yii::error('Model translation failed: ' . $e->getMessage(), 'crelish.translation');
+
+			return [
+				'success' => false,
+				'error' => Yii::t('app', 'Translation failed: {error}', ['error' => $e->getMessage()])
+			];
+		}
+	}
+
+	/**
+	 * Override behaviors to allow AJAX access
+	 */
+	public function behaviors()
+	{
+		$behaviors = parent::behaviors();
+
+		// Allow AJAX requests for translate action
+		return $behaviors;
+	}
+
+	/**
+	 * Disable CSRF for translate action
+	 */
+	public function beforeAction($action)
+	{
+		if ($action->id === 'translate') {
+			$this->enableCsrfValidation = false;
+		}
+		return parent::beforeAction($action);
 	}
 }
