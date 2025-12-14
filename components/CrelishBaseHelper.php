@@ -1061,7 +1061,7 @@ SCRIPT;
   
   /**
    * Generate responsive image HTML using asset UUID
-   * 
+   *
    * @param string $uuid The UUID of the asset
    * @param array $options Configuration options (see method documentation)
    * @return string HTML for responsive image
@@ -1073,10 +1073,10 @@ SCRIPT;
     if (!$asset) {
       return '';
     }
-    
+
     // Determine alt text from asset data
     $altText = $asset->description ?: pathinfo($asset->fileName, PATHINFO_FILENAME);
-    
+
     // Default options
     $defaults = [
       'preset' => 'default',
@@ -1090,23 +1090,72 @@ SCRIPT;
       'width' => $asset->width ?? null,
       'height' => $asset->height ?? null
     ];
-    
+
     // Merge options with defaults
     $options = array_merge($defaults, $options);
-    
+
+    // Check if asset is an SVG - SVGs don't need responsive processing
+    $extension = strtolower(pathinfo($asset->fileName, PATHINFO_EXTENSION));
+    $isSvg = $extension === 'svg' || ($asset->type ?? '') === 'image/svg+xml';
+
+    if ($isSvg) {
+      return self::buildSvgImageHtml($asset, $options);
+    }
+
     // Configure presets for common use cases
     $presets = self::getImagePresets();
-    
+
     // Apply preset if specified and exists
     if (isset($presets[$options['preset']])) {
       $options = array_merge($options, $presets[$options['preset']]);
     }
-    
+
     // Calculate dimensions for aspect ratio if needed
     $options = self::calculateImageDimensions($options, $asset);
-    
+
     // Generate responsive image HTML
     return self::buildResponsiveImageHtml($asset, $options);
+  }
+
+  /**
+   * Build simple image HTML for SVG files
+   *
+   * SVGs are vector graphics and don't need responsive image processing.
+   * They scale infinitely without quality loss.
+   *
+   * @param Asset $asset Asset model
+   * @param array $options Image options
+   * @return string HTML string
+   */
+  private static function buildSvgImageHtml(Asset $asset, array $options): string
+  {
+    $imagePath = self::getAssetUrl($asset->pathName, $asset->fileName);
+
+    $attrs = [
+      'src' => $imagePath,
+      'alt' => htmlspecialchars($options['alt'], ENT_QUOTES, 'UTF-8'),
+      'class' => $options['class'],
+      'loading' => $options['loading'],
+    ];
+
+    // Add width/height if specified (helps prevent layout shift)
+    if (!empty($options['width'])) {
+      $attrs['width'] = $options['width'];
+    }
+    if (!empty($options['height'])) {
+      $attrs['height'] = $options['height'];
+    }
+
+    // Build HTML
+    $html = '<img';
+    foreach ($attrs as $name => $value) {
+      if ($value !== null && $value !== '') {
+        $html .= ' ' . $name . '="' . $value . '"';
+      }
+    }
+    $html .= '>';
+
+    return $html;
   }
 
   /**
