@@ -1069,7 +1069,7 @@ SCRIPT;
   public static function responsiveImage($uuid, $options = []): string
   {
     // Try to get the asset
-    $asset = Asset::findOne($uuid);
+    $asset = Asset::findOne(['=', 'uuid', $uuid]);
     if (!$asset) {
       return '';
     }
