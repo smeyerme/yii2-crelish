@@ -8,7 +8,7 @@
     ],
     "type": "yii2-extension",
     "license": "BSD-3-Clause",
-    "version": "0.18.9",
+    "version": "0.18.10",
     "minimum-stability": "dev",
     "prefer-stable": true,
     "support": {
@@ -88,6 +88,11 @@
         }
     },
     "repositories": [
+        {
+            "type": "composer",
+            "url": "https://cdn.asset-packagist.org/p/npm-asset/bootstrap/latest.json",
+            "only": ["npm-asset/bootstrap"]
+        },
         {
             "type": "composer",
             "url": "https://asset-packagist.org"

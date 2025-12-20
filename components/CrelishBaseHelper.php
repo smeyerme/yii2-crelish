@@ -1088,7 +1088,8 @@ SCRIPT;
       'class' => 'img-fluid',
       'loading' => 'lazy',
       'width' => $asset->width ?? null,
-      'height' => $asset->height ?? null
+      'height' => $asset->height ?? null,
+      'preload' => false
     ];
 
     // Merge options with defaults
@@ -1304,6 +1305,7 @@ SCRIPT;
         'widths' => [480, 768, 1024, 1600, 2000],
         'sizes' => '(max-width: 767px) 100vw, (max-width: 1199px) 100vw, 100vw',
         'loading' => 'eager',
+        'preload' => true,
       ],
       'card' => [
         'widths' => [300, 600, 900],
@@ -1352,39 +1354,53 @@ SCRIPT;
   
   /**
    * Build responsive image HTML
-   * 
+   *
    * @param Asset $asset Asset model
-   * @param array $options Image options
+   * @param array $options Image options including:
+   *   - preload: bool - Whether to register a preload link tag (default: true)
    * @return string HTML string
    */
   private static function buildResponsiveImageHtml(Asset $asset, array $options): string
   {
     // Path to the original image
     $imagePath = self::getAssetUrl($asset->pathName, $asset->fileName);
-    
+
     // Base URL with format and quality
-    $baseUrl = '/crelish/asset/glide?path=' . ltrim($imagePath, '/') . 
-               '&q=' . $options['quality'] . 
+    $baseUrl = '/crelish/asset/glide?path=' . ltrim($imagePath, '/') .
+               '&q=' . $options['quality'] .
                '&fm=' . $options['format'];
-    
+
     // Generate srcset
     $srcset = [];
     foreach ($options['widths'] as $width) {
       $srcset[] = $baseUrl . '&w=' . $width . ' ' . $width . 'w';
     }
-    
+
+    $srcsetString = implode(', ', $srcset);
+
+    // Register preload link tag if enabled
+    if (!empty($options['preload']) && Yii::$app->view !== null) {
+      Yii::$app->view->registerLinkTag([
+        'rel' => 'preload',
+        'as' => 'image',
+        'href' => $baseUrl . '&w=' . max($options['widths']),
+        'imagesrcset' => $srcsetString,
+        'imagesizes' => $options['sizes'],
+      ], 'preload-image-' . $asset->uuid);
+    }
+
     // Build HTML attributes
     $attrs = [
       'src' => $baseUrl . '&w=' . max($options['widths']),
       'alt' => htmlspecialchars($options['alt'], ENT_QUOTES, 'UTF-8'),
       'class' => $options['class'],
       'loading' => $options['loading'],
-      'srcset' => implode(', ', $srcset),
+      'srcset' => $srcsetString,
       'sizes' => $options['sizes'],
       'width' => $options['width'],
       'height' => $options['height']
     ];
-    
+
     // Build HTML
     $html = '<img';
     foreach ($attrs as $name => $value) {
@@ -1393,7 +1409,7 @@ SCRIPT;
       }
     }
     $html .= '>';
-    
+
     return $html;
   }
 }
