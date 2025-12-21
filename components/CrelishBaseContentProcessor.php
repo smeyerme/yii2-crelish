@@ -100,12 +100,12 @@ class CrelishBaseContentProcessor extends Component
       $fieldType = (property_exists($field, 'type')) ? $field->type : 'textInput';
       $transform = (property_exists($field, 'transform')) ? $field->transform : null;
       
-      // Special handling for jsonEditor type
-      if ($fieldType === 'jsonEditor' && empty($transform)) {
+      // Special handling for jsonEditor types
+      if (($fieldType === 'jsonEditor' || $fieldType === 'jsonEditorNew') && empty($transform)) {
         $transform = 'Json';
       }
     }
-	  
+
 	  // Get processor class.
     $processorClass = 'giantbits\crelish\plugins\\' . strtolower($fieldType) . '\\' . ucfirst($fieldType) . 'ContentProcessor';
     if(!empty($transform)) $transformClass = 'giantbits\crelish\components\transformer\CrelishFieldTransformer' . ucfirst($transform);

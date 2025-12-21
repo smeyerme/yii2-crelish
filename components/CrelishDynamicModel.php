@@ -211,7 +211,7 @@ class CrelishDynamicModel extends DynamicModel
               $fieldValue = $langData[$field->key];
               
               // Handle JSON fields
-              if (property_exists($field, 'type') && $field->type === 'jsonEditor') {
+              if (property_exists($field, 'type') && ($field->type === 'jsonEditor' || $field->type === 'jsonEditorNew')) {
                 if (is_string($fieldValue)) {
                   // Convert JSON string to array/object
                   try {
@@ -274,7 +274,7 @@ class CrelishDynamicModel extends DynamicModel
               $fieldValue = $langData[$field->key];
               
               // Check for field type specific processing
-              if (property_exists($field, 'type') && $field->type === 'jsonEditor') {
+              if (property_exists($field, 'type') && ($field->type === 'jsonEditor' || $field->type === 'jsonEditorNew')) {
                 if (is_array($fieldValue) || is_object($fieldValue)) {
                   // Store as JSON string
                   $modelArray['i18n'][$lang][$field->key] = Json::encode($fieldValue);
