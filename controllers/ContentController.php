@@ -155,10 +155,17 @@ class ContentController extends CrelishBaseController
                   // Make sure the relation is joined (use ctype as it maps to the relation method name)
                   $query->joinWith($config->ctype ?? $field->key);
 
+                  // Get the actual table name from the related model class
+                  $tableName = $relationCtype;
+                  if (\giantbits\crelish\components\CrelishModelResolver::modelExists($relationCtype)) {
+                    $relatedModelClass = \giantbits\crelish\components\CrelishModelResolver::getModelClass($relationCtype);
+                    $tableName = $relatedModelClass::tableName();
+                  }
+
                   // Create an AND condition for each related field
                   $relationFieldCondition = ['and'];
                   foreach ($searchFragments as $fragment) {
-                    $relationFieldCondition[] = ['like', $relationCtype . '.' . $labelField, $fragment];
+                    $relationFieldCondition[] = ['like', $tableName . '.' . $labelField, $fragment];
                   }
                   // Add this related field's AND condition to the overall OR conditions
                   $orConditions[] = $relationFieldCondition;
