@@ -22,11 +22,18 @@ class CrelishAsset extends AssetBundle
     'css/crelish-modern.css',
     'css/fontawesome.min.css',
     'css/sharp-regular.min.css',
+    'css/brands.min.css',
+    'css/regular.min.css',
+    'css/solid.min.css',
   ];
   public $js = [
     'https://cdn.jsdelivr.net/dropzone/4.3.0/dropzone.min.js',
   ];
   public $jsOptions = ['position' => \yii\web\View::POS_HEAD];
+
+  public $publishOptions = [
+    'forceCopy' => YII_DEBUG,
+  ];
 
   public $depends = [
     'yii\web\YiiAsset',

@@ -285,6 +285,7 @@ class ElementsController extends CrelishBaseController
       'assetConnector' => 'Asset Connector',
       'relationSelect' => 'Relation Select',
       'jsonEditor' => 'JSON Editor',
+      'jsonEditorNew' => 'JSON Editor (Schema Form)',
       'widget_\\brussens\\yii2\\extensions\\trumbowyg\\TrumbowygWidget' => 'Rich Text Editor'
     ];
     

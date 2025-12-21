@@ -1,6 +1,8 @@
 # JSON Editor Plugin for Crelish CMS
 
-This plugin provides a rich JSON editing experience in the Crelish CMS, allowing users to edit JSON data with a schema-driven interface.
+This plugin provides a rich JSON editing experience in the Crelish CMS using [josdejong/jsoneditor](https://github.com/josdejong/jsoneditor). It provides tree, code, form, text, and view modes.
+
+**Note:** For a more user-friendly schema-based form editor, see the `jsoneditornew` plugin.
 
 ## Features
 
@@ -106,4 +108,4 @@ Alternatively, the plugin will use a CDN version if the local library is not fou
 
 ## Translations
 
-The JSON Editor supports translatable fields through the standard Crelish translation system. Set `"translatable": true` in your field definition to enable translations. 
+The JSON Editor supports translatable fields through the standard Crelish translation system. Set `"translatable": true` in your field definition to enable translations.
