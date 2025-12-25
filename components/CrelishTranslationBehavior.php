@@ -4,7 +4,7 @@
 	
 	use Yii;
 	use yii\db\BaseActiveRecord;
-	use yii\helpers\VarDumper;
+	use giantbits\crelish\components\CrelishBaseHelper;
 	
 	class CrelishTranslationBehavior extends \yii\base\Behavior
 	{
@@ -81,9 +81,11 @@
 			if ($this->skipTranslation) {
 				return;
 			}
-			
+
 			$postData = \Yii::$app->request->post('CrelishDynamicModel', []);
+
 			if(empty($postData['i18n'])) {
+				Yii::debug('No i18n data in POST, skipping translation save', __METHOD__);
 				return;
 			}
 			
@@ -103,7 +105,7 @@
 								'source_model_attribute' => $attribute,
 								'source_model_uuid' => $this->owner->uuid,
 							])->one();
-						
+
 						if (!$translation) {
 							$translation = new \giantbits\crelish\models\CrelishTranslation();
 							$translation->uuid = CrelishBaseHelper::GUIDv4();
@@ -112,13 +114,16 @@
 							$translation->source_model_attribute = $attribute;
 							$translation->source_model_uuid = $this->owner->uuid;
 						}
-						
+
 						$translation->translation = $value;
-						$translation->save();
+
+						$saveResult = $translation->save();
+
+						if (!$saveResult) {
+							Yii::error('Failed to save translation for ' . $attribute . ' (' . $lang . '): ' . json_encode($translation->errors), __METHOD__);
+						}
 					}
 				}
 			}
-			
-			return;
 		}
 	}

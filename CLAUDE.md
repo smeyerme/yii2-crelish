@@ -18,6 +18,9 @@ This document describes how the Crelish CMS (Yii2-based) handles models, element
 10. [Complete Examples](#complete-examples)
 11. [IDE Helpers](#ide-helpers)
 12. [Migration Generator](#migration-generator)
+13. [Frontend Widgets](#frontend-widgets)
+    - [Legacy Widgets](#legacy-widgets)
+    - [Configurable Widgets](#configurable-widgets-new)
 
 ---
 
@@ -1386,3 +1389,205 @@ public function safeDown()
 | `--migrationsDir` | `-m` | Directory for migrations (default: `@app/migrations`) |
 | `--migrationsNamespace` | `-n` | Namespace for migrations (optional) |
 | `--useTablePrefix` | | Use Yii table prefix (default: true) |
+
+---
+
+## Frontend Widgets
+
+Frontend widgets are reusable components that render content on the public-facing website. They live in `workspace/widgets/` and can be configured through the CMS.
+
+> **Full documentation:** See [docs/frontend-widgets.md](docs/frontend-widgets.md) for complete examples and API reference.
+
+### Widget Location
+
+```
+workspace/widgets/{WidgetName}/{WidgetName}.php
+```
+
+The directory name must match the class name.
+
+### Legacy Widgets
+
+Simple widgets extending `yii\base\Widget` without CMS configuration:
+
+```php
+<?php
+
+namespace app\workspace\widgets\CourseList;
+
+use yii\base\Widget;
+
+class CourseList extends Widget
+{
+    public string $action = 'overview';  // Hardcoded or passed via template
+
+    public function run(): string
+    {
+        return $this->render('_courses.twig', [
+            'items' => $this->fetchData(),
+        ]);
+    }
+}
+```
+
+**Characteristics:**
+- Listed in WidgetConnector as "Legacy widget (not configurable)"
+- Configuration via public properties passed in templates
+- No dynamic CMS configuration
+
+### Configurable Widgets (New)
+
+Widgets implementing `ConfigurableWidgetInterface` for CMS-managed configuration:
+
+```php
+<?php
+
+namespace app\workspace\widgets\ServicesList;
+
+use giantbits\crelish\components\ConfigurableWidgetInterface;
+use yii\base\Widget;
+use yii\helpers\Json;
+
+class ServicesList extends Widget implements ConfigurableWidgetInterface
+{
+    public $displayMode = 'full';
+    public $items = [];
+    public $showHeader = true;
+    public $data;  // Receives CMS config
+
+    public static function getWidgetMeta(): array
+    {
+        return [
+            'label' => 'Services Liste',
+            'description' => 'Shows services in various layouts',
+            'category' => 'content',
+            'icon' => 'list',
+        ];
+    }
+
+    public static function getConfigSchema(): array
+    {
+        return [
+            'displayMode' => [
+                'type' => 'select',
+                'label' => 'Display Mode',
+                'options' => [
+                    'full' => 'Full (with description)',
+                    'compact' => 'Compact (title only)',
+                ],
+                'default' => 'full',
+            ],
+            'items' => [
+                'type' => 'relation',
+                'label' => 'Select Services',
+                'ctype' => 'services',
+                'multiple' => true,
+                'displayField' => 'systitle',
+            ],
+            'showHeader' => [
+                'type' => 'checkbox',
+                'label' => 'Show Header',
+                'default' => true,
+            ],
+        ];
+    }
+
+    public function init(): void
+    {
+        parent::init();
+
+        if (!empty($this->data)) {
+            $data = is_string($this->data) ? Json::decode($this->data) : $this->data;
+            if (is_array($data)) {
+                $this->displayMode = $data['displayMode'] ?? $this->displayMode;
+                $this->items = $data['items'] ?? $this->items;
+                $this->showHeader = $data['showHeader'] ?? $this->showHeader;
+            }
+        }
+    }
+
+    public function run(): string
+    {
+        return $this->render('_services.twig', [
+            'items' => $this->getServices(),
+            'config' => [
+                'displayMode' => $this->displayMode,
+                'showHeader' => $this->showHeader,
+            ],
+        ]);
+    }
+}
+```
+
+### Config Schema Field Types
+
+| Type | Description | Options |
+|------|-------------|---------|
+| `text` | Single line text | `placeholder` |
+| `textarea` | Multi-line text | `placeholder`, `rows` |
+| `number` | Numeric input | `min`, `max`, `step` |
+| `select` | Dropdown | `options` (value => label) |
+| `checkbox` | Boolean toggle | - |
+| `radio` | Radio group | `options` (value => label) |
+| `color` | Color picker | - |
+| `asset` | File/image selector | - |
+| `relation` | Content selector | `ctype`, `multiple`, `displayField` |
+
+### Conditional Visibility
+
+Use `dependsOn` to show/hide fields based on other values:
+
+```php
+'showHeader' => [
+    'type' => 'checkbox',
+    'label' => 'Show Header',
+    'default' => true,
+],
+'headerTitle' => [
+    'type' => 'text',
+    'label' => 'Header Title',
+    'dependsOn' => ['showHeader' => true],  // Only visible when showHeader is true
+],
+```
+
+### WidgetConnector Plugin
+
+The `WidgetConnector` CMS plugin:
+1. Scans `workspace/widgets/` for available widgets
+2. Renders dropdown to select widget type
+3. Generates dynamic configuration form from `getConfigSchema()`
+4. Stores `widgetType` + `options` (JSON) in content record
+
+**Usage in Element Definition:**
+
+```json
+{
+  "fields": [
+    {
+      "label": "Widget",
+      "key": "widgetType",
+      "type": "widgetConnector"
+    },
+    {
+      "label": "Options",
+      "key": "options",
+      "type": "textarea",
+      "visible": false
+    }
+  ]
+}
+```
+
+### Using Widgets in Templates
+
+```twig
+{# Direct usage #}
+{{ widget('app\\workspace\\widgets\\ServicesList\\ServicesList', {
+    'displayMode': 'compact'
+}) }}
+
+{# With CMS config #}
+{{ widget('app\\workspace\\widgets\\' ~ content.widgetType ~ '\\' ~ content.widgetType, {
+    'data': content.options
+}) }}
+```
