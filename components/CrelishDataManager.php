@@ -397,15 +397,18 @@ class CrelishDataManager extends Component
   /**
    * Get filters
    *
-   * @return CrelishDynamicJsonModel Filters
+   * @return CrelishDynamicModel Filters
    */
-  public function getFilters(): CrelishDynamicJsonModel
+  public function getFilters(): CrelishDynamicModel
   {
-    $model = new CrelishDynamicJsonModel(['systitle'], [
+    $model = new CrelishDynamicModel([
       'ctype' => $this->ctype,
     ]);
 
-    if (!empty($_GET['CrelishDynamicJsonModel'])) {
+    // Support both old and new model names in GET parameters for backwards compatibility
+    if (!empty($_GET['CrelishDynamicModel'])) {
+      $model->attributes = $_GET['CrelishDynamicModel'];
+    } elseif (!empty($_GET['CrelishDynamicJsonModel'])) {
       $model->attributes = $_GET['CrelishDynamicJsonModel'];
     }
 
