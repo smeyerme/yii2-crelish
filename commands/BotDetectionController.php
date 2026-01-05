@@ -126,40 +126,44 @@ class BotDetectionController extends Controller
     $this->sessionScores = [];
 
     // Phase 1: Collect scores from all detection methods
-    // 1. User agent based detection (known bots + outdated browsers)
-    $this->stdout("\n[1/6] Processing user agent-based detection...\n", Console::FG_CYAN);
+    // 1. Orphan sessions (sessions with no page views - definitely garbage)
+    $this->stdout("\n[1/7] Detecting orphan sessions...\n", Console::FG_CYAN);
+    $this->scoreOrphanSessions();
+
+    // 2. User agent based detection (known bots + outdated browsers)
+    $this->stdout("\n[2/7] Processing user agent-based detection...\n", Console::FG_CYAN);
     $this->scoreUserAgents();
 
-    // 2. Volume-based anomaly detection
-    $this->stdout("\n[2/6] Detecting high-volume anomalies...\n", Console::FG_CYAN);
+    // 3. Volume-based anomaly detection
+    $this->stdout("\n[3/7] Detecting high-volume anomalies...\n", Console::FG_CYAN);
     $this->scoreVolumeAnomalies();
 
-    // 3. Timing pattern detection
-    $this->stdout("\n[3/6] Analyzing timing patterns...\n", Console::FG_CYAN);
+    // 4. Timing pattern detection
+    $this->stdout("\n[4/7] Analyzing timing patterns...\n", Console::FG_CYAN);
     $this->scoreTimingPatterns();
 
-    // 4. Crawling pattern detection
-    $this->stdout("\n[4/6] Detecting crawling patterns...\n", Console::FG_CYAN);
+    // 5. Crawling pattern detection
+    $this->stdout("\n[5/7] Detecting crawling patterns...\n", Console::FG_CYAN);
     $this->scoreCrawlingPatterns();
 
-    // 5. Datacenter IP detection
+    // 6. Datacenter IP detection
     if ($this->thresholds['enable_datacenter_ip_detection'] ?? true) {
-      $this->stdout("\n[5/6] Detecting datacenter IPs...\n", Console::FG_CYAN);
+      $this->stdout("\n[6/7] Detecting datacenter IPs...\n", Console::FG_CYAN);
       $this->scoreDatacenterIps();
     } else {
-      $this->stdout("\n[5/6] Datacenter IP detection disabled, skipping...\n", Console::FG_YELLOW);
+      $this->stdout("\n[6/7] Datacenter IP detection disabled, skipping...\n", Console::FG_YELLOW);
     }
 
     // Phase 2: Apply combination bonuses
-    $this->stdout("\n[6/7] Applying combination bonuses...\n", Console::FG_CYAN);
+    $this->stdout("\n[7/8] Applying combination bonuses...\n", Console::FG_CYAN);
     $this->applyComboBoosts();
 
     // Phase 3: Commit scores to database
-    $this->stdout("\n[7/8] Committing confidence scores...\n", Console::FG_CYAN);
+    $this->stdout("\n[8/9] Committing confidence scores...\n", Console::FG_CYAN);
     $this->commitScores();
 
     // Phase 4: Delete only HIGH confidence bots
-    $this->stdout("\n[8/8] Deleting high-confidence bot traffic...\n", Console::FG_CYAN);
+    $this->stdout("\n[9/9] Deleting high-confidence bot traffic...\n", Console::FG_CYAN);
     $this->deleteHighConfidenceBots();
 
     // Show summary
@@ -179,6 +183,35 @@ class BotDetectionController extends Controller
       $this->thresholds = array_merge($this->thresholds, $customThresholds);
       $this->stdout("Loaded custom thresholds from config file\n", Console::FG_YELLOW);
     }
+  }
+
+  /**
+   * Score sessions with no page views (orphan sessions)
+   * These are completely useless and should always be deleted
+   */
+  protected function scoreOrphanSessions(): void
+  {
+    $db = Yii::$app->db;
+    $scored = 0;
+
+    $this->stdout("Finding sessions without page views...\n");
+
+    // Find all sessions that have zero page views
+    $orphanSessions = $db->createCommand("
+      SELECT s.session_id
+      FROM analytics_sessions s
+      LEFT JOIN analytics_page_views pv ON s.session_id = pv.session_id
+      WHERE s.is_bot = 0
+        AND pv.id IS NULL
+    ")->queryColumn();
+
+    foreach ($orphanSessions as $sessionId) {
+      // Give maximum score - these are definitely garbage
+      $this->addScore($sessionId, 100, 'no_page_views');
+      $scored++;
+    }
+
+    $this->stdout(sprintf("Orphan session scoring: %d sessions scored (100 each)\n", $scored), Console::FG_YELLOW);
   }
 
   /**
@@ -224,6 +257,7 @@ class BotDetectionController extends Controller
 
     $totalProcessed = 0;
     $knownBots = 0;
+    $deadBrowsers = 0;
     $outdatedBrowsers = 0;
     $offset = 0;
 
@@ -252,10 +286,17 @@ class BotDetectionController extends Controller
           $knownBots++;
         }
 
-        // Check for outdated browser
-        if ($this->hasOutdatedBrowser($userAgent)) {
-          $this->addScore($record['session_id'], self::SCORE_OUTDATED_BROWSER, 'outdated_browser');
-          $outdatedBrowsers++;
+        // Check for completely dead browsers (hard cutoff - always 50 points)
+        if ($this->hasDeadBrowser($userAgent)) {
+          $this->addScore($record['session_id'], 50, 'dead_browser');
+          $deadBrowsers++;
+        } else {
+          // Calculate age-based score for outdated but not dead browsers
+          $ageScore = $this->getBrowserAgeScore($userAgent);
+          if ($ageScore > 0) {
+            $this->addScore($record['session_id'], $ageScore, 'outdated_browser:' . $ageScore);
+            $outdatedBrowsers++;
+          }
         }
 
         // Check for custom bot patterns
@@ -273,8 +314,8 @@ class BotDetectionController extends Controller
     } while (count($records) == $this->batchSize);
 
     $this->stdout(sprintf(
-      "User agent analysis: %d sessions, %d known bots, %d outdated browsers\n",
-      $totalProcessed, $knownBots, $outdatedBrowsers
+      "User agent analysis: %d sessions, %d known bots, %d dead browsers, %d outdated browsers\n",
+      $totalProcessed, $knownBots, $deadBrowsers, $outdatedBrowsers
     ), Console::FG_YELLOW);
   }
 
@@ -580,7 +621,9 @@ class BotDetectionController extends Controller
         }
       }
 
-      $hasOutdated = in_array('outdated_browser', $reasons);
+      // Check for outdated browser (now includes score suffix like "outdated_browser:30")
+      $hasOutdated = in_array('dead_browser', $reasons) ||
+        count(array_filter($reasons, fn($r) => str_starts_with($r, 'outdated_browser'))) > 0;
       $hasBehavior = count(array_intersect($reasons, $behaviorSignals)) > 0;
       $hasKnownBot = in_array('known_bot', $reasons);
       $hasCustomBot = in_array('custom_bot_pattern', $reasons);
@@ -1239,25 +1282,223 @@ class BotDetectionController extends Controller
       return true;
     }
 
-    // Check for outdated browser versions
-    if ($this->hasOutdatedBrowser($userAgent)) {
+    // Check for dead browsers
+    if ($this->hasDeadBrowser($userAgent)) {
+      return true;
+    }
+
+    // Check for significantly outdated browsers
+    if ($this->getBrowserAgeScore($userAgent) >= 40) {
       return true;
     }
 
     // Custom rules for edge cases
-    // Email in user agent
-    if (preg_match('/@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/', $userAgent)) {
+    if ($this->hasCustomBotPattern($userAgent)) {
       return true;
     }
 
-    // Incomplete Chrome user agents
-    if (strpos($userAgent, 'Chrome/') !== false &&
-      strpos($userAgent, 'Safari/537.36') === false) {
+    return false;
+  }
+
+  /**
+   * Fetch current browser versions from Can I Use data
+   * Cache for 7 days to avoid constant API calls
+   */
+  protected function getCurrentBrowserVersions(): array
+  {
+    $cache = Yii::$app->cache ?? null;
+    $cacheKey = 'browser_versions_cache';
+
+    // Try cache first (7 day TTL)
+    if ($cache) {
+      $cached = $cache->get($cacheKey);
+      if ($cached !== false) {
+        return $cached;
+      }
+    }
+
+    try {
+      // Fetch from Can I Use GitHub (most reliable public source)
+      $context = stream_context_create([
+        'http' => [
+          'timeout' => 10,
+          'user_agent' => 'CrelishBotDetection/1.0',
+        ],
+      ]);
+
+      $url = 'https://raw.githubusercontent.com/Fyrd/caniuse/main/data.json';
+      $json = @file_get_contents($url, false, $context);
+
+      if ($json) {
+        $data = json_decode($json, true);
+        if ($data && isset($data['agents'])) {
+          $versions = [
+            'ios' => $this->extractLatestVersion($data['agents']['ios_saf']['versions'] ?? []),
+            'android' => $this->extractLatestVersion($data['agents']['android']['versions'] ?? []),
+            'chrome' => $this->extractLatestVersion($data['agents']['chrome']['versions'] ?? []),
+            'firefox' => $this->extractLatestVersion($data['agents']['firefox']['versions'] ?? []),
+            'safari' => $this->extractLatestVersion($data['agents']['safari']['versions'] ?? []),
+          ];
+
+          // Cache for 7 days
+          if ($cache) {
+            $cache->set($cacheKey, $versions, 604800);
+          }
+
+          $this->stdout("Fetched current browser versions from Can I Use\n");
+          return $versions;
+        }
+      }
+    } catch (\Exception $e) {
+      // Silently fall through to fallback
+    }
+
+    // Fallback to hardcoded versions (update annually)
+    $versions = [
+      'ios' => 18,        // iOS 18 = 2024
+      'android' => 15,    // Android 15 = 2024
+      'chrome' => 131,    // Chrome ~131 in late 2024
+      'firefox' => 133,   // Firefox ~133 in late 2024
+      'safari' => 18,     // Safari 18 = 2024
+    ];
+
+    // Cache fallback too
+    if ($cache) {
+      $cache->set($cacheKey, $versions, 604800);
+    }
+
+    return $versions;
+  }
+
+  /**
+   * Extract latest stable version from Can I Use version array
+   */
+  protected function extractLatestVersion(array $versions): int
+  {
+    // Can I Use returns versions like ["130", "131", "132", null, null]
+    // Filter out nulls and get the highest numeric value
+    $validVersions = array_filter($versions, function ($v) {
+      return $v !== null && is_numeric($v);
+    });
+
+    if (empty($validVersions)) {
+      return 0;
+    }
+
+    // Get numeric values only
+    $numericVersions = array_map('intval', $validVersions);
+    return max($numericVersions);
+  }
+
+  /**
+   * Calculate browser age score (0-50 points based on how outdated)
+   * Returns higher scores for older browsers
+   */
+  protected function getBrowserAgeScore($userAgent): int
+  {
+    $currentVersions = $this->getCurrentBrowserVersions();
+
+    // iOS version check
+    if (preg_match('/(?:iPhone OS|CPU OS) (\d+)[_\.]/', $userAgent, $matches)) {
+      $version = intval($matches[1]);
+      $currentVersion = $currentVersions['ios'] ?? 18;
+      $yearsOld = $currentVersion - $version;
+
+      if ($yearsOld >= 6) return 50;   // 6+ years old = ancient
+      if ($yearsOld >= 4) return 40;   // 4+ years old = very old
+      if ($yearsOld >= 2) return 30;   // 2+ years old = old
+      if ($yearsOld >= 1) return 20;   // 1+ year old = somewhat old
+      return 0;
+    }
+
+    // Android version check
+    if (preg_match('/Android (\d+)/', $userAgent, $matches)) {
+      $version = intval($matches[1]);
+      $currentVersion = $currentVersions['android'] ?? 15;
+      $yearsOld = $currentVersion - $version;
+
+      if ($yearsOld >= 6) return 50;   // Android 9 or older = ancient
+      if ($yearsOld >= 4) return 40;   // Android 11 = very old
+      if ($yearsOld >= 2) return 30;   // Android 13 = old
+      if ($yearsOld >= 1) return 20;   // Android 14 = somewhat old
+      return 0;
+    }
+
+    // Chrome version check (releases every 4 weeks, ~13/year)
+    if (preg_match('/Chrome\/(\d+)\./', $userAgent, $matches)) {
+      $version = intval($matches[1]);
+      $currentVersion = $currentVersions['chrome'] ?? 131;
+      $versionsBehind = $currentVersion - $version;
+
+      if ($versionsBehind >= 52) return 50;  // 4+ years old
+      if ($versionsBehind >= 26) return 40;  // 2+ years old
+      if ($versionsBehind >= 13) return 30;  // 1+ year old
+      if ($versionsBehind >= 6) return 20;   // 6+ months old
+      return 0;
+    }
+
+    // Firefox version check (similar release cycle to Chrome)
+    if (preg_match('/Firefox\/(\d+)\./', $userAgent, $matches)) {
+      $version = intval($matches[1]);
+      $currentVersion = $currentVersions['firefox'] ?? 133;
+      $versionsBehind = $currentVersion - $version;
+
+      if ($versionsBehind >= 52) return 50;  // 4+ years old
+      if ($versionsBehind >= 26) return 40;  // 2+ years old
+      if ($versionsBehind >= 13) return 30;  // 1+ year old
+      if ($versionsBehind >= 6) return 20;   // 6+ months old
+      return 0;
+    }
+
+    // Safari desktop version check (Version/X.Y...Safari)
+    if (preg_match('/Version\/(\d+)\.\d+.*Safari/', $userAgent, $matches)) {
+      $version = intval($matches[1]);
+      $currentVersion = $currentVersions['safari'] ?? 18;
+      $yearsOld = $currentVersion - $version;
+
+      if ($yearsOld >= 5) return 50;   // Safari 13 or older
+      if ($yearsOld >= 3) return 40;   // Safari 15
+      if ($yearsOld >= 2) return 30;   // Safari 16
+      if ($yearsOld >= 1) return 20;   // Safari 17
+      return 0;
+    }
+
+    return 0;
+  }
+
+  /**
+   * Check for completely dead browsers (always suspicious)
+   * These get a hard 50 points regardless of version
+   */
+  protected function hasDeadBrowser($userAgent): bool
+  {
+    // Opera Mini (all versions - mostly bots now)
+    if (str_contains($userAgent, 'Opera Mini')) {
       return true;
     }
 
-    // CCleaner
-    if (strpos($userAgent, 'CCleaner') !== false) {
+    // Old Opera versions (8.x, 9.x)
+    if (preg_match('/Opera\/[89]\./', $userAgent)) {
+      return true;
+    }
+
+    // Windows XP/Vista (NT 5.x, NT 6.0) - dead OSes
+    if (preg_match('/Windows NT [56]\.[01]/', $userAgent)) {
+      return true;
+    }
+
+    // Konqueror (dead browser)
+    if (str_contains($userAgent, 'Konqueror')) {
+      return true;
+    }
+
+    // PaleMoon browser (often used by bots)
+    if (str_contains($userAgent, 'PaleMoon')) {
+      return true;
+    }
+
+    // Old Trident/IE 11
+    if (preg_match('/Trident\/7\.0/', $userAgent)) {
       return true;
     }
 
@@ -1266,70 +1507,20 @@ class BotDetectionController extends Controller
       return true;
     }
 
-    return false;
-  }
-
-  /**
-   * Check for outdated browser versions
-   */
-  protected function hasOutdatedBrowser($userAgent)
-  {
-    // iOS version check (e.g., "iPhone OS 13_2_3" or "CPU OS 15_0")
-    if (preg_match('/(?:iPhone OS|CPU OS) (\d+)[_\.]/', $userAgent, $matches)) {
-      if (intval($matches[1]) < $this->thresholds['min_ios_version']) {
-        return true;
-      }
-    }
-
-    // Android version check (e.g., "Android 8.1.0" or "Android 10")
-    if (preg_match('/Android (\d+)/', $userAgent, $matches)) {
-      if (intval($matches[1]) < $this->thresholds['min_android_version']) {
-        return true;
-      }
-    }
-
-    // Chrome version check
-    if (preg_match('/Chrome\/(\d+)\./', $userAgent, $matches)) {
-      if (intval($matches[1]) < $this->thresholds['min_chrome_version']) {
-        return true;
-      }
-    }
-
-    // Firefox version check
-    if (preg_match('/Firefox\/(\d+)\./', $userAgent, $matches)) {
-      if (intval($matches[1]) < $this->thresholds['min_firefox_version']) {
-        return true;
-      }
-    }
-
-    // Safari version check
-    if (preg_match('/Safari\/(\d+)\./', $userAgent, $matches)) {
-      if (intval($matches[1]) < $this->thresholds['min_safari_version']) {
-        return true;
-      }
-    }
-
-    // Impossible Safari version (26+ doesn't exist yet)
-    if (preg_match('/Version\/(\d+)\./', $userAgent, $matches)) {
-      if (intval($matches[1]) >= 26) {
-        return true;
-      }
-    }
-
-    // Old Safari versions (< 15) on desktop
-    if (preg_match('/Version\/(\d+)\.\d+.*Safari/', $userAgent, $matches)) {
-      if (intval($matches[1]) < 15 && strpos($userAgent, 'Mobile') === false) {
-        return true;
-      }
-    }
-
-    // Opera Mini (all versions - mostly bots now)
-    if (strpos($userAgent, 'Opera Mini') !== false) {
+    // CFNetwork with Darwin (automated apps/scrapers)
+    if (preg_match('/CFNetwork\/\d+ Darwin/', $userAgent)) {
       return true;
     }
 
-    // Old Opera versions (9.x)
-    if (preg_match('/Opera\/9\./', $userAgent)) {
+    // KHTML without Chrome/Safari (Konqueror derivatives)
+    if (str_contains($userAgent, 'KHTML') &&
+      !str_contains($userAgent, 'Chrome') &&
+      !str_contains($userAgent, 'Safari')) {
+      return true;
+    }
+
+    // Slack/chatlyio crawlers
+    if (str_contains($userAgent, 'chatlyio') || str_contains($userAgent, 'Slackbot')) {
       return true;
     }
 
@@ -1340,47 +1531,16 @@ class BotDetectionController extends Controller
       }
     }
 
-    // CFNetwork with Darwin (automated apps/scrapers)
-    if (preg_match('/CFNetwork\/\d+ Darwin/', $userAgent)) {
-      return true;
-    }
-
-    // Old Trident/IE 11 (often used by bots)
-    if (preg_match('/Trident\/7\.0/', $userAgent)) {
-      return true;
-    }
-
-    // Windows XP/Vista (NT 5.x, NT 6.0) - dead OSes
-    if (preg_match('/Windows NT [56]\.[01]/', $userAgent)) {
-      return true;
-    }
-
-    // Konqueror (dead browser)
-    if (strpos($userAgent, 'Konqueror') !== false) {
-      return true;
-    }
-
-    // Old Opera 8.x
-    if (preg_match('/Opera\/8\./', $userAgent)) {
-      return true;
-    }
-
-    // PaleMoon browser (often used by bots)
-    if (strpos($userAgent, 'PaleMoon') !== false) {
-      return true;
-    }
-
-    // Slack/chatlyio crawlers
-    if (strpos($userAgent, 'chatlyio') !== false || strpos($userAgent, 'Slackbot') !== false) {
-      return true;
-    }
-
-    // KHTML without Chrome (Konqueror derivatives)
-    if (strpos($userAgent, 'KHTML') !== false && strpos($userAgent, 'Chrome') === false && strpos($userAgent, 'Safari') === false) {
-      return true;
-    }
-
     return false;
+  }
+
+  /**
+   * Check for outdated browser versions (legacy method - now uses age scoring)
+   * @deprecated Use getBrowserAgeScore() instead
+   */
+  protected function hasOutdatedBrowser($userAgent): bool
+  {
+    return $this->hasDeadBrowser($userAgent) || $this->getBrowserAgeScore($userAgent) >= 40;
   }
 
   /**
