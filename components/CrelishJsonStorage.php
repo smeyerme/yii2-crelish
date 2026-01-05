@@ -188,7 +188,7 @@ class CrelishJsonStorage implements CrelishDataStorage
     
     /**
      * Get a data provider for the given content type
-     * 
+     *
      * @param string $ctype Content type
      * @param array $filter Optional filter criteria
      * @param array $sort Optional sorting criteria
@@ -198,7 +198,7 @@ class CrelishJsonStorage implements CrelishDataStorage
     public function getDataProvider(string $ctype, array $filter = [], array $sort = [], int $pageSize = 30): DataProviderInterface
     {
         $records = $this->findAll($ctype, $filter);
-        
+
         // Prepare sort configuration
         $sortConfig = [];
         if (!empty($sort)) {
@@ -208,7 +208,32 @@ class CrelishJsonStorage implements CrelishDataStorage
                 $sortConfig['defaultOrder'] = $sort;
             }
         }
-        
+
+        // Build sortable attributes from element definition
+        $elementDefinition = CrelishDynamicModel::loadElementDefinition($ctype);
+        $sortableAttributes = [];
+
+        if ($elementDefinition && property_exists($elementDefinition, 'fields')) {
+            foreach ($elementDefinition->fields as $field) {
+                if (property_exists($field, 'sortable') && $field->sortable) {
+                    $sortableAttributes[] = $field->key;
+                }
+            }
+        }
+
+        // Also add any fields from defaultOrder to ensure they're sortable
+        if (!empty($sortConfig['defaultOrder'])) {
+            foreach (array_keys($sortConfig['defaultOrder']) as $attr) {
+                if (!in_array($attr, $sortableAttributes)) {
+                    $sortableAttributes[] = $attr;
+                }
+            }
+        }
+
+        if (!empty($sortableAttributes)) {
+            $sortConfig['attributes'] = $sortableAttributes;
+        }
+
         return new ArrayDataProvider([
             'allModels' => $records,
             'pagination' => [
