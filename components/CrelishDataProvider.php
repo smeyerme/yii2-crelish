@@ -210,10 +210,10 @@
 		
 		/**
 		 * Get filters
-		 * 
-		 * @return CrelishDynamicJsonModel Filters
+		 *
+		 * @return CrelishDynamicModel Filters
 		 */
-		public function getFilters(): CrelishDynamicJsonModel
+		public function getFilters(): CrelishDynamicModel
 		{
 			return $this->dataManager->getFilters();
 		}

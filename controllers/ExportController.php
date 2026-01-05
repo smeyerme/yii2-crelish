@@ -3,8 +3,7 @@
 namespace giantbits\crelish\controllers;
 
 use giantbits\crelish\components\CrelishBaseController;
-use giantbits\crelish\components\CrelishDynamicJsonModel;
-use giantbits\crelish\components\CrelishJsonDataProvider;
+use giantbits\crelish\components\CrelishDataManager;
 use yii\filters\AccessControl;
 use yii\helpers\FileHelper;
 use yii\helpers\Json;
@@ -70,15 +69,14 @@ class ExportController extends CrelishBaseController
 
   public function actionIndex()
   {
-    $elements = new CrelishJsonDataProvider('elements', [
-      'key' => 'key',
-      'sort' => ['by' => ['label', 'asc']],
-      'limit' => 99
+    $dataManager = new CrelishDataManager('elements', [
+      'sort' => ['label' => SORT_ASC],
+      'pageSize' => 99
     ]);
 
-    $types = array();
+    $types = [];
 
-    foreach ($elements->all()['models'] as $element) {
+    foreach ($dataManager->all()['models'] as $element) {
       if (isset($element['export'])) {
         $types[] = $element;
       }
@@ -108,17 +106,16 @@ class ExportController extends CrelishBaseController
     \Yii::$app->cache->flush();
 
     // Fetch data types.
-    $elements = new CrelishJsonDataProvider('elements', [
-      'key' => 'key',
-      'sort' => ['by' => ['label', 'asc']],
-      'limit' => 99
+    $elementsManager = new CrelishDataManager('elements', [
+      'sort' => ['label' => SORT_ASC],
+      'pageSize' => 99
     ]);
 
-    $importItems = $elements->all()['models'];
+    $importItems = $elementsManager->all()['models'];
 
     foreach ($importItems as $item) {
       // Build cache for each.
-      $dataCache = new CrelishJsonDataProvider($item['key']);
+      $dataCache = new CrelishDataManager($item['key']);
       $tmp = $dataCache->rawAll();
     }
 
@@ -128,9 +125,13 @@ class ExportController extends CrelishBaseController
     $filter = ['created' => ['between', strtotime(date('Y') . "W" . $_GET['week']), strtotime(date('Y') . "W" . ($_GET['week'] + 1)) - 1]];
 
 
-    $modelProvider = new CrelishJsonDataProvider('enrollmentform', ['filter' => $filter, 'limit' => 10000, 'sort' => ['by' => ['created', 'asc']]], NULL);
+    $dataManager = new CrelishDataManager('enrollmentform', [
+      'filter' => $filter,
+      'pageSize' => 10000,
+      'sort' => ['created' => SORT_ASC]
+    ]);
 
-    $all = $modelProvider->all()['models'];
+    $all = $dataManager->all()['models'];
 
     $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
     $sheet = $spreadsheet->getActiveSheet();

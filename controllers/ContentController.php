@@ -3,7 +3,6 @@
 namespace giantbits\crelish\controllers;
 
 use giantbits\crelish\components\CrelishBaseHelper;
-use giantbits\crelish\components\CrelishDataProvider;
 use giantbits\crelish\components\CrelishDataResolver;
 use giantbits\crelish\components\CrelishDynamicModel;
 use giantbits\crelish\components\CrelishBaseController;
