@@ -7,7 +7,6 @@
   use giantbits\crelish\components\CrelishDataManager;
   use giantbits\crelish\components\CrelishGlobals;
 	use giantbits\crelish\components\CrelishUser;
-	use giantbits\crelish\components\CrelishDataProvider;
 	use giantbits\crelish\components\CrelishDynamicModel;
 	use PhpOffice\PhpSpreadsheet\Spreadsheet;
 	use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -97,8 +96,8 @@
 				return $this->redirect(Url::to(['/crelish/content/index']));
 			}
 			
-			$usersProvider = new CrelishDataProvider('user');
-			$users = $usersProvider->rawAll();
+			$dataManager = new CrelishDataManager('user');
+			$users = $dataManager->rawAll();
 			
 			if (sizeof($users) == 0) {
 				// Generate default admin.

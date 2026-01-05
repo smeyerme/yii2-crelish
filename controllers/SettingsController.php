@@ -3,8 +3,8 @@
 namespace giantbits\crelish\controllers;
 
 use giantbits\crelish\components\CrelishBaseController;
-use giantbits\crelish\components\CrelishDynamicJsonModel;
-use giantbits\crelish\components\CrelishJsonDataProvider;
+use giantbits\crelish\components\CrelishDataManager;
+use giantbits\crelish\components\CrelishDynamicModel;
 use yii\filters\AccessControl;
 use yii\helpers\FileHelper;
 use yii\helpers\Json;
@@ -65,17 +65,16 @@ class SettingsController extends CrelishBaseController
     \Yii::$app->cache->flush();
 
     // Fetch data types.
-    $elements = new CrelishJsonDataProvider('elements', [
-      'key' => 'key',
-      'sort' => ['by' => ['label', 'asc']],
-      'limit' => 99
+    $dataManager = new CrelishDataManager('elements', [
+      'sort' => ['label' => SORT_ASC],
+      'pageSize' => 99
     ]);
 
-    $importItems = $elements->all()['models'];
+    $importItems = $dataManager->all()['models'];
 
     foreach ($importItems as $item) {
       // Build cache for each.
-      $dataCache = new CrelishJsonDataProvider($item['key']);
+      $dataCache = new CrelishDataManager($item['key']);
       $tmp = $dataCache->rawAll();
     }
 
@@ -117,7 +116,7 @@ class SettingsController extends CrelishBaseController
       $ctypeArr = explode(DIRECTORY_SEPARATOR, $file);
       $ctype = $ctypeArr[count($ctypeArr) - 2];
 
-      $item = new CrelishDynamicJsonModel([], ['ctype' => $ctype, 'uuid' => $json['uuid']]);
+      $item = new CrelishDynamicModel(['ctype' => $ctype, 'uuid' => $json['uuid']]);
       $item->save();
 
       var_dump($json);

@@ -22,7 +22,7 @@
 	 * @property-read \yii\data\ArrayDataProvider $provider
 	 * @property-read mixed $columns
 	 * @property-read array $sorting
-	 * @property-read \giantbits\crelish\components\CrelishDynamicJsonModel $filters
+	 * @property-read \giantbits\crelish\components\CrelishDynamicModel $filters
 	 */
 	class CrelishJsonDataProvider extends Component
 	{
@@ -157,10 +157,10 @@
 		
 		/**
 		 * Get filters
-		 * 
-		 * @return CrelishDynamicJsonModel Filters
+		 *
+		 * @return CrelishDynamicModel Filters
 		 */
-		public function getFilters(): CrelishDynamicJsonModel
+		public function getFilters(): CrelishDynamicModel
 		{
 			return $this->dataManager->getFilters();
 		}

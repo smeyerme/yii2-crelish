@@ -2,7 +2,7 @@
 
 namespace giantbits\crelish\controllers;
 
-use giantbits\crelish\components\CrelishDataProvider;
+use giantbits\crelish\components\CrelishDataManager;
 use giantbits\crelish\components\CrelishDynamicModel;
 use giantbits\crelish\components\CrelishBaseController;
 use yii\filters\AccessControl;
@@ -133,7 +133,7 @@ class PageController extends CrelishBaseController
       $_GET['sort'] = 'systitle';
     }
 
-	  $modelProvider = new CrelishDataProvider($this->ctype, ['filter' => $filter]);
+    $dataManager = new CrelishDataManager($this->ctype, ['filter' => $filter]);
 
     $checkCol = [
       [
@@ -141,7 +141,6 @@ class PageController extends CrelishBaseController
       ]
     ];
 
-    //$columns = array_merge($checkCol, $modelProvider->columns);
     $columns = array_merge($checkCol, [
       ['attribute' => 'systitle', 'label' => Yii::t('app', 'Systitle')],
       ['attribute' => 'slug',  'label' => Yii::t('app', 'Slug'), 'value' => function ($model) {
@@ -180,8 +179,8 @@ class PageController extends CrelishBaseController
     };
 
     return $this->render('content.twig', [
-      'dataProvider' => $modelProvider->getProvider(),
-      'filterProvider' => $modelProvider->getFilters(),
+      'dataProvider' => $dataManager->getProvider(),
+      'filterProvider' => $dataManager->getFilters(),
       'columns' => $columns,
       'ctype' => $this->ctype,
       'rowOptions' => $rowOptions
