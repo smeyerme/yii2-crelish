@@ -76,7 +76,18 @@ class CrelishI18nEventHandler
     // Use CrelishTranslationService for translation
     if (CrelishTranslationService::isAvailable()) {
       $translationService = new CrelishTranslationService($sourceLanguage);
-      $translatedText = $translationService->translateText($message, $event->language);
+
+      // Extract and protect placeholders before translation
+      $placeholders = [];
+      $messageToTranslate = self::extractPlaceholders($message, $placeholders);
+
+      // Translate the message with placeholders protected
+      $translatedText = $translationService->translateText($messageToTranslate, $event->language);
+
+      // Restore placeholders in the translated text
+      if ($translatedText !== null) {
+        $translatedText = self::restorePlaceholders($translatedText, $placeholders);
+      }
     }
 
     // Update translation file
@@ -90,6 +101,43 @@ class CrelishI18nEventHandler
     self::writeTranslationFile($file, $translation);
 
     $event->translatedMessage = $translatedText ?? $event->message;
+  }
+
+  /**
+   * Extract placeholders from a message and replace them with protected tokens
+   *
+   * @param string $message The message containing placeholders like {name}
+   * @param array &$placeholders Reference to array that will store the placeholder mappings
+   * @return string The message with placeholders replaced by tokens
+   */
+  private static function extractPlaceholders(string $message, array &$placeholders): string
+  {
+    // Match Yii2 placeholders: {word} or {word_with_underscore} etc.
+    $pattern = '/\{([a-zA-Z_][a-zA-Z0-9_]*)\}/';
+
+    return preg_replace_callback($pattern, function ($matches) use (&$placeholders) {
+      $placeholder = $matches[0]; // e.g., {eventTitle}
+      $index = count($placeholders);
+      // Use XML-like tags that DeepL will preserve (DeepL respects XML/HTML tags)
+      $token = "<x id=\"{$index}\"/>";
+      $placeholders[$token] = $placeholder;
+      return $token;
+    }, $message);
+  }
+
+  /**
+   * Restore original placeholders in the translated text
+   *
+   * @param string $translatedText The translated text with tokens
+   * @param array $placeholders The placeholder mappings (token => original)
+   * @return string The translated text with original placeholders restored
+   */
+  private static function restorePlaceholders(string $translatedText, array $placeholders): string
+  {
+    foreach ($placeholders as $token => $placeholder) {
+      $translatedText = str_replace($token, $placeholder, $translatedText);
+    }
+    return $translatedText;
   }
 
   /**
