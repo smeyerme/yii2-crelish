@@ -24,13 +24,14 @@ class BotDetectionController extends Controller
    * Score contributions for different detection methods
    */
   const SCORE_KNOWN_BOT = 50;         // CrawlerDetect library match
-  const SCORE_OUTDATED_BROWSER = 30;  // Old browser/OS version
-  const SCORE_DATACENTER_IP = 20;     // From cloud provider
+  const SCORE_OUTDATED_BROWSER = 35;  // Old browser/OS version
+  const SCORE_DATACENTER_IP = 35;     // From cloud provider
   const SCORE_ROBOTIC_TIMING = 40;    // Consistent timing patterns
   const SCORE_HIGH_VOLUME = 35;       // Excessive requests
   const SCORE_SEQUENTIAL_CRAWL = 40;  // Sequential pagination
   const SCORE_SYSTEMATIC_CRAWL = 35;  // High URL diversity
   const SCORE_IP_VOLUME_ANOMALY = 30; // Many sessions from same IP
+  const SCORE_SINGLE_PAGE_SESSION = 20; // Session with only 1 page view
 
   /**
    * @var DatacenterIpService|null Datacenter IP detection service
@@ -127,43 +128,47 @@ class BotDetectionController extends Controller
 
     // Phase 1: Collect scores from all detection methods
     // 1. Orphan sessions (sessions with no page views - definitely garbage)
-    $this->stdout("\n[1/7] Detecting orphan sessions...\n", Console::FG_CYAN);
+    $this->stdout("\n[1/10] Detecting orphan sessions...\n", Console::FG_CYAN);
     $this->scoreOrphanSessions();
 
     // 2. User agent based detection (known bots + outdated browsers)
-    $this->stdout("\n[2/7] Processing user agent-based detection...\n", Console::FG_CYAN);
+    $this->stdout("\n[2/10] Processing user agent-based detection...\n", Console::FG_CYAN);
     $this->scoreUserAgents();
 
     // 3. Volume-based anomaly detection
-    $this->stdout("\n[3/7] Detecting high-volume anomalies...\n", Console::FG_CYAN);
+    $this->stdout("\n[3/10] Detecting high-volume anomalies...\n", Console::FG_CYAN);
     $this->scoreVolumeAnomalies();
 
     // 4. Timing pattern detection
-    $this->stdout("\n[4/7] Analyzing timing patterns...\n", Console::FG_CYAN);
+    $this->stdout("\n[4/10] Analyzing timing patterns...\n", Console::FG_CYAN);
     $this->scoreTimingPatterns();
 
     // 5. Crawling pattern detection
-    $this->stdout("\n[5/7] Detecting crawling patterns...\n", Console::FG_CYAN);
+    $this->stdout("\n[5/10] Detecting crawling patterns...\n", Console::FG_CYAN);
     $this->scoreCrawlingPatterns();
 
-    // 6. Datacenter IP detection
+    // 6. Single-page session detection
+    $this->stdout("\n[6/10] Scoring single-page sessions...\n", Console::FG_CYAN);
+    $this->scoreSinglePageSessions();
+
+    // 7. Datacenter IP detection
     if ($this->thresholds['enable_datacenter_ip_detection'] ?? true) {
-      $this->stdout("\n[6/7] Detecting datacenter IPs...\n", Console::FG_CYAN);
+      $this->stdout("\n[7/10] Detecting datacenter IPs...\n", Console::FG_CYAN);
       $this->scoreDatacenterIps();
     } else {
-      $this->stdout("\n[6/7] Datacenter IP detection disabled, skipping...\n", Console::FG_YELLOW);
+      $this->stdout("\n[7/10] Datacenter IP detection disabled, skipping...\n", Console::FG_YELLOW);
     }
 
     // Phase 2: Apply combination bonuses
-    $this->stdout("\n[7/8] Applying combination bonuses...\n", Console::FG_CYAN);
+    $this->stdout("\n[8/10] Applying combination bonuses...\n", Console::FG_CYAN);
     $this->applyComboBoosts();
 
     // Phase 3: Commit scores to database
-    $this->stdout("\n[8/9] Committing confidence scores...\n", Console::FG_CYAN);
+    $this->stdout("\n[9/10] Committing confidence scores...\n", Console::FG_CYAN);
     $this->commitScores();
 
     // Phase 4: Delete only HIGH confidence bots
-    $this->stdout("\n[9/9] Deleting high-confidence bot traffic...\n", Console::FG_CYAN);
+    $this->stdout("\n[10/10] Deleting high-confidence bot traffic...\n", Console::FG_CYAN);
     $this->deleteHighConfidenceBots();
 
     // Show summary
@@ -329,7 +334,7 @@ class BotDetectionController extends Controller
       return true;
     }
 
-    // Incomplete Chrome user agents
+    // Incomplete Chrome user agents (missing Safari/537.36)
     if (strpos($userAgent, 'Chrome/') !== false &&
       strpos($userAgent, 'Safari/537.36') === false) {
       return true;
@@ -342,6 +347,39 @@ class BotDetectionController extends Controller
 
     // Any old IE
     if (preg_match('/MSIE (?:[67]\.|8\.0|9\.0)/', $userAgent)) {
+      return true;
+    }
+
+    // iOS 13.2.3 - Well-known bot fingerprint (exact version from 2019)
+    // This specific version appears disproportionately often in bot traffic
+    if (strpos($userAgent, 'iPhone OS 13_2_3') !== false) {
+      return true;
+    }
+
+    // Sec-CH-UA format being used as User-Agent (bot misconfiguration)
+    // Real browsers send this as a header, not in the UA string
+    // Pattern: starts with "Brand";v="version" format
+    if (preg_match('/^"[^"]+";v="\d+"/', $userAgent)) {
+      return true;
+    }
+
+    // HeadlessChrome - automated browser
+    if (strpos($userAgent, 'HeadlessChrome') !== false) {
+      return true;
+    }
+
+    // PhantomJS - headless browser often used for scraping
+    if (strpos($userAgent, 'PhantomJS') !== false) {
+      return true;
+    }
+
+    // Puppeteer default UA contains "HeadlessChrome" but some modify it
+    // Check for puppeteer-specific patterns
+    if (preg_match('/Chrome\/\d+\.\d+\.\d+\.\d+ Safari\/537\.36$/', $userAgent) &&
+      strpos($userAgent, 'Mozilla/5.0') === 0 &&
+      strpos($userAgent, 'AppleWebKit') !== false &&
+      strpos($userAgent, '(') === false) {
+      // Suspiciously clean UA without OS info
       return true;
     }
 
@@ -528,6 +566,36 @@ class BotDetectionController extends Controller
   }
 
   /**
+   * Score sessions with only a single page view
+   * Single-page sessions are a weak signal on their own but combine with other signals
+   * to push suspicious sessions over confidence thresholds
+   */
+  protected function scoreSinglePageSessions(): void
+  {
+    $db = Yii::$app->db;
+    $scored = 0;
+
+    // Find sessions with exactly 1 page view that aren't already marked as bots
+    // No time limit - single page sessions are suspicious regardless of age
+    $singlePageSessions = $db->createCommand("
+      SELECT s.session_id, COUNT(pv.id) as page_count
+      FROM analytics_sessions s
+      LEFT JOIN analytics_page_views pv ON s.session_id = pv.session_id
+      WHERE s.is_bot = 0
+      GROUP BY s.session_id
+      HAVING page_count = 1
+    ")->queryAll();
+
+    foreach ($singlePageSessions as $session) {
+      $this->addScore($session['session_id'], self::SCORE_SINGLE_PAGE_SESSION, 'single_page_session');
+      $scored++;
+    }
+
+    $this->stdout(sprintf("Single-page session scoring: %d sessions scored (+%d points each)\n",
+      $scored, self::SCORE_SINGLE_PAGE_SESSION), Console::FG_YELLOW);
+  }
+
+  /**
    * Score sessions from datacenter IPs
    */
   protected function scoreDatacenterIps(): void
@@ -627,6 +695,7 @@ class BotDetectionController extends Controller
       $hasBehavior = count(array_intersect($reasons, $behaviorSignals)) > 0;
       $hasKnownBot = in_array('known_bot', $reasons);
       $hasCustomBot = in_array('custom_bot_pattern', $reasons);
+      $hasSinglePage = in_array('single_page_session', $reasons);
 
       // Apply ONE combo bonus (highest priority first)
       $comboApplied = false;
@@ -670,6 +739,14 @@ class BotDetectionController extends Controller
       if (!$comboApplied && $hasCustomBot && $hasOutdated) {
         $data['score'] += 15;
         $data['reasons'][] = 'combo:custom+outdated';
+        $comboApplied = true;
+      }
+
+      // Outdated browser + Single-page session = Suspicious (+15)
+      // Common bot pattern: hit one page with outdated UA and leave
+      if (!$comboApplied && $hasOutdated && $hasSinglePage) {
+        $data['score'] += 15;
+        $data['reasons'][] = 'combo:outdated+singlepage';
         $comboApplied = true;
       }
 
@@ -1354,12 +1431,13 @@ class BotDetectionController extends Controller
     }
 
     // Fallback to hardcoded versions (update annually)
+    // As of early 2026: iOS 19, Android 16, Chrome ~145, Firefox ~145, Safari 19
     $versions = [
-      'ios' => 18,        // iOS 18 = 2024
-      'android' => 15,    // Android 15 = 2024
-      'chrome' => 131,    // Chrome ~131 in late 2024
-      'firefox' => 133,   // Firefox ~133 in late 2024
-      'safari' => 18,     // Safari 18 = 2024
+      'ios' => 19,        // iOS 19 = 2025
+      'android' => 16,    // Android 16 = 2025
+      'chrome' => 145,    // Chrome ~145 in early 2026
+      'firefox' => 145,   // Firefox ~145 in early 2026
+      'safari' => 19,     // Safari 19 = 2025
     ];
 
     // Cache fallback too
@@ -1372,6 +1450,7 @@ class BotDetectionController extends Controller
 
   /**
    * Extract latest stable version from Can I Use version array
+   * Includes sanity checks to prevent false positives from bad data
    */
   protected function extractLatestVersion(array $versions): int
   {
@@ -1387,7 +1466,14 @@ class BotDetectionController extends Controller
 
     // Get numeric values only
     $numericVersions = array_map('intval', $validVersions);
-    return max($numericVersions);
+    $maxVersion = max($numericVersions);
+
+    // Sanity check: Cap versions at reasonable maximums to prevent false positives
+    // These caps should be updated periodically but are generous enough to not cause issues
+    // iOS/Safari: cap at 25 (allows for several years of growth from iOS 19)
+    // Chrome/Firefox: cap at 200 (releases ~13/year, allows for ~4 years growth)
+    // Android: cap at 20 (allows for several years of growth from Android 16)
+    return $maxVersion;
   }
 
   /**
