@@ -1,0 +1,155 @@
+{# Company Analytics PDF Report Template #}
+
+<div class="report">
+    {# Header #}
+    <div class="header">
+        <table style="width: 100%;">
+            <tr>
+                <td style="width: 70%;">
+                    <h1>{{ t('crelish', 'Company Analytics Report') }}</h1>
+                    <div class="company-name" style="font-size: 14pt; font-weight: bold; color: #2c3e50;">
+                        {{ company.systitle ?: company.name }}
+                    </div>
+                </td>
+                <td style="width: 30%; text-align: right;">
+                    {% if company.logo %}
+                        <img src="{{ company.logo }}" class="company-logo" alt="Logo" style="max-width: 30mm; max-height: 20mm;">
+                    {% endif %}
+                </td>
+            </tr>
+        </table>
+        <div class="period-info">
+            <strong>{{ t('crelish', 'Period') }}:</strong> {{ periodLabel }}
+            ({{ startDate }} - {{ endDate }})
+        </div>
+    </div>
+
+    {# Summary Statistics #}
+    <h2>{{ t('crelish', 'Summary Statistics') }}</h2>
+
+    <table class="kpi-grid">
+        <tr>
+            <td>
+                <div class="kpi-value">{{ overviewStats.total_views|default(0)|number_format(0, ',', '.') }}</div>
+                <div class="kpi-label">{{ t('crelish', 'Total Views') }}</div>
+            </td>
+            <td>
+                <div class="kpi-value">{{ overviewStats.unique_sessions|default(0)|number_format(0, ',', '.') }}</div>
+                <div class="kpi-label">{{ t('crelish', 'Unique Sessions') }}</div>
+            </td>
+            <td>
+                <div class="kpi-value">{{ overviewStats.content_count|default(0)|number_format(0, ',', '.') }}</div>
+                <div class="kpi-label">{{ t('crelish', 'Content Items') }}</div>
+            </td>
+            <td>
+                <div class="kpi-value">{{ overviewStats.downloads|default(0)|number_format(0, ',', '.') }}</div>
+                <div class="kpi-label">{{ t('crelish', 'Downloads') }}</div>
+            </td>
+        </tr>
+    </table>
+
+    <table class="kpi-grid">
+        <tr>
+            <td>
+                <div class="kpi-value">{{ overviewStats.list_views|default(0)|number_format(0, ',', '.') }}</div>
+                <div class="kpi-label">{{ t('crelish', 'List Views') }}</div>
+            </td>
+            <td>
+                <div class="kpi-value">{{ overviewStats.detail_views|default(0)|number_format(0, ',', '.') }}</div>
+                <div class="kpi-label">{{ t('crelish', 'Detail Views') }}</div>
+            </td>
+            <td>
+                <div class="kpi-value">{{ overviewStats.clicks|default(0)|number_format(0, ',', '.') }}</div>
+                <div class="kpi-label">{{ t('crelish', 'Clicks') }}</div>
+            </td>
+            <td>
+                {% set convRate = overviewStats.list_views > 0 ? ((overviewStats.detail_views / overviewStats.list_views) * 100)|round(1) : 0 %}
+                <div class="kpi-value">{{ convRate }}%</div>
+                <div class="kpi-label">{{ t('crelish', 'Conversion Rate') }}</div>
+            </td>
+        </tr>
+    </table>
+
+    {# Content Type Breakdown #}
+    {% if contentTypeStats|length > 0 %}
+    <h2>{{ t('crelish', 'Performance by Content Type') }}</h2>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>{{ t('crelish', 'Content Type') }}</th>
+                <th class="text-right">{{ t('crelish', 'Items') }}</th>
+                <th class="text-right">{{ t('crelish', 'List Views') }}</th>
+                <th class="text-right">{{ t('crelish', 'Detail Views') }}</th>
+                <th class="text-right">{{ t('crelish', 'Clicks') }}</th>
+                <th class="text-right">{{ t('crelish', 'Downloads') }}</th>
+                <th class="text-right">{{ t('crelish', 'Total Views') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in contentTypeStats %}
+            <tr>
+                <td><strong>{{ row.element_type|capitalize }}</strong></td>
+                <td class="text-right">{{ row.unique_elements|number_format(0, ',', '.') }}</td>
+                <td class="text-right">{{ row.list_views|number_format(0, ',', '.') }}</td>
+                <td class="text-right">{{ row.detail_views|number_format(0, ',', '.') }}</td>
+                <td class="text-right">{{ row.clicks|number_format(0, ',', '.') }}</td>
+                <td class="text-right">{{ row.downloads|number_format(0, ',', '.') }}</td>
+                <td class="text-right"><strong>{{ row.total_views|number_format(0, ',', '.') }}</strong></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    {# Top Performing Content #}
+    {% if topContent|length > 0 %}
+    <h2>{{ t('crelish', 'Top Performing Content') }}</h2>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th style="width: 40%;">{{ t('crelish', 'Content') }}</th>
+                <th>{{ t('crelish', 'Type') }}</th>
+                <th class="text-right">{{ t('crelish', 'List') }}</th>
+                <th class="text-right">{{ t('crelish', 'Detail') }}</th>
+                <th class="text-right">{{ t('crelish', 'Clicks') }}</th>
+                <th class="text-right">{{ t('crelish', 'DL') }}</th>
+                <th class="text-right">{{ t('crelish', 'Conv%') }}</th>
+                <th class="text-right">{{ t('crelish', 'Total') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in topContent %}
+            <tr>
+                <td>{{ item.title|length > 45 ? item.title|slice(0, 45) ~ '...' : item.title }}</td>
+                <td><span class="badge badge-primary">{{ item.element_type|capitalize }}</span></td>
+                <td class="text-right">{{ item.list_views|number_format(0, ',', '.') }}</td>
+                <td class="text-right">{{ item.detail_views|number_format(0, ',', '.') }}</td>
+                <td class="text-right">{{ item.clicks|number_format(0, ',', '.') }}</td>
+                <td class="text-right">{{ item.downloads|number_format(0, ',', '.') }}</td>
+                <td class="text-right">
+                    <span class="badge {% if item.conversion_rate >= 50 %}badge-success{% elseif item.conversion_rate >= 25 %}badge-warning{% else %}badge-primary{% endif %}">
+                        {{ item.conversion_rate }}%
+                    </span>
+                </td>
+                <td class="text-right"><strong>{{ item.total_views|number_format(0, ',', '.') }}</strong></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    {# Empty state if no data #}
+    {% if contentTypeStats|length == 0 and topContent|length == 0 %}
+    <div style="text-align: center; padding: 20mm; color: #666;">
+        <h3>{{ t('crelish', 'No Analytics Data Available') }}</h3>
+        <p>{{ t('crelish', 'There is no analytics data for this company in the selected period.') }}</p>
+    </div>
+    {% endif %}
+
+    {# Footer #}
+    <div class="footer">
+        {{ t('crelish', 'Generated on') }}: {{ generatedAt }} | {{ t('crelish', 'Powered by Crelish CMS') }}
+    </div>
+</div>
