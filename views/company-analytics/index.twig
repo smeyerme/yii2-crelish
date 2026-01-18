@@ -24,8 +24,8 @@
                             <div class="col-md-6">
                                 <label>{{ t('crelish', 'Select Company') }}</label>
                                 <select id="company-selector" class="form-select" style="width: 100%;">
-                                    {% if companyUuid %}
-                                        <option value="{{ companyUuid }}" selected>{{ t('crelish', 'Loading...') }}</option>
+                                    {% if companyUuid and companyName %}
+                                        <option value="{{ companyUuid }}" selected>{{ companyName }}</option>
                                     {% endif %}
                                 </select>
                             </div>
@@ -68,8 +68,54 @@
 
     {# Dashboard Content - Hidden until company is selected #}
     <div id="dashboard-content" style="display: none;">
-        {# KPI Cards #}
+        {# Company Profile Stats - How the company profile itself performs #}
         <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="card" style="border-left: 4px solid #3498db;">
+                    <div class="card-header bg-light">
+                        <h4 class="mb-0"><i class="fa-sharp fa-regular fa-building me-2"></i>{{ t('crelish', 'Company Profile Performance') }}</h4>
+                        <small class="text-muted">{{ t('crelish', 'How often the company appears in lists and how often the profile is visited') }}</small>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="kpi-card text-center p-3">
+                                    <div class="kpi-label">{{ t('crelish', 'Profile List Views') }}</div>
+                                    <div class="kpi-value" id="kpi-profile-list-views" style="color: #3498db;">
+                                        <div class="spinner-border spinner-border-sm" role="status"></div>
+                                    </div>
+                                    <small class="text-muted">{{ t('crelish', 'Times shown in company lists') }}</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="kpi-card text-center p-3">
+                                    <div class="kpi-label">{{ t('crelish', 'Profile Detail Views') }}</div>
+                                    <div class="kpi-value" id="kpi-profile-detail-views" style="color: #27ae60;">
+                                        <div class="spinner-border spinner-border-sm" role="status"></div>
+                                    </div>
+                                    <small class="text-muted">{{ t('crelish', 'Times profile was opened') }}</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="kpi-card text-center p-3">
+                                    <div class="kpi-label">{{ t('crelish', 'Website Clicks') }}</div>
+                                    <div class="kpi-value" id="kpi-profile-clicks" style="color: #e74c3c;">
+                                        <div class="spinner-border spinner-border-sm" role="status"></div>
+                                    </div>
+                                    <small class="text-muted">{{ t('crelish', 'Clicks on company website link') }}</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# Content KPI Cards - Performance of company's content #}
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <h5 class="text-muted mb-3"><i class="fa-sharp fa-regular fa-newspaper me-2"></i>{{ t('crelish', 'Content Performance') }}</h5>
+            </div>
             <div class="col-md-2">
                 <div class="card kpi-card">
                     <div class="card-body">
@@ -367,8 +413,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function loadOverviewStats(companyUuid) {
-        // Show loading state
-        ['kpi-total-views', 'kpi-sessions', 'kpi-list-views', 'kpi-detail-views', 'kpi-clicks', 'kpi-downloads'].forEach(id => {
+        // Show loading state for all KPIs
+        ['kpi-total-views', 'kpi-sessions', 'kpi-list-views', 'kpi-detail-views', 'kpi-clicks', 'kpi-downloads',
+         'kpi-profile-list-views', 'kpi-profile-detail-views', 'kpi-profile-clicks'].forEach(id => {
             document.getElementById(id).innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div>';
         });
 
@@ -380,13 +427,20 @@ document.addEventListener('DOMContentLoaded', function() {
                     return;
                 }
 
-                // Check if there's any data
+                // Check if there's any data (including profile data)
                 const totalViews = parseInt(data.total_views) || 0;
-                if (totalViews === 0 && (data.content_count || 0) === 0) {
+                const profileViews = parseInt(data.profile_list_views) || 0 + parseInt(data.profile_detail_views) || 0;
+                if (totalViews === 0 && profileViews === 0 && (data.content_count || 0) === 0) {
                     showNoDataState();
                     return;
                 }
 
+                // Company Profile Stats
+                document.getElementById('kpi-profile-list-views').textContent = formatNumber(data.profile_list_views || 0);
+                document.getElementById('kpi-profile-detail-views').textContent = formatNumber(data.profile_detail_views || 0);
+                document.getElementById('kpi-profile-clicks').textContent = formatNumber(data.profile_clicks || 0);
+
+                // Content Stats
                 document.getElementById('kpi-total-views').textContent = formatNumber(data.total_views || 0);
                 document.getElementById('kpi-sessions').textContent = formatNumber(data.unique_sessions || 0);
                 document.getElementById('kpi-list-views').textContent = formatNumber(data.list_views || 0);

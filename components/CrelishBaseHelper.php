@@ -392,6 +392,46 @@ class CrelishBaseHelper
   }
 
   /**
+   * Track an element view with custom context (e.g., company UUID for jobs)
+   *
+   * This is useful for tracking external content (like jobs from an API)
+   * that needs to be associated with a parent entity (like a company).
+   *
+   * Usage in templates:
+   * {{ chelper.trackElementViewWithContext(job.uuid, 'job', 'list', company.uuid) }}
+   *
+   * @param string $elementUuid The UUID of the element to track
+   * @param string $elementType The type of the element (e.g., 'job')
+   * @param string|null $viewType Optional view type ('list', 'detail', 'click', etc.)
+   * @param string|null $contextUuid Custom context UUID (e.g., company UUID) - stored as page_uuid
+   * @return void
+   */
+  public static function trackElementViewWithContext($elementUuid, $elementType, $viewType = null, $contextUuid = null): void
+  {
+    // Skip if analytics component isn't available
+    if (!isset(Yii::$app->crelishAnalytics) ||
+        empty($elementUuid) ||
+        empty($elementType)) {
+      return;
+    }
+
+    // Use context UUID if provided, otherwise fall back to entry point
+    $pageUuid = $contextUuid ?? Yii::$app->controller->entryPoint['uuid'] ?? null;
+
+    if (empty($pageUuid)) {
+      return;
+    }
+
+    // Track the element view with the context as page_uuid
+    Yii::$app->crelishAnalytics->trackElementView(
+      $elementUuid,
+      $elementType,
+      $pageUuid,
+      $viewType
+    );
+  }
+
+  /**
    * Generate a secure token for click tracking
    *
    * This token is used to verify that click tracking requests are legitimate
@@ -417,26 +457,28 @@ class CrelishBaseHelper
   }
 
   /**
-   * Generate a complete click tracking URL for use with HTML ping attribute
+   * Generate a click tracking URL
    *
-   * Usage in templates:
-   * <a href="https://example.com"
-   *    ping="{{ chelper.getClickTrackingUrl(element.uuid, element.ctype) }}">
-   *   Link Text
-   * </a>
+   * Supports two modes:
    *
-   * Or for multiple pings:
-   * <a href="https://example.com"
-   *    ping="{{ chelper.getClickTrackingUrl(element.uuid, element.ctype) }} https://other-tracker.com/ping">
-   *   Link Text
-   * </a>
+   * 1. Redirect mode (recommended, more reliable):
+   *    <a href="{{ chelper.getClickTrackingUrl(element.uuid, element.ctype, targetUrl) }}">
+   *      Link Text
+   *    </a>
+   *
+   * 2. Ping mode (for use with HTML ping attribute):
+   *    <a href="https://example.com"
+   *       ping="{{ chelper.getClickTrackingUrl(element.uuid, element.ctype) }}">
+   *      Link Text
+   *    </a>
    *
    * @param string $uuid Element UUID
-   * @param string $type Element type (e.g., 'ad', 'link', 'banner')
+   * @param string $type Element type (e.g., 'event', 'reference', 'company')
+   * @param string|null $targetUrl Target URL for redirect mode (if null, generates ping-mode URL)
    * @param string|null $pageUuid Optional page UUID (defaults to current page)
    * @return string Complete tracking URL
    */
-  public static function getClickTrackingUrl($uuid, $type = 'link', $pageUuid = null): string
+  public static function getClickTrackingUrl($uuid, $type = 'link', $targetUrl = null, $pageUuid = null): string
   {
     // Generate secure token
     $token = self::generateClickToken($uuid);
@@ -455,6 +497,11 @@ class CrelishBaseHelper
 
     if (!empty($pageUuid)) {
       $params['page'] = $pageUuid;
+    }
+
+    // Add redirect URL if provided (redirect mode)
+    if (!empty($targetUrl)) {
+      $params['redirect'] = $targetUrl;
     }
 
     return Url::to(array_merge(['/crelish/track/click'], $params), true);

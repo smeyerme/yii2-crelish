@@ -11,9 +11,9 @@
                         {{ company.systitle ?: company.name }}
                     </div>
                 </td>
-                <td style="width: 30%; text-align: right;">
-                    {% if company.logo %}
-                        <img src="{{ company.logo }}" class="company-logo" alt="Logo" style="max-width: 30mm; max-height: 20mm;">
+                <td style="width: 30%; text-align: right; vertical-align: middle;">
+                    {% if logoPath %}
+                        <img src="{{ logoPath }}" alt="Logo" style="width: auto; height: 15mm;">
                     {% endif %}
                 </td>
             </tr>
@@ -24,8 +24,35 @@
         </div>
     </div>
 
-    {# Summary Statistics #}
-    <h2>{{ t('crelish', 'Summary Statistics') }}</h2>
+    {# Company Profile Performance #}
+    <h2>{{ t('crelish', 'Company Profile Performance') }}</h2>
+    <p style="color: #666; font-size: 9pt; margin-bottom: 4mm;">{{ t('crelish', 'How often the company appears in lists and how often the profile is visited') }}</p>
+
+    <table class="kpi-grid">
+        <tr>
+            <td style="background: #e8f4fc;">
+                <div class="kpi-value" style="color: #3498db;">{{ profileStats.profile_list_views|default(0)|number_format(0, ',', '.') }}</div>
+                <div class="kpi-label">{{ t('crelish', 'Profile List Views') }}</div>
+            </td>
+            <td style="background: #e8f8f0;">
+                <div class="kpi-value" style="color: #27ae60;">{{ profileStats.profile_detail_views|default(0)|number_format(0, ',', '.') }}</div>
+                <div class="kpi-label">{{ t('crelish', 'Profile Detail Views') }}</div>
+            </td>
+            <td style="background: #fdeaea;">
+                <div class="kpi-value" style="color: #e74c3c;">{{ profileStats.profile_clicks|default(0)|number_format(0, ',', '.') }}</div>
+                <div class="kpi-label">{{ t('crelish', 'Website Clicks') }}</div>
+            </td>
+            <td>
+                {% set profileConvRate = profileStats.profile_list_views > 0 ? ((profileStats.profile_detail_views / profileStats.profile_list_views) * 100)|round(1) : 0 %}
+                <div class="kpi-value">{{ profileConvRate }}%</div>
+                <div class="kpi-label">{{ t('crelish', 'Profile Conversion') }}</div>
+            </td>
+        </tr>
+    </table>
+
+    {# Content Performance Summary #}
+    <h2>{{ t('crelish', 'Content Performance') }}</h2>
+    <p style="color: #666; font-size: 9pt; margin-bottom: 4mm;">{{ t('crelish', 'Performance of products, news, events, downloads and other content') }}</p>
 
     <table class="kpi-grid">
         <tr>
