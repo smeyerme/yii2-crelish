@@ -740,8 +740,30 @@ CSS;
       return;
     }
     
+    // Ensure defaults objects exist
+    if (!JSONEditor.defaults.options) {
+      JSONEditor.defaults.options = {};
+    }
+    if (!JSONEditor.defaults.editors.object.options) {
+      JSONEditor.defaults.editors.object.options = {};
+    }
+    if (!JSONEditor.defaults.editors.array.options) {
+      JSONEditor.defaults.editors.array.options = {};
+    }
+
+    // Collapsed by default
     JSONEditor.defaults.editors.object.options.collapsed = true;
     JSONEditor.defaults.editors.array.options.collapsed = true;
+
+    // Show all optional properties by default (not just required ones)
+    JSONEditor.defaults.options.show_opt_in = false;
+    JSONEditor.defaults.options.display_required_only = false;
+    JSONEditor.defaults.options.required_by_default = true;
+
+    // Also set on object editor level
+    JSONEditor.defaults.editors.object.options.show_opt_in = false;
+    JSONEditor.defaults.editors.object.options.display_required_only = false;
+    JSONEditor.defaults.editors.object.options.required_by_default = true;
 
     // Enable delete confirmation for arrays
     if (!JSONEditor.defaults.callbacks) {
@@ -781,6 +803,7 @@ CSS;
       show_errors: 'change',
       no_additional_properties: true,
       display_required_only: false,
+      show_opt_in: false,
       remove_empty_properties: false,
       use_default_values: true,
       object_layout: 'normal',
@@ -889,6 +912,7 @@ JS;
 
   /**
    * Get default values from the schema
+   * Includes ALL properties to ensure they are visible in the editor
    * @return array|null
    */
   protected function getDefaultFromSchema()
@@ -905,8 +929,31 @@ JS;
       $defaults = new \stdClass();
       if (property_exists($schema, 'properties')) {
         foreach ($schema->properties as $propName => $propSchema) {
+          // Include ALL properties, not just those with defaults
           if (property_exists($propSchema, 'default')) {
             $defaults->{$propName} = $propSchema->default;
+          } elseif (isset($propSchema->type)) {
+            // Set appropriate empty/default values based on type
+            switch ($propSchema->type) {
+              case 'string':
+                $defaults->{$propName} = '';
+                break;
+              case 'number':
+              case 'integer':
+                $defaults->{$propName} = null;
+                break;
+              case 'boolean':
+                $defaults->{$propName} = false;
+                break;
+              case 'array':
+                $defaults->{$propName} = [];
+                break;
+              case 'object':
+                $defaults->{$propName} = new \stdClass();
+                break;
+              default:
+                $defaults->{$propName} = null;
+            }
           }
         }
       }
