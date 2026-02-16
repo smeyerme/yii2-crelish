@@ -180,23 +180,23 @@ class CrelishSentryComponent extends Component
    */
   private function setUserContext(): void
   {
-    if (!$this->initialized || !isset(Yii::$app->user)) {
+    if (!$this->initialized || !Yii::$app->has('user', true)) {
       return;
     }
 
     try {
       $user = Yii::$app->user;
 
-      if (!$user->isGuest && $user->identity) {
+      if (!$user->getIsGuest() && $user->identity) {
         Sentry\configureScope(function (Sentry\State\Scope $scope) use ($user) {
           $scope->setUser([
-            'id' => $user->uuid,
+            'id' => $user->identity->uuid ?? $user->id,
             'username' => $user->identity->username ?? 'unknown',
             'email' => $user->identity->email ?? null,
           ]);
         });
       }
-    } catch (\Exception $e) {
+    } catch (\Throwable $e) {
       // Ignore errors in user context setting
     }
   }
