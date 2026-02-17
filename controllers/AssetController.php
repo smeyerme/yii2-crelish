@@ -779,15 +779,18 @@ class AssetController extends CrelishBaseController
     
     // Get parameters
     $originalUuid = Yii::$app->request->post('original_uuid');
-    $editParams = Yii::$app->request->post('edit_params');
+    $editParamsRaw = Yii::$app->request->post('edit_params');
     $editType = Yii::$app->request->post('edit_type');
-    
-    if (empty($originalUuid) || empty($editParams) || empty($editType)) {
+
+    if (empty($originalUuid) || empty($editParamsRaw) || empty($editType)) {
       return [
         'success' => false,
         'message' => 'Missing required parameters'
       ];
     }
+
+    // Decode JSON string from frontend
+    $editParams = is_string($editParamsRaw) ? Json::decode($editParamsRaw) : $editParamsRaw;
     
     // Find original asset
     $originalAsset = Asset::findOne(['uuid' => $originalUuid]);
@@ -806,8 +809,55 @@ class AssetController extends CrelishBaseController
         'message' => 'Only image assets can be edited'
       ];
     }
-    
-    // Create new asset record
+
+    // Generate the edited image file using Glide
+    $glideParams = $this->convertToGlideParams($editParams);
+    $sourcePath = ltrim(CrelishBaseHelper::getAssetUrl($originalAsset->pathName, $originalAsset->fileName), '/');
+
+    $server = ServerFactory::create([
+      'source' => Yii::getAlias('@app/web'),
+      'cache' => Yii::getAlias('@runtime/glide'),
+      'driver' => 'imagick',
+    ]);
+
+    try {
+      // Glide renders the image into its cache and returns the cache path
+      $cachedPath = $server->makeImage($sourcePath, $glideParams);
+      $cachedFullPath = Yii::getAlias('@runtime/glide') . '/' . $cachedPath;
+
+      if (!file_exists($cachedFullPath)) {
+        return [
+          'success' => false,
+          'message' => 'Glide failed to generate the edited image'
+        ];
+      }
+
+      // Build new filename and copy to uploads
+      $slugger = new Slugify();
+      $pathInfo = pathinfo($originalAsset->fileName);
+      $newFileName = time() . '_' . $slugger->slugify($pathInfo['filename'] . '-' . $editType) . '.' . ($pathInfo['extension'] ?? 'jpg');
+      $destPath = Yii::getAlias('@webroot') . '/uploads/' . $newFileName;
+
+      if (!copy($cachedFullPath, $destPath)) {
+        return [
+          'success' => false,
+          'message' => 'Failed to copy edited image to uploads directory'
+        ];
+      }
+
+      // Detect mime type of the generated file
+      $newMime = mime_content_type($destPath) ?: $originalAsset->mime;
+      $newSize = filesize($destPath);
+
+    } catch (\Exception $e) {
+      Yii::error('Image editing failed: ' . $e->getMessage(), 'application');
+      return [
+        'success' => false,
+        'message' => 'Image processing failed: ' . $e->getMessage()
+      ];
+    }
+
+    // Create new asset record pointing to the actual new file
     $newAsset = new Asset();
     $newAsset->attributes = $originalAsset->attributes;
     $newAsset->uuid = CrelishBaseHelper::GUIDv4();
@@ -815,22 +865,23 @@ class AssetController extends CrelishBaseController
     $newAsset->edit_params = Json::encode($editParams);
     $newAsset->edit_type = $editType;
     $newAsset->is_original = false;
-    
+    $newAsset->fileName = $newFileName;
+    $newAsset->src = $newFileName;
+    $newAsset->pathName = '/uploads/';
+    $newAsset->mime = $newMime;
+    $newAsset->size = $newSize;
+
     // Modify title to indicate it's an edited version
-    $pathInfo = pathinfo($originalAsset->fileName);
     $newTitle = $pathInfo['filename'] . '_' . $editType;
     if (isset($pathInfo['extension'])) {
       $newTitle .= '.' . $pathInfo['extension'];
     }
     $newAsset->systitle = $newTitle;
     $newAsset->title = $newTitle;
-    
-    // The actual file doesn't need to be duplicated since Glide will generate it on demand
-    
+
     if ($newAsset->save()) {
-      // Generate preview URL based on mime type and edit params
-      $previewUrl = $this->generatePreviewUrl($newAsset, $editParams);
-      
+      $previewUrl = '/crelish/asset/glide?path=' . CrelishBaseHelper::getAssetUrl($newAsset->pathName, $newAsset->fileName) . '&w=180&h=150&f=fit';
+
       return [
         'success' => true,
         'asset' => [
@@ -845,6 +896,8 @@ class AssetController extends CrelishBaseController
         ]
       ];
     } else {
+      // Clean up the file if DB save failed
+      @unlink($destPath);
       return [
         'success' => false,
         'message' => 'Failed to save edited asset: ' . implode(', ', $newAsset->getErrorSummary(true))
@@ -904,9 +957,9 @@ class AssetController extends CrelishBaseController
       }
     }
     
-    // Handle rotation
-    if (isset($editParams['rotate']) && is_numeric($editParams['rotate'])) {
-      $glideParams['rot'] = (int)$editParams['rotate'];
+    // Handle rotation/orientation
+    if (isset($editParams['rotate']) && $editParams['rotate'] !== 'auto' && is_numeric($editParams['rotate'])) {
+      $glideParams['or'] = (int)$editParams['rotate'];
     }
     
     // Handle flip
