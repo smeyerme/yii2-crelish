@@ -151,14 +151,24 @@ class ContentController extends CrelishBaseController
                   $relationCtype = $config->ctype;
                   $labelField = property_exists($config, 'labelField') ? $config->labelField : 'systitle';
 
-                  // Make sure the relation is joined (use ctype as it maps to the relation method name)
-                  $query->joinWith($config->ctype ?? $field->key);
+                  // Use the relation name (field key or ctype) for joinWith
+                  $relationName = $config->ctype ?? $field->key;
+                  $query->joinWith($relationName);
 
-                  // Get the actual table name from the related model class
+                  // Get the actual table name from the Yii2 relation's model class,
+                  // not from config ctype (which may differ from the actual model ctype)
                   $tableName = $relationCtype;
-                  if (\giantbits\crelish\components\CrelishModelResolver::modelExists($relationCtype)) {
-                    $relatedModelClass = \giantbits\crelish\components\CrelishModelResolver::getModelClass($relationCtype);
-                    $tableName = $relatedModelClass::tableName();
+                  try {
+                    $relation = (new $modelClass())->getRelation($relationName, false);
+                    if ($relation !== null) {
+                      $tableName = $relation->modelClass::tableName();
+                    }
+                  } catch (\Exception $e) {
+                    // Fallback to CrelishModelResolver
+                    if (\giantbits\crelish\components\CrelishModelResolver::modelExists($relationCtype)) {
+                      $relatedModelClass = \giantbits\crelish\components\CrelishModelResolver::getModelClass($relationCtype);
+                      $tableName = $relatedModelClass::tableName();
+                    }
                   }
 
                   // Create an AND condition for each related field
