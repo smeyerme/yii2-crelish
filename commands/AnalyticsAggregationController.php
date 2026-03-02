@@ -19,6 +19,7 @@ use yii\helpers\Console;
  *   yii crelish/analytics-aggregation/partner-stats      # Build partner stats cache
  *   yii crelish/analytics-aggregation/cleanup            # Delete old raw data
  *   yii crelish/analytics-aggregation/backfill 30        # Backfill last 30 days
+ *   yii crelish/analytics-aggregation/backfill-page-uuid # Link job analytics to companies
  */
 class AnalyticsAggregationController extends Controller
 {
@@ -633,6 +634,159 @@ class AnalyticsAggregationController extends Controller
         $this->stdout("  Success: {$successCount} days\n");
         if ($errorCount > 0) {
             $this->stdout("  Errors: {$errorCount} days\n", Console::FG_YELLOW);
+        }
+
+        return ExitCode::OK;
+    }
+
+    /**
+     * Backfill page_uuid for job records in analytics tables.
+     *
+     * Overwrites page_uuid with the company UUID (from job.company) for all job rows.
+     * Old data has page_uuid set to the page where the job was displayed, but the
+     * company analytics dashboard needs page_uuid = company UUID.
+     *
+     * Because the unique constraint includes page_uuid, rows that were tracked on
+     * different pages for the same job+date+event get merged (totals summed).
+     *
+     * Usage:
+     *   yii crelish/analytics-aggregation/backfill-page-uuid          # Run backfill
+     *   yii crelish/analytics-aggregation/backfill-page-uuid -d       # Dry run
+     *
+     * @return int
+     */
+    public function actionBackfillPageUuid()
+    {
+        $this->stdout("\n" . str_repeat('=', 60) . "\n", Console::FG_CYAN);
+        $this->stdout("Backfill page_uuid for Job Analytics\n", Console::FG_CYAN);
+        $this->stdout(str_repeat('=', 60) . "\n\n", Console::FG_CYAN);
+
+        if ($this->dryRun) {
+            $this->stdout("DRY RUN MODE - No changes will be made\n\n", Console::FG_YELLOW);
+        }
+
+        $db = Yii::$app->db;
+
+        // --- 1. Backfill analytics_element_daily ---
+
+        // Find job rows where page_uuid doesn't match the job's company
+        $dailyCount = $db->createCommand("
+            SELECT COUNT(*)
+            FROM {{%analytics_element_daily}} aed
+            INNER JOIN {{%job}} j ON aed.element_uuid = j.uuid
+            WHERE aed.element_type = 'job'
+              AND j.company IS NOT NULL
+              AND j.company != ''
+              AND (aed.page_uuid IS NULL OR aed.page_uuid != j.company)
+        ")->queryScalar();
+
+        $this->stdout("Daily rows to backfill: " . number_format($dailyCount) . "\n");
+
+        if ($dailyCount > 0 && $this->verbose) {
+            $samples = $db->createCommand("
+                SELECT aed.date, aed.element_uuid, aed.event_type, aed.total_views,
+                       aed.page_uuid as old_page_uuid, j.company, j.systitle
+                FROM {{%analytics_element_daily}} aed
+                INNER JOIN {{%job}} j ON aed.element_uuid = j.uuid
+                WHERE aed.element_type = 'job'
+                  AND j.company IS NOT NULL
+                  AND j.company != ''
+                  AND (aed.page_uuid IS NULL OR aed.page_uuid != j.company)
+                ORDER BY aed.total_views DESC
+                LIMIT 5
+            ")->queryAll();
+
+            $this->stdout("\nSample rows:\n");
+            foreach ($samples as $row) {
+                $this->stdout("  [{$row['date']}] {$row['systitle']} ({$row['event_type']}: {$row['total_views']} views)\n");
+                $this->stdout("    page_uuid: {$row['old_page_uuid']} -> {$row['company']}\n");
+            }
+            $this->stdout("\n");
+        }
+
+        if ($dailyCount > 0 && !$this->dryRun) {
+            try {
+                // Step 1: Upsert rows with company UUID as page_uuid.
+                // Multiple rows for the same job on different pages get merged (totals summed).
+                $upserted = $db->createCommand("
+                    INSERT INTO {{%analytics_element_daily}}
+                        (date, element_uuid, element_type, page_uuid, event_type, total_views, unique_sessions, unique_users)
+                    SELECT
+                        aed.date, aed.element_uuid, aed.element_type, j.company, aed.event_type,
+                        SUM(aed.total_views), SUM(aed.unique_sessions), SUM(aed.unique_users)
+                    FROM {{%analytics_element_daily}} aed
+                    INNER JOIN {{%job}} j ON aed.element_uuid = j.uuid
+                    WHERE aed.element_type = 'job'
+                      AND j.company IS NOT NULL
+                      AND j.company != ''
+                      AND (aed.page_uuid IS NULL OR aed.page_uuid != j.company)
+                    GROUP BY aed.date, aed.element_uuid, aed.element_type, j.company, aed.event_type
+                    ON DUPLICATE KEY UPDATE
+                        total_views = {{%analytics_element_daily}}.total_views + VALUES(total_views),
+                        unique_sessions = {{%analytics_element_daily}}.unique_sessions + VALUES(unique_sessions),
+                        unique_users = {{%analytics_element_daily}}.unique_users + VALUES(unique_users),
+                        updated_at = NOW()
+                ")->execute();
+
+                $this->stdout("  Upserted rows with company page_uuid\n", Console::FG_GREEN);
+
+                // Step 2: Delete the old rows (data has been moved/merged above)
+                $deleted = $db->createCommand("
+                    DELETE aed FROM {{%analytics_element_daily}} aed
+                    INNER JOIN {{%job}} j ON aed.element_uuid = j.uuid
+                    WHERE aed.element_type = 'job'
+                      AND j.company IS NOT NULL
+                      AND j.company != ''
+                      AND aed.page_uuid != j.company
+                ")->execute();
+
+                $this->stdout("  Cleaned up {$deleted} old rows\n", Console::FG_GREEN);
+
+            } catch (\Exception $e) {
+                $this->stderr("Error backfilling daily data: " . $e->getMessage() . "\n", Console::FG_RED);
+                return ExitCode::UNSPECIFIED_ERROR;
+            }
+        }
+
+        // --- 2. Backfill analytics_element_views (raw data, if it still exists) ---
+
+        try {
+            $rawCount = $db->createCommand("
+                SELECT COUNT(*)
+                FROM {{%analytics_element_views}} ev
+                INNER JOIN {{%job}} j ON ev.element_uuid = j.uuid
+                WHERE ev.element_type = 'job'
+                  AND j.company IS NOT NULL
+                  AND j.company != ''
+                  AND (ev.page_uuid IS NULL OR ev.page_uuid != j.company)
+            ")->queryScalar();
+
+            $this->stdout("Raw element views to backfill: " . number_format($rawCount) . "\n");
+
+            if ($rawCount > 0 && !$this->dryRun) {
+                $updated = $db->createCommand("
+                    UPDATE {{%analytics_element_views}} ev
+                    INNER JOIN {{%job}} j ON ev.element_uuid = j.uuid
+                    SET ev.page_uuid = j.company
+                    WHERE ev.element_type = 'job'
+                      AND j.company IS NOT NULL
+                      AND j.company != ''
+                      AND (ev.page_uuid IS NULL OR ev.page_uuid != j.company)
+                ")->execute();
+
+                $this->stdout("  Updated {$updated} raw view rows\n", Console::FG_GREEN);
+            }
+        } catch (\Exception $e) {
+            // Raw data may have been cleaned up already
+            $this->stdout("Raw data table not available (may have been cleaned up)\n", Console::FG_YELLOW);
+        }
+
+        // --- Summary ---
+
+        if ($this->dryRun) {
+            $this->stdout("\nDry run complete - no changes made\n", Console::FG_YELLOW);
+        } else {
+            $this->stdout("\nBackfill completed successfully\n", Console::FG_GREEN);
         }
 
         return ExitCode::OK;
