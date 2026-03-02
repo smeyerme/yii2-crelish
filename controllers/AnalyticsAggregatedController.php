@@ -728,17 +728,17 @@ class AnalyticsAggregatedController extends CrelishBaseController
         if (\giantbits\crelish\components\CrelishModelResolver::modelExists($element['element_type'])) {
           $modelClass = \giantbits\crelish\components\CrelishModelResolver::getModelClass($element['element_type']);
           $elementModel = $modelClass::find()
-            ->select(['uuid', 'systitle', 'title', 'created_at'])
+            ->select(['uuid', 'systitle', 'title', 'created'])
             ->where(['uuid' => $element['element_uuid']])
             ->one();
 
           if ($elementModel) {
             $element['title'] = $elementModel['systitle'] ?? $elementModel['title'] ?? 'Untitled';
 
-            if (isset($elementModel['created_at'])) {
-              $createdAt = is_string($elementModel['created_at'])
-                ? strtotime($elementModel['created_at'])
-                : $elementModel['created_at'];
+            if (!empty($elementModel['created'])) {
+              $createdAt = is_numeric($elementModel['created'])
+                ? (int)$elementModel['created']
+                : strtotime($elementModel['created']);
 
               $element['age_days'] = floor((time() - $createdAt) / 86400);
               $element['avg_views_per_day'] = $element['age_days'] > 0

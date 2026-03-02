@@ -3,7 +3,8 @@
 namespace giantbits\crelish\commands;
 
 use giantbits\crelish\components\DatacenterIpService;
-use Jaybizzle\CrawlerDetect\CrawlerDetect;
+use giantbits\crelish\components\ReferrerSpamService;
+use DeviceDetector\DeviceDetector;
 use Yii;
 use yii\console\Controller;
 use yii\console\ExitCode;
@@ -23,7 +24,8 @@ class BotDetectionController extends Controller
   /**
    * Score contributions for different detection methods
    */
-  const SCORE_KNOWN_BOT = 50;         // CrawlerDetect library match
+  const SCORE_SPAM_REFERRER = 50;     // Known spam referrer domain
+  const SCORE_KNOWN_BOT = 50;         // DeviceDetector library match
   const SCORE_OUTDATED_BROWSER = 35;  // Old browser/OS version
   const SCORE_DATACENTER_IP = 35;     // From cloud provider
   const SCORE_ROBOTIC_TIMING = 40;    // Consistent timing patterns
@@ -37,6 +39,11 @@ class BotDetectionController extends Controller
    * @var DatacenterIpService|null Datacenter IP detection service
    */
   protected ?DatacenterIpService $_datacenterIpService = null;
+
+  /**
+   * @var ReferrerSpamService|null Spam referrer detection service
+   */
+  protected ?ReferrerSpamService $_referrerSpamService = null;
 
   /**
    * @var int Number of records to process in each batch
@@ -79,6 +86,10 @@ class BotDetectionController extends Controller
     'min_safari_version' => 600,
     'min_ios_version' => 16,
     'min_android_version' => 10,
+
+    // Path to GeoLite2-ASN.mmdb for ASN-based datacenter detection
+    // Set this to enable ASN lookups (requires geoip2/geoip2 package)
+    'asn_database_path' => null,
   ];
 
   /**
@@ -128,47 +139,51 @@ class BotDetectionController extends Controller
 
     // Phase 1: Collect scores from all detection methods
     // 1. Orphan sessions (sessions with no page views - definitely garbage)
-    $this->stdout("\n[1/10] Detecting orphan sessions...\n", Console::FG_CYAN);
+    $this->stdout("\n[1/11] Detecting orphan sessions...\n", Console::FG_CYAN);
     $this->scoreOrphanSessions();
 
-    // 2. User agent based detection (known bots + outdated browsers)
-    $this->stdout("\n[2/10] Processing user agent-based detection...\n", Console::FG_CYAN);
+    // 2. Spam referrer detection
+    $this->stdout("\n[2/11] Detecting spam referrers...\n", Console::FG_CYAN);
+    $this->scoreSpamReferrers();
+
+    // 3. User agent based detection (known bots + outdated browsers)
+    $this->stdout("\n[3/11] Processing user agent-based detection...\n", Console::FG_CYAN);
     $this->scoreUserAgents();
 
-    // 3. Volume-based anomaly detection
-    $this->stdout("\n[3/10] Detecting high-volume anomalies...\n", Console::FG_CYAN);
+    // 4. Volume-based anomaly detection
+    $this->stdout("\n[4/11] Detecting high-volume anomalies...\n", Console::FG_CYAN);
     $this->scoreVolumeAnomalies();
 
-    // 4. Timing pattern detection
-    $this->stdout("\n[4/10] Analyzing timing patterns...\n", Console::FG_CYAN);
+    // 5. Timing pattern detection
+    $this->stdout("\n[5/11] Analyzing timing patterns...\n", Console::FG_CYAN);
     $this->scoreTimingPatterns();
 
-    // 5. Crawling pattern detection
-    $this->stdout("\n[5/10] Detecting crawling patterns...\n", Console::FG_CYAN);
+    // 6. Crawling pattern detection
+    $this->stdout("\n[6/11] Detecting crawling patterns...\n", Console::FG_CYAN);
     $this->scoreCrawlingPatterns();
 
-    // 6. Single-page session detection
-    $this->stdout("\n[6/10] Scoring single-page sessions...\n", Console::FG_CYAN);
+    // 7. Single-page session detection
+    $this->stdout("\n[7/11] Scoring single-page sessions...\n", Console::FG_CYAN);
     $this->scoreSinglePageSessions();
 
-    // 7. Datacenter IP detection
+    // 8. Datacenter IP detection
     if ($this->thresholds['enable_datacenter_ip_detection'] ?? true) {
-      $this->stdout("\n[7/10] Detecting datacenter IPs...\n", Console::FG_CYAN);
+      $this->stdout("\n[8/11] Detecting datacenter IPs...\n", Console::FG_CYAN);
       $this->scoreDatacenterIps();
     } else {
-      $this->stdout("\n[7/10] Datacenter IP detection disabled, skipping...\n", Console::FG_YELLOW);
+      $this->stdout("\n[8/11] Datacenter IP detection disabled, skipping...\n", Console::FG_YELLOW);
     }
 
     // Phase 2: Apply combination bonuses
-    $this->stdout("\n[8/10] Applying combination bonuses...\n", Console::FG_CYAN);
+    $this->stdout("\n[9/11] Applying combination bonuses...\n", Console::FG_CYAN);
     $this->applyComboBoosts();
 
     // Phase 3: Commit scores to database
-    $this->stdout("\n[9/10] Committing confidence scores...\n", Console::FG_CYAN);
+    $this->stdout("\n[10/11] Committing confidence scores...\n", Console::FG_CYAN);
     $this->commitScores();
 
     // Phase 4: Delete only HIGH confidence bots
-    $this->stdout("\n[10/10] Deleting high-confidence bot traffic...\n", Console::FG_CYAN);
+    $this->stdout("\n[11/11] Deleting high-confidence bot traffic...\n", Console::FG_CYAN);
     $this->deleteHighConfidenceBots();
 
     // Show summary
@@ -253,11 +268,78 @@ class BotDetectionController extends Controller
   }
 
   /**
+   * Score sessions with spam referrer domains
+   */
+  protected function scoreSpamReferrers(): void
+  {
+    $db = Yii::$app->db;
+    $scored = 0;
+    $spamDomainCounts = [];
+    $offset = 0;
+
+    $service = $this->getReferrerSpamService();
+
+    $this->stdout("Loading spam referrer list...\n");
+    $domainCount = $service->refreshCache();
+    $this->stdout(sprintf("Loaded %d spam domains\n", $domainCount));
+
+    do {
+      $records = $db->createCommand("
+        SELECT DISTINCT s.session_id, pv.referer
+        FROM analytics_sessions s
+        INNER JOIN analytics_page_views pv ON s.session_id = pv.session_id
+        WHERE s.is_bot = 0
+          AND pv.referer IS NOT NULL AND pv.referer != ''
+        LIMIT :limit OFFSET :offset
+      ")
+        ->bindValue(':limit', $this->batchSize)
+        ->bindValue(':offset', $offset)
+        ->queryAll();
+
+      if (empty($records)) {
+        break;
+      }
+
+      foreach ($records as $record) {
+        $hostname = parse_url($record['referer'], PHP_URL_HOST);
+        if (empty($hostname)) {
+          continue;
+        }
+
+        $hostname = strtolower($hostname);
+        $hostname = preg_replace('/^www\./', '', $hostname);
+
+        if ($service->isSpammer($hostname)) {
+          $this->addScore($record['session_id'], self::SCORE_SPAM_REFERRER, 'spam_referrer:' . $hostname);
+          $scored++;
+
+          if (!isset($spamDomainCounts[$hostname])) {
+            $spamDomainCounts[$hostname] = 0;
+          }
+          $spamDomainCounts[$hostname]++;
+        }
+      }
+
+      $offset += $this->batchSize;
+
+    } while (count($records) == $this->batchSize);
+
+    if (!empty($spamDomainCounts)) {
+      arsort($spamDomainCounts);
+      $this->stdout("\nTop spam referrer domains:\n");
+      foreach (array_slice($spamDomainCounts, 0, 10) as $domain => $count) {
+        $this->stdout(sprintf("  %s: %d sessions\n", $domain, $count));
+      }
+    }
+
+    $this->stdout(sprintf("\nSpam referrer scoring: %d sessions scored\n", $scored), Console::FG_YELLOW);
+  }
+
+  /**
    * Score sessions based on user agent analysis
    */
   protected function scoreUserAgents(): void
   {
-    $detector = new CrawlerDetect;
     $db = Yii::$app->db;
 
     $totalProcessed = 0;
@@ -285,19 +367,23 @@ class BotDetectionController extends Controller
       foreach ($records as $record) {
         $userAgent = $record['user_agent'] ?? '';
 
-        // Check for known bot via CrawlerDetect
-        if ($detector->isCrawler($userAgent)) {
+        // Parse user agent with DeviceDetector
+        $dd = new DeviceDetector($userAgent);
+        $dd->parse();
+
+        // Check for known bot via DeviceDetector
+        if ($dd->isBot()) {
           $this->addScore($record['session_id'], self::SCORE_KNOWN_BOT, 'known_bot');
           $knownBots++;
         }
 
         // Check for completely dead browsers (hard cutoff - always 50 points)
-        if ($this->hasDeadBrowser($userAgent)) {
+        if ($this->hasDeadBrowser($userAgent, $dd)) {
           $this->addScore($record['session_id'], 50, 'dead_browser');
           $deadBrowsers++;
         } else {
           // Calculate age-based score for outdated but not dead browsers
-          $ageScore = $this->getBrowserAgeScore($userAgent);
+          $ageScore = $this->getBrowserAgeScore($userAgent, $dd);
           if ($ageScore > 0) {
             $this->addScore($record['session_id'], $ageScore, 'outdated_browser:' . $ageScore);
             $outdatedBrowsers++;
@@ -381,6 +467,27 @@ class BotDetectionController extends Controller
       strpos($userAgent, '(') === false) {
       // Suspiciously clean UA without OS info
       return true;
+    }
+
+    // Monitoring/uptime agents that pollute analytics
+    $monitoringAgents = [
+      'UptimeRobot',
+      'Pingdom',
+      'StatusCake',
+      'Site24x7',
+      'Datadog',
+      'NewRelicPinger',
+      'GTmetrix',
+      'NodePing',
+      'Better Uptime',
+      'Freshping',
+      'Checkly',
+      'Oh Dear',
+    ];
+    foreach ($monitoringAgents as $agent) {
+      if (stripos($userAgent, $agent) !== false) {
+        return true;
+      }
     }
 
     return false;
@@ -610,6 +717,12 @@ class BotDetectionController extends Controller
     $rangeCount = $service->refreshCache();
     $this->stdout(sprintf("Loaded %d IP ranges\n", $rangeCount));
 
+    if ($service->asnDatabasePath !== null) {
+      $this->stdout("ASN-based detection: enabled\n", Console::FG_GREEN);
+    } else {
+      $this->stdout("ASN-based detection: disabled (set asn_database_path in config to enable)\n", Console::FG_YELLOW);
+    }
+
     $offset = 0;
     $totalChecked = 0;
 
@@ -673,7 +786,7 @@ class BotDetectionController extends Controller
     $behaviorSignals = [
       'high_volume_hourly', 'high_volume_daily',
       'robotic_timing', 'sequential_crawler',
-      'systematic_crawler', 'ip_volume_anomaly'
+      'systematic_crawler', 'ip_volume_anomaly',
     ];
 
     foreach ($this->sessionScores as $sessionId => &$data) {
@@ -689,10 +802,13 @@ class BotDetectionController extends Controller
         }
       }
 
+      // Check for spam referrer
+      $hasSpamReferrer = count(array_filter($reasons, fn($r) => str_starts_with($r, 'spam_referrer'))) > 0;
+
       // Check for outdated browser (now includes score suffix like "outdated_browser:30")
       $hasOutdated = in_array('dead_browser', $reasons) ||
         count(array_filter($reasons, fn($r) => str_starts_with($r, 'outdated_browser'))) > 0;
-      $hasBehavior = count(array_intersect($reasons, $behaviorSignals)) > 0;
+      $hasBehavior = count(array_intersect($reasons, $behaviorSignals)) > 0 || $hasSpamReferrer;
       $hasKnownBot = in_array('known_bot', $reasons);
       $hasCustomBot = in_array('custom_bot_pattern', $reasons);
       $hasSinglePage = in_array('single_page_session', $reasons);
@@ -711,6 +827,20 @@ class BotDetectionController extends Controller
       if (!$comboApplied && $hasKnownBot && $hasDatacenter) {
         $data['score'] += 25;
         $data['reasons'][] = 'combo:known+datacenter';
+        $comboApplied = true;
+      }
+
+      // Spam referrer + Datacenter IP = Almost certainly bot (+25)
+      if (!$comboApplied && $hasSpamReferrer && $hasDatacenter) {
+        $data['score'] += 25;
+        $data['reasons'][] = 'combo:spam_referrer+datacenter';
+        $comboApplied = true;
+      }
+
+      // Spam referrer + Outdated browser = Very suspicious (+20)
+      if (!$comboApplied && $hasSpamReferrer && $hasOutdated) {
+        $data['score'] += 20;
+        $data['reasons'][] = 'combo:spam_referrer+outdated';
         $comboApplied = true;
       }
 
@@ -883,7 +1013,6 @@ class BotDetectionController extends Controller
    */
   protected function processPageViews()
   {
-    $detector = new CrawlerDetect;
     $db = Yii::$app->db;
 
     $totalProcessed = 0;
@@ -892,9 +1021,9 @@ class BotDetectionController extends Controller
 
     do {
       $records = $db->createCommand("
-                SELECT id, user_agent 
-                FROM analytics_page_views 
-                WHERE is_bot = 0 
+                SELECT id, user_agent
+                FROM analytics_page_views
+                WHERE is_bot = 0
                 LIMIT :limit OFFSET :offset
             ")
         ->bindValue(':limit', $this->batchSize)
@@ -910,7 +1039,7 @@ class BotDetectionController extends Controller
 
       try {
         foreach ($records as $record) {
-          if ($this->isBot($record['user_agent'], $detector)) {
+          if ($this->isBot($record['user_agent'])) {
             if (!$this->dryRun) {
               $db->createCommand()
                 ->update('analytics_page_views', ['is_bot' => 1], ['id' => $record['id']])
@@ -954,7 +1083,6 @@ class BotDetectionController extends Controller
    */
   protected function processSessions()
   {
-    $detector = new CrawlerDetect;
     $db = Yii::$app->db;
 
     $totalProcessed = 0;
@@ -963,9 +1091,9 @@ class BotDetectionController extends Controller
 
     do {
       $records = $db->createCommand("
-                SELECT session_id, user_agent 
-                FROM analytics_sessions 
-                WHERE is_bot = 0 
+                SELECT session_id, user_agent
+                FROM analytics_sessions
+                WHERE is_bot = 0
                 LIMIT :limit OFFSET :offset
             ")
         ->bindValue(':limit', $this->batchSize)
@@ -981,7 +1109,7 @@ class BotDetectionController extends Controller
 
       try {
         foreach ($records as $record) {
-          if ($this->isBot($record['user_agent'], $detector)) {
+          if ($this->isBot($record['user_agent'])) {
             if (!$this->dryRun) {
               $db->createCommand()
                 ->update('analytics_sessions', ['is_bot' => 1], ['session_id' => $record['session_id']])
@@ -1256,8 +1384,27 @@ class BotDetectionController extends Controller
   {
     if ($this->_datacenterIpService === null) {
       $this->_datacenterIpService = new DatacenterIpService();
+
+      // Wire up ASN database path from thresholds config
+      $asnPath = $this->thresholds['asn_database_path'] ?? null;
+      if ($asnPath !== null && file_exists($asnPath)) {
+        $this->_datacenterIpService->asnDatabasePath = $asnPath;
+      }
     }
     return $this->_datacenterIpService;
+  }
+
+  /**
+   * Get the referrer spam service instance
+   *
+   * @return ReferrerSpamService
+   */
+  protected function getReferrerSpamService(): ReferrerSpamService
+  {
+    if ($this->_referrerSpamService === null) {
+      $this->_referrerSpamService = new ReferrerSpamService();
+    }
+    return $this->_referrerSpamService;
   }
 
   /**
@@ -1352,20 +1499,26 @@ class BotDetectionController extends Controller
   /**
    * Enhanced bot detection with configurable rules
    */
-  protected function isBot($userAgent, CrawlerDetect $detector)
+  protected function isBot($userAgent, ?DeviceDetector $dd = null)
   {
+    // Create DeviceDetector internally if not passed
+    if ($dd === null) {
+      $dd = new DeviceDetector($userAgent);
+      $dd->parse();
+    }
+
     // First check with the library
-    if ($detector->isCrawler($userAgent)) {
+    if ($dd->isBot()) {
       return true;
     }
 
     // Check for dead browsers
-    if ($this->hasDeadBrowser($userAgent)) {
+    if ($this->hasDeadBrowser($userAgent, $dd)) {
       return true;
     }
 
     // Check for significantly outdated browsers
-    if ($this->getBrowserAgeScore($userAgent) >= 40) {
+    if ($this->getBrowserAgeScore($userAgent, $dd) >= 40) {
       return true;
     }
 
@@ -1378,111 +1531,60 @@ class BotDetectionController extends Controller
   }
 
   /**
-   * Fetch current browser versions from Can I Use data
-   * Cache for 7 days to avoid constant API calls
+   * Get current browser versions (hardcoded, update periodically)
+   *
+   * As of early 2026: iOS 19, Android 16, Chrome ~145, Firefox ~145, Safari 19
    */
   protected function getCurrentBrowserVersions(): array
   {
-    $cache = Yii::$app->cache ?? null;
-    $cacheKey = 'browser_versions_cache';
-
-    // Try cache first (7 day TTL)
-    if ($cache) {
-      $cached = $cache->get($cacheKey);
-      if ($cached !== false) {
-        return $cached;
-      }
-    }
-
-    try {
-      // Fetch from Can I Use GitHub (most reliable public source)
-      $context = stream_context_create([
-        'http' => [
-          'timeout' => 10,
-          'user_agent' => 'CrelishBotDetection/1.0',
-        ],
-      ]);
-
-      $url = 'https://raw.githubusercontent.com/Fyrd/caniuse/main/data.json';
-      $json = @file_get_contents($url, false, $context);
-
-      if ($json) {
-        $data = json_decode($json, true);
-        if ($data && isset($data['agents'])) {
-          $versions = [
-            'ios' => $this->extractLatestVersion($data['agents']['ios_saf']['versions'] ?? []),
-            'android' => $this->extractLatestVersion($data['agents']['android']['versions'] ?? []),
-            'chrome' => $this->extractLatestVersion($data['agents']['chrome']['versions'] ?? []),
-            'firefox' => $this->extractLatestVersion($data['agents']['firefox']['versions'] ?? []),
-            'safari' => $this->extractLatestVersion($data['agents']['safari']['versions'] ?? []),
-          ];
-
-          // Cache for 7 days
-          if ($cache) {
-            $cache->set($cacheKey, $versions, 604800);
-          }
-
-          $this->stdout("Fetched current browser versions from Can I Use\n");
-          return $versions;
-        }
-      }
-    } catch (\Exception $e) {
-      // Silently fall through to fallback
-    }
-
-    // Fallback to hardcoded versions (update annually)
-    // As of early 2026: iOS 19, Android 16, Chrome ~145, Firefox ~145, Safari 19
-    $versions = [
+    return [
       'ios' => 19,        // iOS 19 = 2025
       'android' => 16,    // Android 16 = 2025
       'chrome' => 145,    // Chrome ~145 in early 2026
       'firefox' => 145,   // Firefox ~145 in early 2026
       'safari' => 19,     // Safari 19 = 2025
     ];
-
-    // Cache fallback too
-    if ($cache) {
-      $cache->set($cacheKey, $versions, 604800);
-    }
-
-    return $versions;
-  }
-
-  /**
-   * Extract latest stable version from Can I Use version array
-   * Includes sanity checks to prevent false positives from bad data
-   */
-  protected function extractLatestVersion(array $versions): int
-  {
-    // Can I Use returns versions like ["130", "131", "132", null, null]
-    // Filter out nulls and get the highest numeric value
-    $validVersions = array_filter($versions, function ($v) {
-      return $v !== null && is_numeric($v);
-    });
-
-    if (empty($validVersions)) {
-      return 0;
-    }
-
-    // Get numeric values only
-    $numericVersions = array_map('intval', $validVersions);
-    $maxVersion = max($numericVersions);
-
-    // Sanity check: Cap versions at reasonable maximums to prevent false positives
-    // These caps should be updated periodically but are generous enough to not cause issues
-    // iOS/Safari: cap at 25 (allows for several years of growth from iOS 19)
-    // Chrome/Firefox: cap at 200 (releases ~13/year, allows for ~4 years growth)
-    // Android: cap at 20 (allows for several years of growth from Android 16)
-    return $maxVersion;
   }
 
   /**
    * Calculate browser age score (0-50 points based on how outdated)
    * Returns higher scores for older browsers
+   *
+   * @param string $userAgent Raw user agent string
+   * @param DeviceDetector|null $dd Optional parsed DeviceDetector instance
+   * @return int Score 0-50
    */
-  protected function getBrowserAgeScore($userAgent): int
+  protected function getBrowserAgeScore($userAgent, ?DeviceDetector $dd = null): int
   {
     $currentVersions = $this->getCurrentBrowserVersions();
+
+    // When DeviceDetector is available, use structured data
+    if ($dd !== null) {
+      $client = $dd->getClient();
+      $os = $dd->getOs();
+
+      // Score OS version
+      $osScore = $this->scoreOsVersion(
+        $os['name'] ?? '',
+        $os['version'] ?? '',
+        $currentVersions
+      );
+      if ($osScore > 0) {
+        return $osScore;
+      }
+
+      // Score browser version
+      $browserScore = $this->scoreBrowserVersion(
+        $client['name'] ?? '',
+        $client['version'] ?? '',
+        $currentVersions
+      );
+      if ($browserScore > 0) {
+        return $browserScore;
+      }
+    }
+
+    // Regex fallback when DeviceDetector is not available
 
     // iOS version check
     if (preg_match('/(?:iPhone OS|CPU OS) (\d+)[_\.]/', $userAgent, $matches)) {
@@ -1490,10 +1592,10 @@ class BotDetectionController extends Controller
       $currentVersion = $currentVersions['ios'] ?? 18;
       $yearsOld = $currentVersion - $version;
 
-      if ($yearsOld >= 6) return 50;   // 6+ years old = ancient
-      if ($yearsOld >= 4) return 40;   // 4+ years old = very old
-      if ($yearsOld >= 2) return 30;   // 2+ years old = old
-      if ($yearsOld >= 1) return 20;   // 1+ year old = somewhat old
+      if ($yearsOld >= 6) return 50;
+      if ($yearsOld >= 4) return 40;
+      if ($yearsOld >= 2) return 30;
+      if ($yearsOld >= 1) return 20;
       return 0;
     }
 
@@ -1503,10 +1605,10 @@ class BotDetectionController extends Controller
       $currentVersion = $currentVersions['android'] ?? 15;
       $yearsOld = $currentVersion - $version;
 
-      if ($yearsOld >= 6) return 50;   // Android 9 or older = ancient
-      if ($yearsOld >= 4) return 40;   // Android 11 = very old
-      if ($yearsOld >= 2) return 30;   // Android 13 = old
-      if ($yearsOld >= 1) return 20;   // Android 14 = somewhat old
+      if ($yearsOld >= 6) return 50;
+      if ($yearsOld >= 4) return 40;
+      if ($yearsOld >= 2) return 30;
+      if ($yearsOld >= 1) return 20;
       return 0;
     }
 
@@ -1516,10 +1618,10 @@ class BotDetectionController extends Controller
       $currentVersion = $currentVersions['chrome'] ?? 131;
       $versionsBehind = $currentVersion - $version;
 
-      if ($versionsBehind >= 52) return 50;  // 4+ years old
-      if ($versionsBehind >= 26) return 40;  // 2+ years old
-      if ($versionsBehind >= 13) return 30;  // 1+ year old
-      if ($versionsBehind >= 6) return 20;   // 6+ months old
+      if ($versionsBehind >= 52) return 50;
+      if ($versionsBehind >= 26) return 40;
+      if ($versionsBehind >= 13) return 30;
+      if ($versionsBehind >= 6) return 20;
       return 0;
     }
 
@@ -1529,10 +1631,10 @@ class BotDetectionController extends Controller
       $currentVersion = $currentVersions['firefox'] ?? 133;
       $versionsBehind = $currentVersion - $version;
 
-      if ($versionsBehind >= 52) return 50;  // 4+ years old
-      if ($versionsBehind >= 26) return 40;  // 2+ years old
-      if ($versionsBehind >= 13) return 30;  // 1+ year old
-      if ($versionsBehind >= 6) return 20;   // 6+ months old
+      if ($versionsBehind >= 52) return 50;
+      if ($versionsBehind >= 26) return 40;
+      if ($versionsBehind >= 13) return 30;
+      if ($versionsBehind >= 6) return 20;
       return 0;
     }
 
@@ -1542,10 +1644,103 @@ class BotDetectionController extends Controller
       $currentVersion = $currentVersions['safari'] ?? 18;
       $yearsOld = $currentVersion - $version;
 
-      if ($yearsOld >= 5) return 50;   // Safari 13 or older
-      if ($yearsOld >= 3) return 40;   // Safari 15
-      if ($yearsOld >= 2) return 30;   // Safari 16
-      if ($yearsOld >= 1) return 20;   // Safari 17
+      if ($yearsOld >= 5) return 50;
+      if ($yearsOld >= 3) return 40;
+      if ($yearsOld >= 2) return 30;
+      if ($yearsOld >= 1) return 20;
+      return 0;
+    }
+
+    return 0;
+  }
+
+  /**
+   * Score browser version using DeviceDetector structured data
+   */
+  protected function scoreBrowserVersion(string $name, string $version, array $currentVersions): int
+  {
+    if (empty($name) || empty($version)) {
+      return 0;
+    }
+
+    $majorVersion = intval($version);
+    if ($majorVersion <= 0) {
+      return 0;
+    }
+
+    $name = strtolower($name);
+
+    // Chrome / Chrome Mobile / Chromium
+    if (str_contains($name, 'chrome') || str_contains($name, 'chromium')) {
+      $current = $currentVersions['chrome'] ?? 145;
+      $behind = $current - $majorVersion;
+      if ($behind >= 52) return 50;
+      if ($behind >= 26) return 40;
+      if ($behind >= 13) return 30;
+      if ($behind >= 6) return 20;
+      return 0;
+    }
+
+    // Firefox / Firefox Mobile
+    if (str_contains($name, 'firefox')) {
+      $current = $currentVersions['firefox'] ?? 145;
+      $behind = $current - $majorVersion;
+      if ($behind >= 52) return 50;
+      if ($behind >= 26) return 40;
+      if ($behind >= 13) return 30;
+      if ($behind >= 6) return 20;
+      return 0;
+    }
+
+    // Safari / Mobile Safari
+    if (str_contains($name, 'safari')) {
+      $current = $currentVersions['safari'] ?? 19;
+      $behind = $current - $majorVersion;
+      if ($behind >= 5) return 50;
+      if ($behind >= 3) return 40;
+      if ($behind >= 2) return 30;
+      if ($behind >= 1) return 20;
+      return 0;
+    }
+
+    return 0;
+  }
+
+  /**
+   * Score OS version using DeviceDetector structured data
+   */
+  protected function scoreOsVersion(string $name, string $version, array $currentVersions): int
+  {
+    if (empty($name) || empty($version)) {
+      return 0;
+    }
+
+    $majorVersion = intval($version);
+    if ($majorVersion <= 0) {
+      return 0;
+    }
+
+    $name = strtolower($name);
+
+    // iOS
+    if ($name === 'ios') {
+      $current = $currentVersions['ios'] ?? 19;
+      $behind = $current - $majorVersion;
+      if ($behind >= 6) return 50;
+      if ($behind >= 4) return 40;
+      if ($behind >= 2) return 30;
+      if ($behind >= 1) return 20;
+      return 0;
+    }
+
+    // Android
+    if ($name === 'android') {
+      $current = $currentVersions['android'] ?? 16;
+      $behind = $current - $majorVersion;
+      if ($behind >= 6) return 50;
+      if ($behind >= 4) return 40;
+      if ($behind >= 2) return 30;
+      if ($behind >= 1) return 20;
       return 0;
     }
 
@@ -1555,9 +1750,51 @@ class BotDetectionController extends Controller
   /**
    * Check for completely dead browsers (always suspicious)
    * These get a hard 50 points regardless of version
+   *
+   * @param string $userAgent Raw user agent string
+   * @param DeviceDetector|null $dd Optional parsed DeviceDetector instance
+   * @return bool
    */
-  protected function hasDeadBrowser($userAgent): bool
+  protected function hasDeadBrowser($userAgent, ?DeviceDetector $dd = null): bool
   {
+    // DeviceDetector structured checks
+    if ($dd !== null) {
+      $client = $dd->getClient();
+      $os = $dd->getOs();
+      $browserName = strtolower($client['name'] ?? '');
+      $osName = strtolower($os['name'] ?? '');
+      $osVersion = $os['version'] ?? '';
+
+      // Dead browsers
+      $deadBrowsers = ['opera mini', 'konqueror', 'palemoon', 'pale moon', 'internet explorer'];
+      foreach ($deadBrowsers as $dead) {
+        if ($browserName === $dead) {
+          return true;
+        }
+      }
+
+      // Dead OS: Windows < 6.1 (XP = 5.1, Vista = 6.0)
+      if ($osName === 'windows' && !empty($osVersion)) {
+        $parts = explode('.', $osVersion);
+        $major = intval($parts[0] ?? 0);
+        $minor = intval($parts[1] ?? 0);
+        if ($major < 6 || ($major === 6 && $minor < 1)) {
+          return true;
+        }
+      }
+
+      // Dead OS: macOS < 10.14
+      if (str_contains($osName, 'mac') && !empty($osVersion)) {
+        $parts = explode('.', $osVersion);
+        $major = intval($parts[0] ?? 0);
+        $minor = intval($parts[1] ?? 0);
+        if ($major === 10 && $minor < 14) {
+          return true;
+        }
+      }
+    }
+
+    // Regex fallback checks (kept for backward compat)
     // Opera Mini (all versions - mostly bots now)
     if (str_contains($userAgent, 'Opera Mini')) {
       return true;
@@ -1624,9 +1861,9 @@ class BotDetectionController extends Controller
    * Check for outdated browser versions (legacy method - now uses age scoring)
    * @deprecated Use getBrowserAgeScore() instead
    */
-  protected function hasOutdatedBrowser($userAgent): bool
+  protected function hasOutdatedBrowser($userAgent, ?DeviceDetector $dd = null): bool
   {
-    return $this->hasDeadBrowser($userAgent) || $this->getBrowserAgeScore($userAgent) >= 40;
+    return $this->hasDeadBrowser($userAgent, $dd) || $this->getBrowserAgeScore($userAgent, $dd) >= 40;
   }
 
   /**

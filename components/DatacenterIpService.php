@@ -192,6 +192,49 @@ class DatacenterIpService extends Component
   ];
 
   /**
+   * @var string|null Path to GeoLite2-ASN.mmdb database file for ASN-based detection
+   */
+  public ?string $asnDatabasePath = null;
+
+  /**
+   * @var object|null Lazy-loaded GeoIp2 ASN reader
+   */
+  private ?object $_asnReader = null;
+
+  /**
+   * @var array Known hosting provider ASN org name patterns
+   */
+  protected array $hostingAsnPatterns = [
+    'Amazon',
+    'AWS',
+    'Google Cloud',
+    'Google LLC',
+    'Microsoft Azure',
+    'Microsoft Corporation',
+    'DigitalOcean',
+    'Linode',
+    'Akamai Connected Cloud',
+    'Vultr',
+    'OVH',
+    'OVHcloud',
+    'Hetzner',
+    'Alibaba Cloud',
+    'Alibaba US',
+    'Tencent Cloud',
+    'Oracle Cloud',
+    'Oracle Corporation',
+    'Rackspace',
+    'Scaleway',
+    'UpCloud',
+    'Cloudflare',
+    'Fastly',
+    'Leaseweb',
+    'ColoCrossing',
+    'QuadraNet',
+    'Choopa',
+  ];
+
+  /**
    * @var array|null Cached parsed IP ranges
    */
   private ?array $_parsedRanges = null;
@@ -218,6 +261,12 @@ class DatacenterIpService extends Component
           'cidr' => $range['cidr'] ?? 'Unknown',
         ];
       }
+    }
+
+    // Fallback: try ASN-based lookup if configured
+    $asnResult = $this->isHostingAsn($ip);
+    if ($asnResult !== false) {
+      return $asnResult;
     }
 
     return false;
@@ -488,5 +537,51 @@ class DatacenterIpService extends Component
     $end = sprintf('%u', $end);
 
     return bccomp($ipLong, $start) >= 0 && bccomp($ipLong, $end) <= 0;
+  }
+
+  /**
+   * Check if an IP belongs to a known hosting provider via ASN lookup
+   *
+   * Requires geoip2/geoip2 package and a GeoLite2-ASN.mmdb database file.
+   * Silently returns false if dependencies are not available.
+   *
+   * @param string $ip IP address to check
+   * @return array|false Returns provider info array if hosting ASN, false otherwise
+   */
+  public function isHostingAsn(string $ip): array|false
+  {
+    if ($this->asnDatabasePath === null || !file_exists($this->asnDatabasePath)) {
+      return false;
+    }
+
+    if (!class_exists('GeoIp2\Database\Reader')) {
+      return false;
+    }
+
+    try {
+      if ($this->_asnReader === null) {
+        $this->_asnReader = new \GeoIp2\Database\Reader($this->asnDatabasePath);
+      }
+
+      $record = $this->_asnReader->asn($ip);
+      $orgName = $record->autonomousSystemOrganization ?? '';
+
+      if (empty($orgName)) {
+        return false;
+      }
+
+      foreach ($this->hostingAsnPatterns as $pattern) {
+        if (stripos($orgName, $pattern) !== false) {
+          return [
+            'provider' => $orgName,
+            'cidr' => 'ASN:' . ($record->autonomousSystemNumber ?? 'unknown'),
+          ];
+        }
+      }
+    } catch (\Exception $e) {
+      // Silently skip on any GeoIP2 error (invalid IP, DB error, etc.)
+    }
+
+    return false;
   }
 }

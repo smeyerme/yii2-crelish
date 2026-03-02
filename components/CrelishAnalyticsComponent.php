@@ -2,7 +2,7 @@
 
 namespace giantbits\crelish\components;
 
-use Jaybizzle\CrawlerDetect\CrawlerDetect;
+use DeviceDetector\DeviceDetector;
 use Yii;
 use yii\base\Component;
 use yii\db\Query;
@@ -36,19 +36,11 @@ class CrelishAnalyticsComponent extends Component
   private $_sessionId;
 
   /**
-   * @var CrawlerDetect Bot detector instance
-   */
-  private $_botDetector;
-
-  /**
    * Initialize the component
    */
   public function init()
   {
     parent::init();
-
-    // Initialize bot detector
-    $this->_botDetector = new CrawlerDetect();
 
     // Start a session if not already started
     if (Yii::$app->session->isActive === false) {
@@ -231,30 +223,21 @@ class CrelishAnalyticsComponent extends Component
       return true;
     }
 
-    // First check with the crawler-detect library
-    if ($this->_botDetector->isCrawler($userAgent)) {
+    // Check with DeviceDetector library
+    $dd = new DeviceDetector($userAgent);
+    $dd->parse();
+    if ($dd->isBot()) {
       return true;
     }
 
-    // Custom rules for edge cases not caught by crawler-detect
+    // Custom rules for edge cases DeviceDetector may miss
 
     // Email in user agent
     if (preg_match('/@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/', $userAgent)) {
       return true;
     }
 
-    // Very old Chrome/Firefox versions (< 100)
-    if (preg_match('/Chrome\/[0-9]{1,2}\./', $userAgent) ||
-      preg_match('/Firefox\/[0-9]{1,2}\./', $userAgent)) {
-      return true;
-    }
-
-    // Old Internet Explorer (6, 7, 8, 9)
-    if (preg_match('/MSIE [6789]\.0/', $userAgent)) {
-      return true;
-    }
-
-    // Incomplete Chrome user agents
+    // Incomplete Chrome user agents (missing Safari/537.36)
     if (strpos($userAgent, 'Chrome/') !== false &&
       strpos($userAgent, 'Safari/537.36') === false) {
       return true;
@@ -262,6 +245,11 @@ class CrelishAnalyticsComponent extends Component
 
     // CCleaner
     if (strpos($userAgent, 'CCleaner') !== false) {
+      return true;
+    }
+
+    // Old Internet Explorer (6, 7, 8, 9)
+    if (preg_match('/MSIE [6789]\.0/', $userAgent)) {
       return true;
     }
 
@@ -279,21 +267,6 @@ class CrelishAnalyticsComponent extends Component
     if ($userAgent === 'Mozilla/5.0' || preg_match('/^Mozilla\/[0-9]+\.[0-9]+$/', $userAgent)) {
       return true;
     }
-
-    // Optional: Check against your custom bot database
-    // (You might want to remove this if using crawler-detect)
-    /*
-    $botPattern = (new Query())
-      ->select('user_agent_pattern')
-      ->from('analytics_bots')
-      ->all();
-
-    foreach ($botPattern as $pattern) {
-      if (stripos($userAgent, $pattern['user_agent_pattern']) !== false) {
-        return true;
-      }
-    }
-    */
 
     return false;
   }
@@ -489,11 +462,11 @@ class CrelishAnalyticsComponent extends Component
   }
 
   /**
-   * Get the bot detector instance (for advanced usage)
-   * @return CrawlerDetect
+   * @deprecated DeviceDetector is now instantiated per-UA in isBot(). This method returns null.
+   * @return null
    */
   public function getBotDetector()
   {
-    return $this->_botDetector;
+    return null;
   }
 }
