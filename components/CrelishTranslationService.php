@@ -141,6 +141,12 @@ class CrelishTranslationService
             $deeplTargetLang = self::getDeeplLanguageCode($targetLanguage);
             $deeplSourceLang = self::getDeeplLanguageCode($this->sourceLanguage);
 
+            // DeepL source_lang does not accept regional variants (e.g. EN-US, PT-BR).
+            // Strip the region suffix so EN-US becomes EN, PT-PT becomes PT, etc.
+            if (str_contains($deeplSourceLang, '-')) {
+                $deeplSourceLang = explode('-', $deeplSourceLang, 2)[0];
+            }
+
             $result = $this->translator->translateText(
                 $text,
                 $deeplSourceLang,
