@@ -4,6 +4,7 @@ namespace giantbits\crelish\controllers;
 
 use giantbits\crelish\components\CrelishBaseController;
 use giantbits\crelish\components\CrelishModelResolver;
+use giantbits\crelish\components\ElementTitleResolver;
 use kartik\select2\Select2Asset;
 use kartik\select2\ThemeKrajeeBs5Asset;
 use Yii;
@@ -148,8 +149,8 @@ class CompanyAnalyticsController extends CrelishBaseController
             ->andWhere(['<=', 'date', $endDate])
             ->one();
 
-        // Get content stats via page_uuid (all content tracked under this company)
-        $stats = (new Query())
+        // Get content stats (page_uuid OR element ownership)
+        $contentQuery = (new Query())
             ->select([
                 'total_views' => 'SUM(total_views)',
                 'unique_sessions' => 'SUM(unique_sessions)',
@@ -160,10 +161,9 @@ class CompanyAnalyticsController extends CrelishBaseController
                 'content_count' => 'COUNT(DISTINCT element_uuid)'
             ])
             ->from('{{%analytics_element_daily}}')
-            ->where(['page_uuid' => $companyUuid])
             ->andWhere(['>=', 'date', $startDate])
-            ->andWhere(['<=', 'date', $endDate])
-            ->one();
+            ->andWhere(['<=', 'date', $endDate]);
+        $stats = $this->applyCompanyFilter($contentQuery, $companyUuid)->one();
 
         // Add company profile stats
         $stats['profile_list_views'] = (int)($profileStats['profile_list_views'] ?? 0);
@@ -189,7 +189,7 @@ class CompanyAnalyticsController extends CrelishBaseController
 
         list($startDate, $endDate) = $this->getPeriodDates($period);
 
-        $stats = (new Query())
+        $query = (new Query())
             ->select([
                 'element_type',
                 'total_views' => 'SUM(total_views)',
@@ -201,14 +201,12 @@ class CompanyAnalyticsController extends CrelishBaseController
                 'unique_elements' => 'COUNT(DISTINCT element_uuid)'
             ])
             ->from('{{%analytics_element_daily}}')
-            ->where(['page_uuid' => $companyUuid])
             ->andWhere(['>=', 'date', $startDate])
             ->andWhere(['<=', 'date', $endDate])
             ->groupBy(['element_type'])
-            ->orderBy(['total_views' => SORT_DESC])
-            ->all();
+            ->orderBy(['total_views' => SORT_DESC]);
 
-        return $stats;
+        return $this->applyCompanyFilter($query, $companyUuid)->all();
     }
 
     /**
@@ -227,7 +225,7 @@ class CompanyAnalyticsController extends CrelishBaseController
 
         list($startDate, $endDate) = $this->getPeriodDates($period);
 
-        return (new Query())
+        $query = (new Query())
             ->select([
                 'date',
                 'total_views' => 'SUM(total_views)',
@@ -238,12 +236,12 @@ class CompanyAnalyticsController extends CrelishBaseController
                 'downloads' => "SUM(CASE WHEN event_type = 'download' THEN total_views ELSE 0 END)"
             ])
             ->from('{{%analytics_element_daily}}')
-            ->where(['page_uuid' => $companyUuid])
             ->andWhere(['>=', 'date', $startDate])
             ->andWhere(['<=', 'date', $endDate])
             ->groupBy(['date'])
-            ->orderBy(['date' => SORT_ASC])
-            ->all();
+            ->orderBy(['date' => SORT_ASC]);
+
+        return $this->applyCompanyFilter($query, $companyUuid)->all();
     }
 
     /**
@@ -263,7 +261,7 @@ class CompanyAnalyticsController extends CrelishBaseController
 
         list($startDate, $endDate) = $this->getPeriodDates($period);
 
-        $elements = (new Query())
+        $query = (new Query())
             ->select([
                 'element_uuid',
                 'element_type',
@@ -275,13 +273,13 @@ class CompanyAnalyticsController extends CrelishBaseController
                 'downloads' => "SUM(CASE WHEN event_type = 'download' THEN total_views ELSE 0 END)"
             ])
             ->from('{{%analytics_element_daily}}')
-            ->where(['page_uuid' => $companyUuid])
             ->andWhere(['>=', 'date', $startDate])
             ->andWhere(['<=', 'date', $endDate])
             ->groupBy(['element_uuid', 'element_type'])
             ->orderBy(['total_views' => SORT_DESC])
-            ->limit($limit)
-            ->all();
+            ->limit($limit);
+
+        $elements = $this->applyCompanyFilter($query, $companyUuid)->all();
 
         // Enrich with titles
         foreach ($elements as &$element) {
@@ -315,19 +313,19 @@ class CompanyAnalyticsController extends CrelishBaseController
 
         list($startDate, $endDate) = $this->getPeriodDates($period);
 
-        return (new Query())
+        $query = (new Query())
             ->select([
                 'event_type',
                 'total_views' => 'SUM(total_views)',
                 'unique_sessions' => 'SUM(unique_sessions)'
             ])
             ->from('{{%analytics_element_daily}}')
-            ->where(['page_uuid' => $companyUuid])
             ->andWhere(['>=', 'date', $startDate])
             ->andWhere(['<=', 'date', $endDate])
             ->groupBy(['event_type'])
-            ->orderBy(['total_views' => SORT_DESC])
-            ->all();
+            ->orderBy(['total_views' => SORT_DESC]);
+
+        return $this->applyCompanyFilter($query, $companyUuid)->all();
     }
 
     /**
@@ -424,7 +422,7 @@ class CompanyAnalyticsController extends CrelishBaseController
      */
     private function getOverviewStatsData(string $companyUuid, string $startDate, string $endDate): array
     {
-        return (new Query())
+        $query = (new Query())
             ->select([
                 'total_views' => 'SUM(total_views)',
                 'unique_sessions' => 'SUM(unique_sessions)',
@@ -435,10 +433,10 @@ class CompanyAnalyticsController extends CrelishBaseController
                 'content_count' => 'COUNT(DISTINCT element_uuid)'
             ])
             ->from('{{%analytics_element_daily}}')
-            ->where(['page_uuid' => $companyUuid])
             ->andWhere(['>=', 'date', $startDate])
-            ->andWhere(['<=', 'date', $endDate])
-            ->one();
+            ->andWhere(['<=', 'date', $endDate]);
+
+        return $this->applyCompanyFilter($query, $companyUuid)->one();
     }
 
     /**
@@ -446,7 +444,7 @@ class CompanyAnalyticsController extends CrelishBaseController
      */
     private function getContentTypeStatsData(string $companyUuid, string $startDate, string $endDate): array
     {
-        return (new Query())
+        $query = (new Query())
             ->select([
                 'element_type',
                 'total_views' => 'SUM(total_views)',
@@ -458,12 +456,12 @@ class CompanyAnalyticsController extends CrelishBaseController
                 'unique_elements' => 'COUNT(DISTINCT element_uuid)'
             ])
             ->from('{{%analytics_element_daily}}')
-            ->where(['page_uuid' => $companyUuid])
             ->andWhere(['>=', 'date', $startDate])
             ->andWhere(['<=', 'date', $endDate])
             ->groupBy(['element_type'])
-            ->orderBy(['total_views' => SORT_DESC])
-            ->all();
+            ->orderBy(['total_views' => SORT_DESC]);
+
+        return $this->applyCompanyFilter($query, $companyUuid)->all();
     }
 
     /**
@@ -471,7 +469,7 @@ class CompanyAnalyticsController extends CrelishBaseController
      */
     private function getTopContentData(string $companyUuid, string $startDate, string $endDate, int $limit = 15): array
     {
-        $elements = (new Query())
+        $query = (new Query())
             ->select([
                 'element_uuid',
                 'element_type',
@@ -483,13 +481,13 @@ class CompanyAnalyticsController extends CrelishBaseController
                 'downloads' => "SUM(CASE WHEN event_type = 'download' THEN total_views ELSE 0 END)"
             ])
             ->from('{{%analytics_element_daily}}')
-            ->where(['page_uuid' => $companyUuid])
             ->andWhere(['>=', 'date', $startDate])
             ->andWhere(['<=', 'date', $endDate])
             ->groupBy(['element_uuid', 'element_type'])
             ->orderBy(['total_views' => SORT_DESC])
-            ->limit($limit)
-            ->all();
+            ->limit($limit);
+
+        $elements = $this->applyCompanyFilter($query, $companyUuid)->all();
 
         // Enrich with titles
         foreach ($elements as &$element) {
@@ -511,32 +509,73 @@ class CompanyAnalyticsController extends CrelishBaseController
      */
     private function getElementTitle(string $elementUuid, string $elementType): ?string
     {
-        try {
-            if (!CrelishModelResolver::modelExists($elementType)) {
-                return null;
-            }
+        return ElementTitleResolver::resolve($elementUuid, $elementType);
+    }
 
-            $modelClass = CrelishModelResolver::getModelClass($elementType);
-            $element = $modelClass::find()
-                ->where(['uuid' => $elementUuid])
-                ->one();
-
-            if ($element) {
-                if (isset($element['systitle']) && !empty($element['systitle'])) {
-                    return $element['systitle'];
-                }
-                if (isset($element['title']) && !empty($element['title'])) {
-                    return $element['title'];
-                }
-                if (isset($element['name']) && !empty($element['name'])) {
-                    return $element['name'];
-                }
-            }
-        } catch (\Exception $e) {
-            Yii::warning('Failed to load element title: ' . $e->getMessage(), __METHOD__);
+    /**
+     * Collect all element UUIDs that belong to a company.
+     *
+     * Scans every table listed in the analytics-element-types config that has
+     * a 'company' column and returns UUIDs where company = $companyUuid.
+     *
+     * @return string[] Element UUIDs
+     */
+    private function getCompanyElementUuids(string $companyUuid): array
+    {
+        $config = @include(Yii::getAlias('@app/config/analytics-element-types.php'));
+        if (!is_array($config)) {
+            return [];
         }
 
-        return null;
+        $uuids = [];
+        foreach ($config as $type => $typeConfig) {
+            $table = $typeConfig['table'] ?? null;
+            if (empty($table)) {
+                continue;
+            }
+
+            try {
+                // Check if table has a 'company' column
+                $schema = Yii::$app->db->getTableSchema($table);
+                if ($schema === null || !isset($schema->columns['company'])) {
+                    continue;
+                }
+
+                $typeUuids = (new Query())
+                    ->select(['uuid'])
+                    ->from('{{%' . $table . '}}')
+                    ->where(['company' => $companyUuid])
+                    ->column();
+
+                $uuids = array_merge($uuids, $typeUuids);
+            } catch (\Exception $e) {
+                Yii::warning("Failed to get elements for type $type: " . $e->getMessage(), __METHOD__);
+            }
+        }
+
+        return array_unique($uuids);
+    }
+
+    /**
+     * Apply company content filter to a query.
+     *
+     * Matches rows where page_uuid equals the company UUID
+     * OR the element_uuid belongs to content owned by the company.
+     * This ensures data is found both before and after page_uuid backfill.
+     */
+    private function applyCompanyFilter(Query $query, string $companyUuid): Query
+    {
+        $elementUuids = $this->getCompanyElementUuids($companyUuid);
+
+        if (empty($elementUuids)) {
+            return $query->andWhere(['page_uuid' => $companyUuid]);
+        }
+
+        return $query->andWhere([
+            'or',
+            ['page_uuid' => $companyUuid],
+            ['element_uuid' => $elementUuids]
+        ]);
     }
 
     /**
