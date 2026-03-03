@@ -3,6 +3,7 @@
 namespace giantbits\crelish\controllers;
 
 use giantbits\crelish\components\CrelishBaseController;
+use giantbits\crelish\components\ElementTitleResolver;
 use Yii;
 use yii\web\Response;
 use yii\db\Query;
@@ -724,35 +725,33 @@ class AnalyticsAggregatedController extends CrelishBaseController
 
     // Try to get creation dates and calculate age
     foreach ($elements as &$element) {
+      // Resolve title via config or model
+      $element['title'] = ElementTitleResolver::resolve($element['element_uuid'], $element['element_type']);
+
+      // Try to get the 'created' field for age calculation (requires model or direct DB)
       try {
-        if (\giantbits\crelish\components\CrelishModelResolver::modelExists($element['element_type'])) {
-          $modelClass = \giantbits\crelish\components\CrelishModelResolver::getModelClass($element['element_type']);
-          $elementModel = $modelClass::find()
-            ->select(['uuid', 'systitle', 'title', 'created'])
-            ->where(['uuid' => $element['element_uuid']])
-            ->one();
+        $created = (new Query())
+          ->select(['created'])
+          ->from('{{%' . $element['element_type'] . '}}')
+          ->where(['uuid' => $element['element_uuid']])
+          ->scalar();
 
-          if ($elementModel) {
-            $element['title'] = $elementModel['systitle'] ?? $elementModel['title'] ?? 'Untitled';
+        if (!empty($created)) {
+          $createdAt = is_numeric($created)
+            ? (int)$created
+            : strtotime($created);
 
-            if (!empty($elementModel['created'])) {
-              $createdAt = is_numeric($elementModel['created'])
-                ? (int)$elementModel['created']
-                : strtotime($elementModel['created']);
-
-              $element['age_days'] = floor((time() - $createdAt) / 86400);
-              $element['avg_views_per_day'] = $element['age_days'] > 0
-                ? round($element['total_views'] / $element['age_days'], 2)
-                : 0;
-            }
-          }
+          $element['age_days'] = floor((time() - $createdAt) / 86400);
+          $element['avg_views_per_day'] = $element['age_days'] > 0
+            ? round($element['total_views'] / $element['age_days'], 2)
+            : 0;
         }
       } catch (\Exception $e) {
-        // Skip if we can't load the model
+        // Table may not exist or have no 'created' column — skip
       }
 
       // Set defaults if not found
-      if (!isset($element['title'])) {
+      if (empty($element['title'])) {
         $element['title'] = ucfirst($element['element_type']) . ': ' . $element['element_uuid'];
       }
       if (!isset($element['age_days'])) {
@@ -946,7 +945,7 @@ class AnalyticsAggregatedController extends CrelishBaseController
   private function getPageTitle($pageUuid)
   {
     try {
-      // Try to find the page in analytics_page_views to get page_type
+      // Look up the page_type from analytics_page_views
       $pageView = (new Query())
         ->select(['page_type'])
         ->from('{{%analytics_page_views}}')
@@ -954,22 +953,11 @@ class AnalyticsAggregatedController extends CrelishBaseController
         ->limit(1)
         ->one();
 
-      if (!$pageView || !isset($pageView['page_type'])) {
+      if (!$pageView || empty($pageView['page_type'])) {
         return null;
       }
 
-      if (!\giantbits\crelish\components\CrelishModelResolver::modelExists($pageView['page_type'])) {
-        return null;
-      }
-
-      $modelClass = \giantbits\crelish\components\CrelishModelResolver::getModelClass($pageView['page_type']);
-      $pageModel = $modelClass::find()
-        ->where(['uuid' => $pageUuid])
-        ->one();
-
-      if ($pageModel && isset($pageModel['systitle'])) {
-        return $pageModel['systitle'];
-      }
+      return ElementTitleResolver::resolve($pageUuid, $pageView['page_type']);
     } catch (\Exception $e) {
       Yii::warning('Failed to load page title: ' . $e->getMessage());
     }
@@ -985,29 +973,7 @@ class AnalyticsAggregatedController extends CrelishBaseController
    */
   private function getElementTitle($elementUuid, $elementType)
   {
-    try {
-      if (!\giantbits\crelish\components\CrelishModelResolver::modelExists($elementType)) {
-        return null;
-      }
-
-      $modelClass = \giantbits\crelish\components\CrelishModelResolver::getModelClass($elementType);
-      $elementModel = $modelClass::find()
-        ->where(['uuid' => $elementUuid])
-        ->one();
-
-      if ($elementModel && isset($elementModel['systitle'])) {
-        return $elementModel['systitle'];
-      }
-
-      // Try 'title' field as fallback
-      if ($elementModel && isset($elementModel['title'])) {
-        return $elementModel['title'];
-      }
-    } catch (\Exception $e) {
-      Yii::warning('Failed to load element title: ' . $e->getMessage());
-    }
-
-    return null;
+    return ElementTitleResolver::resolve($elementUuid, $elementType);
   }
 
   /**

@@ -3,6 +3,7 @@
 namespace giantbits\crelish\controllers;
 
 use giantbits\crelish\components\CrelishBaseController;
+use giantbits\crelish\components\ElementTitleResolver;
 use Yii;
 use yii\web\Response;
 use yii\helpers\Json;
@@ -104,18 +105,7 @@ class AnalyticsController extends CrelishBaseController
 
     // Enrich with page titles
     foreach ($pages as &$page) {
-
-      // Try to get page title from database
-      $modelClass = \giantbits\crelish\components\CrelishModelResolver::getModelClass($page['page_type']);
-      $pageModel = $modelClass::find()
-        ->where(['uuid' => $page['page_uuid']])
-        ->one();
-
-      if ($pageModel && isset($pageModel['systitle'])) {
-        $page['title'] = $pageModel['systitle'];
-      } else {
-        $page['title'] = 'Unknown Page';
-      }
+      $page['title'] = ElementTitleResolver::resolve($page['page_uuid'], $page['page_type']) ?? 'Unknown Page';
     }
 
     return $pages;
@@ -139,37 +129,19 @@ class AnalyticsController extends CrelishBaseController
 
     // Enrich with element titles if possible
     foreach ($elements as &$element) {
-      // For assets (especially downloads), try to get more info
-      if ($element['element_type'] === 'asset') {
-        $assetModel = \app\workspace\models\Asset::findOne($element['element_uuid']);
-        if ($assetModel) {
-          $element['title'] = $assetModel->title ?? $assetModel->fileName ?? ('Asset: ' . $element['element_uuid']);
-          $element['file_type'] = $assetModel->mime ?? 'Unknown';
-          $element['file_size'] = $assetModel->size ?? 0;
-        } else {
-          $element['title'] = 'Asset: ' . $element['element_uuid'];
+      $resolved = ElementTitleResolver::resolveWithExtras($element['element_uuid'], $element['element_type']);
+
+      if ($resolved) {
+        $element['title'] = $resolved['title'];
+        // Attach extra fields (e.g. mime, size for assets)
+        if (isset($resolved['mime'])) {
+          $element['file_type'] = $resolved['mime'];
+        }
+        if (isset($resolved['size'])) {
+          $element['file_size'] = $resolved['size'];
         }
       } else {
-        // Try to get element title from database based on type
-        try {
-          if (\giantbits\crelish\components\CrelishModelResolver::modelExists($element['element_type'])) {
-            $modelClass = \giantbits\crelish\components\CrelishModelResolver::getModelClass($element['element_type']);
-            $elementModel = $modelClass::find()
-              ->where(['uuid' => $element['element_uuid']])
-              ->one();
-
-            if ($elementModel && isset($elementModel['systitle'])) {
-              $element['title'] = $elementModel['systitle'];
-            } else {
-              $element['title'] = 'Element: ' . $element['element_uuid'];
-            }
-          } else {
-            $element['title'] = ucfirst($element['element_type']) . ': ' . $element['element_uuid'];
-          }
-        } catch (\Exception $e) {
-          $element['title'] = ucfirst($element['element_type']) . ': ' . $element['element_uuid'];
-          Yii::warning('Failed to load element model: ' . $e->getMessage());
-        }
+        $element['title'] = ucfirst($element['element_type']) . ': ' . $element['element_uuid'];
       }
       
       // Add type info for display in the UI
@@ -556,16 +528,10 @@ class AnalyticsController extends CrelishBaseController
           ->one();
           
         if ($firstPageView) {
-          if (\giantbits\crelish\components\CrelishModelResolver::modelExists($firstPageView['page_type'])) {
-            $modelClass = \giantbits\crelish\components\CrelishModelResolver::getModelClass($firstPageView['page_type']);
-            $pageModel = $modelClass::find()
-              ->where(['uuid' => $firstPageView['page_uuid']])
-              ->one();
-
-            if ($pageModel && isset($pageModel['systitle'])) {
-              $session['first_page_title'] = $pageModel['systitle'];
-              $session['first_page_type'] = $firstPageView['page_type'];
-            }
+          $pageTitle = ElementTitleResolver::resolve($firstPageView['page_uuid'], $firstPageView['page_type']);
+          if ($pageTitle !== null) {
+            $session['first_page_title'] = $pageTitle;
+            $session['first_page_type'] = $firstPageView['page_type'];
           }
         }
       } catch (\Exception $e) {
