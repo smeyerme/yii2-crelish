@@ -329,6 +329,25 @@ class CompanyAnalyticsController extends CrelishBaseController
     }
 
     /**
+     * Get benchmark comparison: company stats vs. anonymous Top N average per content type.
+     */
+    public function actionBenchmarkStats()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        $companyUuid = Yii::$app->request->get('company_uuid');
+        $period = Yii::$app->request->get('period', 'month');
+
+        if (empty($companyUuid)) {
+            return ['error' => 'Company UUID is required'];
+        }
+
+        list($startDate, $endDate) = $this->getPeriodDates($period);
+
+        return $this->getBenchmarkData($companyUuid, $startDate, $endDate);
+    }
+
+    /**
      * Export company analytics report as PDF
      */
     public function actionExportPdf()
@@ -378,6 +397,7 @@ class CompanyAnalyticsController extends CrelishBaseController
         $overviewStats = $this->getOverviewStatsData($companyUuid, $startDate, $endDate);
         $contentTypeStats = $this->getContentTypeStatsData($companyUuid, $startDate, $endDate);
         $topContent = $this->getTopContentData($companyUuid, $startDate, $endDate, 15);
+        $benchmarkData = $this->getBenchmarkData($companyUuid, $startDate, $endDate);
 
         // Render PDF
         $html = $this->renderPartial('_pdf-report.twig', [
@@ -391,7 +411,9 @@ class CompanyAnalyticsController extends CrelishBaseController
             'overviewStats' => $overviewStats,
             'contentTypeStats' => $contentTypeStats,
             'topContent' => $topContent,
-            'generatedAt' => date('Y-m-d H:i:s')
+            'benchmarkData' => $benchmarkData,
+            'generatedAt' => date('Y-m-d H:i:s'),
+            'portalName' => $this->getPortalName(),
         ]);
 
         $css = $this->getPdfCss();
@@ -406,7 +428,7 @@ class CompanyAnalyticsController extends CrelishBaseController
             'margin_bottom' => 15
         ]);
 
-        $mpdf->SetTitle('Company Analytics Report - ' . $company['systitle']);
+        $mpdf->SetTitle('Company Analytics Report - ' . $this->getPortalName() . ' - ' . $company['systitle']);
         $mpdf->SetAuthor('Crelish CMS');
 
         $mpdf->WriteHTML($css, \Mpdf\HTMLParserMode::HEADER_CSS);
@@ -414,7 +436,16 @@ class CompanyAnalyticsController extends CrelishBaseController
 
         $filename = 'company-analytics-' . preg_replace('/[^a-z0-9]+/i', '-', $company['systitle']) . '-' . date('Y-m-d') . '.pdf';
 
-        return $mpdf->Output($filename, \Mpdf\Output\Destination::DOWNLOAD);
+        $pdfContent = $mpdf->Output($filename, \Mpdf\Output\Destination::STRING_RETURN);
+
+        $response = Yii::$app->response;
+        $response->format = Response::FORMAT_RAW;
+        $response->headers->set('Content-Type', 'application/pdf');
+        $response->headers->set('Content-Disposition', 'attachment; filename="' . $filename . '"');
+        $response->headers->set('Content-Length', strlen($pdfContent));
+        $response->data = $pdfContent;
+
+        return $response;
     }
 
     /**
@@ -619,6 +650,151 @@ class CompanyAnalyticsController extends CrelishBaseController
         ];
 
         return $labels[$period] ?? $labels['month'];
+    }
+
+    /**
+     * Get the portal name from config or derive from hostname.
+     * Config: params['crelish']['siteName']
+     * Fallback: "forum-holzkarriere.com" → "HOLZKARRIERE"
+     */
+    private function getPortalName(): string
+    {
+        $siteName = Yii::$app->params['crelish']['siteName'] ?? null;
+        if (!empty($siteName)) {
+            return $siteName;
+        }
+
+        $host = Yii::$app->request->hostName ?? '';
+        $name = preg_replace('/^(www\.|forum-)/', '', $host);
+        $name = preg_replace('/\.(com|ch|de|at|net|org)$/', '', $name);
+        return mb_strtoupper($name);
+    }
+
+    /**
+     * Get benchmark comparison data: company stats vs. anonymous Top N average per content type.
+     *
+     * For each content type, finds the top N companies (by total views, excluding the target company),
+     * calculates the average of their metrics, and returns a side-by-side comparison.
+     */
+    private function getBenchmarkData(string $companyUuid, string $startDate, string $endDate): array
+    {
+        $topN = (int)(Yii::$app->params['crelish']['benchmarkTopN'] ?? 5);
+
+        // Step 1: Get the target company's stats per content type
+        $companyStats = $this->getContentTypeStatsData($companyUuid, $startDate, $endDate);
+
+        // Step 2: Get all content types present in analytics for this period
+        $allContentTypes = (new Query())
+            ->select(['element_type'])
+            ->from('{{%analytics_element_daily}}')
+            ->andWhere(['>=', 'date', $startDate])
+            ->andWhere(['<=', 'date', $endDate])
+            ->andWhere(['IS NOT', 'element_type', null])
+            ->groupBy(['element_type'])
+            ->column();
+
+        // Step 3: For each content type, find the top N companies and average their stats
+        $config = @include(Yii::getAlias('@app/config/analytics-element-types.php'));
+        if (!is_array($config)) {
+            $config = [];
+        }
+
+        // Build a map of content type -> table for company lookup
+        $typeTableMap = [];
+        foreach ($config as $type => $typeConfig) {
+            if (!empty($typeConfig['table'])) {
+                $typeTableMap[$type] = $typeConfig['table'];
+            }
+        }
+
+        $benchmark = [];
+        $companyStatsMap = [];
+        foreach ($companyStats as $stat) {
+            $companyStatsMap[$stat['element_type']] = $stat;
+        }
+
+        foreach ($allContentTypes as $contentType) {
+            $table = $typeTableMap[$contentType] ?? null;
+            if (empty($table)) {
+                continue;
+            }
+
+            // Check if this table has a 'company' column
+            try {
+                $schema = Yii::$app->db->getTableSchema($table);
+                if ($schema === null || !isset($schema->columns['company'])) {
+                    continue;
+                }
+            } catch (\Exception $e) {
+                continue;
+            }
+
+            // Find top N companies for this content type (by total views, excluding target company)
+            // First, get all companies and their total views for this content type
+            $companyTotals = (new Query())
+                ->select([
+                    'c.company',
+                    'total_views' => 'SUM(a.total_views)',
+                    'list_views' => "SUM(CASE WHEN a.event_type = 'list' THEN a.total_views ELSE 0 END)",
+                    'detail_views' => "SUM(CASE WHEN a.event_type = 'detail' THEN a.total_views ELSE 0 END)",
+                    'clicks' => "SUM(CASE WHEN a.event_type = 'click' THEN a.total_views ELSE 0 END)",
+                    'downloads' => "SUM(CASE WHEN a.event_type = 'download' THEN a.total_views ELSE 0 END)",
+                    'unique_sessions' => 'SUM(a.unique_sessions)',
+                ])
+                ->from(['a' => '{{%analytics_element_daily}}'])
+                ->innerJoin(['c' => '{{%' . $table . '}}'], 'a.element_uuid = c.uuid')
+                ->andWhere(['a.element_type' => $contentType])
+                ->andWhere(['>=', 'a.date', $startDate])
+                ->andWhere(['<=', 'a.date', $endDate])
+                ->andWhere(['IS NOT', 'c.company', null])
+                ->andWhere(['!=', 'c.company', ''])
+                ->andWhere(['!=', 'c.company', $companyUuid])
+                ->groupBy(['c.company'])
+                ->orderBy(['total_views' => SORT_DESC])
+                ->limit($topN)
+                ->all();
+
+            if (empty($companyTotals)) {
+                continue;
+            }
+
+            // Calculate averages across the top N companies
+            $count = count($companyTotals);
+            $avgTotalViews = array_sum(array_column($companyTotals, 'total_views')) / $count;
+            $avgListViews = array_sum(array_column($companyTotals, 'list_views')) / $count;
+            $avgDetailViews = array_sum(array_column($companyTotals, 'detail_views')) / $count;
+            $avgClicks = array_sum(array_column($companyTotals, 'clicks')) / $count;
+            $avgDownloads = array_sum(array_column($companyTotals, 'downloads')) / $count;
+            $avgSessions = array_sum(array_column($companyTotals, 'unique_sessions')) / $count;
+
+            $companyStat = $companyStatsMap[$contentType] ?? null;
+
+            $benchmark[] = [
+                'element_type' => $contentType,
+                'company' => [
+                    'total_views' => (int)($companyStat['total_views'] ?? 0),
+                    'list_views' => (int)($companyStat['list_views'] ?? 0),
+                    'detail_views' => (int)($companyStat['detail_views'] ?? 0),
+                    'clicks' => (int)($companyStat['clicks'] ?? 0),
+                    'downloads' => (int)($companyStat['downloads'] ?? 0),
+                    'unique_sessions' => (int)($companyStat['unique_sessions'] ?? 0),
+                ],
+                'top_n_average' => [
+                    'total_views' => round($avgTotalViews),
+                    'list_views' => round($avgListViews),
+                    'detail_views' => round($avgDetailViews),
+                    'clicks' => round($avgClicks),
+                    'downloads' => round($avgDownloads),
+                    'unique_sessions' => round($avgSessions),
+                    'count' => $count,
+                ],
+            ];
+        }
+
+        return [
+            'topN' => $topN,
+            'data' => $benchmark,
+        ];
     }
 
     /**

@@ -260,6 +260,30 @@
                 </div>
             </div>
         </div>
+
+        {# Benchmark Comparison #}
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="card" style="border-left: 4px solid #8e44ad;">
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="mb-0"><i class="fa-sharp fa-regular fa-scale-balanced me-2"></i>{{ t('crelish', 'Benchmark Comparison') }}</h4>
+                            <small class="text-muted" id="benchmark-subtitle">{{ t('crelish', 'Your performance compared to the anonymous average of the top companies per content type') }}</small>
+                        </div>
+                        <button class="btn btn-sm btn-outline-primary" id="refresh-benchmark">
+                            <i class="fa-sharp fa-regular fa-refresh"></i>
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div id="benchmark-container">
+                            <div class="text-center">
+                                <div class="spinner-border" role="status"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     {# No Data State #}
@@ -290,6 +314,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const trendsUrl = '{{ url('/crelish/company-analytics/trends') }}';
     const topContentUrl = '{{ url('/crelish/company-analytics/top-content') }}';
     const eventTypeStatsUrl = '{{ url('/crelish/company-analytics/event-type-stats') }}';
+    const benchmarkStatsUrl = '{{ url('/crelish/company-analytics/benchmark-stats') }}';
     const exportPdfUrl = '{{ url('/crelish/company-analytics/export-pdf') }}';
 
     // Initialize Select2 for company selector
@@ -403,6 +428,12 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('refresh-data-btn').disabled = false;
     }
 
+    document.getElementById('refresh-benchmark').addEventListener('click', function() {
+        if (currentCompanyUuid) {
+            loadBenchmarkStats(currentCompanyUuid);
+        }
+    });
+
     function loadCompanyData(companyUuid) {
         showDashboard();
         loadOverviewStats(companyUuid);
@@ -410,6 +441,7 @@ document.addEventListener('DOMContentLoaded', function() {
         loadTrends(companyUuid);
         loadTopContent(companyUuid);
         loadEventTypeStats(companyUuid);
+        loadBenchmarkStats(companyUuid);
     }
 
     function loadOverviewStats(companyUuid) {
@@ -499,6 +531,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 renderEventTypeChart(data);
             })
             .catch(error => console.error('Error loading event type stats:', error));
+    }
+
+    function loadBenchmarkStats(companyUuid) {
+        const container = document.getElementById('benchmark-container');
+        container.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div></div>';
+
+        fetch(benchmarkStatsUrl + '?company_uuid=' + companyUuid + '&period=' + currentPeriod)
+            .then(response => response.json())
+            .then(data => {
+                renderBenchmarkTable(data);
+            })
+            .catch(error => {
+                console.error('Error loading benchmark stats:', error);
+                container.innerHTML = '<div class="alert alert-danger">{{ t("crelish", "Failed to load data") }}</div>';
+            });
     }
 
     // Chart instances
@@ -707,6 +754,54 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         html += '</tbody></table>';
+        container.innerHTML = html;
+    }
+
+    function renderBenchmarkTable(response) {
+        const container = document.getElementById('benchmark-container');
+
+        if (!response || !response.data || response.data.length === 0) {
+            container.innerHTML = '<p class="text-muted">{{ t("crelish", "No benchmark data available. There are not enough companies with analytics data for comparison.") }}</p>';
+            return;
+        }
+
+        const topN = response.topN || 5;
+        document.getElementById('benchmark-subtitle').textContent =
+            '{{ t("crelish", "Your performance compared to the anonymous average of the top") }} ' + topN + ' {{ t("crelish", "companies per content type") }}';
+
+        let html = '<table class="table table-sm insights-table">';
+        html += '<thead><tr>';
+        html += '<th>{{ t("crelish", "Content Type") }}</th>';
+        html += '<th class="text-end">{{ t("crelish", "Your Views") }}</th>';
+        html += '<th class="text-end">Top ' + topN + ' {{ t("crelish", "Avg.") }}</th>';
+        html += '<th class="text-end">{{ t("crelish", "Your Detail") }}</th>';
+        html += '<th class="text-end">Top ' + topN + ' {{ t("crelish", "Avg.") }}</th>';
+        html += '<th class="text-end">{{ t("crelish", "Your Clicks") }}</th>';
+        html += '<th class="text-end">Top ' + topN + ' {{ t("crelish", "Avg.") }}</th>';
+        html += '<th class="text-end">{{ t("crelish", "Difference") }}</th>';
+        html += '</tr></thead><tbody>';
+
+        response.data.forEach(row => {
+            const diff = row.top_n_average.total_views > 0
+                ? (((row.company.total_views - row.top_n_average.total_views) / row.top_n_average.total_views) * 100).toFixed(1)
+                : 0;
+            const diffClass = diff >= 0 ? 'success' : 'danger';
+            const diffPrefix = diff > 0 ? '+' : '';
+
+            html += '<tr>';
+            html += '<td><strong>' + capitalizeFirst(escapeHtml(row.element_type)) + '</strong></td>';
+            html += '<td class="text-end">' + formatNumber(row.company.total_views) + '</td>';
+            html += '<td class="text-end text-muted">' + formatNumber(row.top_n_average.total_views) + '</td>';
+            html += '<td class="text-end">' + formatNumber(row.company.detail_views) + '</td>';
+            html += '<td class="text-end text-muted">' + formatNumber(row.top_n_average.detail_views) + '</td>';
+            html += '<td class="text-end">' + formatNumber(row.company.clicks) + '</td>';
+            html += '<td class="text-end text-muted">' + formatNumber(row.top_n_average.clicks) + '</td>';
+            html += '<td class="text-end"><span class="badge bg-' + diffClass + ' badge-metric">' + diffPrefix + diff + '%</span></td>';
+            html += '</tr>';
+        });
+
+        html += '</tbody></table>';
+        html += '<small class="text-muted">{{ t("crelish", "Comparison based on") }} ' + topN + ' {{ t("crelish", "companies with the highest views per content type (anonymous)") }}</small>';
         container.innerHTML = html;
     }
 

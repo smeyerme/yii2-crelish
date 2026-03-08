@@ -6,7 +6,7 @@
         <table style="width: 100%;">
             <tr>
                 <td style="width: 70%;">
-                    <h1>{{ t('crelish', 'Company Analytics Report') }}</h1>
+                    <h1>{{ t('crelish', 'Company Analytics Report') }} – {{ portalName }}</h1>
                     <div class="company-name" style="font-size: 14pt; font-weight: bold; color: #2c3e50;">
                         {{ company.systitle ?: company.name }}
                     </div>
@@ -161,6 +161,46 @@
                     </span>
                 </td>
                 <td class="text-right"><strong>{{ item.total_views|number_format(0, ',', '.') }}</strong></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    {# Benchmark Comparison #}
+    {% if benchmarkData is defined and benchmarkData.data|default([])|length > 0 %}
+    <h2>{{ t('crelish', 'Benchmark Comparison') }}</h2>
+    <p style="color: #666; font-size: 9pt; margin-bottom: 4mm;">{{ t('crelish', 'Your performance compared to the anonymous average of the Top %count% companies per content type')|replace({'%count%': benchmarkData.topN}) }}</p>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>{{ t('crelish', 'Content Type') }}</th>
+                <th class="text-right">{{ t('crelish', 'Your Views') }}</th>
+                <th class="text-right">{{ t('crelish', 'Top %count% Avg.')|replace({'%count%': benchmarkData.topN}) }}</th>
+                <th class="text-right">{{ t('crelish', 'Your Detail') }}</th>
+                <th class="text-right">{{ t('crelish', 'Top %count% Avg.')|replace({'%count%': benchmarkData.topN}) }}</th>
+                <th class="text-right">{{ t('crelish', 'Your Clicks') }}</th>
+                <th class="text-right">{{ t('crelish', 'Top %count% Avg.')|replace({'%count%': benchmarkData.topN}) }}</th>
+                <th class="text-right">{{ t('crelish', 'Difference') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in benchmarkData.data %}
+            <tr>
+                <td><strong>{{ row.element_type|capitalize }}</strong></td>
+                <td class="text-right">{{ row.company.total_views|number_format(0, ',', '.') }}</td>
+                <td class="text-right" style="color: #888;">{{ row.top_n_average.total_views|number_format(0, ',', '.') }}</td>
+                <td class="text-right">{{ row.company.detail_views|number_format(0, ',', '.') }}</td>
+                <td class="text-right" style="color: #888;">{{ row.top_n_average.detail_views|number_format(0, ',', '.') }}</td>
+                <td class="text-right">{{ row.company.clicks|number_format(0, ',', '.') }}</td>
+                <td class="text-right" style="color: #888;">{{ row.top_n_average.clicks|number_format(0, ',', '.') }}</td>
+                <td class="text-right">
+                    {% set diff = row.top_n_average.total_views > 0 ? (((row.company.total_views - row.top_n_average.total_views) / row.top_n_average.total_views) * 100)|round(1) : 0 %}
+                    <span class="badge {% if diff >= 0 %}badge-success{% else %}badge-warning{% endif %}">
+                        {{ diff > 0 ? '+' : '' }}{{ diff }}%
+                    </span>
+                </td>
             </tr>
             {% endfor %}
         </tbody>
