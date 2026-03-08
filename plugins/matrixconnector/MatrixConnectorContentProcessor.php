@@ -29,7 +29,13 @@ class MatrixConnectorContentProcessor extends Component
     if ($data && $data != '{"main":[]}') {
 
       if (is_string($data)) {
-        $data = Json::decode(stripcslashes(trim($data, '"')));
+        $trimmed = trim($data, '"');
+        $decoded = json_decode($trimmed, true);
+        if ($decoded === null && json_last_error() !== JSON_ERROR_NONE) {
+          $data = Json::decode(stripcslashes($trimmed));
+        } else {
+          $data = $decoded;
+        }
       }
 
       // Extract layout
