@@ -65,6 +65,8 @@ CSS;
       $view->registerCss($css);
 
       // Register JS to communicate save events to the parent window
+      $overlayUuid = $_GET['uuid'] ?? '';
+      $overlayCtype = $_GET['ctype'] ?? '';
       $js = <<<JS
                 // Set a flag to determine if the form has been modified
                 window.hasUnsavedChanges = false;
@@ -95,34 +97,34 @@ CSS;
                     // Notify parent window
                     if (window.parent && window.parent !== window) {
                         try {
-                            window.parent.postMessage({ 
+                            window.parent.postMessage({
                                 action: 'content-saved',
-                                elementId: '{$_GET['uuid']}',
-                                contentType: '{$_GET['ctype']}'
+                                elementId: '{$overlayUuid}',
+                                contentType: '{$overlayCtype}'
                             }, '*');
                         } catch(e) {
                             console.error('Failed to notify parent window', e);
                         }
                     }
-                    
+
                     return true;
                 });
-                
+
                 // Create a custom event for AJAX form success
                 window.triggerSaveEvent = function() {
                     window.hasUnsavedChanges = false;
-                    
+
                     // Create and dispatch a custom event
                     var saveEvent = new CustomEvent('ajaxFormSaved');
                     window.dispatchEvent(saveEvent);
-                    
+
                     // Also try to notify the parent directly
                     if (window.parent && window.parent !== window) {
                         try {
-                            window.parent.postMessage({ 
+                            window.parent.postMessage({
                                 action: 'content-saved',
-                                elementId: '{$_GET['uuid']}',
-                                contentType: '{$_GET['ctype']}'
+                                elementId: '{$overlayUuid}',
+                                contentType: '{$overlayCtype}'
                             }, '*');
                         } catch(e) {
                             console.error('Failed to notify parent window', e);

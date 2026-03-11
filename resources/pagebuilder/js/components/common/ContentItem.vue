@@ -220,27 +220,27 @@ export default {
 };
 </script>
 
-<style scoped>
+<style>
 .content-item {
   margin-bottom: 8px;
-  border: 1px solid #dee2e6;
+  border: 1px solid var(--color-border);
   border-radius: 4px;
-  background-color: #fff;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  background-color: var(--color-bg-main);
+  box-shadow: var(--shadow-sm);
 }
 
 .content-item-header {
   display: flex;
   align-items: center;
   padding: 8px 12px;
-  background-color: #f8f9fa;
-  border-bottom: 1px solid #dee2e6;
+  background-color: var(--color-bg-light);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .drag-handle {
   cursor: move;
   margin-right: 8px;
-  color: #6c757d;
+  color: var(--color-text-muted);
 }
 
 .content-title {
@@ -250,6 +250,7 @@ export default {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: var(--color-text-dark);
 }
 
 .content-actions {
@@ -265,7 +266,8 @@ export default {
   display: inline-block;
   padding: 2px 6px;
   font-size: 0.75rem;
-  background-color: #e9ecef;
+  background-color: rgba(var(--color-primary-light-rgb), 0.15);
+  color: var(--color-primary-light);
   border-radius: 3px;
   margin-bottom: 8px;
 }
@@ -279,21 +281,26 @@ export default {
 
 .content-info dt {
   font-weight: 500;
-  color: #6c757d;
+  color: var(--color-text-muted);
 }
 
 .content-info dd {
   margin: 0;
+  color: var(--color-text-dark);
 }
 
 .content-loading,
 .content-error {
   padding: 0.75rem;
   font-style: italic;
-  color: #6c757d;
+  color: var(--color-text-muted);
 }
 
 .content-error {
   color: #dc3545;
+}
+
+[data-theme="dark"] .content-error {
+  color: #f87171;
 }
 </style>

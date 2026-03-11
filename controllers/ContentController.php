@@ -443,6 +443,15 @@ class ContentController extends CrelishBaseController
    */
   protected function setupHeaderBar()
   {
+    $isOverlay = \Yii::$app->request->get('overlay', 0) == 1;
+
+    // In overlay mode, show only a save button — no sidebar, back button, delete, or save+return
+    if ($isOverlay) {
+      $this->view->params['headerBarLeft'] = [];
+      $this->view->params['headerBarRight'] = [['save', false, false]];
+      return;
+    }
+
     // Default left components for all actions
     $this->view->params['headerBarLeft'] = ['toggle-sidebar'];
 

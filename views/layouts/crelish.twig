@@ -24,10 +24,11 @@
 	</script>
 	{{ void(this.head) }}
 </head>
-<body class="crelish-app-root u-text {% if this.params['isDocumentationMode'] is defined and this.params['isDocumentationMode'] == true %}documentation-mode{% endif %}">
+<body class="crelish-app-root u-text {% if app.request.get('overlay') == 1 %}in-overlay-mode{% endif %} {% if this.params['isDocumentationMode'] is defined and this.params['isDocumentationMode'] == true %}documentation-mode{% endif %}">
 {{ void(this.beginBody()) }}
 
 <section class="cr-root_wrap">
+	{% if app.request.get('overlay') != 1 %}
 	<div id="cr-left-pane" class="left-col scrollable {% if this.params['isDocumentationMode'] is defined and this.params['isDocumentationMode'] == true %}documentation-sidebar{% endif %}">
 		<div class="logo-head">
 			<a href="{{ url('crelish/dashboard/index') }}">
@@ -39,7 +40,8 @@
 			{% include '@crelish/views/layouts/_side_nav.twig' %}
 		</div>
 	</div>
-	<div id="cr-right-pane" class="scrollable">
+	{% endif %}
+	<div id="cr-right-pane" class="scrollable" {% if app.request.get('overlay') == 1 %}style="width: 100%;"{% endif %}>
 		
 		{{ header_bar_widget({
 			'leftComponents': this.params['headerBarLeft'] ?? ['toggle-sidebar'],
@@ -54,6 +56,7 @@
 	</div>
 </section>
 
+{% if app.request.get('overlay') != 1 %}
 <script type="text/javascript">
   function execDelete(url) {
     const urlParams = new URLSearchParams(window.location.search);
@@ -101,6 +104,7 @@
     </div>
   </div>
 </div>
+{% endif %}
 
 {% apply registerCss %}
 

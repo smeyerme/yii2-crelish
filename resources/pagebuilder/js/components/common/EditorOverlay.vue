@@ -45,10 +45,14 @@ export default {
     title: {
       type: String,
       default: 'Edit Content'
+    },
+    createMode: {
+      type: Boolean,
+      default: false
     }
   },
 
-  emits: ['close', 'saved'],
+  emits: ['close', 'saved', 'created'],
 
   data() {
     return {
@@ -61,6 +65,9 @@ export default {
 
   computed: {
     editorUrl() {
+      if (this.createMode && this.contentType) {
+        return `/crelish/content/create?ctype=${this.contentType}&overlay=1`;
+      }
       if (!this.elementId || !this.contentType) return '';
       return `/crelish/content/update?uuid=${this.elementId}&ctype=${this.contentType}&overlay=1`;
     }
@@ -156,10 +163,26 @@ export default {
           // Allow a brief moment to see the success message
           setTimeout(() => {
             this.stopSaveDetection();
-            this.$emit('saved', {
-              elementId: this.elementId,
-              contentType: this.contentType
-            });
+
+            if (this.createMode) {
+              // In create mode, extract the new UUID from the redirected iframe URL
+              try {
+                const iframeUrl = new URL(iframe.contentWindow.location.href);
+                const newUuid = iframeUrl.searchParams.get('uuid');
+                const ctype = iframeUrl.searchParams.get('ctype') || this.contentType;
+                if (newUuid) {
+                  this.$emit('created', { uuid: newUuid, ctype: ctype });
+                }
+              } catch (e) {
+                console.warn('Could not extract UUID from iframe URL:', e);
+              }
+            } else {
+              this.$emit('saved', {
+                elementId: this.elementId,
+                contentType: this.contentType
+              });
+            }
+
             this.$emit('close');
           }, 1500);
         }
@@ -226,34 +249,6 @@ export default {
               // Add styles to hide elements
               const style = document.createElement('style');
               style.textContent = \`
-                /* Hide unnecessary elements */
-                #cr-left-pane {
-                  display: none !important;
-                }
-
-                /* Adjust layout */
-                .content-wrapper, .content, .main-content {
-                  padding: 0 !important;
-                  margin: 0 !important;
-                  width: 100% !important;
-                }
-
-                body {
-                  background: white !important;
-                  pointer-events: auto !important;
-                }
-
-                /* Ensure all form elements can be interacted with */
-                input, select, textarea, button, a {
-                  pointer-events: auto !important;
-                }
-
-                .container {
-                  width: 100% !important;
-                  max-width: none !important;
-                  padding: 0 15px !important;
-                }
-
                 /* Format alerts nicely */
                 .alert-success {
                   position: fixed;
@@ -368,9 +363,9 @@ export default {
   position: relative;
   width: 95vw;
   height: 95vh;
-  background-color: white;
+  background-color: var(--color-bg-main);
   border-radius: 6px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-xl);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -382,26 +377,28 @@ export default {
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;
-  background-color: #f8f9fa;
-  border-bottom: 1px solid #ddd;
+  background: var(--gradient-primary);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .overlay-header h2 {
   margin: 0;
   font-size: 1.25rem;
+  color: var(--color-text-light);
 }
 
-.btn-close {
+.editor-overlay .btn-close {
   background: none;
   border: none;
   font-size: 24px;
   cursor: pointer;
-  color: #666;
+  color: var(--color-text-light);
   line-height: 1;
+  opacity: 0.8;
 }
 
-.btn-close:hover {
-  color: #000;
+.editor-overlay .btn-close:hover {
+  opacity: 1;
 }
 
 .overlay-content {
@@ -428,15 +425,16 @@ export default {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background-color: white;
+  background-color: var(--color-bg-main);
+  color: var(--color-text-muted);
   z-index: 3;
 }
 
 .spinner {
   width: 50px;
   height: 50px;
-  border: 5px solid #f3f3f3;
-  border-top: 5px solid #3498db;
+  border: 5px solid var(--color-border);
+  border-top: 5px solid var(--color-primary-light);
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 15px;
