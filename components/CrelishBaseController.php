@@ -98,34 +98,43 @@ class CrelishBaseController extends Controller
    */
   protected function setupHeaderBar()
   {
+    $isOverlay = \Yii::$app->request->get('overlay', 0) == 1;
+
+    // In overlay mode, show only a save button — no sidebar, back button, delete, or save+return
+    if ($isOverlay) {
+      $this->view->params['headerBarLeft'] = [];
+      $this->view->params['headerBarRight'] = [['save', false, false]];
+      return;
+    }
+
     // Default left components for all actions
     $this->view->params['headerBarLeft'] = ['toggle-sidebar'];
-    
+
     // Default right components (empty by default)
     $this->view->params['headerBarRight'] = [];
-    
+
     // Set specific components based on action
     $action = $this->action ? $this->action->id : null;
-    
+
     switch ($action) {
       case 'index':
         // For index actions, add search and create/delete buttons
         $this->view->params['headerBarLeft'][] = 'search';
         $this->view->params['headerBarRight'] = ['delete', 'create'];
         break;
-        
+
       case 'create':
         // For create actions, add back button and save buttons (without delete)
         $this->view->params['headerBarLeft'][] = 'back-button';
         $this->view->params['headerBarRight'] = [['save', true, false]]; // Show save and return, no delete
         break;
-        
+
       case 'update':
         // For update actions, add back button and save buttons (with delete)
         $this->view->params['headerBarLeft'][] = 'back-button';
         $this->view->params['headerBarRight'] = [['save', true, true]]; // Show save and return, with delete
         break;
-        
+
       default:
         // For other actions, just keep the defaults
         break;
@@ -226,9 +235,16 @@ class CrelishBaseController extends Controller
   {
     Yii::$app->session->setFlash('success', Yii::t("app", 'Content saved successfully...'));
 
+    $isOverlay = Yii::$app->request->get('overlay', 0) == 1;
+
     $redirectUrl = !empty($_POST['save_n_return']) && $_POST['save_n_return'] == "1"
       ? [Yii::$app->controller->id . '/index', 'ctype' => $this->ctype]
       : [Yii::$app->controller->id . '/update', 'ctype' => $this->ctype, 'uuid' => $this->model->uuid];
+
+    // Preserve overlay param so post-redirect page stays in overlay mode
+    if ($isOverlay && is_array($redirectUrl)) {
+      $redirectUrl['overlay'] = 1;
+    }
 
     Yii::$app->response->redirect(Url::to($redirectUrl))->send();
     Yii::$app->end();

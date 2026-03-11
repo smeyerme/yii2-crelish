@@ -10,6 +10,15 @@
     </ul>
 </div>
 <div class="content-selector">
+    <div class="create-new-action">
+        <a href="#"
+           data-pjax="0"
+           class="btn btn-sm btn-outline-primary cntCreateNew"
+           data-ctype="{{ currentType }}"
+           data-target="{{ target }}">
+            <span class="fa-sharp fa-regular fa-plus"></span> {{ t('app', 'Create New') }} {{ currentType }}
+        </a>
+    </div>
     <h6>{{ t('app', 'Content') }}</h6>
     {{ grid_view_widget({
         'dataProvider': dataProvider,
@@ -267,6 +276,10 @@
     border: 1px solid var(--color-border);
     box-shadow: var(--shadow-sm);
     height: 100%;
+}
+
+.create-new-action {
+    margin-bottom: 1rem;
 }
 
 .content-dropper-subnav li a:hover {

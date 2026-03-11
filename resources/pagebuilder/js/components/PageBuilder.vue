@@ -6,9 +6,11 @@
         :is-visible="editorOverlayVisible"
         :element-id="editorElementId"
         :content-type="editorContentType"
+        :create-mode="editorCreateMode"
         :title="editorTitle"
         @close="closeEditorOverlay"
         @saved="handleContentSaved"
+        @created="handleContentCreated"
     ></editor-overlay>
 
     <!-- Content Selection Modal -->
@@ -270,6 +272,8 @@ export default {
       editorOverlayVisible: false,
       editorElementId: null,
       editorContentType: null,
+      editorCreateMode: false,
+      editorCreateTargetArea: null,
       editorTitle: 'Edit Content',
 
       // For content selector
@@ -673,6 +677,8 @@ export default {
 
     closeEditorOverlay() {
       this.editorOverlayVisible = false;
+      this.editorCreateMode = false;
+      this.editorCreateTargetArea = null;
     },
 
     debouncedAreaKeyChange(rowIndex, colIndex, event) {
@@ -840,14 +846,20 @@ export default {
 
           // Find all add content buttons and attach click handlers
           document.addEventListener('click', function(event) {
-            if (event.target && event.target.classList.contains('cntAdd')) {
+            var target = event.target.closest('.cntAdd') || event.target.closest('.cntCreateNew');
+            if (target && target.classList.contains('cntAdd')) {
               event.preventDefault();
-              const contentData = event.target.dataset.content;
-
-              // Send message to parent window
+              var contentData = target.dataset.content;
               window.parent.postMessage({
                 action: 'contentSelected',
                 content: contentData,
+                targetArea: '${this.targetAreaKey}'
+              }, '*');
+            } else if (target && target.classList.contains('cntCreateNew')) {
+              event.preventDefault();
+              window.parent.postMessage({
+                action: 'createNew',
+                ctype: target.dataset.ctype,
                 targetArea: '${this.targetAreaKey}'
               }, '*');
             }
@@ -875,8 +887,37 @@ export default {
       }
     },
 
+    handleContentCreated(data) {
+      // Called by EditorOverlay when a new content element was created
+      if (data && data.uuid && data.ctype && this.editorCreateTargetArea) {
+        const targetArea = this.editorCreateTargetArea;
+        if (!this.contentData[targetArea]) {
+          this.contentData[targetArea] = [];
+        }
+        this.contentData[targetArea] = [
+          ...this.contentData[targetArea],
+          { uuid: data.uuid, ctype: data.ctype }
+        ];
+      }
+    },
+
     handleContentSelectionMessage(event) {
       // Process messages from content selector iframe
+      if (event.data && event.data.action === 'createNew') {
+        // Close selector modal and open editor overlay in create mode
+        const ctype = event.data.ctype;
+        const targetArea = event.data.targetArea || this.targetAreaKey;
+        this.closeContentSelector();
+
+        this.editorCreateMode = true;
+        this.editorCreateTargetArea = targetArea;
+        this.editorElementId = null;
+        this.editorContentType = ctype;
+        this.editorTitle = `Create ${ctype}`;
+        this.editorOverlayVisible = true;
+        return;
+      }
+
       if (event.data && event.data.action === 'contentSelected') {
         try {
           // Parse the content data
@@ -965,6 +1006,7 @@ export default {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Ubuntu, "Helvetica Neue", sans-serif;
   max-width: 1200px;
   margin: 0 auto;
+  color: var(--color-text-dark);
 }
 
 .builder-container {
@@ -985,19 +1027,20 @@ export default {
 .empty-structure {
   padding: 2rem;
   text-align: center;
-  background-color: #f8f9fa;
+  background-color: var(--color-bg-light);
   border-radius: 4px;
-  border: 1px dashed #ddd;
+  border: 1px dashed var(--color-border);
   margin-bottom: 1rem;
+  color: var(--color-text-muted);
 }
 
 .page-row {
   margin-bottom: 1.5rem;
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-border);
   border-radius: 4px;
   overflow: hidden;
-  background-color: #fff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background-color: var(--color-bg-main);
+  box-shadow: var(--shadow-sm);
 }
 
 .row-header {
@@ -1005,12 +1048,13 @@ export default {
   justify-content: space-between;
   align-items: center;
   padding: 0.75rem 1rem;
-  background-color: #f8f9fa;
-  border-bottom: 1px solid #ddd;
+  background-color: var(--color-bg-light);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .row-title {
   font-weight: 600;
+  color: var(--color-text-dark);
 }
 
 .row-actions {
@@ -1029,16 +1073,17 @@ export default {
   width: 100%;
   padding: 2rem;
   text-align: center;
-  background-color: #f8f9fa;
+  background-color: var(--color-bg-light);
   border-radius: 4px;
-  border: 1px dashed #ddd;
+  border: 1px dashed var(--color-border);
+  color: var(--color-text-muted);
 }
 
 .row-column {
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-border);
   border-radius: 4px;
   overflow: hidden;
-  background-color: #f8f9fa;
+  background-color: var(--color-bg-light);
 }
 
 .column-header {
@@ -1046,22 +1091,30 @@ export default {
   justify-content: space-between;
   align-items: center;
   padding: 0.5rem;
-  background-color: #e9ecef;
-  border-bottom: 1px solid #ddd;
+  background-color: var(--color-bg-secondary);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .area-key-input {
   flex: 1;
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-border);
   border-radius: 3px;
   padding: 0.25rem 0.5rem;
   font-size: 0.875rem;
   margin-right: 0.5rem;
+  background-color: var(--color-bg-main);
+  color: var(--color-text-dark);
+}
+
+.area-key-input:focus {
+  outline: none;
+  border-color: var(--color-primary-light);
+  box-shadow: 0 0 0 2px rgba(var(--color-primary-light-rgb), 0.15);
 }
 
 .column-content {
   padding: 0.5rem;
-  background-color: #fff;
+  background-color: var(--color-bg-main);
 }
 
 .content-header {
@@ -1069,23 +1122,24 @@ export default {
   justify-content: space-between;
   align-items: center;
   padding: 0.5rem;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--color-border);
   margin-bottom: 0.75rem;
 }
 
 .content-header h4 {
   margin: 0;
   font-size: 1rem;
+  color: var(--color-text-dark);
 }
 
 .empty-content-draggable {
   padding: 1.5rem;
   text-align: center;
-  color: #6c757d;
+  color: var(--color-text-muted);
   font-style: italic;
-  border: 1px dashed #ddd;
+  border: 1px dashed var(--color-border);
   border-radius: 4px;
-  background-color: #f9f9f9;
+  background-color: var(--color-bg-light);
   min-height: 80px;
   display: flex;
   align-items: center;
@@ -1124,36 +1178,42 @@ export default {
   width: 90%;
   max-width: 1200px;
   height: 80vh;
-  background-color: #fff;
+  background-color: var(--color-bg-main);
   border-radius: 6px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-xl);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   z-index: 9999;
 }
 
-.modal-header {
+.page-builder .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 1rem;
-  background-color: #f8f9fa;
-  border-bottom: 1px solid #ddd;
+  background: var(--gradient-primary);
+  border-bottom: 1px solid var(--color-border);
 }
 
-.modal-header h3 {
+.page-builder .modal-header h3 {
   margin: 0;
+  color: var(--color-text-light);
 }
 
-.btn-close {
+.page-builder .btn-close {
   background: none;
   border: none;
   font-size: 1.5rem;
   line-height: 1;
   cursor: pointer;
   padding: 0;
-  color: #6c757d;
+  color: var(--color-text-light);
+  opacity: 0.8;
+}
+
+.page-builder .btn-close:hover {
+  opacity: 1;
 }
 
 .modal-body {
@@ -1174,8 +1234,10 @@ export default {
   padding: 0;
   border: none;
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-xl);
   max-width: 400px;
+  background-color: var(--color-bg-main);
+  color: var(--color-text-dark);
 }
 
 .custom-dialog::backdrop {
@@ -1189,6 +1251,7 @@ export default {
 .dialog-content h3 {
   margin-top: 0;
   margin-bottom: 1rem;
+  color: var(--color-text-dark);
 }
 
 .dialog-actions {
@@ -1223,8 +1286,12 @@ export default {
 
 .btn-primary {
   color: #fff;
-  background-color: #007bff;
-  border-color: #007bff;
+  background: var(--gradient-primary);
+  border-color: var(--color-primary-dark);
+}
+
+.btn-primary:hover {
+  box-shadow: var(--shadow-md);
 }
 
 .btn-success {
@@ -1240,21 +1307,38 @@ export default {
 }
 
 .btn-outline-primary {
-  color: #007bff;
+  color: var(--color-primary-light);
   background-color: transparent;
-  border-color: #007bff;
+  border-color: var(--color-primary-light);
+}
+
+.btn-outline-primary:hover {
+  background-color: rgba(var(--color-primary-light-rgb), 0.1);
 }
 
 .btn-outline-secondary {
-  color: #6c757d;
+  color: var(--color-text-muted);
   background-color: transparent;
-  border-color: #6c757d;
+  border-color: var(--color-border);
+}
+
+.btn-outline-secondary:hover {
+  background-color: var(--color-bg-light);
 }
 
 .btn-outline-danger {
   color: #dc3545;
   background-color: transparent;
   border-color: #dc3545;
+}
+
+[data-theme="dark"] .btn-outline-danger {
+  color: #f87171;
+  border-color: #f87171;
+}
+
+[data-theme="dark"] .btn-outline-danger:hover {
+  background-color: rgba(220, 53, 69, 0.15);
 }
 
 /* Responsive adjustments */
