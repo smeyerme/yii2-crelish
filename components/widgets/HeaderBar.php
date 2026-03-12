@@ -548,6 +548,15 @@ class HeaderBar extends Widget
         }
         return '<span class="c-nav__content">' . Yii::t('app', $title) . '</span>';
       },
+      'link' => function ($label = '', $url = '#', $options = []) {
+        $class = $options['class'] ?? 'c-button';
+        unset($options['class']);
+        $attrs = '';
+        foreach ($options as $k => $v) {
+          $attrs .= ' ' . Html::encode($k) . '="' . Html::encode($v) . '"';
+        }
+        return '<a class="' . Html::encode($class) . '" href="' . Html::encode($url) . '"' . $attrs . '>' . $label . '</a>';
+      },
       'delete' => function () {
         return '<button class="c-button c-button--error btn-delete-grid hidden">
                     <i class="fa-sharp  fa-regular fa-check-square"></i> ' . '
