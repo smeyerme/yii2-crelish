@@ -26,7 +26,7 @@ use yii\helpers\Json;
  *   }
  * }
  */
-class FeedConfigurator extends CrelishFormWidget
+class Feedconfigurator extends CrelishFormWidget
 {
     public $data;
     public $formKey;
