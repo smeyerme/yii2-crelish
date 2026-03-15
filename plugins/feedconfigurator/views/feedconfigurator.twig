@@ -1,0 +1,327 @@
+<div class="mb-3 highlight-addon field-crelishdynamicmodel-{{ formKey }} feed-configurator" id="{{ fieldId }}_container">
+    <label class="form-label">
+        {{ field.label|default('Konfiguration') }}
+    </label>
+
+    {# Hidden input for the JSON config value #}
+    <input type="hidden"
+           name="CrelishDynamicModel[{{ field.key }}]"
+           id="{{ fieldId }}_input"
+           value="{{ currentOptions|json_encode|e('html_attr') }}"/>
+
+    {# Dynamic config fields container #}
+    <div id="{{ fieldId }}_config" class="feed-config-fields">
+        {# Fields rendered by JavaScript based on selected type's schema #}
+    </div>
+
+    {# Fallback textarea for manual JSON editing #}
+    <div id="{{ fieldId }}_fallback" class="feed-config-fallback" style="display: none;">
+        <textarea class="form-control font-monospace" id="{{ fieldId }}_fallback_json" rows="6"
+                  placeholder='{"key": "value"}'></textarea>
+        <small class="form-text text-muted">JSON-Konfiguration manuell eingeben.</small>
+    </div>
+
+    <div id="{{ fieldId }}_empty" class="text-muted mt-2" style="display: none;">
+        <small>Bitte zuerst einen Feed-Typ auswählen.</small>
+    </div>
+</div>
+
+<style>
+.feed-configurator .feed-config-fields {
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    margin-top: 0.5rem;
+}
+
+.feed-configurator .feed-config-fields:empty {
+    display: none;
+}
+
+.feed-configurator .feed-config-fields .config-field {
+    margin-bottom: 1rem;
+}
+
+.feed-configurator .feed-config-fields .config-field:last-child {
+    margin-bottom: 0;
+}
+
+.feed-configurator .feed-config-fields .config-field label {
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+}
+
+.feed-configurator .feed-config-fields .config-field .form-text {
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
+.feed-configurator .feed-config-fallback {
+    margin-top: 0.5rem;
+}
+
+html[data-theme="dark"] .feed-configurator .feed-config-fields {
+    border-color: #495057;
+    background: #1e2a3b;
+}
+</style>
+
+<script>
+(function($) {
+    $(document).ready(function() {
+        var fieldId = '{{ fieldId }}';
+        var hiddenInput = $('#' + fieldId + '_input');
+        var configContainer = $('#' + fieldId + '_config');
+        var fallbackContainer = $('#' + fieldId + '_fallback');
+        var fallbackTextarea = $('#' + fieldId + '_fallback_json');
+        var emptyMessage = $('#' + fieldId + '_empty');
+
+        var schemas = {{ schemas|json_encode|raw }};
+        var currentOptions = {{ currentOptions|json_encode|raw }};
+        var linkedField = '{{ linkedField|default('')|e('js') }}';
+
+        // Field type renderers (same pattern as widgetconnector)
+        var fieldRenderers = {
+            'text': function(key, config, value) {
+                return '<div class="config-field">' +
+                    '<label for="' + fieldId + '_opt_' + key + '">' + config.label + (config.required ? ' *' : '') + '</label>' +
+                    '<input type="text" class="form-control" ' +
+                    'id="' + fieldId + '_opt_' + key + '" ' +
+                    'data-key="' + key + '" ' +
+                    'value="' + escapeHtml(value || config['default'] || '') + '" ' +
+                    (config.placeholder ? 'placeholder="' + escapeHtml(config.placeholder) + '"' : '') +
+                    (config.required ? 'required' : '') + '>' +
+                    (config.hint ? '<small class="form-text">' + config.hint + '</small>' : '') +
+                    '</div>';
+            },
+
+            'textarea': function(key, config, value) {
+                var displayValue = value || config['default'] || '';
+                // If the value is an object/array, pretty-print it
+                if (typeof displayValue === 'object') {
+                    displayValue = JSON.stringify(displayValue, null, 2);
+                }
+                return '<div class="config-field">' +
+                    '<label for="' + fieldId + '_opt_' + key + '">' + config.label + (config.required ? ' *' : '') + '</label>' +
+                    '<textarea class="form-control font-monospace" ' +
+                    'id="' + fieldId + '_opt_' + key + '" ' +
+                    'data-key="' + key + '" ' +
+                    (config.json ? 'data-json="true" ' : '') +
+                    'rows="' + (config.rows || 3) + '" ' +
+                    (config.placeholder ? 'placeholder="' + escapeHtml(config.placeholder) + '"' : '') +
+                    (config.required ? 'required' : '') + '>' +
+                    escapeHtml(displayValue) +
+                    '</textarea>' +
+                    (config.hint ? '<small class="form-text">' + config.hint + '</small>' : '') +
+                    '</div>';
+            },
+
+            'number': function(key, config, value) {
+                var val = value !== undefined && value !== null ? value : (config['default'] !== undefined ? config['default'] : '');
+                return '<div class="config-field">' +
+                    '<label for="' + fieldId + '_opt_' + key + '">' + config.label + (config.required ? ' *' : '') + '</label>' +
+                    '<input type="number" class="form-control" ' +
+                    'id="' + fieldId + '_opt_' + key + '" ' +
+                    'data-key="' + key + '" ' +
+                    'value="' + val + '" ' +
+                    (config.min !== undefined ? 'min="' + config.min + '"' : '') +
+                    (config.max !== undefined ? 'max="' + config.max + '"' : '') +
+                    (config.required ? 'required' : '') + '>' +
+                    (config.hint ? '<small class="form-text">' + config.hint + '</small>' : '') +
+                    '</div>';
+            },
+
+            'select': function(key, config, value) {
+                var currentVal = value !== undefined && value !== null ? value : (config['default'] || '');
+                var html = '<div class="config-field">' +
+                    '<label for="' + fieldId + '_opt_' + key + '">' + config.label + (config.required ? ' *' : '') + '</label>' +
+                    '<select class="form-select" id="' + fieldId + '_opt_' + key + '" data-key="' + key + '"' +
+                    (config.required ? ' required' : '') + '>';
+
+                if (!config.required) {
+                    html += '<option value="">-- Auswählen --</option>';
+                }
+
+                for (var optKey in config.options) {
+                    var selected = (optKey == currentVal) ? ' selected' : '';
+                    html += '<option value="' + escapeHtml(optKey) + '"' + selected + '>' +
+                        escapeHtml(config.options[optKey]) + '</option>';
+                }
+
+                html += '</select>' +
+                    (config.hint ? '<small class="form-text">' + config.hint + '</small>' : '') +
+                    '</div>';
+                return html;
+            },
+
+            'checkbox': function(key, config, value) {
+                var checked = value !== undefined && value !== null ? value : (config['default'] || false);
+                return '<div class="config-field">' +
+                    '<div class="form-check">' +
+                    '<input type="checkbox" class="form-check-input" ' +
+                    'id="' + fieldId + '_opt_' + key + '" ' +
+                    'data-key="' + key + '" ' +
+                    (checked ? 'checked' : '') + '>' +
+                    '<label class="form-check-label" for="' + fieldId + '_opt_' + key + '">' +
+                    config.label + '</label>' +
+                    '</div>' +
+                    (config.hint ? '<small class="form-text">' + config.hint + '</small>' : '') +
+                    '</div>';
+            }
+        };
+
+        function escapeHtml(text) {
+            if (text === null || text === undefined) return '';
+            var div = document.createElement('div');
+            div.appendChild(document.createTextNode(String(text)));
+            return div.innerHTML;
+        }
+
+        function renderConfigFields(schema) {
+            configContainer.empty();
+            fallbackContainer.hide();
+            emptyMessage.hide();
+
+            if (!schema || Object.keys(schema).length === 0) {
+                fallbackContainer.show();
+                if (Object.keys(currentOptions).length > 0) {
+                    fallbackTextarea.val(JSON.stringify(currentOptions, null, 2));
+                }
+                return;
+            }
+
+            for (var key in schema) {
+                var fieldConfig = schema[key];
+                var fieldType = fieldConfig.type || 'text';
+                var renderer = fieldRenderers[fieldType] || fieldRenderers['text'];
+                var currentValue = currentOptions[key];
+
+                // Handle dependsOn visibility
+                if (fieldConfig.dependsOn) {
+                    var show = true;
+                    for (var depKey in fieldConfig.dependsOn) {
+                        var depValue = fieldConfig.dependsOn[depKey];
+                        var actualValue = currentOptions[depKey];
+                        if (Array.isArray(depValue)) {
+                            if (depValue.indexOf(actualValue) === -1) {
+                                show = false;
+                                break;
+                            }
+                        } else if (actualValue != depValue) {
+                            show = false;
+                            break;
+                        }
+                    }
+                    if (!show) continue;
+                }
+
+                configContainer.append(renderer(key, fieldConfig, currentValue));
+            }
+
+            // Bind change events
+            configContainer.find('input, select, textarea').on('change input', function() {
+                updateOptions();
+            });
+        }
+
+        function updateOptions() {
+            var options = {};
+            var processedKeys = {};
+
+            configContainer.find('[data-key]').each(function() {
+                var $el = $(this);
+                var key = $el.data('key');
+
+                if (processedKeys[key]) return;
+
+                var value;
+
+                if ($el.is(':checkbox')) {
+                    value = $el.is(':checked');
+                    options[key] = value;
+                    processedKeys[key] = true;
+                    return;
+                } else if ($el.attr('type') === 'number') {
+                    value = $el.val() !== '' ? parseFloat($el.val()) : null;
+                } else if ($el.data('json')) {
+                    // Parse textarea as JSON if flagged
+                    var raw = $el.val().trim();
+                    if (raw) {
+                        try {
+                            value = JSON.parse(raw);
+                        } catch(e) {
+                            value = raw;
+                        }
+                    }
+                } else {
+                    value = $el.val();
+                }
+
+                if (value !== null && value !== '' && value !== undefined) {
+                    options[key] = value;
+                }
+                processedKeys[key] = true;
+            });
+
+            // If config fields are empty but fallback is visible, use fallback
+            if (configContainer.children().length === 0 && fallbackContainer.is(':visible')) {
+                try {
+                    var raw = fallbackTextarea.val().trim();
+                    if (raw) {
+                        options = JSON.parse(raw);
+                    }
+                } catch(e) {
+                    // Keep empty
+                }
+            }
+
+            currentOptions = options;
+            hiddenInput.val(JSON.stringify(options));
+        }
+
+        function onTypeChange(newType) {
+            if (!newType) {
+                configContainer.empty();
+                fallbackContainer.hide();
+                emptyMessage.show();
+                return;
+            }
+
+            var schema = schemas[newType] || null;
+            renderConfigFields(schema);
+        }
+
+        // Watch the linked dropdown for changes
+        if (linkedField) {
+            var linkedSelector = '[name="CrelishDynamicModel[' + linkedField + ']"]';
+
+            $(document).on('change', linkedSelector, function() {
+                // Don't reset options when switching if the type hasn't actually changed
+                var newType = $(this).val();
+                onTypeChange(newType);
+                updateOptions();
+            });
+
+            // Also find the actual current value from the dropdown (in case model value isn't set yet)
+            var $linkedEl = $(linkedSelector);
+            var currentType = $linkedEl.length ? $linkedEl.val() : '{{ currentType|e('js') }}';
+
+            if (currentType) {
+                onTypeChange(currentType);
+            } else {
+                emptyMessage.show();
+            }
+        } else {
+            // No linked field - show fallback JSON editor
+            fallbackContainer.show();
+            if (Object.keys(currentOptions).length > 0) {
+                fallbackTextarea.val(JSON.stringify(currentOptions, null, 2));
+            }
+        }
+
+        // Fallback textarea changes
+        fallbackTextarea.on('change input', updateOptions);
+    });
+})(jQuery);
+</script>
