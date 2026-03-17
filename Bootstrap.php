@@ -278,13 +278,18 @@ class Bootstrap implements BootstrapInterface
         continue;
       }
 
-      [$controllerName, $fullClassName] = $controllerInfo;
-      $controllerMap[$controllerName] = $fullClassName;
+      [$camelName, $kebabName, $fullClassName] = $controllerInfo;
+      // Register kebab-case as primary (Yii2 convention)
+      $controllerMap[$kebabName] = $fullClassName;
+      $this->addControllerUrlRule($app, $kebabName);
 
-      // Add URL rule for this controller
-      $this->addControllerUrlRule($app, $controllerName);
+      // Also register legacy camelCase alias for backward compatibility
+      if ($camelName !== $kebabName) {
+        $controllerMap[$camelName] = $fullClassName;
+        $this->addControllerUrlRule($app, $camelName);
+      }
 
-      Yii::info("Discovered workspace controller: {$controllerName} => {$fullClassName}", 'crelish');
+      Yii::info("Discovered workspace controller: {$kebabName} => {$fullClassName}", 'crelish');
     }
 
     return $controllerMap;
@@ -294,7 +299,7 @@ class Bootstrap implements BootstrapInterface
    * Parse controller file and extract controller information
    *
    * @param string $file Controller file path
-   * @return array|null Controller info [name, className] or null if invalid
+   * @return array|null [camelCaseName, kebab-case-name, className] or null if invalid
    */
   private function parseControllerFile(string $file): ?array
   {
@@ -303,10 +308,14 @@ class Bootstrap implements BootstrapInterface
       return null;
     }
 
-    $controllerName = lcfirst(str_replace('Controller', '', $className));
+    $baseName = str_replace('Controller', '', $className);
+    // Legacy camelCase format (e.g. eventAnalytics)
+    $camelName = lcfirst($baseName);
+    // Yii2-standard kebab-case format (e.g. event-analytics)
+    $kebabName = strtolower(preg_replace('/(?<!^)[A-Z]/', '-$0', $baseName));
     $fullClassName = 'app\\workspace\\crelish\\controllers\\' . $className;
 
-    return [$controllerName, $fullClassName];
+    return [$camelName, $kebabName, $fullClassName];
   }
 
   /**
