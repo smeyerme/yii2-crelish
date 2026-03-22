@@ -1136,7 +1136,8 @@ SCRIPT;
       'loading' => 'lazy',
       'width' => $asset->width ?? null,
       'height' => $asset->height ?? null,
-      'preload' => false
+      'preload' => false,
+      'fetchpriority' => null
     ];
 
     // Merge options with defaults
@@ -1153,9 +1154,9 @@ SCRIPT;
     // Configure presets for common use cases
     $presets = self::getImagePresets();
 
-    // Apply preset if specified and exists
+    // Apply preset as base, then let explicit user options override
     if (isset($presets[$options['preset']])) {
-      $options = array_merge($options, $presets[$options['preset']]);
+      $options = array_merge($defaults, $presets[$options['preset']], $options);
     }
 
     // Calculate dimensions for aspect ratio if needed
@@ -1445,7 +1446,8 @@ SCRIPT;
       'srcset' => $srcsetString,
       'sizes' => $options['sizes'],
       'width' => $options['width'],
-      'height' => $options['height']
+      'height' => $options['height'],
+      'fetchpriority' => $options['fetchpriority']
     ];
 
     // Build HTML
