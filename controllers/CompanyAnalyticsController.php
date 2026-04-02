@@ -673,8 +673,9 @@ class CompanyAnalyticsController extends CrelishBaseController
     /**
      * Get benchmark comparison data: company stats vs. anonymous Top N average per content type.
      *
-     * For each content type, finds the top N companies (by total views, excluding the target company),
-     * calculates the average of their metrics, and returns a side-by-side comparison.
+     * All metrics are normalized per element (e.g. per job) so that companies with
+     * different numbers of listings can be compared fairly.
+     * The top N ranking is based on the highest per-element detail views.
      */
     private function getBenchmarkData(string $companyUuid, string $startDate, string $endDate): array
     {
@@ -693,7 +694,7 @@ class CompanyAnalyticsController extends CrelishBaseController
             ->groupBy(['element_type'])
             ->column();
 
-        // Step 3: For each content type, find the top N companies and average their stats
+        // Step 3: For each content type, find the top N companies and average their per-element stats
         $config = @include(Yii::getAlias('@app/config/analytics-element-types.php'));
         if (!is_array($config)) {
             $config = [];
@@ -729,11 +730,11 @@ class CompanyAnalyticsController extends CrelishBaseController
                 continue;
             }
 
-            // Find top N companies for this content type (by total views, excluding target company)
-            // First, get all companies and their total views for this content type
+            // Get per-company totals and element counts
             $companyTotals = (new Query())
                 ->select([
                     'c.company',
+                    'element_count' => 'COUNT(DISTINCT a.element_uuid)',
                     'total_views' => 'SUM(a.total_views)',
                     'list_views' => "SUM(CASE WHEN a.event_type = 'list' THEN a.total_views ELSE 0 END)",
                     'detail_views' => "SUM(CASE WHEN a.event_type = 'detail' THEN a.total_views ELSE 0 END)",
@@ -750,42 +751,57 @@ class CompanyAnalyticsController extends CrelishBaseController
                 ->andWhere(['!=', 'c.company', ''])
                 ->andWhere(['!=', 'c.company', $companyUuid])
                 ->groupBy(['c.company'])
-                ->orderBy(['total_views' => SORT_DESC])
-                ->limit($topN)
                 ->all();
 
             if (empty($companyTotals)) {
                 continue;
             }
 
-            // Calculate averages across the top N companies
-            $count = count($companyTotals);
-            $avgTotalViews = array_sum(array_column($companyTotals, 'total_views')) / $count;
-            $avgListViews = array_sum(array_column($companyTotals, 'list_views')) / $count;
-            $avgDetailViews = array_sum(array_column($companyTotals, 'detail_views')) / $count;
-            $avgClicks = array_sum(array_column($companyTotals, 'clicks')) / $count;
-            $avgDownloads = array_sum(array_column($companyTotals, 'downloads')) / $count;
-            $avgSessions = array_sum(array_column($companyTotals, 'unique_sessions')) / $count;
+            // Normalize each company's stats per element, then rank by per-element detail views
+            $perElement = [];
+            foreach ($companyTotals as $ct) {
+                $n = max(1, (int)$ct['element_count']);
+                $perElement[] = [
+                    'detail_views_per_element' => (int)$ct['detail_views'] / $n,
+                    'list_views_per_element' => (int)$ct['list_views'] / $n,
+                    'clicks_per_element' => (int)$ct['clicks'] / $n,
+                    'downloads_per_element' => (int)$ct['downloads'] / $n,
+                    'sessions_per_element' => (int)$ct['unique_sessions'] / $n,
+                    'element_count' => $n,
+                ];
+            }
 
+            // Sort by per-element detail views descending, take top N
+            usort($perElement, fn($a, $b) => $b['detail_views_per_element'] <=> $a['detail_views_per_element']);
+            $topCompanies = array_slice($perElement, 0, $topN);
+            $count = count($topCompanies);
+
+            $avgDetailPerEl = array_sum(array_column($topCompanies, 'detail_views_per_element')) / $count;
+            $avgListPerEl = array_sum(array_column($topCompanies, 'list_views_per_element')) / $count;
+            $avgClicksPerEl = array_sum(array_column($topCompanies, 'clicks_per_element')) / $count;
+            $avgDownloadsPerEl = array_sum(array_column($topCompanies, 'downloads_per_element')) / $count;
+            $avgSessionsPerEl = array_sum(array_column($topCompanies, 'sessions_per_element')) / $count;
+
+            // Target company per-element stats
             $companyStat = $companyStatsMap[$contentType] ?? null;
+            $companyElementCount = max(1, (int)($companyStat['unique_elements'] ?? 1));
 
             $benchmark[] = [
                 'element_type' => $contentType,
                 'company' => [
-                    'total_views' => (int)($companyStat['total_views'] ?? 0),
-                    'list_views' => (int)($companyStat['list_views'] ?? 0),
-                    'detail_views' => (int)($companyStat['detail_views'] ?? 0),
-                    'clicks' => (int)($companyStat['clicks'] ?? 0),
-                    'downloads' => (int)($companyStat['downloads'] ?? 0),
-                    'unique_sessions' => (int)($companyStat['unique_sessions'] ?? 0),
+                    'element_count' => $companyElementCount,
+                    'detail_views' => round((int)($companyStat['detail_views'] ?? 0) / $companyElementCount, 1),
+                    'list_views' => round((int)($companyStat['list_views'] ?? 0) / $companyElementCount, 1),
+                    'clicks' => round((int)($companyStat['clicks'] ?? 0) / $companyElementCount, 1),
+                    'downloads' => round((int)($companyStat['downloads'] ?? 0) / $companyElementCount, 1),
+                    'unique_sessions' => round((int)($companyStat['unique_sessions'] ?? 0) / $companyElementCount, 1),
                 ],
                 'top_n_average' => [
-                    'total_views' => round($avgTotalViews),
-                    'list_views' => round($avgListViews),
-                    'detail_views' => round($avgDetailViews),
-                    'clicks' => round($avgClicks),
-                    'downloads' => round($avgDownloads),
-                    'unique_sessions' => round($avgSessions),
+                    'detail_views' => round($avgDetailPerEl, 1),
+                    'list_views' => round($avgListPerEl, 1),
+                    'clicks' => round($avgClicksPerEl, 1),
+                    'downloads' => round($avgDownloadsPerEl, 1),
+                    'unique_sessions' => round($avgSessionsPerEl, 1),
                     'count' => $count,
                 ],
             ];
