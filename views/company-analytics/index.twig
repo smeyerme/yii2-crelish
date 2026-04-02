@@ -767,31 +767,33 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const topN = response.topN || 5;
         document.getElementById('benchmark-subtitle').textContent =
-            '{{ t("crelish", "Your performance compared to the anonymous average of the top") }} ' + topN + ' {{ t("crelish", "companies per content type") }}';
+            '{{ t("crelish", "Per-element performance compared to the anonymous average of the top") }} ' + topN + ' {{ t("crelish", "companies per content type") }}';
 
         let html = '<table class="table table-sm insights-table">';
         html += '<thead><tr>';
         html += '<th>{{ t("crelish", "Content Type") }}</th>';
-        html += '<th class="text-end">{{ t("crelish", "Your Views") }}</th>';
+        html += '<th class="text-end">{{ t("crelish", "Elements") }}</th>';
+        html += '<th class="text-end">{{ t("crelish", "Views/Element") }}</th>';
         html += '<th class="text-end">Top ' + topN + ' {{ t("crelish", "Avg.") }}</th>';
-        html += '<th class="text-end">{{ t("crelish", "Your Detail") }}</th>';
+        html += '<th class="text-end">{{ t("crelish", "Detail/Element") }}</th>';
         html += '<th class="text-end">Top ' + topN + ' {{ t("crelish", "Avg.") }}</th>';
-        html += '<th class="text-end">{{ t("crelish", "Your Clicks") }}</th>';
+        html += '<th class="text-end">{{ t("crelish", "Clicks/Element") }}</th>';
         html += '<th class="text-end">Top ' + topN + ' {{ t("crelish", "Avg.") }}</th>';
         html += '<th class="text-end">{{ t("crelish", "Difference") }}</th>';
         html += '</tr></thead><tbody>';
 
         response.data.forEach(row => {
-            const diff = row.top_n_average.total_views > 0
-                ? (((row.company.total_views - row.top_n_average.total_views) / row.top_n_average.total_views) * 100).toFixed(1)
+            const diff = row.top_n_average.detail_views > 0
+                ? (((row.company.detail_views - row.top_n_average.detail_views) / row.top_n_average.detail_views) * 100).toFixed(1)
                 : 0;
             const diffClass = diff >= 0 ? 'success' : 'danger';
             const diffPrefix = diff > 0 ? '+' : '';
 
             html += '<tr>';
             html += '<td><strong>' + capitalizeFirst(escapeHtml(row.element_type)) + '</strong></td>';
-            html += '<td class="text-end">' + formatNumber(row.company.total_views) + '</td>';
-            html += '<td class="text-end text-muted">' + formatNumber(row.top_n_average.total_views) + '</td>';
+            html += '<td class="text-end">' + formatNumber(row.company.element_count) + '</td>';
+            html += '<td class="text-end">' + formatNumber(row.company.list_views) + '</td>';
+            html += '<td class="text-end text-muted">' + formatNumber(row.top_n_average.list_views) + '</td>';
             html += '<td class="text-end">' + formatNumber(row.company.detail_views) + '</td>';
             html += '<td class="text-end text-muted">' + formatNumber(row.top_n_average.detail_views) + '</td>';
             html += '<td class="text-end">' + formatNumber(row.company.clicks) + '</td>';
@@ -801,7 +803,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         html += '</tbody></table>';
-        html += '<small class="text-muted">{{ t("crelish", "Comparison based on") }} ' + topN + ' {{ t("crelish", "companies with the highest views per content type (anonymous)") }}</small>';
+        html += '<small class="text-muted">{{ t("crelish", "All values normalized per element. Comparison based on per-element detail views of the top") }} ' + topN + ' {{ t("crelish", "companies (anonymous).") }}</small>';
         container.innerHTML = html;
     }
 

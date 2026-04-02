@@ -170,17 +170,18 @@
     {# Benchmark Comparison #}
     {% if benchmarkData is defined and benchmarkData.data|default([])|length > 0 %}
     <h2>{{ t('crelish', 'Benchmark Comparison') }}</h2>
-    <p style="color: #666; font-size: 9pt; margin-bottom: 4mm;">{{ t('crelish', 'Your performance compared to the anonymous average of the Top %count% companies per content type')|replace({'%count%': benchmarkData.topN}) }}</p>
+    <p style="color: #666; font-size: 9pt; margin-bottom: 4mm;">{{ t('crelish', 'Per-element performance compared to the anonymous average of the Top %count% companies per content type')|replace({'%count%': benchmarkData.topN}) }}</p>
 
     <table class="data-table">
         <thead>
             <tr>
                 <th>{{ t('crelish', 'Content Type') }}</th>
-                <th class="text-right">{{ t('crelish', 'Your Views') }}</th>
+                <th class="text-right">{{ t('crelish', 'Elements') }}</th>
+                <th class="text-right">{{ t('crelish', 'Views/Element') }}</th>
                 <th class="text-right">{{ t('crelish', 'Top %count% Avg.')|replace({'%count%': benchmarkData.topN}) }}</th>
-                <th class="text-right">{{ t('crelish', 'Your Detail') }}</th>
+                <th class="text-right">{{ t('crelish', 'Detail/Element') }}</th>
                 <th class="text-right">{{ t('crelish', 'Top %count% Avg.')|replace({'%count%': benchmarkData.topN}) }}</th>
-                <th class="text-right">{{ t('crelish', 'Your Clicks') }}</th>
+                <th class="text-right">{{ t('crelish', 'Clicks/Element') }}</th>
                 <th class="text-right">{{ t('crelish', 'Top %count% Avg.')|replace({'%count%': benchmarkData.topN}) }}</th>
                 <th class="text-right">{{ t('crelish', 'Difference') }}</th>
             </tr>
@@ -189,14 +190,15 @@
             {% for row in benchmarkData.data %}
             <tr>
                 <td><strong>{{ row.element_type|capitalize }}</strong></td>
-                <td class="text-right">{{ row.company.total_views|number_format(0, ',', '.') }}</td>
-                <td class="text-right" style="color: #888;">{{ row.top_n_average.total_views|number_format(0, ',', '.') }}</td>
-                <td class="text-right">{{ row.company.detail_views|number_format(0, ',', '.') }}</td>
-                <td class="text-right" style="color: #888;">{{ row.top_n_average.detail_views|number_format(0, ',', '.') }}</td>
-                <td class="text-right">{{ row.company.clicks|number_format(0, ',', '.') }}</td>
-                <td class="text-right" style="color: #888;">{{ row.top_n_average.clicks|number_format(0, ',', '.') }}</td>
+                <td class="text-right">{{ row.company.element_count }}</td>
+                <td class="text-right">{{ row.company.list_views|number_format(1, ',', '.') }}</td>
+                <td class="text-right" style="color: #888;">{{ row.top_n_average.list_views|number_format(1, ',', '.') }}</td>
+                <td class="text-right">{{ row.company.detail_views|number_format(1, ',', '.') }}</td>
+                <td class="text-right" style="color: #888;">{{ row.top_n_average.detail_views|number_format(1, ',', '.') }}</td>
+                <td class="text-right">{{ row.company.clicks|number_format(1, ',', '.') }}</td>
+                <td class="text-right" style="color: #888;">{{ row.top_n_average.clicks|number_format(1, ',', '.') }}</td>
                 <td class="text-right">
-                    {% set diff = row.top_n_average.total_views > 0 ? (((row.company.total_views - row.top_n_average.total_views) / row.top_n_average.total_views) * 100)|round(1) : 0 %}
+                    {% set diff = row.top_n_average.detail_views > 0 ? (((row.company.detail_views - row.top_n_average.detail_views) / row.top_n_average.detail_views) * 100)|round(1) : 0 %}
                     <span class="badge {% if diff >= 0 %}badge-success{% else %}badge-warning{% endif %}">
                         {{ diff > 0 ? '+' : '' }}{{ diff }}%
                     </span>
@@ -205,6 +207,7 @@
             {% endfor %}
         </tbody>
     </table>
+    <p style="color: #888; font-size: 8pt; margin-top: 2mm;">{{ t('crelish', 'All values normalized per element. Comparison based on per-element detail views of the top %count% companies (anonymous).')|replace({'%count%': benchmarkData.topN}) }}</p>
     {% endif %}
 
     {# Empty state if no data #}
