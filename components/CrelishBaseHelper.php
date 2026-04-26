@@ -1260,10 +1260,10 @@ SCRIPT;
    * @param float $alpha 0.0 – 1.0
    * @return string CSS color value, e.g. "rgb(121 92 65 / 0.12)"
    */
-  public static function hexToRgbaString($hex, $alpha): string
+  public static function hexToRgbaString(string $hex, float $alpha): string
   {
     $rgb = self::hexToRgb($hex);
-    $a = max(0, min(1, (float)$alpha));
+    $a = max(0, min(1, $alpha));
     return sprintf('rgb(%d %d %d / %s)', $rgb['r'], $rgb['g'], $rgb['b'], rtrim(rtrim(number_format($a, 3, '.', ''), '0'), '.'));
   }
 
@@ -1278,12 +1278,16 @@ SCRIPT;
    */
   public static function renderEventColorMap(): string
   {
+    static $cached = null;
+    if ($cached !== null) {
+      return $cached;
+    }
     $rows = (new \yii\db\Query())
       ->select(['code', 'color'])
       ->from('eventcategory')
       ->where(['state' => 2])
-      ->andWhere(['not', ['code' => null]])
-      ->andWhere(['not', ['color' => null]])
+      ->andWhere(['is not', 'code', null])
+      ->andWhere(['is not', 'color', null])
       ->all();
 
     $css = '';
@@ -1303,7 +1307,7 @@ SCRIPT;
         $dark
       );
     }
-    return $css;
+    return $cached = $css;
   }
 
   /**
