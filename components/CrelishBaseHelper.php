@@ -1254,6 +1254,59 @@ SCRIPT;
   }
 
   /**
+   * Convert a hex color to a CSS `rgb(R G B / A)` string.
+   *
+   * @param string $hex e.g. "#795c41" or "795c41"
+   * @param float $alpha 0.0 – 1.0
+   * @return string CSS color value, e.g. "rgb(121 92 65 / 0.12)"
+   */
+  public static function hexToRgbaString($hex, $alpha): string
+  {
+    $rgb = self::hexToRgb($hex);
+    $a = max(0, min(1, (float)$alpha));
+    return sprintf('rgb(%d %d %d / %s)', $rgb['r'], $rgb['g'], $rgb['b'], rtrim(rtrim(number_format($a, 3, '.', ''), '0'), '.'));
+  }
+
+  /**
+   * Render a CSS rule block scoping per-event color custom properties.
+   *
+   * Iterates active EventCategory rows and emits one `[data-event="CODE"]`
+   * rule per category with the design tokens the new portal consumes:
+   * --event, --event-soft, --event-dark, --event-ink.
+   *
+   * @return string CSS text (no <style> wrapper)
+   */
+  public static function renderEventColorMap(): string
+  {
+    $rows = (new \yii\db\Query())
+      ->select(['code', 'color'])
+      ->from('eventcategory')
+      ->where(['state' => 2])
+      ->andWhere(['not', ['code' => null]])
+      ->andWhere(['not', ['color' => null]])
+      ->all();
+
+    $css = '';
+    foreach ($rows as $row) {
+      $code = strtoupper((string)$row['code']);
+      $color = (string)$row['color'];
+      if ($code === '' || $color === '') {
+        continue;
+      }
+      $soft = self::hexToRgbaString($color, 0.12);
+      $dark = self::darkenColor($color, 0.10);
+      $css .= sprintf(
+        "[data-event=\"%s\"]{--event:%s;--event-soft:%s;--event-dark:%s;--event-ink:#fff;}\n",
+        $code,
+        $color,
+        $soft,
+        $dark
+      );
+    }
+    return $css;
+  }
+
+  /**
    * Calculate relative luminance using WCAG formula
    * 
    * @param array $rgb RGB color values
