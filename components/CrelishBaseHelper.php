@@ -1268,49 +1268,6 @@ SCRIPT;
   }
 
   /**
-   * Render a CSS rule block scoping per-event color custom properties.
-   *
-   * Iterates active EventCategory rows and emits one `[data-event="CODE"]`
-   * rule per category with the design tokens the new portal consumes:
-   * --event, --event-soft, --event-dark, --event-ink.
-   *
-   * @return string CSS text (no <style> wrapper)
-   */
-  public static function renderEventColorMap(): string
-  {
-    static $cached = null;
-    if ($cached !== null) {
-      return $cached;
-    }
-    $rows = (new \yii\db\Query())
-      ->select(['code', 'color'])
-      ->from('eventcategory')
-      ->where(['state' => 2])
-      ->andWhere(['is not', 'code', null])
-      ->andWhere(['is not', 'color', null])
-      ->all();
-
-    $css = '';
-    foreach ($rows as $row) {
-      $code = strtoupper((string)$row['code']);
-      $color = (string)$row['color'];
-      if ($code === '' || $color === '') {
-        continue;
-      }
-      $soft = self::hexToRgbaString($color, 0.12);
-      $dark = self::darkenColor($color, 0.10);
-      $css .= sprintf(
-        "[data-event=\"%s\"]{--event:%s;--event-soft:%s;--event-dark:%s;--event-ink:#fff;}\n",
-        $code,
-        $color,
-        $soft,
-        $dark
-      );
-    }
-    return $cached = $css;
-  }
-
-  /**
    * Calculate relative luminance using WCAG formula
    * 
    * @param array $rgb RGB color values
