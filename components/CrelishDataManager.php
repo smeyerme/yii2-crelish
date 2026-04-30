@@ -47,7 +47,7 @@ class CrelishDataManager extends Component
    * @param string|null $uuid UUID
    * @param bool $autoSetRelations Whether to automatically set relations for queries
    */
-  public function __construct(string $ctype, array $settings = [], string $uuid = null, bool $autoSetRelations = false)
+  public function __construct(string $ctype, array $settings = [], ?string $uuid = null, bool $autoSetRelations = false)
   {
     $this->ctype = $ctype;
     $this->settings = $settings;
