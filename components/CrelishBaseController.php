@@ -208,8 +208,35 @@ class CrelishBaseController extends Controller
       'uuid' => $settings['uuid'] ?? $this->uuid
     ]);
 
+    // Clone-prefill: copy attributes from a source model onto this fresh
+    // (no-uuid) model. Excludes identity / audit columns so the new record
+    // gets its own uuid + timestamps on save. Driven by the `prefillFrom`
+    // setting passed by ContentController::actionCreate.
+    if (
+      !empty($settings['prefillFrom'])
+      && $settings['prefillFrom'] instanceof CrelishDynamicModel
+    ) {
+      $this->copyAttributesForClone($settings['prefillFrom'], $this->model);
+    }
+
     if ($action !== 'default') {
       $this->model->scenario = $action;
+    }
+  }
+
+  /**
+   * Copy a source CrelishDynamicModel's attributes onto a target model
+   * (used by the clone-prefill flow). Skips identity + audit columns so
+   * the target record gets its own uuid + timestamps when saved.
+   */
+  private function copyAttributesForClone(CrelishDynamicModel $source, CrelishDynamicModel $target): void
+  {
+    $excludeKeys = ['uuid', 'created', 'updated'];
+    foreach ($source->getAttributes() as $key => $value) {
+      if (in_array($key, $excludeKeys, true)) {
+        continue;
+      }
+      $target->{$key} = $value;
     }
   }
 
