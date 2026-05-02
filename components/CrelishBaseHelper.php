@@ -1107,6 +1107,68 @@ SCRIPT;
   }
   
   /**
+   * Strip HTML and return up to the first N sentences of a rich-text
+   * blob, capped at a maximum character length. Useful for hero teasers,
+   * card subtitles, and other surfaces where editor-supplied long-form
+   * content needs to be condensed.
+   *
+   * Sentence detection: terminators `. ! ?` followed by whitespace or
+   * end-of-string. Multiple consecutive sentence terminators are kept
+   * with their leading sentence (e.g. "Wirklich?!" stays one sentence).
+   *
+   * Falls back to a word-boundary character cap with an ellipsis when
+   * no sentence terminator is found, or when even one sentence
+   * exceeds `$maxChars`.
+   *
+   * @param string|null $html Source content (HTML or plain text).
+   * @param int $max Maximum number of sentences to keep (default 2).
+   * @param int $maxChars Hard upper bound on output length (default 220).
+   * @return string Plain-text excerpt; HTML stripped, entities decoded,
+   *                whitespace collapsed. Empty input returns empty string.
+   */
+  public static function firstSentences($html, int $max = 2, int $maxChars = 220): string
+  {
+    $source = (string)($html ?? '');
+    if ($source === '') {
+      return '';
+    }
+    $plain = trim(html_entity_decode(strip_tags($source), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+    $plain = preg_replace('/\s+/u', ' ', $plain) ?? $plain;
+    if ($plain === '') {
+      return '';
+    }
+    // Split on whitespace following a sentence terminator, but only when
+    // the next sentence begins with an uppercase letter (any script).
+    // Avoids tokenising in-number dots (German "1.700"), abbreviations
+    // followed by lowercase ("z.B. später"), and the like.
+    $sentences = preg_split('/(?<=[.!?])\s+(?=\p{Lu})/u', $plain) ?: [$plain];
+    if (!empty($sentences)) {
+      $out = '';
+      foreach ($sentences as $i => $sentence) {
+        if ($i >= $max) {
+          break;
+        }
+        $candidate = trim($out === '' ? $sentence : $out . ' ' . $sentence);
+        if (mb_strlen($candidate) > $maxChars && $i > 0) {
+          break;
+        }
+        $out = $candidate;
+      }
+      $out = trim($out);
+      if ($out !== '' && mb_strlen($out) <= $maxChars) {
+        return $out;
+      }
+    }
+    if (mb_strlen($plain) <= $maxChars) {
+      return $plain;
+    }
+    $cut = mb_substr($plain, 0, $maxChars);
+    $lastSpace = mb_strrpos($cut, ' ');
+    $base = $lastSpace !== false ? mb_substr($cut, 0, $lastSpace) : $cut;
+    return rtrim($base, " .,;:!?") . '…';
+  }
+
+  /**
    * Generate responsive image HTML using asset UUID
    *
    * @param string $uuid The UUID of the asset
@@ -1251,6 +1313,20 @@ SCRIPT;
       'g' => hexdec(substr($hex, 2, 2)),
       'b' => hexdec(substr($hex, 4, 2))
     ];
+  }
+
+  /**
+   * Convert a hex color to a CSS `rgb(R G B / A)` string.
+   *
+   * @param string $hex e.g. "#795c41" or "795c41"
+   * @param float $alpha 0.0 – 1.0
+   * @return string CSS color value, e.g. "rgb(121 92 65 / 0.12)"
+   */
+  public static function hexToRgbaString(string $hex, float $alpha): string
+  {
+    $rgb = self::hexToRgb($hex);
+    $a = max(0, min(1, $alpha));
+    return sprintf('rgb(%d %d %d / %s)', $rgb['r'], $rgb['g'], $rgb['b'], rtrim(rtrim(number_format($a, 3, '.', ''), '0'), '.'));
   }
 
   /**

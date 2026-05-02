@@ -298,11 +298,38 @@ class ContentController extends CrelishBaseController
 
   /**
    * [actionCreate description]
+   *
+   * Supports a `prefill` query param: when set to an existing record's UUID,
+   * the create form opens pre-populated with that record's field values
+   * (clone-prefill flow). The new record is only persisted when the editor
+   * explicitly Saves.
+   *
    * @return [type] [description]
    */
   public function actionCreate()
   {
-    $content = $this->buildForm();
+    $settings = [];
+
+    $prefillUuid = \Yii::$app->request->get('prefill');
+    if (!empty($prefillUuid)) {
+      $source = new CrelishDynamicModel([
+        'ctype' => $this->ctype,
+        'uuid'  => $prefillUuid,
+      ]);
+
+      // CrelishDynamicModel sets isNewRecord=true if the uuid didn't resolve
+      // to a stored row. Same pattern used by actionDelete.
+      if ($source && !$source->isNewRecord) {
+        $settings['prefillFrom'] = $source;
+      } else {
+        \Yii::$app->session->setFlash(
+          'warning',
+          \Yii::t('crelish', 'Source record for clone was not found. Showing empty create form.')
+        );
+      }
+    }
+
+    $content = $this->buildForm('default', $settings);
 
     return $this->render('create.twig', [
       'content' => $content,
@@ -475,9 +502,9 @@ class ContentController extends CrelishBaseController
         break;
 
       case 'update':
-        // For update actions, add back button and save buttons (with delete)
+        // For update actions, add back button, clone, and save buttons (with delete)
         $this->view->params['headerBarLeft'][] = 'back-button';
-        $this->view->params['headerBarRight'] = [['save', true, true]]; // Show save and return, with delete
+        $this->view->params['headerBarRight'] = ['clone', ['save', true, true]];
         break;
 
       case 'selector':

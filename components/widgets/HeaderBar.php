@@ -557,6 +557,32 @@ class HeaderBar extends Widget
         }
         return '<a class="' . Html::encode($class) . '" href="' . Html::encode($url) . '"' . $attrs . '>' . $label . '</a>';
       },
+      'clone' => function () {
+        // Linked from the content edit page. Builds the URL to actionCreate
+        // with `prefill=<source_uuid>` so the create form opens pre-populated
+        // with the source record's field values. No DB write happens on
+        // click — the new record is only persisted when the editor saves.
+        $controller = \Yii::$app->controller->id;
+        $module = \Yii::$app->controller->module->id;
+        $ctype = \Yii::$app->request->get('ctype');
+        $uuid = \Yii::$app->request->get('uuid');
+
+        if (!$ctype || !$uuid) {
+          // No source = nothing to clone. Render nothing.
+          return '';
+        }
+
+        $cloneUrl = \Yii::$app->urlManager->createUrl([
+          "/{$module}/{$controller}/create",
+          'ctype' => $ctype,
+          'prefill' => $uuid,
+        ]);
+
+        return '<a class="c-button btn-clone c-button--info" href="' . $cloneUrl
+             . '" title="' . \Yii::t('crelish', 'Clone') . '">'
+             . '<i class="fa-sharp fa-regular fa-copy"></i>'
+             . '</a>';
+      },
       'delete' => function () {
         return '<button class="c-button c-button--error btn-delete-grid hidden">
                     <i class="fa-sharp  fa-regular fa-check-square"></i> ' . '
