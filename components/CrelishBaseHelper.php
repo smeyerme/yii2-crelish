@@ -1202,8 +1202,10 @@ SCRIPT;
       'fetchpriority' => null
     ];
 
-    // Merge options with defaults
-    $options = array_merge($defaults, $options);
+    // Keep caller-supplied options separate so the preset merge below isn't
+    // clobbered by defaults that were folded into $options.
+    $userOptions = $options;
+    $options = array_merge($defaults, $userOptions);
 
     // Check if asset is an SVG - SVGs don't need responsive processing
     $extension = strtolower(pathinfo($asset->fileName, PATHINFO_EXTENSION));
@@ -1218,7 +1220,7 @@ SCRIPT;
 
     // Apply preset as base, then let explicit user options override
     if (isset($presets[$options['preset']])) {
-      $options = array_merge($defaults, $presets[$options['preset']], $options);
+      $options = array_merge($defaults, $presets[$options['preset']], $userOptions);
     }
 
     // Calculate dimensions for aspect ratio if needed
@@ -1418,13 +1420,15 @@ SCRIPT;
   }
   
   /**
-   * Get image presets configuration
-   * 
+   * Get image presets configuration. Defaults can be overridden per-preset
+   * via `Yii::$app->params['crelish']['responsive_image_presets']`; overrides
+   * shallow-merge within a preset so callers can tweak just one key.
+   *
    * @return array Preset configurations
    */
   private static function getImagePresets(): array
   {
-    return [
+    $defaults = [
       'hero' => [
         'widths' => [480, 768, 1024, 1600, 2000],
         'sizes' => '(max-width: 767px) 100vw, (max-width: 1199px) 100vw, 100vw',
@@ -1448,6 +1452,20 @@ SCRIPT;
         'sizes' => '100vw',
       ]
     ];
+
+    $overrides = Yii::$app->params['crelish']['responsive_image_presets'] ?? [];
+    if (!is_array($overrides) || empty($overrides)) {
+      return $defaults;
+    }
+
+    foreach ($overrides as $name => $config) {
+      if (!is_array($config)) {
+        continue;
+      }
+      $defaults[$name] = array_merge($defaults[$name] ?? [], $config);
+    }
+
+    return $defaults;
   }
   
   /**
