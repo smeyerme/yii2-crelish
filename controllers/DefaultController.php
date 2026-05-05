@@ -10,6 +10,8 @@ namespace giantbits\crelish\controllers;
 
 use giantbits\crelish\components\CrelishBaseController;
 use yii\filters\AccessControl;
+use yii\web\Cookie;
+use Yii;
 
 class DefaultController extends CrelishBaseController {
 
@@ -61,5 +63,32 @@ class DefaultController extends CrelishBaseController {
 
     public function actionIndex() {
         return $this->render('index.twig');
+    }
+
+    /**
+     * Persist the editor's preferred admin UI language in a long-lived cookie.
+     * CrelishBaseController::init() reads it back on every admin request.
+     * Validates against params.crelish.languages so an invalid value can't
+     * pin the admin to an unsupported locale. Redirects to the referrer when
+     * it's same-origin, otherwise to the dashboard.
+     */
+    public function actionSetLanguage($lang) {
+        $allowed = Yii::$app->params['crelish']['languages'] ?? [];
+        if (!empty($allowed) && in_array($lang, $allowed, true)) {
+            Yii::$app->response->cookies->add(new Cookie([
+                'name' => 'crelish_admin_lang',
+                'value' => $lang,
+                'expire' => time() + 365 * 86400,
+                'httpOnly' => true,
+                'sameSite' => Cookie::SAME_SITE_LAX,
+            ]));
+        }
+
+        $referrer = Yii::$app->request->referrer;
+        $hostInfo = Yii::$app->request->hostInfo;
+        if (!$referrer || !$hostInfo || !str_starts_with($referrer, $hostInfo)) {
+            $referrer = ['/crelish/dashboard/index'];
+        }
+        return $this->redirect($referrer);
     }
 }

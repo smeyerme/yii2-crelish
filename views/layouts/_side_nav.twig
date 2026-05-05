@@ -55,6 +55,13 @@
                 </label>
             </div>
         </div>
+        <form method="get" action="{{ url('/crelish/default/set-language') }}" class="lang-switcher" title="{{ t('app', 'Admin UI language') }}">
+            <select name="lang" onchange="this.form.submit()" class="lang-switcher-select" aria-label="{{ t('app', 'Admin UI language') }}">
+                {% for code in (app.params.crelish.languages ?? ['de']) %}
+                    <option value="{{ code }}"{% if code == app.language %} selected{% endif %}>{{ code|upper }}</option>
+                {% endfor %}
+            </select>
+        </form>
         <a href="{{ url('/crelish/documentation/index') }}" class="documentation-link" title="{{ t('app', 'View Documentation') }}">
             <span class="cr-version">{{ app.params.crelish.version }}</span>
             <i class="fa-sharp fa-solid fa-book-open docs-icon"></i>
@@ -122,6 +129,40 @@
     padding: 0.75rem 1rem 0.5rem;
     border-bottom: 1px solid rgba(0,0,0,0.05);
     margin-bottom: 0.5rem;
+}
+
+/* Admin UI language switcher — sits between theme toggle and docs link */
+.lang-switcher {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+.lang-switcher-select {
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    background: transparent;
+    color: inherit;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 4px 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    line-height: 1;
+    appearance: none;
+}
+[data-theme="dark"] .lang-switcher-select {
+    color: #e5e7eb;
+    border-color: rgba(255, 255, 255, 0.18);
+    color-scheme: dark;
+}
+[data-theme="dark"] .lang-switcher-select option {
+    background-color: #1e293b;
+    color: #e5e7eb;
+}
+.lang-switcher-select:focus {
+    outline: none;
+    border-color: rgba(99, 102, 241, 0.6);
 }
 
 /* Theme toggle switch styling */

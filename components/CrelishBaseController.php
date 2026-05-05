@@ -24,6 +24,18 @@ class CrelishBaseController extends Controller
 
     parent::init();
 
+    // Admin UI language is decoupled from the URL-based frontend language.
+    // CrelishBaseUrlRule short-circuits for `crelish/*` paths, so without
+    // this hook Yii::$app->language would stay at the bootstrap default.
+    // A signed long-lived cookie ('crelish_admin_lang') stores the editor's
+    // preference; we only honor values present in the configured language
+    // allow-list so a bad cookie can't break i18n.
+    $cookieLang = Yii::$app->request->cookies->getValue('crelish_admin_lang');
+    $allowedLangs = Yii::$app->params['crelish']['languages'] ?? [];
+    if ($cookieLang && (empty($allowedLangs) || in_array($cookieLang, $allowedLangs, true))) {
+      Yii::$app->language = $cookieLang;
+    }
+
     Yii::$app->view->title = ucfirst($this->id);
     
     // Handle common session and query parameters
