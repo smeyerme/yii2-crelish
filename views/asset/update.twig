@@ -45,6 +45,7 @@
 				{{ form.field(model, 'src', { 'inputOptions': { 'class': 'form-control disabled', 'disabled': 'disabled'}}) | raw }}
 				{{ form.field(model, 'src_remote', { 'inputOptions': { 'class': 'form-control'}}) | raw }}
 				{{ form.field(model, 'description', {'options': {'style': 'margin-bottom: 0px;' }}).textarea({'rows':6 }) | raw }}
+				{{ form.field(model, 'copyright', { 'inputOptions': { 'class': 'form-control'}}) | raw }}
 
 				{% if colormain_hex is not empty %}
 					<div class="form-group palette-ul">
