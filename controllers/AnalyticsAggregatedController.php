@@ -4,6 +4,8 @@ namespace giantbits\crelish\controllers;
 
 use giantbits\crelish\components\CrelishBaseController;
 use giantbits\crelish\components\ElementTitleResolver;
+use giantbits\crelish\helpers\CrelishAnalyticsPeriod;
+use giantbits\crelish\widgets\CrelishAnalyticsPeriodPicker;
 use Yii;
 use yii\web\Response;
 use yii\db\Query;
@@ -71,10 +73,17 @@ class AnalyticsAggregatedController extends CrelishBaseController
    */
   public function actionIndex()
   {
-    $period = Yii::$app->request->get('period', 'month');
+    [$startDate, $endDate, $period] = $this->resolvePeriod();
 
     return $this->render('index.twig', [
-      'period' => $period
+      'period' => $period,
+      'startDate' => $startDate,
+      'endDate' => $endDate,
+      'periodPicker' => CrelishAnalyticsPeriodPicker::widget([
+        'period' => $period,
+        'startDate' => $startDate,
+        'endDate' => $endDate,
+      ]),
     ]);
   }
 
@@ -84,7 +93,7 @@ class AnalyticsAggregatedController extends CrelishBaseController
   public function actionPageDetail()
   {
     $pageUuid = Yii::$app->request->get('page_uuid');
-    $period = Yii::$app->request->get('period', 'month');
+    [$startDate, $endDate, $period] = $this->resolvePeriod();
 
     if (!$pageUuid) {
       Yii::$app->session->setFlash('error', Yii::t('crelish', 'Page UUID is required'));
@@ -93,7 +102,14 @@ class AnalyticsAggregatedController extends CrelishBaseController
 
     return $this->render('page-performance.twig', [
       'pageUuid' => $pageUuid,
-      'period' => $period
+      'period' => $period,
+      'startDate' => $startDate,
+      'endDate' => $endDate,
+      'periodPicker' => CrelishAnalyticsPeriodPicker::widget([
+        'period' => $period,
+        'startDate' => $startDate,
+        'endDate' => $endDate,
+      ]),
     ]);
   }
 
@@ -103,7 +119,7 @@ class AnalyticsAggregatedController extends CrelishBaseController
   public function actionElementDetail()
   {
     $elementUuid = Yii::$app->request->get('element_uuid');
-    $period = Yii::$app->request->get('period', 'month');
+    [$startDate, $endDate, $period] = $this->resolvePeriod();
 
     if (!$elementUuid) {
       Yii::$app->session->setFlash('error', Yii::t('crelish', 'Element UUID is required'));
@@ -112,7 +128,14 @@ class AnalyticsAggregatedController extends CrelishBaseController
 
     return $this->render('element-performance.twig', [
       'elementUuid' => $elementUuid,
-      'period' => $period
+      'period' => $period,
+      'startDate' => $startDate,
+      'endDate' => $endDate,
+      'periodPicker' => CrelishAnalyticsPeriodPicker::widget([
+        'period' => $period,
+        'startDate' => $startDate,
+        'endDate' => $endDate,
+      ]),
     ]);
   }
 
@@ -123,8 +146,7 @@ class AnalyticsAggregatedController extends CrelishBaseController
   {
     Yii::$app->response->format = Response::FORMAT_JSON;
 
-    $period = Yii::$app->request->get('period', 'month');
-    list($startDate, $endDate) = $this->getPeriodDates($period);
+    [$startDate, $endDate, $period] = $this->resolvePeriod();
 
     // Get page view stats from daily aggregates
     $pageStats = (new Query())
@@ -177,11 +199,16 @@ class AnalyticsAggregatedController extends CrelishBaseController
   {
     Yii::$app->response->format = Response::FORMAT_JSON;
 
-    $period = Yii::$app->request->get('period', 'month');
     $granularity = Yii::$app->request->get('granularity', 'daily');
-    list($startDate, $endDate) = $this->getPeriodDates($period);
+    [$startDate, $endDate, $period] = $this->resolvePeriod();
 
-    if ($granularity === 'monthly' || $period === 'year') {
+    // Long ranges fall back to monthly aggregates so a multi-year custom range
+    // does not render one point per day.
+    $useMonthly = $granularity === 'monthly'
+      || $period === 'year'
+      || CrelishAnalyticsPeriod::granularity($startDate, $endDate) === 'month';
+
+    if ($useMonthly) {
       // Use monthly aggregates for better performance
       $data = (new Query())
         ->select([
@@ -223,12 +250,12 @@ class AnalyticsAggregatedController extends CrelishBaseController
   {
     Yii::$app->response->format = Response::FORMAT_JSON;
 
-    $period = Yii::$app->request->get('period', 'month');
     $limit = Yii::$app->request->get('limit', 10);
-    list($startDate, $endDate) = $this->getPeriodDates($period);
+    [$startDate, $endDate, $period] = $this->resolvePeriod();
 
-    // Use monthly or daily aggregates based on period
-    $useMonthly = in_array($period, ['year', 'all']);
+    // Use monthly or daily aggregates based on how much time the range covers
+    $useMonthly = in_array($period, ['year', 'all'])
+      || CrelishAnalyticsPeriod::granularity($startDate, $endDate) === 'month';
 
     if ($useMonthly) {
       $pages = (new Query())
@@ -282,14 +309,14 @@ class AnalyticsAggregatedController extends CrelishBaseController
   {
     Yii::$app->response->format = Response::FORMAT_JSON;
 
-    $period = Yii::$app->request->get('period', 'month');
     $limit = Yii::$app->request->get('limit', 10);
     $eventType = Yii::$app->request->get('event_type'); // filter by event type
     $elementType = Yii::$app->request->get('element_type'); // filter by element type
-    list($startDate, $endDate) = $this->getPeriodDates($period);
+    [$startDate, $endDate, $period] = $this->resolvePeriod();
 
-    // Use monthly or daily aggregates based on period
-    $useMonthly = in_array($period, ['year', 'all']);
+    // Use monthly or daily aggregates based on how much time the range covers
+    $useMonthly = in_array($period, ['year', 'all'])
+      || CrelishAnalyticsPeriod::granularity($startDate, $endDate) === 'month';
 
     $query = (new Query())
       ->select([
@@ -341,8 +368,7 @@ class AnalyticsAggregatedController extends CrelishBaseController
   {
     Yii::$app->response->format = Response::FORMAT_JSON;
 
-    $period = Yii::$app->request->get('period', 'month');
-    list($startDate, $endDate) = $this->getPeriodDates($period);
+    [$startDate, $endDate, $period] = $this->resolvePeriod();
 
     $distribution = (new Query())
       ->select([
@@ -368,8 +394,7 @@ class AnalyticsAggregatedController extends CrelishBaseController
   {
     Yii::$app->response->format = Response::FORMAT_JSON;
 
-    $period = Yii::$app->request->get('period', 'month');
-    list($startDate, $endDate) = $this->getPeriodDates($period);
+    [$startDate, $endDate, $period] = $this->resolvePeriod();
 
     $distribution = (new Query())
       ->select([
@@ -395,8 +420,7 @@ class AnalyticsAggregatedController extends CrelishBaseController
     Yii::$app->response->format = Response::FORMAT_JSON;
 
     $pageUuid = Yii::$app->request->get('page_uuid');
-    $period = Yii::$app->request->get('period', 'month');
-    list($startDate, $endDate) = $this->getPeriodDates($period);
+    [$startDate, $endDate, $period] = $this->resolvePeriod();
 
     if (!$pageUuid) {
       return ['error' => 'Page UUID is required'];
@@ -455,8 +479,7 @@ class AnalyticsAggregatedController extends CrelishBaseController
     Yii::$app->response->format = Response::FORMAT_JSON;
 
     $elementUuid = Yii::$app->request->get('element_uuid');
-    $period = Yii::$app->request->get('period', 'month');
-    list($startDate, $endDate) = $this->getPeriodDates($period);
+    [$startDate, $endDate, $period] = $this->resolvePeriod();
 
     if (!$elementUuid) {
       return ['error' => 'Element UUID is required'];
@@ -517,8 +540,8 @@ class AnalyticsAggregatedController extends CrelishBaseController
     $period1 = Yii::$app->request->get('period1', 'month');
     $period2 = Yii::$app->request->get('period2', 'previous_month');
 
-    list($start1, $end1) = $this->getPeriodDates($period1);
-    list($start2, $end2) = $this->getPeriodDates($period2);
+    [$start1, $end1] = CrelishAnalyticsPeriod::resolve($period1);
+    [$start2, $end2] = CrelishAnalyticsPeriod::resolve($period2);
 
     // Get stats for both periods
     $stats1 = $this->getPeriodStats($start1, $end1);
@@ -527,11 +550,11 @@ class AnalyticsAggregatedController extends CrelishBaseController
     // Calculate changes
     $comparison = [
       'period1' => [
-        'label' => $this->getPeriodLabel($period1),
+        'label' => CrelishAnalyticsPeriod::label($period1),
         'stats' => $stats1
       ],
       'period2' => [
-        'label' => $this->getPeriodLabel($period2),
+        'label' => CrelishAnalyticsPeriod::label($period2),
         'stats' => $stats2
       ],
       'changes' => [
@@ -549,9 +572,8 @@ class AnalyticsAggregatedController extends CrelishBaseController
    */
   public function actionExport()
   {
-    $period = Yii::$app->request->get('period', 'month');
     $type = Yii::$app->request->get('type', 'pages');
-    list($startDate, $endDate) = $this->getPeriodDates($period);
+    [$startDate, $endDate, $period] = $this->resolvePeriod();
 
     $filename = 'analytics_aggregated_' . $type . '_' . date('Y-m-d') . '.csv';
 
@@ -618,9 +640,8 @@ class AnalyticsAggregatedController extends CrelishBaseController
   {
     Yii::$app->response->format = Response::FORMAT_JSON;
 
-    $period = Yii::$app->request->get('period', 'month');
     $limit = Yii::$app->request->get('limit', 20);
-    list($startDate, $endDate) = $this->getPeriodDates($period);
+    [$startDate, $endDate, $period] = $this->resolvePeriod();
 
     // Get list and detail views grouped by element
     $elementStats = (new Query())
@@ -667,8 +688,7 @@ class AnalyticsAggregatedController extends CrelishBaseController
   {
     Yii::$app->response->format = Response::FORMAT_JSON;
 
-    $period = Yii::$app->request->get('period', 'month');
-    list($startDate, $endDate) = $this->getPeriodDates($period);
+    [$startDate, $endDate, $period] = $this->resolvePeriod();
 
     // Get page views by day of week
     $patterns = (new Query())
@@ -702,9 +722,8 @@ class AnalyticsAggregatedController extends CrelishBaseController
   {
     Yii::$app->response->format = Response::FORMAT_JSON;
 
-    $period = Yii::$app->request->get('period', 'month');
     $limit = Yii::$app->request->get('limit', 20);
-    list($startDate, $endDate) = $this->getPeriodDates($period);
+    [$startDate, $endDate, $period] = $this->resolvePeriod();
 
     // Get element performance with creation dates
     $elements = (new Query())
@@ -777,8 +796,7 @@ class AnalyticsAggregatedController extends CrelishBaseController
   {
     Yii::$app->response->format = Response::FORMAT_JSON;
 
-    $period = Yii::$app->request->get('period', 'month');
-    list($startDate, $endDate) = $this->getPeriodDates($period);
+    [$startDate, $endDate, $period] = $this->resolvePeriod();
 
     // Get all element types to analyze
     $elementTypes = (new Query())
@@ -839,53 +857,22 @@ class AnalyticsAggregatedController extends CrelishBaseController
   }
 
   /**
-   * Get period dates (start and end)
-   * @param string $period
-   * @return array [startDate, endDate]
+   * Resolve the reporting period from the current request.
+   *
+   * Supports both the named presets and a custom range submitted as
+   * `period=custom&start_date=Y-m-d&end_date=Y-m-d`.
+   *
+   * @return array{0: string, 1: string, 2: string} [startDate, endDate, period]
    */
-  private function getPeriodDates($period)
+  private function resolvePeriod()
   {
-    switch ($period) {
-      case 'today':
-        return [date('Y-m-d'), date('Y-m-d')];
-      case 'yesterday':
-        return [date('Y-m-d', strtotime('-1 day')), date('Y-m-d', strtotime('-1 day'))];
-      case 'week':
-        return [date('Y-m-d', strtotime('-7 days')), date('Y-m-d')];
-      case 'month':
-        return [date('Y-m-d', strtotime('-30 days')), date('Y-m-d')];
-      case 'previous_month':
-        return [date('Y-m-d', strtotime('-60 days')), date('Y-m-d', strtotime('-31 days'))];
-      case 'quarter':
-        return [date('Y-m-d', strtotime('-90 days')), date('Y-m-d')];
-      case 'year':
-        return [date('Y-m-d', strtotime('-365 days')), date('Y-m-d')];
-      case 'all':
-        return ['2000-01-01', date('Y-m-d')];
-      default:
-        return [date('Y-m-d', strtotime('-30 days')), date('Y-m-d')];
-    }
-  }
+    $request = Yii::$app->request;
 
-  /**
-   * Get period label for display
-   * @param string $period
-   * @return string
-   */
-  private function getPeriodLabel($period)
-  {
-    $labels = [
-      'today' => Yii::t('crelish', 'Today'),
-      'yesterday' => Yii::t('crelish', 'Yesterday'),
-      'week' => Yii::t('crelish', 'Last 7 Days'),
-      'month' => Yii::t('crelish', 'Last 30 Days'),
-      'previous_month' => Yii::t('crelish', 'Previous Month'),
-      'quarter' => Yii::t('crelish', 'Last 90 Days'),
-      'year' => Yii::t('crelish', 'Last Year'),
-      'all' => Yii::t('crelish', 'All Time')
-    ];
-
-    return $labels[$period] ?? $labels['month'];
+    return CrelishAnalyticsPeriod::resolve(
+      $request->get('period', CrelishAnalyticsPeriod::FALLBACK),
+      $request->get('start_date'),
+      $request->get('end_date')
+    );
   }
 
   /**

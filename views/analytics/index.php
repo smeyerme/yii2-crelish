@@ -22,13 +22,7 @@ $exportSessionsUrl = Url::to(['export', 'type' => 'sessions']);
                         <div class="analytics-filters">
                             <div class="form-group">
                                 <label><?= Yii::t('crelish', 'Time Period:') ?></label>
-                              <?= Html::dropDownList('period', $period, [
-                                'day' => Yii::t('crelish', 'Last 24 Hours'),
-                                'week' => Yii::t('crelish', 'Last 7 Days'),
-                                'month' => Yii::t('crelish', 'Last 30 Days'),
-                                'year' => Yii::t('crelish', 'Last Year'),
-                                'all' => Yii::t('crelish', 'All Time')
-                              ], ['class' => 'form-control', 'id' => 'period-filter']) ?>
+                              <?= $periodPicker ?>
                             </div>
                             <div class="form-group">
                                 <label>
@@ -151,6 +145,9 @@ $visitorsText = Yii::t('crelish', 'Visitors');
 $fileTypeText = Yii::t('crelish', 'File Type');
 $viewTypeText = Yii::t('crelish', 'View Type');
 
+// Fallback period used only if the picker widget failed to initialise
+$periodJson = json_encode($period);
+
 // JavaScript with proper URL handling
 $js = <<<JS
 // URLs from PHP variables
@@ -178,6 +175,21 @@ var viewTypeText = '$viewTypeText';
 
 // Chart objects
 var pageViewsChart = null;
+
+// Reporting period selection, owned by the date range picker widget.
+function periodParams() {
+    if (window.crelishPeriodPicker) {
+        return window.crelishPeriodPicker.params();
+    }
+    return { period: $periodJson };
+}
+
+function periodQuery() {
+    if (window.crelishPeriodPicker) {
+        return window.crelishPeriodPicker.query();
+    }
+    return 'period=' + encodeURIComponent($periodJson);
+}
 var dataLoadInterval = null;
 
 // Load data on page load
@@ -186,7 +198,7 @@ $(document).ready(function() {
     loadData();
     
     // Handle period change
-    $('#period-filter').change(function() {
+    $('#period-filter').on('crelish:periodchange', function() {
         loadData();
         updateExportLinks();
     });
@@ -251,28 +263,34 @@ function loadData() {
 
 // Update export links with current filters
 function updateExportLinks() {
-    var period = $('#period-filter').val();
+    var periodSelection = periodParams();
+    var period = periodSelection.period;
+    var startDate = periodSelection.start_date || '';
+    var endDate = periodSelection.end_date || '';
     var excludeBots = $('#exclude-bots').is(':checked') ? 1 : 0;
     var uniqueVisitors = $('#unique-visitors').is(':checked') ? 1 : 0;
     
     $('#export-page-views').attr('href', 
-        exportPageViewsBaseUrl + '&period=' + period + '&exclude_bots=' + excludeBots + '&unique_visitors=' + uniqueVisitors);
+        exportPageViewsBaseUrl + '&' + periodQuery() + '&exclude_bots=' + excludeBots + '&unique_visitors=' + uniqueVisitors);
     $('#export-elements').attr('href', 
-        exportElementsBaseUrl + '&period=' + period);
+        exportElementsBaseUrl + '&' + periodQuery());
     $('#export-sessions').attr('href', 
-        exportSessionsBaseUrl + '&period=' + period);
+        exportSessionsBaseUrl + '&' + periodQuery());
 }
 
 // Load page view statistics
 function loadPageViewStats() {
-    var period = $('#period-filter').val();
+    var periodSelection = periodParams();
+    var period = periodSelection.period;
+    var startDate = periodSelection.start_date || '';
+    var endDate = periodSelection.end_date || '';
     var excludeBots = $('#exclude-bots').is(':checked') ? 1 : 0;
     var uniqueVisitors = $('#unique-visitors').is(':checked') ? 1 : 0;
     
     $.ajax({
         url: pageViewStatsUrl,
         data: { 
-            period: period, 
+            period: period, start_date: startDate, end_date: endDate, 
             exclude_bots: excludeBots,
             unique_visitors: uniqueVisitors
         },
@@ -285,14 +303,17 @@ function loadPageViewStats() {
 
 // Load traffic summary
 function loadTrafficSummary() {
-    var period = $('#period-filter').val();
+    var periodSelection = periodParams();
+    var period = periodSelection.period;
+    var startDate = periodSelection.start_date || '';
+    var endDate = periodSelection.end_date || '';
     var excludeBots = $('#exclude-bots').is(':checked') ? 1 : 0;
     var uniqueVisitors = $('#unique-visitors').is(':checked') ? 1 : 0;
     
     $.ajax({
         url: pageViewStatsUrl,
         data: { 
-            period: period, 
+            period: period, start_date: startDate, end_date: endDate, 
             exclude_bots: excludeBots,
             unique_visitors: uniqueVisitors
         },
@@ -328,14 +349,17 @@ function loadTrafficSummary() {
 
 // Load top pages
 function loadTopPages() {
-    var period = $('#period-filter').val();
+    var periodSelection = periodParams();
+    var period = periodSelection.period;
+    var startDate = periodSelection.start_date || '';
+    var endDate = periodSelection.end_date || '';
     var excludeBots = $('#exclude-bots').is(':checked') ? 1 : 0;
     var uniqueVisitors = $('#unique-visitors').is(':checked') ? 1 : 0;
     
     $.ajax({
         url: topPagesUrl,
         data: { 
-            period: period, 
+            period: period, start_date: startDate, end_date: endDate, 
             exclude_bots: excludeBots, 
             unique_visitors: uniqueVisitors,
             limit: 10 
@@ -369,12 +393,15 @@ function loadTopPages() {
 
 // Load top content elements
 function loadTopElements() {
-    var period = $('#period-filter').val();
+    var periodSelection = periodParams();
+    var period = periodSelection.period;
+    var startDate = periodSelection.start_date || '';
+    var endDate = periodSelection.end_date || '';
     var elementType = $('#element-type-filter').val();
     
     // Prepare data object for the AJAX request
     var requestData = { 
-        period: period, 
+        period: period, start_date: startDate, end_date: endDate, 
         limit: 10
     };
     

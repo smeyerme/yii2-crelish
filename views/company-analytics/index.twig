@@ -31,15 +31,7 @@
                             </div>
                             <div class="col-md-3">
                                 <label>{{ t('crelish', 'Time Period') }}</label>
-                                <select id="period-filter" class="form-select">
-                                    <option value="today" {{ period == 'today' ? 'selected' : '' }}>{{ t('crelish', 'Today') }}</option>
-                                    <option value="yesterday" {{ period == 'yesterday' ? 'selected' : '' }}>{{ t('crelish', 'Yesterday') }}</option>
-                                    <option value="week" {{ period == 'week' ? 'selected' : '' }}>{{ t('crelish', 'Last 7 Days') }}</option>
-                                    <option value="month" {{ period == 'month' ? 'selected' : '' }}>{{ t('crelish', 'Last 30 Days') }}</option>
-                                    <option value="quarter" {{ period == 'quarter' ? 'selected' : '' }}>{{ t('crelish', 'Last 90 Days') }}</option>
-                                    <option value="year" {{ period == 'year' ? 'selected' : '' }}>{{ t('crelish', 'Last Year') }}</option>
-                                    <option value="all" {{ period == 'all' ? 'selected' : '' }}>{{ t('crelish', 'All Time') }}</option>
-                                </select>
+                                {{ periodPicker|raw }}
                             </div>
                             <div class="col-md-3 d-flex align-items-end">
                                 <button type="button" class="btn btn-outline-primary w-100" id="refresh-data-btn" disabled>
@@ -305,7 +297,18 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     let currentCompanyUuid = '{{ companyUuid }}';
+    // Period state is owned by the picker widget; these mirror it for URL building.
     let currentPeriod = '{{ period }}';
+    let currentStartDate = '{{ startDate }}';
+    let currentEndDate = '{{ endDate }}';
+
+    // Query fragment describing the selected reporting period.
+    function periodQuery() {
+        if (window.crelishPeriodPicker) {
+            return window.crelishPeriodPicker.query();
+        }
+        return 'period=' + encodeURIComponent(currentPeriod);
+    }
 
     // API URLs
     const companiesUrl = '{{ url('/crelish/company-analytics/companies') }}';
@@ -367,8 +370,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    document.getElementById('period-filter').addEventListener('change', function() {
-        currentPeriod = this.value;
+    document.getElementById('period-filter').addEventListener('crelish:periodchange', function(event) {
+        currentPeriod = event.detail.period;
+        currentStartDate = event.detail.start_date || '';
+        currentEndDate = event.detail.end_date || '';
         if (currentCompanyUuid) {
             loadCompanyData(currentCompanyUuid);
             updateUrl();
@@ -389,7 +394,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.getElementById('export-pdf-btn').addEventListener('click', function() {
         if (currentCompanyUuid) {
-            window.location.href = exportPdfUrl + '?company_uuid=' + currentCompanyUuid + '&period=' + currentPeriod;
+            window.location.href = exportPdfUrl + '?company_uuid=' + currentCompanyUuid + '&' + periodQuery();
         }
     });
 
@@ -401,6 +406,13 @@ document.addEventListener('DOMContentLoaded', function() {
             url.searchParams.delete('company_uuid');
         }
         url.searchParams.set('period', currentPeriod);
+        if (currentPeriod === 'custom') {
+            url.searchParams.set('start_date', currentStartDate);
+            url.searchParams.set('end_date', currentEndDate);
+        } else {
+            url.searchParams.delete('start_date');
+            url.searchParams.delete('end_date');
+        }
         window.history.pushState({}, '', url);
     }
 
@@ -451,7 +463,7 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById(id).innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div>';
         });
 
-        fetch(overviewStatsUrl + '?company_uuid=' + companyUuid + '&period=' + currentPeriod)
+        fetch(overviewStatsUrl + '?company_uuid=' + companyUuid + '&' + periodQuery())
             .then(response => response.json())
             .then(data => {
                 if (data.error) {
@@ -487,7 +499,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const container = document.getElementById('content-type-table-container');
         container.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div></div>';
 
-        fetch(contentTypeStatsUrl + '?company_uuid=' + companyUuid + '&period=' + currentPeriod)
+        fetch(contentTypeStatsUrl + '?company_uuid=' + companyUuid + '&' + periodQuery())
             .then(response => response.json())
             .then(data => {
                 renderContentTypeTable(data);
@@ -500,7 +512,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function loadTrends(companyUuid) {
-        fetch(trendsUrl + '?company_uuid=' + companyUuid + '&period=' + currentPeriod)
+        fetch(trendsUrl + '?company_uuid=' + companyUuid + '&' + periodQuery())
             .then(response => response.json())
             .then(data => {
                 renderTrendChart(data);
@@ -513,7 +525,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const container = document.getElementById('top-content-container');
         container.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div></div>';
 
-        fetch(topContentUrl + '?company_uuid=' + companyUuid + '&period=' + currentPeriod + '&limit=20')
+        fetch(topContentUrl + '?company_uuid=' + companyUuid + '&' + periodQuery() + '&limit=20')
             .then(response => response.json())
             .then(data => {
                 renderTopContent(data);
@@ -525,7 +537,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function loadEventTypeStats(companyUuid) {
-        fetch(eventTypeStatsUrl + '?company_uuid=' + companyUuid + '&period=' + currentPeriod)
+        fetch(eventTypeStatsUrl + '?company_uuid=' + companyUuid + '&' + periodQuery())
             .then(response => response.json())
             .then(data => {
                 renderEventTypeChart(data);
@@ -537,7 +549,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const container = document.getElementById('benchmark-container');
         container.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div></div>';
 
-        fetch(benchmarkStatsUrl + '?company_uuid=' + companyUuid + '&period=' + currentPeriod)
+        fetch(benchmarkStatsUrl + '?company_uuid=' + companyUuid + '&' + periodQuery())
             .then(response => response.json())
             .then(data => {
                 renderBenchmarkTable(data);

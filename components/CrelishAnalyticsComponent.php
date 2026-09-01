@@ -6,6 +6,7 @@ use DeviceDetector\DeviceDetector;
 use Yii;
 use yii\base\Component;
 use yii\db\Query;
+use giantbits\crelish\helpers\CrelishAnalyticsPeriod;
 use yii\db\Expression;
 use yii\helpers\ArrayHelper;
 
@@ -273,15 +274,19 @@ class CrelishAnalyticsComponent extends Component
 
   /**
    * Get page view statistics for a given period
-   * @param string $period day|week|month|year
+   * @param string $period preset key, or 'custom' when a range is supplied
    * @param bool $excludeBots
    * @param bool $uniqueVisitors Only count unique visitors (by IP + session_id)
+   * @param string|null $startDate Y-m-d, only read for a custom range
+   * @param string|null $endDate Y-m-d, only read for a custom range
    * @return array
    */
-  public function getPageViewStats($period = 'month', $excludeBots = true, $uniqueVisitors = false)
+  public function getPageViewStats($period = 'month', $excludeBots = true, $uniqueVisitors = false, $startDate = null, $endDate = null)
   {
-    $dateExpression = $this->getDateExpressionForPeriod($period);
-    $startDate = $this->getPeriodStartDate($period);
+    [$rangeStart, $rangeEnd, $period] = CrelishAnalyticsPeriod::resolve($period, $startDate, $endDate);
+    $dateExpression = $this->getDateExpressionForRange($rangeStart, $rangeEnd);
+    $startDate = $rangeStart . ' 00:00:00';
+    $endDate = $rangeEnd . ' 23:59:59';
 
     $query = (new Query());
 
@@ -307,6 +312,7 @@ class CrelishAnalyticsComponent extends Component
 
     // Add the date filter
     $query->andWhere(['>=', 'created_at', $startDate]);
+    $query->andWhere(['<=', 'created_at', $endDate]);
 
     return $query->groupBy(['date'])
       ->orderBy(['date' => SORT_ASC])
@@ -315,14 +321,15 @@ class CrelishAnalyticsComponent extends Component
 
   /**
    * Get top viewed pages for a given period
-   * @param string $period day|week|month|year
+   * @param string $period preset key, or 'custom' when a range is supplied
    * @param int $limit
    * @param bool $excludeBots
    * @param bool $uniqueVisitors Only count unique visitors (by IP + session_id)
    * @return array
    */
-  public function getTopPages($period = 'month', $limit = 10, $excludeBots = true, $uniqueVisitors = false)
+  public function getTopPages($period = 'month', $limit = 10, $excludeBots = true, $uniqueVisitors = false, $startDate = null, $endDate = null)
   {
+    [$rangeStart, $rangeEnd, $period] = CrelishAnalyticsPeriod::resolve($period, $startDate, $endDate);
     $query = (new Query());
     
     if ($uniqueVisitors) {
@@ -350,7 +357,8 @@ class CrelishAnalyticsComponent extends Component
     }
 
     if ($period !== 'all') {
-      $query->andWhere(['>=', 'created_at', $this->getPeriodStartDate($period)]);
+      $query->andWhere(['>=', 'created_at', $rangeStart . ' 00:00:00']);
+      $query->andWhere(['<=', 'created_at', $rangeEnd . ' 23:59:59']);
     }
 
     return $query->groupBy(['page_uuid'])
@@ -361,13 +369,16 @@ class CrelishAnalyticsComponent extends Component
 
   /**
    * Get most viewed elements
-   * @param string $period day|week|month|year
+   * @param string $period preset key, or 'custom' when a range is supplied
    * @param int $limit
    * @param string|null $type Optional filter for view type (e.g., 'download', 'list', 'detail')
+   * @param string|null $startDate Y-m-d, only read for a custom range
+   * @param string|null $endDate Y-m-d, only read for a custom range
    * @return array
    */
-  public function getTopElements($period = 'month', $limit = 10, $type = null)
+  public function getTopElements($period = 'month', $limit = 10, $type = null, $startDate = null, $endDate = null)
   {
+    [$rangeStart, $rangeEnd, $period] = CrelishAnalyticsPeriod::resolve($period, $startDate, $endDate);
     $query = (new Query())
       ->select([
         'element_uuid',
@@ -381,7 +392,8 @@ class CrelishAnalyticsComponent extends Component
     $conditions = [];
     
     if ($period !== 'all') {
-      $conditions[] = ['>=', 'created_at', $this->getPeriodStartDate($period)];
+      $conditions[] = ['>=', 'created_at', $rangeStart . ' 00:00:00'];
+      $conditions[] = ['<=', 'created_at', $rangeEnd . ' 23:59:59'];
     }
     
     // Add type filter if specified
@@ -410,20 +422,21 @@ class CrelishAnalyticsComponent extends Component
   }
 
   /**
-   * Get the date expression for a given period for SQL grouping
-   * @param string $period
+   * Get the date expression for a date range for SQL grouping.
+   *
+   * Granularity follows the length of the range, so a custom range groups by
+   * hour, day or month depending on how much time it covers.
+   *
+   * @param string $startDate Y-m-d
+   * @param string $endDate Y-m-d
    * @return Expression
    */
-  private function getDateExpressionForPeriod($period)
+  private function getDateExpressionForRange($startDate, $endDate)
   {
-    switch ($period) {
-      case 'day':
+    switch (CrelishAnalyticsPeriod::granularity($startDate, $endDate)) {
+      case 'hour':
         return new Expression('DATE_FORMAT(created_at, "%Y-%m-%d %H:00")');
-      case 'week':
-        return new Expression('DATE_FORMAT(created_at, "%Y-%m-%d")');
       case 'month':
-        return new Expression('DATE_FORMAT(created_at, "%Y-%m-%d")');
-      case 'year':
         return new Expression('DATE_FORMAT(created_at, "%Y-%m")');
       default:
         return new Expression('DATE_FORMAT(created_at, "%Y-%m-%d")');

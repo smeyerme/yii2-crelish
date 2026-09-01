@@ -90,5 +90,16 @@ return [
   'Media Library' => 'Medienbibliothek',
   'System Settings' => 'Systemeinstellungen',
   'API Documentation' => 'API-Dokumentation',
-];
 
+  // Analytics reporting period picker
+  'Today' => 'Heute',
+  'Yesterday' => 'Gestern',
+  'Last 7 Days' => 'Letzte 7 Tage',
+  'Last 30 Days' => 'Letzte 30 Tage',
+  'Previous Month' => 'Vormonat',
+  'Last 90 Days' => 'Letzte 90 Tage',
+  'Last Year' => 'Letztes Jahr',
+  'All Time' => 'Gesamter Zeitraum',
+  'Apply' => 'Übernehmen',
+  'Custom Range' => 'Benutzerdefiniert',
+];

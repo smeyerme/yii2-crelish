@@ -13,11 +13,15 @@
                         </div>
                         <div class="col-md-4 text-end">
                             <div class="btn-group" role="group">
-                                <a href="{{ url('/crelish/analytics-aggregated/export', {'type': 'pages', 'period': period}) }}"
+                                <a href="{{ url('/crelish/analytics-aggregated/export', {'type': 'pages'}) }}"
+                                   id="export-pages-link"
+                                   data-base-url="{{ url('/crelish/analytics-aggregated/export', {'type': 'pages'}) }}"
                                    class="btn btn-outline-primary btn-sm">
                                     <i class="fa-sharp fa-regular fa-download"></i> {{ t('crelish', 'Export Pages') }}
                                 </a>
-                                <a href="{{ url('/crelish/analytics-aggregated/export', {'type': 'elements', 'period': period}) }}"
+                                <a href="{{ url('/crelish/analytics-aggregated/export', {'type': 'elements'}) }}"
+                                   id="export-elements-link"
+                                   data-base-url="{{ url('/crelish/analytics-aggregated/export', {'type': 'elements'}) }}"
                                    class="btn btn-outline-primary btn-sm">
                                     <i class="fa-sharp fa-regular fa-download"></i> {{ t('crelish', 'Export Elements') }}
                                 </a>
@@ -30,15 +34,7 @@
                         <div class="row">
                             <div class="col-md-3">
                                 <label>{{ t('crelish', 'Time Period') }}</label>
-                                <select id="period-filter" class="form-select">
-                                    <option value="today" {{ period == 'today' ? 'selected' : '' }}>{{ t('crelish', 'Today') }}</option>
-                                    <option value="yesterday" {{ period == 'yesterday' ? 'selected' : '' }}>{{ t('crelish', 'Yesterday') }}</option>
-                                    <option value="week" {{ period == 'week' ? 'selected' : '' }}>{{ t('crelish', 'Last 7 Days') }}</option>
-                                    <option value="month" {{ period == 'month' ? 'selected' : '' }}>{{ t('crelish', 'Last 30 Days') }}</option>
-                                    <option value="quarter" {{ period == 'quarter' ? 'selected' : '' }}>{{ t('crelish', 'Last 90 Days') }}</option>
-                                    <option value="year" {{ period == 'year' ? 'selected' : '' }}>{{ t('crelish', 'Last Year') }}</option>
-                                    <option value="all" {{ period == 'all' ? 'selected' : '' }}>{{ t('crelish', 'All Time') }}</option>
-                                </select>
+                                {{ periodPicker|raw }}
                             </div>
                             <div class="col-md-3">
                                 <label>{{ t('crelish', 'Granularity') }}</label>
@@ -268,6 +264,27 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     let currentPeriod = '{{ period }}';
+    let currentStartDate = '{{ startDate }}';
+    let currentEndDate = '{{ endDate }}';
+
+    // Keep the CSV export links pointing at the selected period.
+    function updateExportLinks() {
+        ['export-pages-link', 'export-elements-link'].forEach(function(id) {
+            var link = document.getElementById(id);
+            if (link) {
+                var base = link.dataset.baseUrl;
+                link.href = base + (base.indexOf('?') === -1 ? '?' : '&') + periodQuery();
+            }
+        });
+    }
+
+    // Query fragment describing the selected reporting period.
+    function periodQuery() {
+        if (window.crelishPeriodPicker) {
+            return window.crelishPeriodPicker.query();
+        }
+        return 'period=' + encodeURIComponent(currentPeriod);
+    }
     let currentGranularity = 'daily';
 
     // API URLs
@@ -282,9 +299,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const contentFreshnessUrl = '{{ url('/crelish/analytics-aggregated/content-freshness') }}';
     const partnerRankingsUrl = '{{ url('/crelish/analytics-aggregated/partner-rankings') }}';
 
+    updateExportLinks();
+
     // Filter handlers
-    document.getElementById('period-filter').addEventListener('change', function() {
-        currentPeriod = this.value;
+    document.getElementById('period-filter').addEventListener('crelish:periodchange', function(event) {
+        currentPeriod = event.detail.period;
+        currentStartDate = event.detail.start_date || '';
+        currentEndDate = event.detail.end_date || '';
+        updateExportLinks();
         refreshAllData();
     });
 
@@ -317,7 +339,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function loadOverviewStats() {
-        fetch(overviewStatsUrl + '?period=' + currentPeriod)
+        fetch(overviewStatsUrl + '?' + periodQuery())
             .then(response => response.json())
             .then(data => {
                 // Update KPIs
@@ -334,7 +356,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function loadPageViewsTrend() {
-        fetch(pageViewsTrendUrl + '?period=' + currentPeriod + '&granularity=' + currentGranularity)
+        fetch(pageViewsTrendUrl + '?' + periodQuery() + '&granularity=' + currentGranularity)
             .then(response => response.json())
             .then(data => {
                 renderPageViewsTrendChart(data);
@@ -346,7 +368,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const container = document.getElementById('top-pages-container');
         container.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div></div>';
 
-        fetch(topPagesUrl + '?period=' + currentPeriod + '&limit=10')
+        fetch(topPagesUrl + '?' + periodQuery() + '&limit=10')
             .then(response => response.json())
             .then(data => {
                 renderTopPages(data);
@@ -363,7 +385,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         container.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div></div>';
 
-        let url = topElementsUrl + '?period=' + currentPeriod + '&limit=10';
+        let url = topElementsUrl + '?' + periodQuery() + '&limit=10';
         if (eventType) {
             url += '&event_type=' + eventType;
         }
@@ -380,7 +402,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function loadElementTypeDistribution() {
-        fetch(elementTypeDistUrl + '?period=' + currentPeriod)
+        fetch(elementTypeDistUrl + '?' + periodQuery())
             .then(response => response.json())
             .then(data => {
                 renderElementTypeChart(data);
@@ -389,7 +411,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function loadEventTypeDistribution() {
-        fetch(eventTypeDistUrl + '?period=' + currentPeriod)
+        fetch(eventTypeDistUrl + '?' + periodQuery())
             .then(response => response.json())
             .then(data => {
                 renderEventTypeChart(data);
@@ -557,7 +579,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const container = document.getElementById('conversion-rates-container');
         container.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div></div>';
 
-        fetch(conversionRatesUrl + '?period=' + currentPeriod + '&limit=10')
+        fetch(conversionRatesUrl + '?' + periodQuery() + '&limit=10')
             .then(response => response.json())
             .then(data => {
                 renderConversionRates(data);
@@ -600,7 +622,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function loadDayOfWeekPatterns() {
-        fetch(dayOfWeekUrl + '?period=' + currentPeriod)
+        fetch(dayOfWeekUrl + '?' + periodQuery())
             .then(response => response.json())
             .then(data => {
                 renderDayOfWeekChart(data);
@@ -649,7 +671,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const container = document.getElementById('content-freshness-container');
         container.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div></div>';
 
-        fetch(contentFreshnessUrl + '?period=' + currentPeriod + '&limit=15')
+        fetch(contentFreshnessUrl + '?' + periodQuery() + '&limit=15')
             .then(response => response.json())
             .then(data => {
                 renderContentFreshness(data);
@@ -695,7 +717,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const container = document.getElementById('partner-rankings-container');
         container.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div></div>';
 
-        fetch(partnerRankingsUrl + '?period=' + currentPeriod)
+        fetch(partnerRankingsUrl + '?' + periodQuery())
             .then(response => response.json())
             .then(data => {
                 renderPartnerRankings(data);

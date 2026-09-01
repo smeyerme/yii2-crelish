@@ -19,12 +19,7 @@
                     <div class="row">
                         <div class="col-md-3">
                             <label>{{ t('crelish', 'Time Period') }}</label>
-                            <select id="period-filter" class="form-select">
-                                <option value="week">{{ t('crelish', 'Last 7 Days') }}</option>
-                                <option value="month" selected>{{ t('crelish', 'Last 30 Days') }}</option>
-                                <option value="quarter">{{ t('crelish', 'Last 90 Days') }}</option>
-                                <option value="year">{{ t('crelish', 'Last Year') }}</option>
-                            </select>
+                            {{ periodPicker|raw }}
                         </div>
                     </div>
                 </div>
@@ -119,7 +114,17 @@
 document.addEventListener('DOMContentLoaded', function() {
     const urlParams = new URLSearchParams(window.location.search);
     const elementUuid = urlParams.get('element_uuid');
-    let currentPeriod = 'month';
+    let currentPeriod = '{{ period }}';
+    let currentStartDate = '{{ startDate }}';
+    let currentEndDate = '{{ endDate }}';
+
+    // Query fragment describing the selected reporting period.
+    function periodQuery() {
+        if (window.crelishPeriodPicker) {
+            return window.crelishPeriodPicker.query();
+        }
+        return 'period=' + encodeURIComponent(currentPeriod);
+    }
 
     if (!elementUuid) {
         alert('{{ t("crelish", "Element UUID is required") }}');
@@ -129,8 +134,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const performanceUrl = '{{ url(["/crelish/analytics-aggregated/element-performance"]) }}';
 
-    document.getElementById('period-filter').addEventListener('change', function() {
-        currentPeriod = this.value;
+    document.getElementById('period-filter').addEventListener('crelish:periodchange', function(event) {
+        currentPeriod = event.detail.period;
+        currentStartDate = event.detail.start_date || '';
+        currentEndDate = event.detail.end_date || '';
         loadElementPerformance();
     });
 
@@ -140,7 +147,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let distributionChart = null;
 
     function loadElementPerformance() {
-        fetch(performanceUrl + '?element_uuid=' + elementUuid + '&period=' + currentPeriod)
+        fetch(performanceUrl + '?element_uuid=' + elementUuid + '&' + periodQuery())
             .then(response => response.json())
             .then(data => {
                 if (data.error) {
