@@ -56,6 +56,7 @@
         "kartik-v/yii2-dialog": "dev-master",
         "kartik-v/yii2-dynagrid": "dev-master",
         "kartik-v/yii2-grid": "v3.5.3",
+        "kartik-v/yii2-date-range": "^1.7",
         "yiisoft/yii2-httpclient": "^2.0",
         "guzzlehttp/guzzle": "^7.10",
         "yiisoft/yii2-symfonymailer": "^4.0",

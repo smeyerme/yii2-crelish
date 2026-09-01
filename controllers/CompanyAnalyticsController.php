@@ -5,6 +5,8 @@ namespace giantbits\crelish\controllers;
 use giantbits\crelish\components\CrelishBaseController;
 use giantbits\crelish\components\CrelishModelResolver;
 use giantbits\crelish\components\ElementTitleResolver;
+use giantbits\crelish\helpers\CrelishAnalyticsPeriod;
+use giantbits\crelish\widgets\CrelishAnalyticsPeriodPicker;
 use kartik\select2\Select2Asset;
 use kartik\select2\ThemeKrajeeBs5Asset;
 use Yii;
@@ -62,7 +64,7 @@ class CompanyAnalyticsController extends CrelishBaseController
      */
     public function actionIndex()
     {
-        $period = Yii::$app->request->get('period', 'month');
+        [$startDate, $endDate, $period] = $this->resolvePeriod();
         $companyUuid = Yii::$app->request->get('company_uuid', '');
         $companyName = '';
 
@@ -81,6 +83,13 @@ class CompanyAnalyticsController extends CrelishBaseController
 
         return $this->render('index.twig', [
             'period' => $period,
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+            'periodPicker' => CrelishAnalyticsPeriodPicker::widget([
+                'period' => $period,
+                'startDate' => $startDate,
+                'endDate' => $endDate,
+            ]),
             'companyUuid' => $companyUuid,
             'companyName' => $companyName
         ]);
@@ -128,13 +137,12 @@ class CompanyAnalyticsController extends CrelishBaseController
         Yii::$app->response->format = Response::FORMAT_JSON;
 
         $companyUuid = Yii::$app->request->get('company_uuid');
-        $period = Yii::$app->request->get('period', 'month');
 
         if (empty($companyUuid)) {
             return ['error' => 'Company UUID is required'];
         }
 
-        list($startDate, $endDate) = $this->getPeriodDates($period);
+        [$startDate, $endDate, $period] = $this->resolvePeriod();
 
         // Get company profile stats (the company itself, not its content)
         $profileStats = (new Query())
@@ -181,13 +189,12 @@ class CompanyAnalyticsController extends CrelishBaseController
         Yii::$app->response->format = Response::FORMAT_JSON;
 
         $companyUuid = Yii::$app->request->get('company_uuid');
-        $period = Yii::$app->request->get('period', 'month');
 
         if (empty($companyUuid)) {
             return ['error' => 'Company UUID is required'];
         }
 
-        list($startDate, $endDate) = $this->getPeriodDates($period);
+        [$startDate, $endDate, $period] = $this->resolvePeriod();
 
         $query = (new Query())
             ->select([
@@ -217,13 +224,12 @@ class CompanyAnalyticsController extends CrelishBaseController
         Yii::$app->response->format = Response::FORMAT_JSON;
 
         $companyUuid = Yii::$app->request->get('company_uuid');
-        $period = Yii::$app->request->get('period', 'month');
 
         if (empty($companyUuid)) {
             return ['error' => 'Company UUID is required'];
         }
 
-        list($startDate, $endDate) = $this->getPeriodDates($period);
+        [$startDate, $endDate, $period] = $this->resolvePeriod();
 
         $query = (new Query())
             ->select([
@@ -252,14 +258,13 @@ class CompanyAnalyticsController extends CrelishBaseController
         Yii::$app->response->format = Response::FORMAT_JSON;
 
         $companyUuid = Yii::$app->request->get('company_uuid');
-        $period = Yii::$app->request->get('period', 'month');
         $limit = Yii::$app->request->get('limit', 20);
 
         if (empty($companyUuid)) {
             return ['error' => 'Company UUID is required'];
         }
 
-        list($startDate, $endDate) = $this->getPeriodDates($period);
+        [$startDate, $endDate, $period] = $this->resolvePeriod();
 
         $query = (new Query())
             ->select([
@@ -305,13 +310,12 @@ class CompanyAnalyticsController extends CrelishBaseController
         Yii::$app->response->format = Response::FORMAT_JSON;
 
         $companyUuid = Yii::$app->request->get('company_uuid');
-        $period = Yii::$app->request->get('period', 'month');
 
         if (empty($companyUuid)) {
             return ['error' => 'Company UUID is required'];
         }
 
-        list($startDate, $endDate) = $this->getPeriodDates($period);
+        [$startDate, $endDate, $period] = $this->resolvePeriod();
 
         $query = (new Query())
             ->select([
@@ -336,13 +340,12 @@ class CompanyAnalyticsController extends CrelishBaseController
         Yii::$app->response->format = Response::FORMAT_JSON;
 
         $companyUuid = Yii::$app->request->get('company_uuid');
-        $period = Yii::$app->request->get('period', 'month');
 
         if (empty($companyUuid)) {
             return ['error' => 'Company UUID is required'];
         }
 
-        list($startDate, $endDate) = $this->getPeriodDates($period);
+        [$startDate, $endDate, $period] = $this->resolvePeriod();
 
         return $this->getBenchmarkData($companyUuid, $startDate, $endDate);
     }
@@ -353,7 +356,6 @@ class CompanyAnalyticsController extends CrelishBaseController
     public function actionExportPdf()
     {
         $companyUuid = Yii::$app->request->get('company_uuid');
-        $period = Yii::$app->request->get('period', 'month');
 
         if (empty($companyUuid)) {
             Yii::$app->session->setFlash('error', 'Company UUID is required');
@@ -378,7 +380,7 @@ class CompanyAnalyticsController extends CrelishBaseController
             $logoPath = $this->resolveAssetPath($company['logo']);
         }
 
-        list($startDate, $endDate) = $this->getPeriodDates($period);
+        [$startDate, $endDate, $period] = $this->resolvePeriod();
 
         // Get company profile stats (the company itself, not its content)
         $profileStats = (new Query())
@@ -404,7 +406,7 @@ class CompanyAnalyticsController extends CrelishBaseController
             'company' => $company,
             'logoPath' => $logoPath,
             'period' => $period,
-            'periodLabel' => $this->getPeriodLabel($period),
+            'periodLabel' => CrelishAnalyticsPeriod::label($period, $startDate, $endDate),
             'startDate' => $startDate,
             'endDate' => $endDate,
             'profileStats' => $profileStats,
@@ -610,46 +612,22 @@ class CompanyAnalyticsController extends CrelishBaseController
     }
 
     /**
-     * Get period dates
+     * Resolve the reporting period from the current request.
+     *
+     * Supports both the named presets and a custom range submitted as
+     * `period=custom&start_date=Y-m-d&end_date=Y-m-d`.
+     *
+     * @return array{0: string, 1: string, 2: string} [startDate, endDate, period]
      */
-    private function getPeriodDates(string $period): array
+    private function resolvePeriod(): array
     {
-        switch ($period) {
-            case 'today':
-                return [date('Y-m-d'), date('Y-m-d')];
-            case 'yesterday':
-                return [date('Y-m-d', strtotime('-1 day')), date('Y-m-d', strtotime('-1 day'))];
-            case 'week':
-                return [date('Y-m-d', strtotime('-7 days')), date('Y-m-d')];
-            case 'month':
-                return [date('Y-m-d', strtotime('-30 days')), date('Y-m-d')];
-            case 'quarter':
-                return [date('Y-m-d', strtotime('-90 days')), date('Y-m-d')];
-            case 'year':
-                return [date('Y-m-d', strtotime('-365 days')), date('Y-m-d')];
-            case 'all':
-                return ['2000-01-01', date('Y-m-d')];
-            default:
-                return [date('Y-m-d', strtotime('-30 days')), date('Y-m-d')];
-        }
-    }
+        $request = Yii::$app->request;
 
-    /**
-     * Get period label for display
-     */
-    private function getPeriodLabel(string $period): string
-    {
-        $labels = [
-            'today' => Yii::t('crelish', 'Today'),
-            'yesterday' => Yii::t('crelish', 'Yesterday'),
-            'week' => Yii::t('crelish', 'Last 7 Days'),
-            'month' => Yii::t('crelish', 'Last 30 Days'),
-            'quarter' => Yii::t('crelish', 'Last 90 Days'),
-            'year' => Yii::t('crelish', 'Last Year'),
-            'all' => Yii::t('crelish', 'All Time')
-        ];
-
-        return $labels[$period] ?? $labels['month'];
+        return CrelishAnalyticsPeriod::resolve(
+            $request->get('period', CrelishAnalyticsPeriod::FALLBACK),
+            $request->get('start_date'),
+            $request->get('end_date')
+        );
     }
 
     /**

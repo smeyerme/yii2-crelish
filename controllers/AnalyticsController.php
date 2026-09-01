@@ -4,6 +4,8 @@ namespace giantbits\crelish\controllers;
 
 use giantbits\crelish\components\CrelishBaseController;
 use giantbits\crelish\components\ElementTitleResolver;
+use giantbits\crelish\helpers\CrelishAnalyticsPeriod;
+use giantbits\crelish\widgets\CrelishAnalyticsPeriodPicker;
 use Yii;
 use yii\web\Response;
 use yii\helpers\Json;
@@ -64,12 +66,19 @@ class AnalyticsController extends CrelishBaseController
    */
   public function actionIndex()
   {
-    $period = Yii::$app->request->get('period', 'month');
+    [$rangeStart, $rangeEnd, $period] = $this->resolvePeriod();
     $excludeBots = Yii::$app->request->get('exclude_bots', 1);
     $uniqueVisitors = Yii::$app->request->get('unique_visitors', 0);
 
     return $this->render('index', [
       'period' => $period,
+      'startDate' => substr($rangeStart, 0, 10),
+      'endDate' => substr($rangeEnd, 0, 10),
+      'periodPicker' => CrelishAnalyticsPeriodPicker::widget([
+        'period' => $period,
+        'startDate' => substr($rangeStart, 0, 10),
+        'endDate' => substr($rangeEnd, 0, 10),
+      ]),
       'excludeBots' => $excludeBots,
       'uniqueVisitors' => $uniqueVisitors
     ]);
@@ -82,11 +91,17 @@ class AnalyticsController extends CrelishBaseController
   {
     Yii::$app->response->format = Response::FORMAT_JSON;
 
-    $period = Yii::$app->request->get('period', 'month');
+    [$rangeStart, $rangeEnd, $period] = $this->resolvePeriod();
     $excludeBots = Yii::$app->request->get('exclude_bots', 1);
     $uniqueVisitors = Yii::$app->request->get('unique_visitors', 0);
 
-    return Yii::$app->crelishAnalytics->getPageViewStats($period, (bool)$excludeBots, (bool)$uniqueVisitors);
+    return Yii::$app->crelishAnalytics->getPageViewStats(
+      $period,
+      (bool)$excludeBots,
+      (bool)$uniqueVisitors,
+      Yii::$app->request->get('start_date'),
+      Yii::$app->request->get('end_date')
+    );
   }
 
   /**
@@ -96,12 +111,19 @@ class AnalyticsController extends CrelishBaseController
   {
     Yii::$app->response->format = Response::FORMAT_JSON;
 
-    $period = Yii::$app->request->get('period', 'month');
+    [$rangeStart, $rangeEnd, $period] = $this->resolvePeriod();
     $limit = Yii::$app->request->get('limit', 10);
     $excludeBots = Yii::$app->request->get('exclude_bots', 1);
     $uniqueVisitors = Yii::$app->request->get('unique_visitors', 0);
 
-    $pages = Yii::$app->crelishAnalytics->getTopPages($period, $limit, (bool)$excludeBots, (bool)$uniqueVisitors);
+    $pages = Yii::$app->crelishAnalytics->getTopPages(
+      $period,
+      $limit,
+      (bool)$excludeBots,
+      (bool)$uniqueVisitors,
+      Yii::$app->request->get('start_date'),
+      Yii::$app->request->get('end_date')
+    );
 
     // Enrich with page titles
     foreach ($pages as &$page) {
@@ -118,14 +140,17 @@ class AnalyticsController extends CrelishBaseController
   {
     Yii::$app->response->format = Response::FORMAT_JSON;
 
-    $period = Yii::$app->request->get('period', 'month');
+    [$rangeStart, $rangeEnd, $period] = $this->resolvePeriod();
     $limit = Yii::$app->request->get('limit', 10);
     
+    $startDate = Yii::$app->request->get('start_date');
+    $endDate = Yii::$app->request->get('end_date');
+
     // Only pass the type parameter if it's explicitly provided in the request
     $type = Yii::$app->request->get('type');
     $elements = $type !== null 
-        ? Yii::$app->crelishAnalytics->getTopElements($period, $limit, $type)
-        : Yii::$app->crelishAnalytics->getTopElements($period, $limit);
+        ? Yii::$app->crelishAnalytics->getTopElements($period, $limit, $type, $startDate, $endDate)
+        : Yii::$app->crelishAnalytics->getTopElements($period, $limit, null, $startDate, $endDate);
 
     // Enrich with element titles if possible
     foreach ($elements as &$element) {
@@ -158,7 +183,7 @@ class AnalyticsController extends CrelishBaseController
   {
     Yii::$app->response->format = Response::FORMAT_JSON;
 
-    $period = Yii::$app->request->get('period', 'month');
+    [$rangeStart, $rangeEnd, $period] = $this->resolvePeriod();
 
     $botStats = (new \yii\db\Query())
       ->select([
@@ -167,7 +192,7 @@ class AnalyticsController extends CrelishBaseController
       ])
       ->from('analytics_page_views')
       ->where(['is_bot' => 1])
-      ->andWhere(['>=', 'created_at', $this->getPeriodStartDate($period)])
+      ->andWhere(['between', 'created_at', $rangeStart, $rangeEnd])
       ->groupBy(['user_agent'])
       ->orderBy(['count' => SORT_DESC])
       ->limit(20)
@@ -181,7 +206,7 @@ class AnalyticsController extends CrelishBaseController
    */
   public function actionExport()
   {
-    $period = Yii::$app->request->get('period', 'month');
+    [$rangeStart, $rangeEnd, $period] = $this->resolvePeriod();
     $excludeBots = Yii::$app->request->get('exclude_bots', 1);
     $uniqueVisitors = Yii::$app->request->get('unique_visitors', 0);
     $type = Yii::$app->request->get('type', 'page_views');
@@ -215,7 +240,7 @@ class AnalyticsController extends CrelishBaseController
     }
 
     if ($period !== 'all') {
-      $query->andWhere(['>=', 'created_at', $this->getPeriodStartDate($period)]);
+      $query->andWhere(['between', 'created_at', $rangeStart, $rangeEnd]);
     }
 
     $data = $query->all();
@@ -247,24 +272,25 @@ class AnalyticsController extends CrelishBaseController
   }
 
   /**
-   * Get the start date for a given period
-   * @param string $period
-   * @return string
+   * Resolve the reporting period from the current request.
+   *
+   * Supports both the named presets and a custom range submitted as
+   * `period=custom&start_date=Y-m-d&end_date=Y-m-d`. The returned bounds are
+   * full datetimes so they can be compared against `created_at` directly.
+   *
+   * @return array{0: string, 1: string, 2: string} [rangeStart, rangeEnd, period]
    */
-  private function getPeriodStartDate($period)
+  private function resolvePeriod()
   {
-    switch ($period) {
-      case 'day':
-        return date('Y-m-d 00:00:00');
-      case 'week':
-        return date('Y-m-d 00:00:00', strtotime('-7 days'));
-      case 'month':
-        return date('Y-m-d 00:00:00', strtotime('-30 days'));
-      case 'year':
-        return date('Y-m-d 00:00:00', strtotime('-365 days'));
-      default:
-        return date('Y-m-d 00:00:00', strtotime('-30 days'));
-    }
+    $request = Yii::$app->request;
+
+    [$startDate, $endDate, $period] = CrelishAnalyticsPeriod::resolve(
+      $request->get('period', CrelishAnalyticsPeriod::FALLBACK),
+      $request->get('start_date'),
+      $request->get('end_date')
+    );
+
+    return [$startDate . ' 00:00:00', $endDate . ' 23:59:59', $period];
   }
   
   /**
@@ -272,7 +298,7 @@ class AnalyticsController extends CrelishBaseController
    */
   public function actionDashboard()
   {
-    $period = Yii::$app->request->get('period', 'month');
+    [$rangeStart, $rangeEnd, $period] = $this->resolvePeriod();
     $excludeBots = Yii::$app->request->get('exclude_bots', 1);
     $uniqueVisitors = Yii::$app->request->get('unique_visitors', 0);
     
@@ -423,7 +449,7 @@ class AnalyticsController extends CrelishBaseController
    */
   public function actionSessions()
   {
-    $period = Yii::$app->request->get('period', 'month');
+    [$rangeStart, $rangeEnd, $period] = $this->resolvePeriod();
     $excludeBots = Yii::$app->request->get('exclude_bots', 1);
     $page = Yii::$app->request->get('page', 1);
     $pageSize = Yii::$app->request->get('per_page', 20);
@@ -445,13 +471,13 @@ class AnalyticsController extends CrelishBaseController
   {
     Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
     
-    $period = Yii::$app->request->get('period', 'month');
+    [$rangeStart, $rangeEnd, $period] = $this->resolvePeriod();
     $excludeBots = Yii::$app->request->get('exclude_bots', 1);
     $page = intval(Yii::$app->request->get('page', 1));
     $pageSize = intval(Yii::$app->request->get('per_page', 20));
     
     // Get session stats by day for chart
-    $dateExpression = $this->getDateExpressionForPeriod($period);
+    $dateExpression = $this->getDateExpressionForRange($rangeStart, $rangeEnd);
     $chartQuery = (new \yii\db\Query())
       ->select([
         'date' => $dateExpression,
@@ -464,7 +490,7 @@ class AnalyticsController extends CrelishBaseController
     }
     
     if ($period !== 'all') {
-      $chartQuery->andWhere(['>=', 'created_at', $this->getPeriodStartDate($period)]);
+      $chartQuery->andWhere(['between', 'created_at', $rangeStart, $rangeEnd]);
     }
     
     $chartData = $chartQuery
@@ -491,7 +517,7 @@ class AnalyticsController extends CrelishBaseController
     }
     
     if ($period !== 'all') {
-      $sessionQuery->andWhere(['>=', 'created_at', $this->getPeriodStartDate($period)]);
+      $sessionQuery->andWhere(['between', 'created_at', $rangeStart, $rangeEnd]);
     }
     
     // Get total count for pagination
@@ -552,20 +578,26 @@ class AnalyticsController extends CrelishBaseController
   }
   
   /**
-   * Get the date expression for a given period for SQL grouping
-   * @param string $period
+   * Get the date expression for a date range for SQL grouping.
+   *
+   * Granularity follows the length of the range, so a custom range groups by
+   * hour, day or month depending on how much time it covers.
+   *
+   * @param string $rangeStart datetime
+   * @param string $rangeEnd datetime
    * @return \yii\db\Expression
    */
-  private function getDateExpressionForPeriod($period)
+  private function getDateExpressionForRange($rangeStart, $rangeEnd)
   {
-    switch ($period) {
-      case 'day':
+    $granularity = CrelishAnalyticsPeriod::granularity(
+      substr($rangeStart, 0, 10),
+      substr($rangeEnd, 0, 10)
+    );
+
+    switch ($granularity) {
+      case 'hour':
         return new \yii\db\Expression('DATE_FORMAT(created_at, "%Y-%m-%d %H:00")');
-      case 'week':
-        return new \yii\db\Expression('DATE_FORMAT(created_at, "%Y-%m-%d")');
       case 'month':
-        return new \yii\db\Expression('DATE_FORMAT(created_at, "%Y-%m-%d")');
-      case 'year':
         return new \yii\db\Expression('DATE_FORMAT(created_at, "%Y-%m")');
       default:
         return new \yii\db\Expression('DATE_FORMAT(created_at, "%Y-%m-%d")');
