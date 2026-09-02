@@ -1171,7 +1171,10 @@ a.c-button:hover {
 
 .modal-header .modal-title {
   font-weight: 600 !important;
-  color: var(--color-text-light) !important;
+  /* Not --color-text-light: that token is the LIGHT-THEME text colour (#2d3748),
+     not a light-coloured text. .modal-header always carries the dark
+     --gradient-primary background in both themes, so the title is always white. */
+  color: #fff !important;
 }
 
 .modal-header .btn-close {
