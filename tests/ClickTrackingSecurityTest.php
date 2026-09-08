@@ -180,6 +180,56 @@ check('ping token cannot be upgraded to a redirect (no location)', null, $locati
 check('missing token does not redirect (status)', 400, $status);
 check('missing token does not redirect (no location)', null, $location);
 
+// Full round trip through the real URL builder. The token is signed over the
+// raw target, but travels through URL encoding, so encoding has to be
+// symmetric or every legitimate link breaks.
+// The Location header is percent-encoded where a raw byte would be illegal in a
+// header, so the expected value is not always identical to the stored URL.
+foreach ([
+    'plain' => [
+        'https://www.example-company.com/karriere',
+        'https://www.example-company.com/karriere',
+    ],
+    'query string' => [
+        'https://www.example-company.com/jobs?id=42&ref=fhb',
+        'https://www.example-company.com/jobs?id=42&ref=fhb',
+    ],
+    'umlauts' => [
+        'https://www.example-company.com/über-uns/stellenangebote',
+        'https://www.example-company.com/%C3%BCber-uns/stellenangebote',
+    ],
+    'space and escapes' => [
+        'https://www.example-company.com/a b/c+d?x=%20&y=a/b',
+        'https://www.example-company.com/a%20b/c+d?x=%20&y=a/b',
+    ],
+    'fragment' => [
+        'https://www.example-company.com/jobs#stelle-7',
+        'https://www.example-company.com/jobs#stelle-7',
+    ],
+] as $label => [$target, $expectedLocation]) {
+    makeApp();
+    $url = CrelishBaseHelper::getClickTrackingUrl(UUID, 'job', $target);
+
+    parse_str((string)parse_url($url, PHP_URL_QUERY), $params);
+    unset($params['r']);
+
+    [$status, $location] = callAction($params);
+    check("round trip survives encoding: $label (status)", 302, $status);
+    check("round trip survives encoding: $label (location)", $expectedLocation, $location);
+}
+
+// A signed URL without a host is still structurally rejected.
+makeApp();
+$hostless = 'https:///pfad-ohne-host';
+$hostlessToken = CrelishBaseHelper::generateClickToken(UUID, $hostless);
+[$status, $location] = callAction([
+    'uuid' => UUID,
+    'token' => $hostlessToken,
+    'redirect' => $hostless,
+]);
+check('URL without a host is rejected (status)', 400, $status);
+check('URL without a host is rejected (no location)', null, $location);
+
 // Array-valued parameters (?token[]=x) must not reach the token logic.
 [$status, $location] = callAction([
     'uuid' => UUID,

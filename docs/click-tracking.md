@@ -169,6 +169,17 @@ Regression tests for both live in `tests/ClickTrackingSecurityTest.php`:
 php tests/ClickTrackingSecurityTest.php
 ```
 
+### Redirect targets
+
+A signed target still has to be structurally sound: it needs an `http` or `https`
+scheme and a host, and it must not carry embedded credentials
+(`https://trusted.example.com@evil.example.net/`), which are a common way to make
+a hostile host look familiar in the address bar.
+
+Non-ASCII characters are allowed. Editorial URLs such as
+`https://example.com/über-uns` are valid and are percent-encoded when the
+`Location` header is written, since a header may only carry printable ASCII.
+
 ### Required configuration
 
 Tokens are signed with `Yii::$app->params['clickTokenSecret']` if set, otherwise

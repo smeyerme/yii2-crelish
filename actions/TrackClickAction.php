@@ -206,27 +206,51 @@ class TrackClickAction extends Action
             return $this->rejectRequest(true);
         }
 
-        // Validate URL format
-        if (!filter_var($url, FILTER_VALIDATE_URL)) {
-            Yii::warning('Click tracking: Invalid redirect URL: ' . $url, 'analytics');
+        $parts = parse_url($url);
+
+        // Note: FILTER_VALIDATE_URL is deliberately not used here. It rejects
+        // non-ASCII characters, so editorial URLs like https://example.com/über-uns
+        // would never resolve. The signature already guarantees the URL came from
+        // this application, so structure is all that needs checking.
+        if ($parts === false || empty($parts['host'])) {
+            Yii::warning('Click tracking: Malformed redirect URL: ' . $url, 'analytics');
             return $this->rejectRequest(true);
         }
 
         // Only allow http and https protocols
-        $scheme = parse_url($url, PHP_URL_SCHEME);
-        if (!in_array(strtolower((string)$scheme), ['http', 'https'], true)) {
+        $scheme = strtolower((string)($parts['scheme'] ?? ''));
+        if (!in_array($scheme, ['http', 'https'], true)) {
             Yii::warning('Click tracking: Invalid URL scheme: ' . $scheme, 'analytics');
             return $this->rejectRequest(true);
         }
 
         // Embedded credentials (https://user:pass@host) are a classic way to make
         // a hostile host look like a trusted one in the address bar.
-        if (parse_url($url, PHP_URL_USER) !== null || parse_url($url, PHP_URL_PASS) !== null) {
+        if (isset($parts['user']) || isset($parts['pass'])) {
             Yii::warning('Click tracking: Redirect URL contains credentials', 'analytics');
             return $this->rejectRequest(true);
         }
 
-        return Yii::$app->response->redirect($url, 302);
+        return Yii::$app->response->redirect($this->encodeForHeader($url), 302);
+    }
+
+    /**
+     * Percent-encode bytes that are not legal in an HTTP header value
+     *
+     * A Location header may only carry printable ASCII, but stored URLs can
+     * legitimately contain spaces and UTF-8 (umlauts, for instance). Existing
+     * percent-escapes are left alone, so this is safe to apply repeatedly.
+     *
+     * @param string $url Target URL
+     * @return string
+     */
+    private function encodeForHeader(string $url): string
+    {
+        return preg_replace_callback(
+            '/[^\x21-\x7E]/',
+            static fn(array $m): string => rawurlencode($m[0]),
+            $url
+        );
     }
 
     /**
