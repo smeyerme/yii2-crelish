@@ -6,9 +6,11 @@ use app\workspace\models\Asset;
 use Cocur\Slugify\Slugify;
 use MatthiasMullie\Minify\CSS;
 use Yii;
+use yii\base\InvalidConfigException;
 use yii\helpers\Url;
 use yii\helpers\VarDumper;
 use yii\web\JsExpression;
+use yii\web\Request;
 use yii\web\UploadedFile;
 
 /**
@@ -432,6 +434,73 @@ class CrelishBaseHelper
   }
 
   /**
+   * Length of the HMAC part of a click token, in hex characters
+   */
+  public const CLICK_TOKEN_HASH_LENGTH = 32;
+
+  /**
+   * Length of the base36 timestamp suffix of a click token
+   */
+  public const CLICK_TOKEN_TIME_LENGTH = 10;
+
+  /**
+   * Resolve the secret used to sign click tracking tokens
+   *
+   * Prefers an explicitly configured `clickTokenSecret` param and falls back to
+   * the application's cookie validation key. Never falls back to a constant or
+   * empty value: a guessable secret would let anyone mint valid tokens.
+   *
+   * @return string
+   * @throws InvalidConfigException if no usable secret is configured
+   */
+  private static function clickTokenSecret(): string
+  {
+    $secret = Yii::$app->params['clickTokenSecret'] ?? null;
+
+    if (empty($secret)) {
+      $request = Yii::$app->has('request') ? Yii::$app->get('request') : null;
+      if ($request instanceof Request) {
+        $secret = $request->cookieValidationKey;
+      }
+    }
+
+    if (empty($secret) || !is_string($secret)) {
+      throw new InvalidConfigException(
+        'Click tracking requires a secret. Set either params["clickTokenSecret"] '
+        . 'or the request component\'s cookieValidationKey.'
+      );
+    }
+
+    return $secret;
+  }
+
+  /**
+   * Calculate the HMAC part of a click token
+   *
+   * The redirect target is part of the signed payload, so a token is only valid
+   * for the exact destination it was generated for. Without that binding the
+   * tracking endpoint would act as an open redirect.
+   *
+   * @param string $uuid Element UUID
+   * @param string|null $redirectUrl Redirect target, or null for ping mode
+   * @param int $timestamp Unix timestamp the token was issued at
+   * @return string
+   * @throws InvalidConfigException
+   */
+  public static function clickTokenHash($uuid, ?string $redirectUrl, int $timestamp): string
+  {
+    // "\n" separates the fields so that no combination of values can produce the
+    // same payload as a different combination.
+    $payload = implode("\n", [(string)$uuid, (string)$redirectUrl, (string)$timestamp]);
+
+    return substr(
+      hash_hmac('sha256', $payload, self::clickTokenSecret()),
+      0,
+      self::CLICK_TOKEN_HASH_LENGTH
+    );
+  }
+
+  /**
    * Generate a secure token for click tracking
    *
    * This token is used to verify that click tracking requests are legitimate
@@ -444,14 +513,22 @@ class CrelishBaseHelper
    * </a>
    *
    * @param string $uuid Element UUID
+   * @param string|null $redirectUrl Redirect target the token should be valid for.
+   *   Null for ping mode; for redirect mode it must match the `redirect` query
+   *   parameter exactly.
    * @return string Secure token
+   * @throws InvalidConfigException
    */
-  public static function generateClickToken($uuid): string
+  public static function generateClickToken($uuid, ?string $redirectUrl = null): string
   {
     $timestamp = time();
-    $secret = Yii::$app->security->passwordHashStrategy;
-    $hash = substr(hash_hmac('sha256', $uuid . $timestamp, $secret), 0, 16);
-    $timeBase36 = str_pad(base_convert($timestamp, 10, 36), 10, '0', STR_PAD_LEFT);
+    $hash = self::clickTokenHash($uuid, $redirectUrl, $timestamp);
+    $timeBase36 = str_pad(
+      base_convert((string)$timestamp, 10, 36),
+      self::CLICK_TOKEN_TIME_LENGTH,
+      '0',
+      STR_PAD_LEFT
+    );
 
     return $hash . $timeBase36;
   }
@@ -480,8 +557,12 @@ class CrelishBaseHelper
    */
   public static function getClickTrackingUrl($uuid, $type = 'link', $targetUrl = null, $pageUuid = null): string
   {
-    // Generate secure token
-    $token = self::generateClickToken($uuid);
+    // Normalize to the exact value that will end up in the `redirect` parameter,
+    // because that is what the token is signed over.
+    $targetUrl = !empty($targetUrl) ? (string)$targetUrl : null;
+
+    // Generate secure token, bound to the redirect target
+    $token = self::generateClickToken($uuid, $targetUrl);
 
     // Get page UUID
     if (empty($pageUuid)) {
@@ -500,7 +581,7 @@ class CrelishBaseHelper
     }
 
     // Add redirect URL if provided (redirect mode)
-    if (!empty($targetUrl)) {
+    if ($targetUrl !== null) {
       $params['redirect'] = $targetUrl;
     }
 

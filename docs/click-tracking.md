@@ -100,14 +100,29 @@ ClickTrackingAsset::register($this);
 <a href="https://partner.com"
    target="_blank"
    rel="noopener noreferrer"
-   data-track-click="{{ chelper.getClickTrackingUrl(banner.uuid, 'banner', page.uuid) }}">
+   data-track-click="{{ chelper.getClickTrackingUrl(banner.uuid, 'banner', null, page.uuid) }}">
   Partner Link
+</a>
+```
+
+### Redirect Mode
+
+Instead of a background ping, the link itself can point at the tracking endpoint,
+which logs the click and then forwards the visitor. This is more reliable, because
+it does not depend on the browser completing a background request during
+navigation.
+
+```twig
+<a href="{{ chelper.getClickTrackingUrl(model.uuid, model.ctype, model.linkUrl) }}"
+   target="_blank"
+   rel="noopener noreferrer">
+  Partner Website
 </a>
 ```
 
 ## Helper Methods
 
-### `chelper.getClickTrackingUrl($uuid, $type, $pageUuid)`
+### `chelper.getClickTrackingUrl($uuid, $type, $targetUrl, $pageUuid)`
 
 Generates a complete tracking URL with security token.
 
@@ -115,18 +130,78 @@ Generates a complete tracking URL with security token.
 - `$uuid` (string, required) - Element UUID to track
 - `$type` (string, optional) - Element type (default: 'link')
   - Common types: 'ad', 'banner', 'link', 'button', 'cta'
+- `$targetUrl` (string, optional) - Redirect target. Provide it for redirect mode,
+  leave it out for ping mode.
 - `$pageUuid` (string, optional) - Page UUID (defaults to current page)
 
 **Returns:** String - Complete tracking URL
 
-### `chelper.generateClickToken($uuid)`
+### `chelper.generateClickToken($uuid, $redirectUrl)`
 
 Generates just the security token (usually not needed directly).
 
 **Parameters:**
 - `$uuid` (string, required) - Element UUID
+- `$redirectUrl` (string, optional) - Redirect target the token should be valid
+  for. Must be `null` for ping mode, and must match the `redirect` query
+  parameter exactly for redirect mode.
 
 **Returns:** String - Security token
+
+## Security
+
+The tracking endpoint is public and unauthenticated, and in redirect mode it
+forwards visitors to another site. That combination is attractive to phishing
+campaigns: a link on a trusted domain that quietly lands somewhere else.
+
+Two properties keep it safe, and both have to hold:
+
+1. **The redirect target is part of the signed token.** The token is an HMAC over
+   `uuid + redirect target + issue time`, so it is only valid for the exact
+   destination the application generated it for. Appending or swapping a
+   `redirect` parameter invalidates it.
+2. **A failed check never redirects.** Missing token, bad token, expired token and
+   exceeded rate limit all return `400`, never a `Location` header.
+
+Regression tests for both live in `tests/ClickTrackingSecurityTest.php`:
+
+```bash
+php tests/ClickTrackingSecurityTest.php
+```
+
+### Required configuration
+
+Tokens are signed with `Yii::$app->params['clickTokenSecret']` if set, otherwise
+with the `request` component's `cookieValidationKey`. If neither is configured,
+click tracking throws `InvalidConfigException` rather than falling back to a
+guessable value.
+
+A dedicated secret is preferable, because it can live outside version control and
+can be rotated without invalidating everyone's cookies:
+
+```php
+// config/params.php
+return [
+    'clickTokenSecret' => getenv('CLICK_TOKEN_SECRET'),
+];
+```
+
+Rotating the secret invalidates all outstanding tracking URLs. Those are
+regenerated on every page render, so the practical impact is limited to links in
+already-sent newsletters and in cached or indexed pages.
+
+### Token lifetime
+
+Tokens are valid for 30 days by default. Because the destination is signed, an old
+token cannot be repointed, so the window mainly limits how long a link can be
+replayed to inflate click counts. Adjust it per project if needed:
+
+```php
+'click' => [
+    'class' => 'giantbits\crelish\actions\TrackClickAction',
+    'tokenValidityWindow' => 604800, // 7 days
+],
+```
 
 ## Database Schema
 

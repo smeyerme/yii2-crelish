@@ -14,19 +14,29 @@ use yii\web\BadRequestHttpException;
  * This action is designed to be called via the HTML ping attribute for unobtrusive click tracking.
  * It includes security measures to prevent abuse and spam.
  *
- * Usage in templates:
+ * Usage in templates (build URLs with the helper, which signs them correctly):
  * <a href="https://external-site.com"
- *    ping="/crelish/track/click?uuid={{ element.uuid }}&type={{ element.ctype }}&token={{ chelper.generateClickToken(element.uuid) }}">
+ *    ping="{{ chelper.getClickTrackingUrl(element.uuid, element.ctype) }}">
  *   External Link
  * </a>
+ *
+ * Security: the token is an HMAC over uuid + redirect target + issue time. The
+ * redirect target is signed, so this endpoint can only forward visitors to URLs
+ * the application itself generated a link for, never to an attacker-supplied one.
  */
 class TrackClickAction extends Action
 {
     /**
      * Maximum time window for token validity (in seconds)
+     *
+     * Tokens are regenerated on every page render, but rendered pages live on in
+     * HTTP caches, CDNs, search indexes and sent newsletters, so a short window
+     * mostly breaks legitimate clicks. The redirect target is part of the signed
+     * payload, so an old token still cannot be pointed anywhere new.
+     *
      * @var int
      */
-    public $tokenValidityWindow = 3600; // 1 hour
+    public $tokenValidityWindow = 2592000; // 30 days
 
     /**
      * Rate limit: maximum clicks per session per element within time window
@@ -54,17 +64,22 @@ class TrackClickAction extends Action
      * - Ping mode (no redirect param): Returns 204 No Content, for use with HTML ping attribute
      * - Redirect mode (with redirect param): Logs click and redirects to target URL
      *
+     * A request that fails validation never redirects: ping mode answers 204,
+     * redirect mode answers 400.
+     *
      * @return Response
      * @throws BadRequestHttpException
      */
     public function run(): Response
     {
-        // Get parameters
-        $uuid = Yii::$app->request->get('uuid');
-        $type = Yii::$app->request->get('type', 'link');
-        $token = Yii::$app->request->get('token');
-        $pageUuid = Yii::$app->request->get('page');
-        $redirectUrl = Yii::$app->request->get('redirect');
+        // Get parameters. Query values are attacker-controlled and can arrive as
+        // arrays (?token[]=x), so anything not a string is discarded here rather
+        // than blowing up further down.
+        $uuid = $this->stringParam('uuid');
+        $type = $this->stringParam('type') ?? 'link';
+        $token = $this->stringParam('token');
+        $pageUuid = $this->stringParam('page');
+        $redirectUrl = $this->stringParam('redirect');
 
         // Determine mode based on redirect parameter
         $isRedirectMode = !empty($redirectUrl);
@@ -78,19 +93,19 @@ class TrackClickAction extends Action
         // Validate required parameters
         if (empty($uuid) || empty($token)) {
             Yii::warning('Click tracking: Missing required parameters (uuid or token)', 'analytics');
-            return $this->handleError($isRedirectMode, $redirectUrl);
+            return $this->rejectRequest($isRedirectMode);
         }
 
-        // Verify token to prevent unauthorized tracking
-        if (!$this->verifyClickToken($uuid, $token)) {
-            Yii::warning('Click tracking: Invalid token for UUID ' . $uuid . ' (token: ' . substr($token, 0, 10) . '...)', 'analytics');
-            return $this->handleError($isRedirectMode, $redirectUrl);
+        // Verify token to prevent unauthorized tracking and redirect abuse
+        if (!$this->verifyClickToken($uuid, $isRedirectMode ? $redirectUrl : null, $token)) {
+            Yii::warning('Click tracking: Invalid token for UUID ' . $uuid . ' (token: ' . substr($token, 0, 10) . '..., redirect: ' . ($redirectUrl ?: '-') . ')', 'analytics');
+            return $this->rejectRequest($isRedirectMode);
         }
 
         // Check rate limiting to prevent spam
         if (!$this->checkRateLimit($uuid)) {
             Yii::warning('Click tracking: Rate limit exceeded for UUID ' . $uuid, 'analytics');
-            return $this->handleError($isRedirectMode, $redirectUrl);
+            return $this->rejectRequest($isRedirectMode);
         }
 
         // Track the click if analytics is available
@@ -132,43 +147,83 @@ class TrackClickAction extends Action
     }
 
     /**
-     * Handle errors in both ping and redirect modes
+     * Read a query parameter, returning null unless it is a non-empty string
      *
-     * @param bool $isRedirectMode Whether redirect mode is active
-     * @param string|null $redirectUrl Target URL for redirect mode
-     * @return Response
+     * @param string $name Parameter name
+     * @return string|null
      */
-    private function handleError(bool $isRedirectMode, ?string $redirectUrl): Response
+    private function stringParam(string $name): ?string
     {
-        if ($isRedirectMode && !empty($redirectUrl)) {
-            return $this->safeRedirect($redirectUrl);
-        }
-        return Yii::$app->response;
+        $value = Yii::$app->request->get($name);
+
+        return (is_string($value) && $value !== '') ? $value : null;
     }
 
     /**
-     * Safely redirect to an external URL with validation
+     * Reject a request that failed validation
+     *
+     * Never redirects. Redirecting on a failed check would make the endpoint an
+     * open redirect: anyone could append their own `redirect` parameter and have
+     * this domain forward visitors to it, which is exactly what phishing
+     * campaigns look for.
+     *
+     * @param bool $isRedirectMode Whether redirect mode is active
+     * @return Response
+     */
+    private function rejectRequest(bool $isRedirectMode): Response
+    {
+        $response = Yii::$app->response;
+        $response->format = Response::FORMAT_RAW;
+
+        if ($isRedirectMode) {
+            // A person is waiting on this response, so say what happened.
+            $response->statusCode = 400;
+            $response->content = 'This link is invalid or has expired.';
+        } else {
+            // Ping mode is fire-and-forget in the background; stay quiet.
+            $response->statusCode = 204;
+            $response->content = '';
+        }
+
+        return $response;
+    }
+
+    /**
+     * Redirect to a target URL that has already passed signature verification
+     *
+     * The checks below are defence in depth. The signature is what makes the
+     * redirect safe; these merely stop a malformed editorial URL from producing
+     * a broken or dangerous Location header.
      *
      * @param string $url Target URL
      * @return Response
      */
     private function safeRedirect(string $url): Response
     {
+        // Reject control characters (header injection) before anything else
+        if (preg_match('/[\x00-\x1F\x7F]/', $url)) {
+            Yii::warning('Click tracking: Redirect URL contains control characters', 'analytics');
+            return $this->rejectRequest(true);
+        }
+
         // Validate URL format
         if (!filter_var($url, FILTER_VALIDATE_URL)) {
             Yii::warning('Click tracking: Invalid redirect URL: ' . $url, 'analytics');
-            Yii::$app->response->format = Response::FORMAT_RAW;
-            Yii::$app->response->statusCode = 400;
-            return Yii::$app->response;
+            return $this->rejectRequest(true);
         }
 
         // Only allow http and https protocols
         $scheme = parse_url($url, PHP_URL_SCHEME);
-        if (!in_array(strtolower($scheme), ['http', 'https'])) {
+        if (!in_array(strtolower((string)$scheme), ['http', 'https'], true)) {
             Yii::warning('Click tracking: Invalid URL scheme: ' . $scheme, 'analytics');
-            Yii::$app->response->format = Response::FORMAT_RAW;
-            Yii::$app->response->statusCode = 400;
-            return Yii::$app->response;
+            return $this->rejectRequest(true);
+        }
+
+        // Embedded credentials (https://user:pass@host) are a classic way to make
+        // a hostile host look like a trusted one in the address bar.
+        if (parse_url($url, PHP_URL_USER) !== null || parse_url($url, PHP_URL_PASS) !== null) {
+            Yii::warning('Click tracking: Redirect URL contains credentials', 'analytics');
+            return $this->rejectRequest(true);
         }
 
         return Yii::$app->response->redirect($url, 302);
@@ -178,42 +233,50 @@ class TrackClickAction extends Action
      * Verify the security token
      *
      * @param string $uuid Element UUID
+     * @param string|null $redirectUrl Redirect target the token must be bound to,
+     *   or null in ping mode
      * @param string $token Token to verify
      * @return bool
      */
-    private function verifyClickToken($uuid, $token): bool
+    private function verifyClickToken(string $uuid, ?string $redirectUrl, string $token): bool
     {
-        // Extract timestamp from token (last 10 characters are base36 timestamp)
-        if (strlen($token) < 20) {
+        $hashLength = CrelishBaseHelper::CLICK_TOKEN_HASH_LENGTH;
+        $timeLength = CrelishBaseHelper::CLICK_TOKEN_TIME_LENGTH;
+
+        if (strlen($token) !== $hashLength + $timeLength) {
             return false;
         }
 
-        $tokenHash = substr($token, 0, -10);
-        $tokenTime = base_convert(substr($token, -10), 36, 10);
+        $tokenHash = substr($token, 0, $hashLength);
+        $timePart = substr($token, -$timeLength);
+
+        // base_convert() silently ignores characters outside the source base, so
+        // reject anything that is not a well-formed base36 timestamp up front.
+        if (!preg_match('/^[0-9a-z]+$/', $timePart)) {
+            return false;
+        }
+
+        $tokenTime = (int)base_convert($timePart, 36, 10);
+        $currentTime = time();
+
+        // Reject tokens dated in the future (beyond minor clock skew)
+        if ($tokenTime > $currentTime + 300) {
+            return false;
+        }
 
         // Check if token is within validity window
-        $currentTime = time();
         if (($currentTime - $tokenTime) > $this->tokenValidityWindow) {
             return false;
         }
 
-        // Regenerate expected token and compare
-        $expectedHash = $this->generateTokenHash($uuid, $tokenTime);
+        try {
+            $expectedHash = CrelishBaseHelper::clickTokenHash($uuid, $redirectUrl, $tokenTime);
+        } catch (\Exception $e) {
+            Yii::error('Click tracking: Cannot verify token: ' . $e->getMessage(), 'analytics');
+            return false;
+        }
 
         return hash_equals($expectedHash, $tokenHash);
-    }
-
-    /**
-     * Generate token hash for verification
-     *
-     * @param string $uuid Element UUID
-     * @param int $timestamp Unix timestamp
-     * @return string
-     */
-    private function generateTokenHash($uuid, $timestamp): string
-    {
-        $secret = Yii::$app->security->passwordHashStrategy;
-        return substr(hash_hmac('sha256', $uuid . $timestamp, $secret), 0, 16);
     }
 
     /**
