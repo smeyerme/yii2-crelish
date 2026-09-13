@@ -8,6 +8,7 @@ use yii\base\InvalidRouteException;
 use yii\i18n\Formatter;
 use yii\web\Controller;
 use yii\helpers\Html;
+use yii\helpers\Json;
 use yii\helpers\Url;
 use yii\web\NotFoundHttpException;
 
@@ -383,22 +384,45 @@ class CrelishBaseController extends Controller
    * Scoped per ctype and record so two records do not share a tab. When the
    * server has already chosen a tab because of validation errors it sets
    * data-crelish-has-errors, and the restore stands down rather than fighting it.
+   *
+   * An unsaved record has no stable identity to key on, so persistence is
+   * skipped entirely (no read, no write) until the record has a uuid.
    */
   private function registerTabPersistenceJs(string $ctype): void
   {
-    $key = 'crelish.activeTab.' . $ctype . '.' . ($this->model->uuid ?: 'new');
+    if (!$this->model->uuid) {
+      return;
+    }
+
+    $key = 'crelish.activeTab.' . $ctype . '.' . $this->model->uuid;
+    $keyJs = Json::htmlEncode($key);
 
     $js = <<<JS
 (function () {
   var nav = document.querySelector('.crelish-form-tabs');
-  if (!nav || !window.sessionStorage) {
+  if (!nav) {
     return;
   }
 
-  var KEY = '{$key}';
+  var KEY = {$keyJs};
+
+  var storage = null;
+  try {
+    storage = window.sessionStorage;
+  } catch (e) {
+    storage = null;
+  }
+  if (!storage) {
+    return;
+  }
 
   if (nav.getAttribute('data-crelish-has-errors') !== '1') {
-    var saved = sessionStorage.getItem(KEY);
+    var saved = null;
+    try {
+      saved = storage.getItem(KEY);
+    } catch (e) {
+      saved = null;
+    }
     if (saved) {
       var button = nav.querySelector('[data-crelish-tab="' + saved + '"]');
       // A plain click goes through Bootstrap's own delegated tab handler, so
@@ -412,7 +436,11 @@ class CrelishBaseController extends Controller
   nav.addEventListener('shown.bs.tab', function (event) {
     var key = event.target.getAttribute('data-crelish-tab');
     if (key) {
-      sessionStorage.setItem(KEY, key);
+      try {
+        storage.setItem(KEY, key);
+      } catch (e) {
+        // Storage unavailable or full; nothing to remember.
+      }
     }
   });
 })();
