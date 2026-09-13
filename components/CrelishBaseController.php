@@ -337,12 +337,39 @@ class CrelishBaseController extends Controller
 
   private function renderFormStructure($form, $settings): string
   {
+    $ctype = $settings['ctype'] ?? $this->ctype;
+    $tabs = new CrelishFormTabs(
+      (array)($this->model->fieldDefinitions->tabs ?? []),
+      (string)$ctype
+    );
+    $errors = $this->model->errors;
 
     $html = Html::beginTag("div", ['class' => $settings['outerClass']]);
     $html .= $this->renderLanguageSelector();
-    $html .= Html::beginTag("div", ['class' => 'row']);
-    $html .= $this->renderTabs($form, $settings);
-    $html .= Html::endTag('div');
+
+    if ($tabs->isTabbed()) {
+      // Tabbed path: each pane opens its own .row, so no wrapper here.
+      $html .= $tabs->renderNav($errors);
+      $html .= $tabs->renderPanes(
+        fn($tab) => $this->renderTab($tab, $form, $settings),
+        $errors
+      );
+
+      // Inline rather than added to CrelishAsset, so the published-asset cache
+      // in web/assets/<hash>/ is not involved.
+      Yii::$app->view->registerCss(
+        '.crelish-form-tabs { margin-bottom: 1rem; }
+         .crelish-form-tabs .nav-link { cursor: pointer; }',
+        [],
+        'crelish-form-tabs'
+      );
+    } else {
+      // Legacy path, byte-identical to before: one row holding every group.
+      $html .= Html::beginTag("div", ['class' => 'row']);
+      $html .= $this->renderTabs($form, $settings);
+      $html .= Html::endTag('div');
+    }
+
     $html .= Html::endTag('div');
     $html .= Html::hiddenInput('save_n_return', '0', ['id' => 'save_n_return']);
     return $html;
