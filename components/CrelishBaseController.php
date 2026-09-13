@@ -713,10 +713,21 @@ JS;
   private function renderField($field, $form)
   {
     if (property_exists($field, 'translatable') && $field->translatable === true) {
-      return $this->renderTranslatableField($field, $form);
+      $html = (string) $this->renderTranslatableField($field, $form);
     } else {
-      return $this->buildCustomOrDefaultField($field, $form);
+      $html = (string) $this->buildCustomOrDefaultField($field, $form);
     }
+
+    // helpText has been declared on element fields for a long time without
+    // anything rendering it. jsonEditorNew reads `description` instead, and no
+    // element sets that, so there is no double render.
+    if (!empty($field->helpText)) {
+      $html .= Html::tag('p', Html::encode($field->helpText), [
+        'class' => 'text-muted small crelish-field-help',
+      ]);
+    }
+
+    return $html;
   }
 
   private function renderTranslatableField($field, $form): string
