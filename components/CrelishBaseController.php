@@ -363,6 +363,8 @@ class CrelishBaseController extends Controller
         [],
         'crelish-form-tabs'
       );
+
+      $this->registerTabPersistenceJs((string)$ctype);
     } else {
       // Legacy path, byte-identical to before: one row holding every group.
       $html .= Html::beginTag("div", ['class' => 'row']);
@@ -373,6 +375,50 @@ class CrelishBaseController extends Controller
     $html .= Html::endTag('div');
     $html .= Html::hiddenInput('save_n_return', '0', ['id' => 'save_n_return']);
     return $html;
+  }
+
+  /**
+   * Remember which tab the editor was on across the save redirect.
+   *
+   * Scoped per ctype and record so two records do not share a tab. When the
+   * server has already chosen a tab because of validation errors it sets
+   * data-crelish-has-errors, and the restore stands down rather than fighting it.
+   */
+  private function registerTabPersistenceJs(string $ctype): void
+  {
+    $key = 'crelish.activeTab.' . $ctype . '.' . ($this->model->uuid ?: 'new');
+
+    $js = <<<JS
+(function () {
+  var nav = document.querySelector('.crelish-form-tabs');
+  if (!nav || !window.sessionStorage) {
+    return;
+  }
+
+  var KEY = '{$key}';
+
+  if (nav.getAttribute('data-crelish-has-errors') !== '1') {
+    var saved = sessionStorage.getItem(KEY);
+    if (saved) {
+      var button = nav.querySelector('[data-crelish-tab="' + saved + '"]');
+      // A plain click goes through Bootstrap's own delegated tab handler, so
+      // this works whether or not the bootstrap object is exposed globally.
+      if (button) {
+        button.click();
+      }
+    }
+  }
+
+  nav.addEventListener('shown.bs.tab', function (event) {
+    var key = event.target.getAttribute('data-crelish-tab');
+    if (key) {
+      sessionStorage.setItem(KEY, key);
+    }
+  });
+})();
+JS;
+
+    Yii::$app->view->registerJs($js, \yii\web\View::POS_END, 'crelish-form-tabs');
   }
 
   private function renderLanguageSelector(): string
