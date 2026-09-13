@@ -210,7 +210,8 @@ JS;
 
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
+    // curl_close() is a no-op since PHP 8.0 and deprecated in 8.5; under Yii's
+    // error handler the deprecation throws and aborts the render.
 
     if ($httpCode !== 200) {
       throw new Exception('MJML API rendering failed with HTTP code ' . $httpCode);
