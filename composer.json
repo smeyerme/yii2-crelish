@@ -8,7 +8,7 @@
     ],
     "type": "yii2-extension",
     "license": "BSD-3-Clause",
-    "version": "0.21.10",
+    "version": "0.21.11",
     "minimum-stability": "dev",
     "prefer-stable": true,
     "support": {
@@ -29,7 +29,7 @@
     "require": {
         "php": ">=8.2.0",
         "yiisoft/yii2": "~2.0.53",
-        "symfony/yaml": "v6.3.12",
+        "symfony/yaml": "^6.4",
         "ksubileau/color-thief-php": "^1.4",
         "yiisoft/yii2-twig": "2.5.1",
         "yiisoft/yii2-bootstrap5": "2.0.50",

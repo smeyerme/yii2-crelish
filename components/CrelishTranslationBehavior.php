@@ -82,7 +82,14 @@
 				return;
 			}
 
-			$postData = \Yii::$app->request->post('CrelishDynamicModel', []);
+			$request = \Yii::$app->request;
+			
+			if (!$request instanceof \yii\web\Request) {
+				Yii::debug('No web request (console context), skipping translation save', __METHOD__);
+				return;
+			}
+			
+			$postData = $request->post('CrelishDynamicModel', []);
 
 			if(empty($postData['i18n'])) {
 				Yii::debug('No i18n data in POST, skipping translation save', __METHOD__);

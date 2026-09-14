@@ -8,6 +8,7 @@ use yii\base\InvalidRouteException;
 use yii\i18n\Formatter;
 use yii\web\Controller;
 use yii\helpers\Html;
+use yii\helpers\Json;
 use yii\helpers\Url;
 use yii\web\NotFoundHttpException;
 
@@ -337,15 +338,115 @@ class CrelishBaseController extends Controller
 
   private function renderFormStructure($form, $settings): string
   {
+    $ctype = $settings['ctype'] ?? $this->ctype;
+    $tabs = new CrelishFormTabs(
+      (array)($this->model->fieldDefinitions->tabs ?? []),
+      (string)$ctype
+    );
+    $errors = $this->model->errors;
 
     $html = Html::beginTag("div", ['class' => $settings['outerClass']]);
     $html .= $this->renderLanguageSelector();
-    $html .= Html::beginTag("div", ['class' => 'row']);
-    $html .= $this->renderTabs($form, $settings);
-    $html .= Html::endTag('div');
+
+    if ($tabs->isTabbed()) {
+      // Tabbed path: each pane opens its own .row, so no wrapper here.
+      $html .= $tabs->renderNav($errors);
+      $html .= $tabs->renderPanes(
+        fn($tab) => $this->renderTab($tab, $form, $settings),
+        $errors
+      );
+
+      // Inline rather than added to CrelishAsset, so the published-asset cache
+      // in web/assets/<hash>/ is not involved.
+      Yii::$app->view->registerCss(
+        '.crelish-form-tabs { margin-bottom: 1rem; }
+         .crelish-form-tabs .nav-link { cursor: pointer; }',
+        [],
+        'crelish-form-tabs'
+      );
+
+      $this->registerTabPersistenceJs((string)$ctype);
+    } else {
+      // Legacy path, byte-identical to before: one row holding every group.
+      $html .= Html::beginTag("div", ['class' => 'row']);
+      $html .= $this->renderTabs($form, $settings);
+      $html .= Html::endTag('div');
+    }
+
     $html .= Html::endTag('div');
     $html .= Html::hiddenInput('save_n_return', '0', ['id' => 'save_n_return']);
     return $html;
+  }
+
+  /**
+   * Remember which tab the editor was on across the save redirect.
+   *
+   * Scoped per ctype and record so two records do not share a tab. When the
+   * server has already chosen a tab because of validation errors it sets
+   * data-crelish-has-errors, and the restore stands down rather than fighting it.
+   *
+   * An unsaved record has no stable identity to key on, so persistence is
+   * skipped entirely (no read, no write) until the record has a uuid.
+   */
+  private function registerTabPersistenceJs(string $ctype): void
+  {
+    if (!$this->model->uuid) {
+      return;
+    }
+
+    $key = 'crelish.activeTab.' . $ctype . '.' . $this->model->uuid;
+    $keyJs = Json::htmlEncode($key);
+
+    $js = <<<JS
+(function () {
+  var nav = document.querySelector('.crelish-form-tabs');
+  if (!nav) {
+    return;
+  }
+
+  var KEY = {$keyJs};
+
+  var storage = null;
+  try {
+    storage = window.sessionStorage;
+  } catch (e) {
+    storage = null;
+  }
+  if (!storage) {
+    return;
+  }
+
+  if (nav.getAttribute('data-crelish-has-errors') !== '1') {
+    var saved = null;
+    try {
+      saved = storage.getItem(KEY);
+    } catch (e) {
+      saved = null;
+    }
+    if (saved) {
+      var button = nav.querySelector('[data-crelish-tab="' + saved + '"]');
+      // A plain click goes through Bootstrap's own delegated tab handler, so
+      // this works whether or not the bootstrap object is exposed globally.
+      if (button) {
+        button.click();
+      }
+    }
+  }
+
+  nav.addEventListener('shown.bs.tab', function (event) {
+    var key = event.target.getAttribute('data-crelish-tab');
+    if (key) {
+      try {
+        storage.setItem(KEY, key);
+      } catch (e) {
+        // Storage unavailable or full; nothing to remember.
+      }
+    }
+  });
+})();
+JS;
+
+    Yii::$app->view->registerJs($js, \yii\web\View::POS_END, 'crelish-form-tabs');
   }
 
   private function renderLanguageSelector(): string
@@ -612,10 +713,21 @@ JS;
   private function renderField($field, $form)
   {
     if (property_exists($field, 'translatable') && $field->translatable === true) {
-      return $this->renderTranslatableField($field, $form);
+      $html = (string) $this->renderTranslatableField($field, $form);
     } else {
-      return $this->buildCustomOrDefaultField($field, $form);
+      $html = (string) $this->buildCustomOrDefaultField($field, $form);
     }
+
+    // helpText has been declared on element fields for a long time without
+    // anything rendering it. jsonEditorNew reads `description` instead, and no
+    // element sets that, so there is no double render.
+    if (!empty($field->helpText)) {
+      $html .= Html::tag('p', Html::encode($field->helpText), [
+        'class' => 'text-muted small crelish-field-help',
+      ]);
+    }
+
+    return $html;
   }
 
   private function renderTranslatableField($field, $form): string

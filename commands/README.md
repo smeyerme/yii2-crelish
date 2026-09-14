@@ -1,4 +1,4 @@
-Okay# Crelish Analytics Console Commands
+# Crelish Analytics Console Commands
 
 This directory contains console controllers for managing analytics data, including bot detection and data aggregation.
 
@@ -6,6 +6,7 @@ This directory contains console controllers for managing analytics data, includi
 
 - [Bot Detection Controller](#bot-detection-controller)
 - [Analytics Aggregation Controller](#analytics-aggregation-controller)
+- [Track Click Forensics](#track-click-forensics)
 - [Recommended Workflow](#recommended-workflow)
 - [Cron Job Setup](#cron-job-setup)
 
@@ -766,6 +767,65 @@ CREATE INDEX idx_session_bot ON analytics_sessions(session_id, is_bot);
    ```bash
    php yii crelish/analytics-aggregation/partner-stats --verbose
    ```
+
+---
+
+## Track Click Forensics
+
+**File:** `analyze-track-clicks.php`
+**Standalone CLI script — not a Yii console controller**
+
+### Overview
+
+Before 0.21.10, `/crelish/track/click` redirected to the `redirect` parameter even
+when token validation failed, which made it an open redirect. It was abused in
+the wild to launder phishing links through a trusted domain.
+
+This script answers the follow-up question: did any of those abusive calls also
+pollute the click statistics? The old code returned *before* writing to
+`analytics_element_views` whenever the token check failed, so a foreign click was
+only counted when its token happened to still be valid — signature correct and
+younger than `tokenValidityWindow`. Since the old signature used an empty key,
+that check can be reproduced exactly from the access log.
+
+`analytics_element_views` stores neither IP nor URL, so the database alone cannot
+identify these rows. The web server access log is the only source that records the
+`redirect` parameter.
+
+### Usage
+
+Runs on plain PHP with no dependencies, so it can be copied straight to the server:
+
+```bash
+php analyze-track-clicks.php --own-hosts=example.com,www.example.com ~/logs/*.log
+```
+
+| Option | Meaning |
+|---|---|
+| `--own-hosts=a.de,b.de` | Legitimate redirect targets. Everything else counts as foreign. Without it, every target is treated as foreign. |
+| `--window=3600` | The `tokenValidityWindow` the old code ran with, in seconds. |
+| `--csv=path.csv` | Where to write the hit list. Defaults to `zu-loeschende-klicks.csv` in the working directory. |
+
+### Output
+
+The summary splits foreign redirects into "only redirected" and "landed in the
+statistics". If nothing landed, there is nothing to clean up and the script says
+so. Otherwise it writes a CSV of `element_uuid`, `element_type` and `created_at`
+identifying the rows to delete.
+
+After deleting them, recompute the aggregates for each affected day — the numbers
+have already been rolled up into `analytics_element_daily`, `analytics_element_monthly`
+and `analytics_partner_stats`:
+
+```bash
+php yii crelish/analytics-aggregation/daily 2026-03-05
+```
+
+### Scope
+
+Only relevant for tokens issued before 0.21.10. Since then the redirect target is
+part of the signed payload and a failed check answers `400` without a `Location`
+header, so no foreign target can get through in the first place.
 
 ---
 
