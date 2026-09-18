@@ -85,6 +85,76 @@ final class CrelishFormTabs
     return $this->tabs[0]->key ?? '';
   }
 
+  /**
+   * The client-side counterpart of activeKey().
+   *
+   * activeKey() only runs when the request reaches the server. Yii validates in
+   * the browser first, so an empty required field on a hidden pane blocks the
+   * submit with no page load: the error is rendered where nobody can see it, the
+   * first tab stays active, and the form looks like it ignores the save button.
+   *
+   * After each validation round this opens the first tab carrying an error and
+   * puts the count on every affected tab — the same two signals the server-side
+   * path gives. It reads the panes rather than a field-to-tab map so that
+   * dynamically added rows (json-editor, matrix) are covered too.
+   */
+  public static function validationScript(string $formId): string
+  {
+    $id = json_encode($formId, JSON_THROW_ON_ERROR);
+
+    return <<<JS
+(function () {
+  var form = document.getElementById({$id});
+  var nav = document.querySelector('.crelish-form-tabs');
+  // Yii fires afterValidate as a jQuery event; without jQuery there is nothing
+  // to listen to, and the server-side path still covers the submitted case.
+  if (!form || !nav || !window.jQuery) {
+    return;
+  }
+
+  function sync() {
+    var firstWithErrors = null;
+
+    nav.querySelectorAll('[data-crelish-tab]').forEach(function (button) {
+      var target = button.getAttribute('data-bs-target');
+      var pane = target ? document.querySelector(target) : null;
+      if (!pane) {
+        return;
+      }
+
+      var count = pane.querySelectorAll('.has-error, .is-invalid').length;
+      var badge = button.querySelector('.badge');
+
+      if (count > 0) {
+        button.classList.add('text-danger');
+        if (!badge) {
+          badge = document.createElement('span');
+          badge.className = 'badge bg-danger ms-1';
+          button.appendChild(badge);
+        }
+        badge.textContent = String(count);
+        if (!firstWithErrors) {
+          firstWithErrors = button;
+        }
+      } else {
+        button.classList.remove('text-danger');
+        if (badge) {
+          badge.remove();
+        }
+      }
+    });
+
+    // Only pull the editor away from their tab when the errors are elsewhere.
+    if (firstWithErrors && !firstWithErrors.classList.contains('active')) {
+      firstWithErrors.click();
+    }
+  }
+
+  window.jQuery(form).on('afterValidate', sync);
+})();
+JS;
+  }
+
   public function renderNav(array $errors): string
   {
     $active = $this->activeKey($errors);
