@@ -366,6 +366,14 @@ class CrelishBaseController extends Controller
       );
 
       $this->registerTabPersistenceJs((string)$ctype);
+
+      // Client-side validation never reaches activeKey(): it blocks the submit
+      // in the browser, so without this an error on a hidden pane is invisible.
+      Yii::$app->view->registerJs(
+        CrelishFormTabs::validationScript((string)$settings['id']),
+        \yii\web\View::POS_END,
+        'crelish-form-tabs-validation'
+      );
     } else {
       // Legacy path, byte-identical to before: one row holding every group.
       $html .= Html::beginTag("div", ['class' => 'row']);
