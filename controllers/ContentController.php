@@ -363,8 +363,10 @@ class ContentController extends CrelishBaseController
     $uuid = \Yii::$app->request->get('uuid');
     $model = new CrelishDynamicModel(['ctype' => $ctype, 'uuid' => $uuid]);
 
-    if ($model) {
-      $model->delete();
+    // Der Konstruktor liefert immer ein Objekt; ob die uuid auf einen Datensatz
+    // zeigte, sagt erst delete(). Sonst meldet die Seite einen Erfolg, der nie
+    // stattgefunden hat.
+    if ($model->delete()) {
       Yii::$app->session->setFlash('success', Yii::t("crelish", 'Content was deleted successfully...'));
     } else {
       Yii::$app->session->setFlash('warning', Yii::t("crelish", 'Content could not be deleted.'));

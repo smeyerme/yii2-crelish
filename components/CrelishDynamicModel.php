@@ -176,7 +176,16 @@ class CrelishDynamicModel extends DynamicModel
         $modelClass = CrelishModelResolver::getModelClass($this->_ctype);
         $rawData = $modelClass::find()->where(['uuid' => $this->_uuid])->one();
 
-        if ($rawData && $rawData->hasMethod('loadAllTranslations')) {
+        // Kein Treffer: die uuid kam ungeprüft aus der URL und darf nicht im
+        // Modell stehen bleiben, wo sie andernorts in Markup und Storage-Keys
+        // landet. Der json-Zweig unten hält es seit jeher so.
+        if (!$rawData) {
+          $this->attributes = null;
+          $this->uuid = null;
+          return;
+        }
+
+        if ($rawData->hasMethod('loadAllTranslations')) {
           $this->allTranslations = $rawData->loadAllTranslations();
         }
         break;
@@ -360,6 +369,13 @@ class CrelishDynamicModel extends DynamicModel
 
   public function delete()
   {
+    // Ohne uuid gibt es nichts zu löschen — das ist der Fall, wenn die uuid aus
+    // der URL auf keinen Datensatz zeigte und loadModelData() sie verworfen hat.
+    // Der Storage nimmt einen string, null quittiert er mit einem TypeError.
+    if (empty($this->uuid)) {
+      return false;
+    }
+
     // Use the storage factory to get the appropriate storage implementation
     $storage = CrelishStorageFactory::getStorage($this->ctype);
     
