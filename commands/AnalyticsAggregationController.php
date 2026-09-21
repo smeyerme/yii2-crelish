@@ -52,6 +52,15 @@ class AnalyticsAggregationController extends Controller
     public $optimize = false;
 
     /**
+     * @var bool Delete raw rows even for days that were never aggregated.
+     *
+     * Deliberately separate from --force: --force only answers the interactive
+     * prompt, which cron must do, and must never double as permission to
+     * destroy un-aggregated traffic.
+     */
+    public $skipAggregationCheck = false;
+
+    /**
      * @var bool Skip the interactive confirmation in cleanup.
      *
      * Yii's confirm() returns its default (false) when stdin is empty, so an
@@ -72,6 +81,7 @@ class AnalyticsAggregationController extends Controller
             'batchSize',
             'force',
             'optimize',
+            'skipAggregationCheck',
         ]);
     }
 
@@ -540,25 +550,31 @@ class AnalyticsAggregationController extends Controller
 
         $this->stdout("Cutoff date: {$cutoffDate}\n\n");
 
-        // Check if we have aggregated data for the period we're about to delete
-        $aggregatesCutoff = date('Y-m-d', strtotime("-{$this->retentionDays} days"));
-        $hasElementAggregates = $db->createCommand("
-            SELECT COUNT(*) FROM {{%analytics_element_daily}}
-            WHERE date < :cutoff
-        ")->bindValue(':cutoff', $aggregatesCutoff)->queryScalar();
+        // Verify every day about to be deleted actually made it into the daily
+        // aggregates. The previous check only asked whether *any* aggregate row
+        // existed before the cutoff, which is true as soon as the site has any
+        // history at all - so a multi-month aggregation outage sailed straight
+        // past it and the raw rows were deleted unaggregated.
+        if (!$this->skipAggregationCheck) {
+            $unaggregated = $this->findUnaggregatedDays($cutoffDate);
 
-        $hasPageAggregates = $db->createCommand("
-            SELECT COUNT(*) FROM {{%analytics_page_daily}}
-            WHERE date < :cutoff
-        ")->bindValue(':cutoff', $aggregatesCutoff)->queryScalar();
+            if (!empty($unaggregated)) {
+                $shown = array_slice($unaggregated, 0, 10);
 
-        if ($hasElementAggregates == 0 && $hasPageAggregates == 0) {
-            $this->stdout("⚠ No aggregated data found for period before {$aggregatesCutoff}\n", Console::FG_YELLOW);
-            $this->stdout("Run daily aggregation first to preserve data!\n", Console::FG_YELLOW);
+                $this->stderr("\n✗ Refusing to delete: " . count($unaggregated)
+                    . " day(s) in the deletion range have raw traffic but no daily aggregate.\n", Console::FG_RED);
+                $this->stderr("  " . implode(', ', $shown)
+                    . (count($unaggregated) > count($shown) ? ', ...' : '') . "\n\n", Console::FG_RED);
+                $this->stderr("Deleting now would lose this traffic permanently. Run:\n", Console::FG_YELLOW);
+                $this->stderr("  yii crelish/analytics-aggregation/backfill <days>\n\n", Console::FG_YELLOW);
+                $this->stderr("Override with --skipAggregationCheck=1 only if the loss is intended.\n", Console::FG_YELLOW);
 
-            if (!$this->confirmDestructive("Continue anyway?")) {
-                return ExitCode::OK;
+                return ExitCode::UNSPECIFIED_ERROR;
             }
+
+            $this->stdout("✓ Aggregate coverage verified for the deletion range\n\n", Console::FG_GREEN);
+        } else {
+            $this->stdout("⚠ Aggregation coverage check skipped (--skipAggregationCheck)\n\n", Console::FG_YELLOW);
         }
 
         // Count records to be deleted (element_views doesn't have is_bot)
@@ -688,6 +704,114 @@ class AnalyticsAggregationController extends Controller
         $this->stdout("\nCleanup completed successfully\n", Console::FG_GREEN);
 
         return ExitCode::OK;
+    }
+
+    /**
+     * Find days in the deletion range that hold reportable raw traffic but have
+     * no corresponding row in the daily aggregates.
+     *
+     * @param string $cutoffDate Rows older than this are the ones to be deleted
+     * @return string[] Y-m-d dates, ascending
+     */
+    protected function findUnaggregatedDays(string $cutoffDate): array
+    {
+        // Both streams are checked independently: actionDaily() aggregates element
+        // views and page views in separate statements, so one can succeed while the
+        // other throws, leaving a day half-covered.
+        $days = array_merge(
+            $this->findGapDays(
+                $cutoffDate,
+                '{{%analytics_element_daily}}',
+                "SELECT EXISTS (
+                    SELECT 1
+                    FROM {{%analytics_element_views}} ev
+                    INNER JOIN {{%analytics_sessions}} s ON ev.session_id = s.session_id
+                    WHERE ev.created_at >= :start AND ev.created_at < :end
+                      AND s.is_bot = 0
+                 )",
+                "SELECT MIN(created_at) FROM {{%analytics_element_views}} WHERE created_at < :cutoff"
+            ),
+            $this->findGapDays(
+                $cutoffDate,
+                '{{%analytics_page_daily}}',
+                "SELECT EXISTS (
+                    SELECT 1
+                    FROM {{%analytics_page_views}}
+                    WHERE created_at >= :start AND created_at < :end
+                      AND is_bot = 0
+                 )",
+                "SELECT MIN(created_at) FROM {{%analytics_page_views}} WHERE created_at < :cutoff AND is_bot = 0"
+            )
+        );
+
+        $days = array_values(array_unique($days));
+        sort($days);
+
+        return $days;
+    }
+
+    /**
+     * Days holding reportable raw traffic with no row in the given aggregate table.
+     *
+     * @param string $cutoffDate Rows older than this are the ones to be deleted
+     * @param string $aggregateTable Aggregate table to test coverage against
+     * @param string $probeSql EXISTS query taking :start and :end
+     * @param string $firstRawSql MIN(created_at) query taking :cutoff
+     * @return string[] Y-m-d dates
+     */
+    protected function findGapDays(
+        string $cutoffDate,
+        string $aggregateTable,
+        string $probeSql,
+        string $firstRawSql
+    ): array {
+        $db = Yii::$app->db;
+        $cutoffDay = substr($cutoffDate, 0, 10);
+
+        $firstRaw = $db->createCommand($firstRawSql)
+            ->bindValue(':cutoff', $cutoffDate)
+            ->queryScalar();
+
+        if ($firstRaw === null) {
+            return [];
+        }
+
+        // Day list comes from the small aggregate table, so the expensive per-day
+        // probe below only runs for days already missing a row - normally none.
+        $covered = array_flip($db->createCommand("
+            SELECT DISTINCT date FROM {$aggregateTable}
+            WHERE date >= :from AND date < :to
+        ")
+            ->bindValue(':from', substr($firstRaw, 0, 10))
+            ->bindValue(':to', $cutoffDay)
+            ->queryColumn());
+
+        $gaps = [];
+        $day = new \DateTimeImmutable(substr($firstRaw, 0, 10));
+        $end = new \DateTimeImmutable($cutoffDay);
+        $oneDay = new \DateInterval('P1D');
+
+        for (; $day < $end; $day = $day->add($oneDay)) {
+            $date = $day->format('Y-m-d');
+
+            if (isset($covered[$date])) {
+                continue;
+            }
+
+            // A day whose only raw rows are bot or orphaned traffic is not a gap:
+            // aggregation legitimately produces nothing for it, and reporting it
+            // would block cleanup permanently.
+            $hasReportable = $db->createCommand($probeSql)
+                ->bindValue(':start', $date . ' 00:00:00')
+                ->bindValue(':end', $day->add($oneDay)->format('Y-m-d') . ' 00:00:00')
+                ->queryScalar();
+
+            if ($hasReportable) {
+                $gaps[] = $date;
+            }
+        }
+
+        return $gaps;
     }
 
     /**
