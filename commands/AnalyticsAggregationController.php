@@ -39,6 +39,28 @@ class AnalyticsAggregationController extends Controller
     public $verbose = false;
 
     /**
+     * @var int Rows deleted per statement during cleanup
+     */
+    public $batchSize = 5000;
+
+    /**
+     * @var bool Run OPTIMIZE TABLE after cleanup to return freed space to disk.
+     *
+     * Off by default: on InnoDB this rebuilds the table, needs roughly its size
+     * again in free disk space, and holds a lock for the duration.
+     */
+    public $optimize = false;
+
+    /**
+     * @var bool Skip the interactive confirmation in cleanup.
+     *
+     * Yii's confirm() returns its default (false) when stdin is empty, so an
+     * unattended cron run silently aborts the cleanup unless this is set (or
+     * the command is invoked with --interactive=0).
+     */
+    public $force = false;
+
+    /**
      * Define command options
      */
     public function options($actionID)
@@ -47,6 +69,9 @@ class AnalyticsAggregationController extends Controller
             'dryRun',
             'retentionDays',
             'verbose',
+            'batchSize',
+            'force',
+            'optimize',
         ]);
     }
 
@@ -59,6 +84,8 @@ class AnalyticsAggregationController extends Controller
             'd' => 'dryRun',
             'r' => 'retentionDays',
             'v' => 'verbose',
+            'b' => 'batchSize',
+            'f' => 'force',
         ]);
     }
 
@@ -83,6 +110,11 @@ class AnalyticsAggregationController extends Controller
 
         $db = Yii::$app->db;
 
+        // Half-open [start, end) range instead of DATE(created_at) = :date, which
+        // is not sargable and forces a full table scan on every query below.
+        $rangeStart = $targetDate . ' 00:00:00';
+        $rangeEnd = date('Y-m-d', strtotime($targetDate . ' +1 day')) . ' 00:00:00';
+
         // Check if we have element view data for this date
         // Note: analytics_element_views doesn't have is_bot, we join with sessions
         // IMPORTANT: Use INNER JOIN to exclude orphaned element views without valid sessions
@@ -90,15 +122,15 @@ class AnalyticsAggregationController extends Controller
             SELECT COUNT(*)
             FROM {{%analytics_element_views}} ev
             INNER JOIN {{%analytics_sessions}} s ON ev.session_id = s.session_id
-            WHERE DATE(ev.created_at) = :date AND s.is_bot = 0
-        ")->bindValue(':date', $targetDate)->queryScalar();
+            WHERE ev.created_at >= :start AND ev.created_at < :end AND s.is_bot = 0
+        ")->bindValue(':start', $rangeStart)->bindValue(':end', $rangeEnd)->queryScalar();
 
         // Check if we have page view data for this date
         $pageViewCount = $db->createCommand("
             SELECT COUNT(*)
             FROM {{%analytics_page_views}}
-            WHERE DATE(created_at) = :date AND is_bot = 0
-        ")->bindValue(':date', $targetDate)->queryScalar();
+            WHERE created_at >= :start AND created_at < :end AND is_bot = 0
+        ")->bindValue(':start', $rangeStart)->bindValue(':end', $rangeEnd)->queryScalar();
 
         if ($elementViewCount == 0 && $pageViewCount == 0) {
             $this->stdout("No data found for {$targetDate}\n", Console::FG_YELLOW);
@@ -130,7 +162,7 @@ class AnalyticsAggregationController extends Controller
                         COUNT(DISTINCT CASE WHEN ev.user_id IS NOT NULL AND ev.user_id > 0 THEN ev.user_id END) as unique_users
                     FROM {{%analytics_element_views}} ev
                     INNER JOIN {{%analytics_sessions}} s ON ev.session_id = s.session_id
-                    WHERE DATE(ev.created_at) = :date
+                    WHERE ev.created_at >= :start AND ev.created_at < :end
                         AND s.is_bot = 0
                     GROUP BY DATE(ev.created_at), ev.element_uuid, ev.element_type, ev.page_uuid, ev.type
                     ON DUPLICATE KEY UPDATE
@@ -138,7 +170,7 @@ class AnalyticsAggregationController extends Controller
                         unique_sessions = VALUES(unique_sessions),
                         unique_users = VALUES(unique_users),
                         updated_at = NOW()
-                ")->bindValue(':date', $targetDate)->execute();
+                ")->bindValue(':start', $rangeStart)->bindValue(':end', $rangeEnd)->execute();
 
                 $this->stdout("✓ Aggregated {$aggregated} element view records\n", Console::FG_GREEN);
 
@@ -164,14 +196,14 @@ class AnalyticsAggregationController extends Controller
                         COUNT(DISTINCT session_id) as unique_sessions,
                         COUNT(DISTINCT CASE WHEN user_id IS NOT NULL AND user_id > 0 THEN user_id END) as unique_users
                     FROM {{%analytics_page_views}}
-                    WHERE DATE(created_at) = :date AND is_bot = 0
+                    WHERE created_at >= :start AND created_at < :end AND is_bot = 0
                     GROUP BY DATE(created_at), page_uuid, url
                     ON DUPLICATE KEY UPDATE
                         total_views = VALUES(total_views),
                         unique_sessions = VALUES(unique_sessions),
                         unique_users = VALUES(unique_users),
                         updated_at = NOW()
-                ")->bindValue(':date', $targetDate)->execute();
+                ")->bindValue(':start', $rangeStart)->bindValue(':end', $rangeEnd)->execute();
 
                 $this->stdout("✓ Aggregated {$pageAggregated} page view records\n", Console::FG_GREEN);
 
@@ -524,7 +556,7 @@ class AnalyticsAggregationController extends Controller
             $this->stdout("⚠ No aggregated data found for period before {$aggregatesCutoff}\n", Console::FG_YELLOW);
             $this->stdout("Run daily aggregation first to preserve data!\n", Console::FG_YELLOW);
 
-            if (!$this->confirm("Continue anyway?")) {
+            if (!$this->confirmDestructive("Continue anyway?")) {
                 return ExitCode::OK;
             }
         }
@@ -540,30 +572,53 @@ class AnalyticsAggregationController extends Controller
             WHERE created_at < :cutoff AND is_bot = 0
         ")->bindValue(':cutoff', $cutoffDate)->queryScalar();
 
+        // Only orphans newer than the cutoff are counted here: anything older is
+        // already covered by the age-based delete above, which runs first. This
+        // keeps the reported total from double-counting the same rows.
+        $orphanedElementViewsCount = $db->createCommand("
+            SELECT COUNT(*) FROM {{%analytics_element_views}} ev
+            LEFT JOIN {{%analytics_sessions}} s ON ev.session_id = s.session_id
+            WHERE s.session_id IS NULL AND ev.created_at >= :cutoff
+        ")->bindValue(':cutoff', $cutoffDate)->queryScalar();
+
+        $orphanedSessionsCount = $db->createCommand("
+            SELECT COUNT(*) FROM {{%analytics_sessions}} s
+            WHERE s.created_at < :cutoff
+              AND NOT EXISTS (
+                SELECT 1 FROM {{%analytics_page_views}} pv WHERE pv.session_id = s.session_id
+              )
+        ")->bindValue(':cutoff', $cutoffDate)->queryScalar();
+
         $this->stdout("Records to delete:\n");
-        $this->stdout("  Element views: " . number_format($elementViewsCount) . "\n");
-        $this->stdout("  Page views: " . number_format($pageViewsCount) . "\n\n");
+        $this->stdout("  Element views (older than cutoff): " . number_format($elementViewsCount) . "\n");
+        $this->stdout("  Element views (orphaned, any age): " . number_format($orphanedElementViewsCount) . "\n");
+        $this->stdout("  Page views: " . number_format($pageViewsCount) . "\n");
+        $this->stdout("  Sessions (orphaned, older than cutoff): " . number_format($orphanedSessionsCount) . "\n\n");
 
         if ($this->dryRun) {
             $this->stdout("Would delete these records (dry run)\n", Console::FG_YELLOW);
             return ExitCode::OK;
         }
 
-        if ($elementViewsCount + $pageViewsCount == 0) {
+        $totalToDelete = $elementViewsCount + $pageViewsCount
+            + $orphanedElementViewsCount + $orphanedSessionsCount;
+
+        if ($totalToDelete == 0) {
             $this->stdout("No records to delete\n", Console::FG_GREEN);
             return ExitCode::OK;
         }
 
-        if (!$this->confirm("Delete " . number_format($elementViewsCount + $pageViewsCount) . " records?")) {
+        if (!$this->confirmDestructive("Delete " . number_format($totalToDelete) . " records?")) {
             $this->stdout("Aborted\n");
             return ExitCode::OK;
         }
 
         // Delete old element views (no is_bot column)
         try {
-            $deleted = $db->createCommand()
-                ->delete('{{%analytics_element_views}}', ['<', 'created_at', $cutoffDate])
-                ->execute();
+            $deleted = $this->deleteInBatches(
+                "DELETE FROM {{%analytics_element_views}} WHERE created_at < :cutoff LIMIT :limit",
+                [':cutoff' => $cutoffDate]
+            );
 
             $this->stdout("✓ Deleted " . number_format($deleted) . " element view records\n", Console::FG_GREEN);
         } catch (\Exception $e) {
@@ -572,32 +627,167 @@ class AnalyticsAggregationController extends Controller
 
         // Delete old page views
         try {
-            $deleted = $db->createCommand()
-                ->delete('{{%analytics_page_views}}', [
-                    'and',
-                    ['<', 'created_at', $cutoffDate],
-                    ['is_bot' => 0]
-                ])
-                ->execute();
+            $deleted = $this->deleteInBatches(
+                "DELETE FROM {{%analytics_page_views}} WHERE created_at < :cutoff AND is_bot = 0 LIMIT :limit",
+                [':cutoff' => $cutoffDate]
+            );
 
             $this->stdout("✓ Deleted " . number_format($deleted) . " page view records\n", Console::FG_GREEN);
         } catch (\Exception $e) {
             $this->stderr("✗ Error deleting page views: " . $e->getMessage() . "\n", Console::FG_RED);
         }
 
-        // Optimize tables
-        $this->stdout("\nOptimizing tables...\n");
+        // Delete element views whose session no longer exists. These are invisible
+        // to every report (all aggregation INNER JOINs analytics_sessions), so they
+        // are pure dead weight. Previously this was only possible by hand, via
+        // commands/CLEANUP_ORPHANED_ELEMENT_VIEWS.sql.
         try {
-            $db->createCommand("OPTIMIZE TABLE {{%analytics_element_views}}")->execute();
-            $db->createCommand("OPTIMIZE TABLE {{%analytics_page_views}}")->execute();
-            $this->stdout("✓ Tables optimized\n", Console::FG_GREEN);
+            $deleted = $this->deleteOrphanedElementViews();
+            $this->stdout("✓ Deleted " . number_format($deleted) . " orphaned element view records\n", Console::FG_GREEN);
         } catch (\Exception $e) {
-            $this->stderr("✗ Error optimizing tables: " . $e->getMessage() . "\n", Console::FG_RED);
+            $this->stderr("✗ Error deleting orphaned element views: " . $e->getMessage() . "\n", Console::FG_RED);
+        }
+
+        // Delete sessions that no longer have any page views referencing them.
+        // Without this analytics_sessions grows without bound - it was never
+        // covered by cleanup, and its rows outlive the page views they describe.
+        try {
+            $deleted = $this->deleteInBatches(
+                "DELETE FROM {{%analytics_sessions}}
+                 WHERE created_at < :cutoff
+                   AND NOT EXISTS (
+                     SELECT 1 FROM {{%analytics_page_views}} pv
+                     WHERE pv.session_id = {{%analytics_sessions}}.session_id
+                   )
+                 LIMIT :limit",
+                [':cutoff' => $cutoffDate]
+            );
+
+            $this->stdout("✓ Deleted " . number_format($deleted) . " orphaned session records\n", Console::FG_GREEN);
+        } catch (\Exception $e) {
+            $this->stderr("✗ Error deleting sessions: " . $e->getMessage() . "\n", Console::FG_RED);
+        }
+
+        // Optimize tables. On InnoDB this rebuilds the table to return freed pages
+        // to the filesystem; it needs roughly the table's size in free disk space
+        // and locks the table for the duration, so it is opt-in.
+        if ($this->optimize) {
+            $this->stdout("\nOptimizing tables...\n");
+            foreach (['analytics_element_views', 'analytics_page_views', 'analytics_sessions'] as $table) {
+                try {
+                    $db->createCommand('OPTIMIZE TABLE ' . $db->quoteTableName($table))->execute();
+                    $this->stdout("✓ Optimized {$table}\n", Console::FG_GREEN);
+                } catch (\Exception $e) {
+                    $this->stderr("✗ Error optimizing {$table}: " . $e->getMessage() . "\n", Console::FG_RED);
+                }
+            }
+        } else {
+            $this->stdout("\nSkipping OPTIMIZE TABLE (pass --optimize=1 to reclaim disk space)\n", Console::FG_YELLOW);
         }
 
         $this->stdout("\nCleanup completed successfully\n", Console::FG_GREEN);
 
         return ExitCode::OK;
+    }
+
+    /**
+     * Delete element views whose session row no longer exists, in batches.
+     *
+     * analytics_element_views has no index on session_id and MariaDB rejects
+     * LIMIT on a multi-table DELETE, so rows are located by walking the primary
+     * key forward and deleted by id list.
+     *
+     * @return int Total rows deleted
+     */
+    protected function deleteOrphanedElementViews(): int
+    {
+        $db = Yii::$app->db;
+        $batchSize = max(1, (int)$this->batchSize);
+        $total = 0;
+        $lastId = 0;
+
+        do {
+            $ids = $db->createCommand("
+                SELECT ev.id
+                FROM {{%analytics_element_views}} ev
+                LEFT JOIN {{%analytics_sessions}} s ON ev.session_id = s.session_id
+                WHERE s.session_id IS NULL
+                  AND ev.id > :lastId
+                ORDER BY ev.id
+                LIMIT :limit
+            ")
+                ->bindValue(':lastId', $lastId)
+                ->bindValue(':limit', $batchSize)
+                ->queryColumn();
+
+            if (empty($ids)) {
+                break;
+            }
+
+            $lastId = end($ids);
+            $total += $db->createCommand()
+                ->delete('{{%analytics_element_views}}', ['id' => $ids])
+                ->execute();
+
+            if ($this->verbose) {
+                $this->stdout("  orphaned element views deleted: " . number_format($total) . "\r");
+            }
+        } while (count($ids) == $batchSize);
+
+        return $total;
+    }
+
+    /**
+     * Confirm a destructive step, unless running unattended.
+     *
+     * Yii's confirm() reads stdin and falls back to its default (false) when
+     * stdin is empty, so under cron the answer is always "no" and the step is
+     * silently skipped. --force (or --interactive=0) bypasses the prompt.
+     *
+     * @param string $message
+     * @return bool
+     */
+    protected function confirmDestructive(string $message): bool
+    {
+        if ($this->force || !$this->interactive) {
+            return true;
+        }
+
+        return $this->confirm($message);
+    }
+
+    /**
+     * Run a DELETE ... LIMIT :limit statement repeatedly until no rows match.
+     *
+     * Deleting a multi-month backlog in one statement builds a single very large
+     * transaction and undo log, which on shared hosting usually ends in a lock
+     * wait timeout and leaves nothing deleted.
+     *
+     * @param string $sql    Statement containing a :limit placeholder
+     * @param array  $params Additional bound parameters
+     * @return int Total rows deleted
+     */
+    protected function deleteInBatches(string $sql, array $params = []): int
+    {
+        $db = Yii::$app->db;
+        $batchSize = max(1, (int)$this->batchSize);
+        $total = 0;
+
+        do {
+            $command = $db->createCommand($sql)->bindValue(':limit', $batchSize);
+            foreach ($params as $name => $value) {
+                $command->bindValue($name, $value);
+            }
+
+            $deleted = $command->execute();
+            $total += $deleted;
+
+            if ($this->verbose && $deleted > 0) {
+                $this->stdout("  deleted so far: " . number_format($total) . "\r");
+            }
+        } while ($deleted == $batchSize);
+
+        return $total;
     }
 
     /**

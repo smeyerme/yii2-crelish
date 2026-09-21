@@ -51,6 +51,20 @@ class BotDetectionController extends Controller
   public $batchSize = 1000;
 
   /**
+   * @var int Only score sessions created within the last N days.
+   *
+   * Scoring is cumulative and persisted (bot_score/is_bot), so sessions older
+   * than this window have already been evaluated by previous runs. Without a
+   * window the nightly run re-scores the entire history every night, which
+   * grows without bound and eventually exhausts memory.
+   *
+   * Set to 0 to disable the window and scan all sessions (not recommended on
+   * large datasets - use only for a one-off backfill with a raised
+   * memory_limit).
+   */
+  public $days = 30;
+
+  /**
    * @var bool Whether to run in dry-run mode (no updates)
    */
   public $dryRun = false;
@@ -100,6 +114,7 @@ class BotDetectionController extends Controller
     return array_merge(parent::options($actionID), [
       'batchSize',
       'dryRun',
+      'days',
     ]);
   }
 
@@ -126,6 +141,13 @@ class BotDetectionController extends Controller
       self::SCORE_MEDIUM_CONFIDENCE,
       self::SCORE_MEDIUM_CONFIDENCE
     ), Console::FG_YELLOW);
+
+    $this->stdout(
+      (int)$this->days > 0
+        ? sprintf("Scoring window: sessions from the last %d days\n", (int)$this->days)
+        : "Scoring window: disabled - scanning all sessions\n",
+      Console::FG_YELLOW
+    );
 
     if ($this->dryRun) {
       $this->stdout("Running in DRY RUN mode - no changes will be made\n", Console::FG_YELLOW);
@@ -216,20 +238,34 @@ class BotDetectionController extends Controller
 
     $this->stdout("Finding sessions without page views...\n");
 
-    // Find all sessions that have zero page views
-    $orphanSessions = $db->createCommand("
-      SELECT s.session_id
-      FROM analytics_sessions s
-      LEFT JOIN analytics_page_views pv ON s.session_id = pv.session_id
-      WHERE s.is_bot = 0
-        AND pv.id IS NULL
-    ")->queryColumn();
+    // Find sessions that have zero page views, in batches so a large backlog
+    // cannot exhaust memory. A correlated COUNT is used rather than NOT EXISTS
+    // because MariaDB materialises the NOT EXISTS subquery once per batch
+    // (~600k rows); the correlated form resolves as a covering index lookup.
+    $lastId = '';
+    do {
+      $orphanSessions = $db->createCommand("
+        SELECT s.session_id
+        FROM analytics_sessions s
+        WHERE s.is_bot = 0
+          AND s.session_id > :lastId" . $this->sessionWindowSql('s') . "
+          AND (
+            SELECT COUNT(*) FROM analytics_page_views pv WHERE pv.session_id = s.session_id
+          ) = 0
+        ORDER BY s.session_id
+        LIMIT :limit
+      ")
+        ->bindValue(':lastId', $lastId)
+        ->bindValue(':limit', $this->batchSize)
+        ->queryColumn();
 
-    foreach ($orphanSessions as $sessionId) {
-      // Give maximum score - these are definitely garbage
-      $this->addScore($sessionId, 100, 'no_page_views');
-      $scored++;
-    }
+      foreach ($orphanSessions as $sessionId) {
+        // Give maximum score - these are definitely garbage
+        $this->addScore($sessionId, 100, 'no_page_views');
+        $scored++;
+        $lastId = $sessionId;
+      }
+    } while (count($orphanSessions) == $this->batchSize);
 
     $this->stdout(sprintf("Orphan session scoring: %d sessions scored (100 each)\n", $scored), Console::FG_YELLOW);
   }
@@ -268,6 +304,22 @@ class BotDetectionController extends Controller
   }
 
   /**
+   * SQL fragment restricting a sessions query to the configured time window.
+   *
+   * @param string $alias Table alias used for analytics_sessions in the query
+   * @return string Empty string when the window is disabled ($days = 0)
+   */
+  protected function sessionWindowSql(string $alias = 's'): string
+  {
+    $days = (int)$this->days;
+    if ($days <= 0) {
+      return '';
+    }
+
+    return sprintf(' AND %s.created_at >= DATE_SUB(NOW(), INTERVAL %d DAY)', $alias, $days);
+  }
+
+  /**
    * Score sessions with spam referrer domains
    */
   protected function scoreSpamReferrers(): void
@@ -275,7 +327,6 @@ class BotDetectionController extends Controller
     $db = Yii::$app->db;
     $scored = 0;
     $spamDomainCounts = [];
-    $offset = 0;
 
     $service = $this->getReferrerSpamService();
 
@@ -283,17 +334,22 @@ class BotDetectionController extends Controller
     $domainCount = $service->refreshCache();
     $this->stdout(sprintf("Loaded %d spam domains\n", $domainCount));
 
+    // Keyset pagination on pv.id: OFFSET pagination degrades quadratically on a
+    // table this size and is not deterministic without an ORDER BY.
+    $lastId = 0;
     do {
       $records = $db->createCommand("
-        SELECT DISTINCT s.session_id, pv.referer
+        SELECT pv.id, s.session_id, pv.referer
         FROM analytics_sessions s
         INNER JOIN analytics_page_views pv ON s.session_id = pv.session_id
         WHERE s.is_bot = 0
-          AND pv.referer IS NOT NULL AND pv.referer != ''
-        LIMIT :limit OFFSET :offset
+          AND pv.id > :lastId
+          AND pv.referer IS NOT NULL AND pv.referer != ''" . $this->sessionWindowSql('s') . "
+        ORDER BY pv.id
+        LIMIT :limit
       ")
+        ->bindValue(':lastId', $lastId)
         ->bindValue(':limit', $this->batchSize)
-        ->bindValue(':offset', $offset)
         ->queryAll();
 
       if (empty($records)) {
@@ -301,6 +357,7 @@ class BotDetectionController extends Controller
       }
 
       foreach ($records as $record) {
+        $lastId = $record['id'];
         $hostname = parse_url($record['referer'], PHP_URL_HOST);
         if (empty($hostname)) {
           continue;
@@ -319,9 +376,6 @@ class BotDetectionController extends Controller
           $spamDomainCounts[$hostname]++;
         }
       }
-
-      $offset += $this->batchSize;
-
     } while (count($records) == $this->batchSize);
 
     if (!empty($spamDomainCounts)) {
@@ -346,18 +400,20 @@ class BotDetectionController extends Controller
     $knownBots = 0;
     $deadBrowsers = 0;
     $outdatedBrowsers = 0;
-    $offset = 0;
+    $lastId = '';
 
     do {
       $records = $db->createCommand("
         SELECT session_id, user_agent
-        FROM analytics_sessions
+        FROM analytics_sessions s
         WHERE is_bot = 0 AND (bot_score IS NULL OR bot_score < :threshold)
-        LIMIT :limit OFFSET :offset
+          AND session_id > :lastId" . $this->sessionWindowSql('s') . "
+        ORDER BY session_id
+        LIMIT :limit
       ")
         ->bindValue(':threshold', self::SCORE_HIGH_CONFIDENCE)
+        ->bindValue(':lastId', $lastId)
         ->bindValue(':limit', $this->batchSize)
-        ->bindValue(':offset', $offset)
         ->queryAll();
 
       if (empty($records)) {
@@ -365,6 +421,7 @@ class BotDetectionController extends Controller
       }
 
       foreach ($records as $record) {
+        $lastId = $record['session_id'];
         $userAgent = $record['user_agent'] ?? '';
 
         // Parse user agent with DeviceDetector
@@ -398,7 +455,6 @@ class BotDetectionController extends Controller
       }
 
       $totalProcessed += count($records);
-      $offset += $this->batchSize;
 
       $this->stdout(sprintf("Processed %d sessions...\n", $totalProcessed));
 
@@ -682,21 +738,35 @@ class BotDetectionController extends Controller
     $db = Yii::$app->db;
     $scored = 0;
 
-    // Find sessions with exactly 1 page view that aren't already marked as bots
-    // No time limit - single page sessions are suspicious regardless of age
-    $singlePageSessions = $db->createCommand("
-      SELECT s.session_id, COUNT(pv.id) as page_count
-      FROM analytics_sessions s
-      LEFT JOIN analytics_page_views pv ON s.session_id = pv.session_id
-      WHERE s.is_bot = 0
-      GROUP BY s.session_id
-      HAVING page_count = 1
-    ")->queryAll();
+    // Find sessions with exactly 1 page view that aren't already marked as bots.
+    //
+    // Processed in keyset batches and restricted to the configured time window.
+    // Previously this loaded every non-bot session in the database into a single
+    // PHP array; once the table passed a few hundred thousand rows that exhausted
+    // memory_limit and aborted the whole nightly run before aggregation.
+    $lastId = '';
+    do {
+      $singlePageSessions = $db->createCommand("
+        SELECT s.session_id
+        FROM analytics_sessions s
+        WHERE s.is_bot = 0
+          AND s.session_id > :lastId" . $this->sessionWindowSql('s') . "
+          AND (
+            SELECT COUNT(*) FROM analytics_page_views pv WHERE pv.session_id = s.session_id
+          ) = 1
+        ORDER BY s.session_id
+        LIMIT :limit
+      ")
+        ->bindValue(':lastId', $lastId)
+        ->bindValue(':limit', $this->batchSize)
+        ->queryColumn();
 
-    foreach ($singlePageSessions as $session) {
-      $this->addScore($session['session_id'], self::SCORE_SINGLE_PAGE_SESSION, 'single_page_session');
-      $scored++;
-    }
+      foreach ($singlePageSessions as $sessionId) {
+        $this->addScore($sessionId, self::SCORE_SINGLE_PAGE_SESSION, 'single_page_session');
+        $scored++;
+        $lastId = $sessionId;
+      }
+    } while (count($singlePageSessions) == $this->batchSize);
 
     $this->stdout(sprintf("Single-page session scoring: %d sessions scored (+%d points each)\n",
       $scored, self::SCORE_SINGLE_PAGE_SESSION), Console::FG_YELLOW);
@@ -723,19 +793,21 @@ class BotDetectionController extends Controller
       $this->stdout("ASN-based detection: disabled (set asn_database_path in config to enable)\n", Console::FG_YELLOW);
     }
 
-    $offset = 0;
+    $lastId = '';
     $totalChecked = 0;
 
     do {
       $sessions = $db->createCommand("
-        SELECT DISTINCT s.session_id, s.ip_address
+        SELECT s.session_id, s.ip_address
         FROM analytics_sessions s
         WHERE s.is_bot = 0
-          AND s.ip_address IS NOT NULL AND s.ip_address != ''
-        LIMIT :limit OFFSET :offset
+          AND s.session_id > :lastId
+          AND s.ip_address IS NOT NULL AND s.ip_address != ''" . $this->sessionWindowSql('s') . "
+        ORDER BY s.session_id
+        LIMIT :limit
       ")
+        ->bindValue(':lastId', $lastId)
         ->bindValue(':limit', $this->batchSize)
-        ->bindValue(':offset', $offset)
         ->queryAll();
 
       if (empty($sessions)) {
@@ -743,6 +815,7 @@ class BotDetectionController extends Controller
       }
 
       foreach ($sessions as $session) {
+        $lastId = $session['session_id'];
         $datacenterInfo = $service->isDatacenterIp($session['ip_address']);
 
         if ($datacenterInfo !== false) {
@@ -759,7 +832,6 @@ class BotDetectionController extends Controller
       }
 
       $totalChecked += count($sessions);
-      $offset += $this->batchSize;
 
     } while (count($sessions) == $this->batchSize);
 
@@ -905,45 +977,64 @@ class BotDetectionController extends Controller
     $mediumCount = 0;
     $lowCount = 0;
 
-    foreach ($this->sessionScores as $sessionId => $data) {
-      $score = min(100, $data['score']); // Cap at 100
-      $reasons = implode(',', array_unique($data['reasons']));
-      $confidence = $this->getConfidenceLevel($score);
+    $hasReasonColumn = $this->hasColumn('analytics_sessions', 'bot_reason');
 
-      // Count by confidence level
-      if ($confidence === 'high') {
-        $highCount++;
-      } elseif ($confidence === 'medium') {
-        $mediumCount++;
-      } else {
-        $lowCount++;
-      }
+    // Commit in chunks inside a transaction. Previously every session cost two
+    // separate round-trips (one UPDATE per session, plus one per bot session
+    // against analytics_page_views), which made this step take tens of minutes.
+    foreach (array_chunk($this->sessionScores, $this->batchSize, true) as $chunk) {
+      $highConfidenceIds = [];
+      $chunkHigh = 0;
+      $chunkMedium = 0;
+      $chunkLow = 0;
+      $transaction = $db->beginTransaction();
 
       try {
-        // Update session with score
-        $updateData = [
-          'bot_score' => $score,
-          'is_bot' => ($confidence === 'high') ? 1 : 0,
-        ];
+        foreach ($chunk as $sessionId => $data) {
+          $score = min(100, $data['score']); // Cap at 100
+          $reasons = implode(',', array_unique($data['reasons']));
+          $confidence = $this->getConfidenceLevel($score);
 
-        if ($this->hasColumn('analytics_sessions', 'bot_reason')) {
-          $updateData['bot_reason'] = substr($reasons, 0, 255);
-        }
+          // Count by confidence level (applied only once the chunk commits)
+          if ($confidence === 'high') {
+            $chunkHigh++;
+            $highConfidenceIds[] = $sessionId;
+          } elseif ($confidence === 'medium') {
+            $chunkMedium++;
+          } else {
+            $chunkLow++;
+          }
 
-        $db->createCommand()
-          ->update('analytics_sessions', $updateData, ['session_id' => $sessionId])
-          ->execute();
+          $updateData = [
+            'bot_score' => $score,
+            'is_bot' => ($confidence === 'high') ? 1 : 0,
+          ];
 
-        // If high confidence, also mark page views
-        if ($confidence === 'high') {
+          if ($hasReasonColumn) {
+            $updateData['bot_reason'] = substr($reasons, 0, 255);
+          }
+
           $db->createCommand()
-            ->update('analytics_page_views', ['is_bot' => 1], ['session_id' => $sessionId])
+            ->update('analytics_sessions', $updateData, ['session_id' => $sessionId])
             ->execute();
         }
 
-        $committed++;
+        // Mark page views for all high-confidence sessions in this chunk at once
+        if (!empty($highConfidenceIds)) {
+          $db->createCommand()
+            ->update('analytics_page_views', ['is_bot' => 1], ['session_id' => $highConfidenceIds])
+            ->execute();
+        }
+
+        $transaction->commit();
+
+        $committed += count($chunk);
+        $highCount += $chunkHigh;
+        $mediumCount += $chunkMedium;
+        $lowCount += $chunkLow;
       } catch (\Exception $e) {
-        $this->stderr("Error committing score for {$sessionId}: " . $e->getMessage() . "\n", Console::FG_RED);
+        $transaction->rollBack();
+        $this->stderr("Error committing score chunk: " . $e->getMessage() . "\n", Console::FG_RED);
       }
     }
 
@@ -975,28 +1066,20 @@ class BotDetectionController extends Controller
         SELECT COUNT(*) FROM analytics_page_views WHERE is_bot = 1
       ")->queryScalar();
 
-      // Delete element views from bot sessions
-      $deletedElementViews = $db->createCommand("
-        DELETE ev FROM analytics_element_views ev
-        INNER JOIN analytics_sessions s ON ev.session_id = s.session_id
-        WHERE s.is_bot = 1
-      ")->execute();
+      // All three deletes run in batches. A single unbounded DELETE over a backlog
+      // of millions of rows builds one enormous transaction and its undo log, and
+      // typically ends in a lock wait timeout on shared hosting.
+      $deletedElementViews = $this->deleteBotElementViews();
 
-      $this->stdout(sprintf("Deleted %d bot element views\n", $deletedElementViews));
+      $deletedPageViews = $this->deleteInBatches("
+        DELETE FROM analytics_page_views WHERE is_bot = 1 LIMIT :limit
+      ", 'bot page views');
 
-      // Delete bot page views
-      $deletedPageViews = $db->createCommand("
-        DELETE FROM analytics_page_views WHERE is_bot = 1
-      ")->execute();
-
-      $this->stdout(sprintf("Deleted %d bot page views\n", $deletedPageViews));
-
-      // Delete bot sessions
-      $deletedSessions = $db->createCommand("
-        DELETE FROM analytics_sessions WHERE is_bot = 1
-      ")->execute();
-
-      $this->stdout(sprintf("Deleted %d bot sessions\n", $deletedSessions));
+      // Sessions last: the two statements above join against / are identified by
+      // is_bot on this table, so removing it first would orphan their rows.
+      $deletedSessions = $this->deleteInBatches("
+        DELETE FROM analytics_sessions WHERE is_bot = 1 LIMIT :limit
+      ", 'bot sessions');
 
       $this->stdout(sprintf(
         "\nHigh-confidence bots deleted: %d sessions, %d page views\n",
@@ -1006,6 +1089,83 @@ class BotDetectionController extends Controller
     } catch (\Exception $e) {
       $this->stderr("Error deleting bot traffic: " . $e->getMessage() . "\n", Console::FG_RED);
     }
+  }
+
+  /**
+   * Delete element views belonging to bot sessions, in batches.
+   *
+   * analytics_element_views has no index on session_id, and MariaDB rejects LIMIT
+   * on a multi-table DELETE, so rows are located by walking the primary key
+   * forward and deleted by id list. Over a full run this costs a single pass of
+   * the table rather than one scan per batch.
+   *
+   * @return int Total number of rows deleted
+   */
+  protected function deleteBotElementViews(): int
+  {
+    $db = Yii::$app->db;
+    $total = 0;
+    $lastId = 0;
+
+    do {
+      $ids = $db->createCommand("
+        SELECT ev.id
+        FROM analytics_element_views ev
+        INNER JOIN analytics_sessions s ON ev.session_id = s.session_id
+        WHERE s.is_bot = 1
+          AND ev.id > :lastId
+        ORDER BY ev.id
+        LIMIT :limit
+      ")
+        ->bindValue(':lastId', $lastId)
+        ->bindValue(':limit', $this->batchSize)
+        ->queryColumn();
+
+      if (empty($ids)) {
+        break;
+      }
+
+      $lastId = end($ids);
+
+      $total += $db->createCommand()
+        ->delete('analytics_element_views', ['id' => $ids])
+        ->execute();
+
+      $this->stdout(sprintf("  deleted bot element views so far: %d\r", $total));
+    } while (count($ids) == $this->batchSize);
+
+    $this->stdout(sprintf("Deleted %d bot element views\n", $total));
+
+    return $total;
+  }
+
+  /**
+   * Run a DELETE ... LIMIT :limit statement repeatedly until it stops matching rows.
+   *
+   * @param string $sql   Statement containing a :limit placeholder
+   * @param string $label Human readable row description for progress output
+   * @return int Total number of rows deleted
+   */
+  protected function deleteInBatches(string $sql, string $label): int
+  {
+    $db = Yii::$app->db;
+    $total = 0;
+
+    do {
+      $deleted = $db->createCommand($sql)
+        ->bindValue(':limit', $this->batchSize)
+        ->execute();
+
+      $total += $deleted;
+
+      if ($deleted > 0) {
+        $this->stdout(sprintf("  deleted %s so far: %d\r", $label, $total));
+      }
+    } while ($deleted == $this->batchSize);
+
+    $this->stdout(sprintf("Deleted %d %s\n", $total, $label));
+
+    return $total;
   }
 
   /**
