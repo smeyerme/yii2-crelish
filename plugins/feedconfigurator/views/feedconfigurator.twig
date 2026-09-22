@@ -61,6 +61,34 @@
     margin-top: 0.5rem;
 }
 
+.feed-configurator .map-group {
+    border-left: 2px solid #dee2e6;
+    padding-left: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.feed-configurator .map-group-label {
+    font-weight: 500;
+    font-size: 0.875rem;
+    margin-bottom: 0.25rem;
+}
+
+.feed-configurator .repeat-rows:empty {
+    margin-bottom: 0.25rem;
+}
+
+.feed-configurator .repeat-row .repeat-key {
+    max-width: 45%;
+}
+
+.feed-configurator .repeat-add {
+    margin-top: 0.25rem;
+}
+
+html[data-theme="dark"] .feed-configurator .map-group {
+    border-left-color: #495057;
+}
+
 html[data-theme="dark"] .feed-configurator .feed-config-fields {
     border-color: #495057;
     background: #1e2a3b;
@@ -168,8 +196,100 @@ html[data-theme="dark"] .feed-configurator .feed-config-fields {
                     '</div>' +
                     (config.hint ? '<small class="form-text">' + config.hint + '</small>' : '') +
                     '</div>';
+            },
+
+            // Repeatable single-value rows. Produces a plain array of strings,
+            // so the user never types brackets, quotes or commas.
+            'list': function(key, config, value) {
+                var parsed = coerce(value);
+                var items = Array.isArray(parsed) ? parsed
+                    : (Array.isArray(config['default']) ? config['default'] : []);
+                var rows = '';
+                for (var i = 0; i < items.length; i++) {
+                    rows += listRow(items[i], config.itemPlaceholder);
+                }
+                return '<div class="config-field" data-key="' + key + '" data-widget="list">' +
+                    '<label>' + config.label + (config.required ? ' *' : '') + '</label>' +
+                    '<div class="repeat-rows" data-iph="' + escapeHtml(config.itemPlaceholder || '') + '">' + rows + '</div>' +
+                    '<button type="button" class="btn btn-sm btn-outline-secondary repeat-add">+ ' +
+                    escapeHtml(config.addLabel || 'Eintrag hinzufügen') + '</button>' +
+                    (config.hint ? '<small class="form-text">' + config.hint + '</small>' : '') +
+                    '</div>';
+            },
+
+            // Key/value rows. Flat by default; with config.groups it renders one
+            // labelled block per group and produces {group: {key: value}} - the
+            // shape the Kategorie-Zuordnungen field already stores.
+            'map': function(key, config, value) {
+                var raw = coerce(value);
+                var val = (raw && typeof raw === 'object' && !Array.isArray(raw)) ? raw : {};
+                var kph = config.keyPlaceholder || '';
+                var vph = config.valuePlaceholder || '';
+                var html = '<div class="config-field" data-key="' + key + '" data-widget="map">' +
+                    '<label>' + config.label + (config.required ? ' *' : '') + '</label>';
+
+                if (config.groups) {
+                    for (var g = 0; g < config.groups.length; g++) {
+                        var grp = config.groups[g];
+                        var gKey = grp.key || grp;
+                        var gVal = (val[gKey] && typeof val[gKey] === 'object') ? val[gKey] : {};
+                        var gRows = '';
+                        for (var gk in gVal) {
+                            if (Object.prototype.hasOwnProperty.call(gVal, gk)) {
+                                gRows += mapRow(gk, gVal[gk], kph, vph);
+                            }
+                        }
+                        html += '<div class="map-group" data-group="' + escapeHtml(gKey) + '">' +
+                            '<div class="map-group-label">' + escapeHtml(grp.label || gKey) + '</div>' +
+                            (grp.hint ? '<small class="form-text">' + grp.hint + '</small>' : '') +
+                            '<div class="repeat-rows" data-kph="' + escapeHtml(kph) + '" data-vph="' + escapeHtml(vph) + '">' + gRows + '</div>' +
+                            '<button type="button" class="btn btn-sm btn-outline-secondary repeat-add">+ ' +
+                            escapeHtml(config.addLabel || 'Zuordnung hinzufügen') + '</button>' +
+                            '</div>';
+                    }
+                } else {
+                    var rows = '';
+                    for (var k in val) {
+                        if (Object.prototype.hasOwnProperty.call(val, k)) {
+                            rows += mapRow(k, val[k], kph, vph);
+                        }
+                    }
+                    html += '<div class="repeat-rows" data-kph="' + escapeHtml(kph) + '" data-vph="' + escapeHtml(vph) + '">' + rows + '</div>' +
+                        '<button type="button" class="btn btn-sm btn-outline-secondary repeat-add">+ ' +
+                        escapeHtml(config.addLabel || 'Zuordnung hinzufügen') + '</button>';
+                }
+
+                html += (config.hint ? '<small class="form-text">' + config.hint + '</small>' : '') + '</div>';
+                return html;
             }
         };
+
+        // Values written by the previous textarea editor are already decoded, but a
+        // textarea whose JSON did not parse was stored as the raw string. Recover
+        // those instead of silently rendering an empty widget and dropping them.
+        function coerce(value) {
+            if (typeof value !== 'string') return value;
+            try { return JSON.parse(value); } catch (e) { return value; }
+        }
+
+        function listRow(val, placeholder) {
+            return '<div class="repeat-row input-group input-group-sm mb-1">' +
+                '<input type="text" class="form-control repeat-value" value="' + escapeHtml(val || '') + '" ' +
+                'placeholder="' + escapeHtml(placeholder || '') + '">' +
+                '<button type="button" class="btn btn-outline-danger repeat-remove" title="Entfernen">&times;</button>' +
+                '</div>';
+        }
+
+        function mapRow(k, v, kph, vph) {
+            return '<div class="repeat-row input-group input-group-sm mb-1">' +
+                '<input type="text" class="form-control repeat-key" value="' + escapeHtml(k || '') + '" ' +
+                'placeholder="' + escapeHtml(kph || 'Feed-Wert') + '">' +
+                '<span class="input-group-text">&rarr;</span>' +
+                '<input type="text" class="form-control repeat-value" value="' + escapeHtml(v || '') + '" ' +
+                'placeholder="' + escapeHtml(vph || 'Unser Wert') + '">' +
+                '<button type="button" class="btn btn-outline-danger repeat-remove" title="Entfernen">&times;</button>' +
+                '</div>';
+        }
 
         function escapeHtml(text) {
             if (text === null || text === undefined) return '';
@@ -177,6 +297,26 @@ html[data-theme="dark"] .feed-configurator .feed-config-fields {
             div.appendChild(document.createTextNode(String(text)));
             return div.innerHTML;
         }
+
+        // Delegated, so rows added after the initial render are covered and the
+        // handlers are not stacked again on every schema switch.
+        configContainer.on('change input', 'input, select, textarea', function() {
+            updateOptions();
+        });
+
+        configContainer.on('click', '.repeat-add', function() {
+            var $rows = $(this).prev('.repeat-rows');
+            var widget = $(this).closest('[data-widget]').data('widget');
+            $rows.append(widget === 'list'
+                ? listRow('', $rows.data('iph'))
+                : mapRow('', '', $rows.data('kph'), $rows.data('vph')));
+            updateOptions();
+        });
+
+        configContainer.on('click', '.repeat-remove', function() {
+            $(this).closest('.repeat-row').remove();
+            updateOptions();
+        });
 
         function renderConfigFields(schema) {
             configContainer.empty();
@@ -219,10 +359,15 @@ html[data-theme="dark"] .feed-configurator .feed-config-fields {
                 configContainer.append(renderer(key, fieldConfig, currentValue));
             }
 
-            // Bind change events
-            configContainer.find('input, select, textarea').on('change input', function() {
-                updateOptions();
+        }
+
+        function readRows($scope) {
+            var obj = {};
+            $scope.find('.repeat-row').each(function() {
+                var k = $.trim($(this).find('.repeat-key').val());
+                if (k) obj[k] = $.trim($(this).find('.repeat-value').val());
             });
+            return obj;
         }
 
         function updateOptions() {
@@ -236,6 +381,34 @@ html[data-theme="dark"] .feed-configurator .feed-config-fields {
                 if (processedKeys[key]) return;
 
                 var value;
+                var widget = $el.data('widget');
+
+                if (widget === 'list') {
+                    var arr = [];
+                    $el.find('.repeat-value').each(function() {
+                        var v = $.trim($(this).val());
+                        if (v) arr.push(v);
+                    });
+                    if (arr.length) options[key] = arr;
+                    processedKeys[key] = true;
+                    return;
+                }
+
+                if (widget === 'map') {
+                    var $groups = $el.find('.map-group');
+                    var out = {};
+                    if ($groups.length) {
+                        $groups.each(function() {
+                            var inner = readRows($(this));
+                            if (Object.keys(inner).length) out[$(this).data('group')] = inner;
+                        });
+                    } else {
+                        out = readRows($el);
+                    }
+                    if (Object.keys(out).length) options[key] = out;
+                    processedKeys[key] = true;
+                    return;
+                }
 
                 if ($el.is(':checkbox')) {
                     value = $el.is(':checked');
