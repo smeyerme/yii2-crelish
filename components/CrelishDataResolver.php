@@ -15,9 +15,9 @@ class CrelishDataResolver
 	 * Resolve a model based on content type and UUID
 	 * 
 	 * @param array $modelInfo Model information
-	 * @return mixed The resolved model
+	 * @return object|null The resolved model, or null if no record matches the uuid
 	 */
-	public static function resolveModel(array $modelInfo)
+	public static function resolveModel(array $modelInfo): ?object
 	{
 		$ctype = $modelInfo['ctype'];
 		$uuid = $modelInfo['uuid'];
@@ -33,8 +33,14 @@ class CrelishDataResolver
 		$storage = CrelishStorageFactory::getStorage($ctype);
 		$data = $storage->findOne($ctype, $uuid);
 		
+		// Kein Treffer: der Verweis zeigt auf einen Datensatz, den es nicht (mehr)
+		// gibt — eine gelöschte Relation oder ein Klartextwert aus einem Import.
+		// Ein leeres Modell half hier nie weiter: dessen init() nullt die uuid
+		// seinerseits, das hohle Objekt lief aber bis in die Formulare durch und
+		// zerbrach dort am (string)-Cast. Alle Aufrufer prüfen das Ergebnis
+		// ohnehin auf falsy, und der db:-Zweig oben hält es seit jeher so.
 		if (!$data) {
-			return new CrelishDynamicJsonModel([], ['ctype' => $ctype, 'uuid' => $uuid]);
+			return null;
 		}
 		
 		return new CrelishDynamicJsonModel($data, ['ctype' => $ctype, 'uuid' => $uuid]);
