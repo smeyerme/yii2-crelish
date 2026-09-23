@@ -39,21 +39,14 @@ class RelationSelect extends CrelishFormWidget
 
     // Already an array
     if (is_array($value)) {
-      // Make sure we have only string UUIDs, not objects or nested arrays
-      return array_map(function($item) {
-        if (is_object($item) && isset($item->uuid)) {
-          return $item->uuid;
-        } elseif (is_array($item) && isset($item['uuid'])) {
-          return $item['uuid'];
-        } else {
-          return (string)$item;
+      $uuids = [];
+      foreach ($value as $item) {
+        $uuid = self::extractUuid($item);
+        if ($uuid !== null) {
+          $uuids[] = $uuid;
         }
-      }, $value);
-    }
-
-    // If it's an object with a uuid property
-    if (is_object($value) && isset($value->uuid)) {
-      return [$value->uuid];
+      }
+      return $uuids;
     }
 
     // Try to parse as JSON (could be an array or object)
@@ -66,8 +59,34 @@ class RelationSelect extends CrelishFormWidget
       }
     }
 
-    // Assume it's a single UUID string
-    return [(string)$value];
+    // A single value: either an object carrying a uuid, or the uuid itself
+    $uuid = self::extractUuid($value);
+
+    return $uuid === null ? [] : [$uuid];
+  }
+
+  /**
+   * Pulls the uuid out of whatever shape a relation value arrives in.
+   *
+   * Ein Objekt ohne uuid ist ein Verweis ins Leere — ein gelöschter Datensatz
+   * oder ein Klartextwert aus einem Import. Der frühere (string)-Cast brach
+   * genau dort mit einem fatalen Fehler ab und riss die ganze Seite mit; ein
+   * Wert ohne uuid wird darum verworfen.
+   *
+   * @param mixed $item
+   * @return string|null The uuid, or null if the value carries none
+   */
+  private static function extractUuid($item): ?string
+  {
+    if (is_object($item)) {
+      return isset($item->uuid) ? (string)$item->uuid : null;
+    }
+
+    if (is_array($item)) {
+      return isset($item['uuid']) ? (string)$item['uuid'] : null;
+    }
+
+    return is_scalar($item) ? (string)$item : null;
   }
 
   public function init()
