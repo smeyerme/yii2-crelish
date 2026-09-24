@@ -57,7 +57,35 @@ final class QrLogo
       throw new RuntimeException('SVG logos with DOCTYPE/ENTITY declarations are not supported.');
     }
 
+    if (self::hasExternalReference($content)) {
+      throw new RuntimeException('SVG logos must not reference external files or URLs.');
+    }
+
     return self::fromSvg($content);
+  }
+
+  /**
+   * True if any href/xlink:href attribute points somewhere other than an
+   * in-document fragment (#…) or a data: URI, e.g. <image>/<use> pulling in
+   * a local file or a remote URL when Imagick parses the SVG.
+   */
+  private static function hasExternalReference(string $svg): bool
+  {
+    if (!preg_match_all('/(?:xlink:href|href)\s*=\s*(["\'])(.*?)\1/i', $svg, $matches)) {
+      return false;
+    }
+
+    foreach ($matches[2] as $value) {
+      $value = trim($value);
+
+      if ($value === '' || str_starts_with($value, '#') || preg_match('/^data:/i', $value)) {
+        continue;
+      }
+
+      return true;
+    }
+
+    return false;
   }
 
   private static function fromRaster(string $path, array $info, callable $loader): self

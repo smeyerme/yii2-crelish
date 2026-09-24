@@ -164,6 +164,8 @@ echo "\nSVG logo rejections\n";
 $dangerousSvgs = [
     'DOCTYPE declaration' => '<?xml version="1.0"?><!DOCTYPE svg><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"></svg>',
     'ENTITY declaration' => '<?xml version="1.0"?><!ENTITY xxe SYSTEM "file:///etc/passwd"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10">&xxe;</svg>',
+    'external file reference' => '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="10" height="10"><image href="file:///etc/passwd"/></svg>',
+    'external URL reference' => '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="10" height="10"><image xlink:href="https://example.com/x.png"/></svg>',
 ];
 foreach ($dangerousSvgs as $label => $content) {
     try {
@@ -174,6 +176,9 @@ foreach ($dangerousSvgs as $label => $content) {
     }
     check("$label is rejected", true, $threw);
 }
+
+$fragmentRefLogo = QrLogo::fromFile(fileWithContent('svg', '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><defs><rect id="a" width="10" height="10" fill="#2f6f4f"/></defs><use href="#a"/></svg>'));
+check('in-document fragment reference is accepted', true, $fragmentRefLogo->svg !== null);
 
 echo "\nKnockout stays within the cap (every QR size)\n";
 $capLogo = QrLogo::fromFile(transparentLogo());

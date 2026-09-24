@@ -246,7 +246,7 @@ class ShortLinkController extends CrelishBaseController
       $request->get('end_date')
     );
     $bundle = QrBundleService::forLink($link);
-    $hasLogoPath = QrBundleService::logoPathFor($link) !== null;
+    $hasLogoPath = $bundle->logoPath() !== null;
     $logoProblem = $hasLogoPath ? $bundle->logoProblem() : null;
     $hasLogo = $hasLogoPath && $logoProblem === null;
 
@@ -289,6 +289,16 @@ class ShortLinkController extends CrelishBaseController
     try {
       $response->data = QrBundleService::forLink($link)->renderer($link, $variant)->svg();
     } catch (\Throwable $e) {
+      $message = "QR preview failed for short link {$uuid} ({$variant}): " . $e->getMessage();
+
+      // A missing/unusable logo for the 'logo' variant is an expected condition
+      // (the admin already shows a warning for it); anything else is a bug.
+      if ($e instanceof \RuntimeException) {
+        Yii::warning($message, 'shortlink');
+      } else {
+        Yii::error($message, 'shortlink');
+      }
+
       $response->statusCode = 404;
       $response->data = '';
     }

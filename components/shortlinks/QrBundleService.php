@@ -35,6 +35,14 @@ final class QrBundleService
   }
 
   /**
+   * The logo path this instance was built with, or null when none is configured
+   */
+  public function logoPath(): ?string
+  {
+    return $this->logoPath;
+  }
+
+  /**
    * The link's own logo asset if set, else the site-wide logo from config
    *
    * @param callable(string): ?string|null $assetUrl resolves an asset uuid to its site-relative URL
@@ -93,8 +101,14 @@ final class QrBundleService
       QrLogo::fromFile($this->logoPath);
 
       return $this->logoProblemCache = null;
-    } catch (\Throwable $e) {
+    } catch (RuntimeException $e) {
       return $this->logoProblemCache = $e->getMessage();
+    } catch (\Throwable $e) {
+      // Not a RuntimeException: an actual bug, not an expected "bad logo" case
+      // (files() already warns for that one). Log it and don't leak internals.
+      Yii::error("QR logo check failed for path '{$this->logoPath}': " . $e->getMessage(), 'shortlink');
+
+      return $this->logoProblemCache = 'The logo could not be processed; see the application log.';
     }
   }
 
