@@ -217,8 +217,8 @@ final class QrRenderer
   private function computeKnockout(QrLogo $logo): array
   {
     $size = $this->matrix->size;
-    $width = self::matchParity(max(3, (int)round($size * self::LOGO_SHARE)), $size);
-    $height = self::matchParity(max(3, (int)ceil(($width - 1) * $logo->height / $logo->width) + 1), $size);
+    $width = self::matchParityDown(max(3, (int)floor($size * self::LOGO_SHARE)), $size);
+    $height = self::matchParityCapped(max(3, (int)ceil(($width - 1) * $logo->height / $logo->width) + 1), $size, $width);
     $height = min($height, $width);
 
     return [intdiv($size - $width, 2), intdiv($size - $height, 2), $width, $height];
@@ -251,11 +251,25 @@ final class QrRenderer
   }
 
   /**
-   * Same parity as the code size keeps the knockout centred on the module grid
+   * Same parity as the code size keeps the knockout centred on the module grid.
+   * Only ever rounds down, so the width never exceeds the LOGO_SHARE cap.
    */
-  private static function matchParity(int $value, int $size): int
+  private static function matchParityDown(int $value, int $size): int
   {
-    return ($size - $value) % 2 === 0 ? $value : $value + 1;
+    return ($size - $value) % 2 === 0 ? $value : $value - 1;
+  }
+
+  /**
+   * Same parity as the code size, rounding up when there is room within $cap
+   * and down otherwise, so the height never exceeds the knockout width.
+   */
+  private static function matchParityCapped(int $value, int $size, int $cap): int
+  {
+    if (($size - $value) % 2 === 0) {
+      return $value;
+    }
+
+    return $value + 1 <= $cap ? $value + 1 : $value - 1;
   }
 
   /**

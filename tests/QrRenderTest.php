@@ -112,4 +112,26 @@ foreach (['missing file' => '/nonexistent/logo.png', 'text file' => __FILE__] as
     check("$label is rejected", true, $threw);
 }
 
+echo "\nKnockout stays within the cap (every QR size)\n";
+$capLogo = QrLogo::fromFile(transparentLogo());
+$cursor = 0;
+for ($size = 21; $size <= 177; $size += 4) {
+    do {
+        $cursor++;
+        $probe = QrMatrix::encode(str_repeat('A', $cursor), 'H');
+    } while ($probe->size < $size);
+    check("size $size is reachable by encoding", $size, $probe->size);
+
+    $renderer = new QrRenderer($probe, 30, 4, '#000000', $capLogo);
+    [$kx, $ky, $kw, $kh] = $renderer->knockout();
+    $violations = array_keys(array_filter([
+        'width exceeds 22% of the code' => $kw > $size * QrRenderer::LOGO_SHARE + 1e-9,
+        'width parity differs from the code size' => ($size - $kw) % 2 !== 0,
+        'height exceeds the width' => $kh > $kw,
+        'height parity differs from the code size' => ($size - $kh) % 2 !== 0,
+        'knockout is not centred' => 2 * $kx + $kw !== $size || 2 * $ky + $kh !== $size,
+    ]));
+    check("size $size: knockout respects the cap, parity and centring", [], $violations);
+}
+
 shortLinkDone();
