@@ -5,7 +5,7 @@
   <div class="mb-3">
     <label class="form-label" for="sl-{{ name }}">{{ label }}</label>
     <input type="{{ opts.type ?? 'text' }}" id="sl-{{ name }}" name="ShortLink[{{ name }}]"
-           class="form-control{% if link.hasErrors(error) %} is-invalid{% endif %}"
+           class="form-control{{ opts.extraClass ?? '' }}{% if link.hasErrors(error) %} is-invalid{% endif %}"
            value="{{ opts.value ?? attribute(link, name) }}" {{ (opts.extra ?? '')|raw }}>
     {% if opts.help is defined %}<div class="form-text">{{ opts.help }}</div>{% endif %}
     {% if link.hasErrors(error) %}<div class="invalid-feedback">{{ link.getFirstError(error) }}</div>{% endif %}
@@ -28,149 +28,180 @@
         <input type="hidden" name="{{ csrfParam }}" value="{{ csrfToken }}">
         <input type="hidden" id="save_n_return" name="save_n_return" value="0">
 
-        <h4>{{ t('crelish', 'Link') }}</h4>
         <div class="row">
-          <div class="col-md-8">{{ f.input(link, 'systitle', t('crelish', 'Title')) }}</div>
-          <div class="col-md-4">
-            {{ f.input(link, 'code', t('crelish', 'Code'), {'help': (link.isNewRecord ? '' : link.getShortUrl()), 'extra': 'autocomplete="off" spellcheck="false"'}) }}
-          </div>
-        </div>
-        <div class="row">
-          <div class="col-md-4 mb-3">
-            <label class="form-label" for="sl-state">{{ t('crelish', 'State') }}</label>
-            <select id="sl-state" name="ShortLink[state]" class="form-select">
-              {% for value, label in {2: t('crelish', 'Online'), 1: t('crelish', 'Draft'), 0: t('crelish', 'Offline'), 3: t('crelish', 'Archived')} %}
-                <option value="{{ value }}"{% if link.state == value %} selected{% endif %}>{{ label }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="col-md-4">{{ f.input(link, 'validFromInput', t('crelish', 'Valid from'), {'type': 'datetime-local', 'error': 'valid_from'}) }}</div>
-          <div class="col-md-4">{{ f.input(link, 'validUntilInput', t('crelish', 'Valid until'), {'type': 'datetime-local', 'error': 'valid_until'}) }}</div>
-        </div>
-        <div class="mb-3">
-          <label class="form-label" for="sl-note">{{ t('crelish', 'Internal note') }}</label>
-          <textarea id="sl-note" name="ShortLink[note]" class="form-control" rows="2">{{ link.note }}</textarea>
-        </div>
-
-        <h4 class="mt-4">{{ t('crelish', 'Target') }}</h4>
-        <div class="mb-3">
-          <div class="form-check form-check-inline">
-            <input class="form-check-input" type="radio" name="ShortLink[target_type]" id="sl-target-content" value="content"{% if link.target_type == 'content' %} checked{% endif %}>
-            <label class="form-check-label" for="sl-target-content">{{ t('crelish', 'Crelish content') }}</label>
-          </div>
-          <div class="form-check form-check-inline">
-            <input class="form-check-input" type="radio" name="ShortLink[target_type]" id="sl-target-url" value="url"{% if link.target_type == 'url' %} checked{% endif %}>
-            <label class="form-check-label" for="sl-target-url">{{ t('crelish', 'External URL') }}</label>
-          </div>
-        </div>
-
-        <div id="sl-target-content-fields"{% if link.target_type != 'content' %} hidden{% endif %}>
-          <div class="row">
-            <div class="col-md-4 mb-3">
-              <label class="form-label" for="sl-target_ctype">{{ t('crelish', 'Content type') }}</label>
-              <select id="sl-target_ctype" name="ShortLink[target_ctype]" class="form-select{% if link.hasErrors('target_ctype') %} is-invalid{% endif %}">
-                <option value="">–</option>
-                {% for ctype in targetTypes %}
-                  <option value="{{ ctype }}"{% if ctype == link.target_ctype %} selected{% endif %}>{{ ctype }}</option>
-                {% endfor %}
-              </select>
-              {% if link.hasErrors('target_ctype') %}<div class="invalid-feedback">{{ link.getFirstError('target_ctype') }}</div>{% endif %}
-            </div>
-            <div class="col-md-5 mb-3 position-relative">
-              <label class="form-label" for="sl-target-search">{{ t('crelish', 'Record') }}</label>
-              <input type="search" id="sl-target-search" class="form-control{% if link.hasErrors('target_uuid') %} is-invalid{% endif %}"
-                     value="{{ targetTitle }}" autocomplete="off" placeholder="{{ t('crelish', 'Search by title…') }}">
-              <input type="hidden" id="sl-target_uuid" name="ShortLink[target_uuid]" value="{{ link.target_uuid }}">
-              <div id="sl-target-results" class="list-group position-absolute w-100" style="z-index: 10"></div>
-              {% if link.hasErrors('target_uuid') %}<div class="invalid-feedback">{{ link.getFirstError('target_uuid') }}</div>{% endif %}
-            </div>
-            <div class="col-md-3 mb-3">
-              <label class="form-label" for="sl-target_language">{{ t('crelish', 'Language') }}</label>
-              <select id="sl-target_language" name="ShortLink[target_language]" class="form-select">
-                <option value="">{{ t('crelish', 'Visitor language') }}</option>
-                {% for language in languages %}
-                  <option value="{{ language }}"{% if language == link.target_language %} selected{% endif %}>{{ language }}</option>
-                {% endfor %}
-              </select>
+          <div class="col col-md-6">
+            <div class="card">
+              <div class="card-header">{{ t('crelish', 'Link') }}</div>
+              <div class="card-body">
+                <div class="row">
+                  <div class="col-md-8">{{ f.input(link, 'systitle', t('crelish', 'Title')) }}</div>
+                  <div class="col-md-4">
+                    {{ f.input(link, 'code', t('crelish', 'Code'), {'help': (link.isNewRecord ? '' : link.getShortUrl()), 'extra': 'autocomplete="off" spellcheck="false"'}) }}
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col-md-4 mb-3">
+                    <label class="form-label" for="sl-state">{{ t('crelish', 'State') }}</label>
+                    <select id="sl-state" name="ShortLink[state]" class="form-select">
+                      {% for value, label in {2: t('crelish', 'Online'), 1: t('crelish', 'Draft'), 0: t('crelish', 'Offline'), 3: t('crelish', 'Archived')} %}
+                        <option value="{{ value }}"{% if link.state == value %} selected{% endif %}>{{ label }}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                  <div class="col-md-4">{{ f.input(link, 'validFromInput', t('crelish', 'Valid from'), {'type': 'datetime-local', 'error': 'valid_from'}) }}</div>
+                  <div class="col-md-4">{{ f.input(link, 'validUntilInput', t('crelish', 'Valid until'), {'type': 'datetime-local', 'error': 'valid_until'}) }}</div>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label" for="sl-note">{{ t('crelish', 'Internal note') }}</label>
+                  <textarea id="sl-note" name="ShortLink[note]" class="form-control" rows="2">{{ link.note }}</textarea>
+                </div>
+              </div>
             </div>
           </div>
+
+          <div class="col col-md-6">
+            <div class="card">
+              <div class="card-header">{{ t('crelish', 'Target') }}</div>
+              <div class="card-body">
+                <div class="mb-3">
+                  <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="ShortLink[target_type]" id="sl-target-content" value="content"{% if link.target_type == 'content' %} checked{% endif %}>
+                    <label class="form-check-label" for="sl-target-content">{{ t('crelish', 'Crelish content') }}</label>
+                  </div>
+                  <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="ShortLink[target_type]" id="sl-target-url" value="url"{% if link.target_type == 'url' %} checked{% endif %}>
+                    <label class="form-check-label" for="sl-target-url">{{ t('crelish', 'External URL') }}</label>
+                  </div>
+                </div>
+
+                <div id="sl-target-content-fields"{% if link.target_type != 'content' %} hidden{% endif %}>
+                  <div class="row">
+                    <div class="col-md-4 mb-3">
+                      <label class="form-label" for="sl-target_ctype">{{ t('crelish', 'Content type') }}</label>
+                      <select id="sl-target_ctype" name="ShortLink[target_ctype]" class="form-select{% if link.hasErrors('target_ctype') %} is-invalid{% endif %}">
+                        <option value="">–</option>
+                        {% for ctype in targetTypes %}
+                          <option value="{{ ctype }}"{% if ctype == link.target_ctype %} selected{% endif %}>{{ ctype }}</option>
+                        {% endfor %}
+                      </select>
+                      {% if link.hasErrors('target_ctype') %}<div class="invalid-feedback">{{ link.getFirstError('target_ctype') }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-5 mb-3 position-relative">
+                      <label class="form-label" for="sl-target-search">{{ t('crelish', 'Record') }}</label>
+                      <input type="search" id="sl-target-search" class="form-control{% if link.hasErrors('target_uuid') %} is-invalid{% endif %}"
+                             value="{{ targetTitle }}" autocomplete="off" placeholder="{{ t('crelish', 'Search by title…') }}">
+                      <input type="hidden" id="sl-target_uuid" name="ShortLink[target_uuid]" value="{{ link.target_uuid }}">
+                      <div id="sl-target-results" class="list-group position-absolute w-100" style="z-index: 10"></div>
+                      {% if link.hasErrors('target_uuid') %}<div class="invalid-feedback">{{ link.getFirstError('target_uuid') }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-3 mb-3">
+                      <label class="form-label" for="sl-target_language">{{ t('crelish', 'Language') }}</label>
+                      <select id="sl-target_language" name="ShortLink[target_language]" class="form-select">
+                        <option value="">{{ t('crelish', 'Visitor language') }}</option>
+                        {% for language in languages %}
+                          <option value="{{ language }}"{% if language == link.target_language %} selected{% endif %}>{{ language }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div id="sl-target-url-fields"{% if link.target_type != 'url' %} hidden{% endif %}>
+                  {{ f.input(link, 'target_url', t('crelish', 'Target URL'), {'type': 'url', 'extra': 'placeholder="https://"'}) }}
+                </div>
+
+                {{ f.input(link, 'fallback_url', t('crelish', 'Fallback URL'), {
+                  'type': 'url',
+                  'extra': 'placeholder="' ~ siteFallback|e('html_attr') ~ '"',
+                  'help': t('crelish', 'Used when the link is offline, outside its validity window, or its target no longer exists.')
+                }) }}
+
+                {% if resolvesTo %}
+                  <p class="form-text">
+                    {{ t('crelish', 'Currently resolves to') }}:
+                    <a href="{{ resolvesTo.url }}" target="_blank" rel="noopener">{{ resolvesTo.url }}</a>
+                    {% if resolvesTo.isFallback() %}<span class="badge text-bg-warning">{{ t('crelish', 'fallback') }}: {{ resolvesTo.reason }}</span>{% endif %}
+                  </p>
+                {% endif %}
+              </div>
+            </div>
+          </div>
         </div>
-
-        <div id="sl-target-url-fields"{% if link.target_type != 'url' %} hidden{% endif %}>
-          {{ f.input(link, 'target_url', t('crelish', 'Target URL'), {'type': 'url', 'extra': 'placeholder="https://"'}) }}
-        </div>
-
-        {{ f.input(link, 'fallback_url', t('crelish', 'Fallback URL'), {
-          'type': 'url',
-          'extra': 'placeholder="' ~ siteFallback|e('html_attr') ~ '"',
-          'help': t('crelish', 'Used when the link is offline, outside its validity window, or its target no longer exists.')
-        }) }}
-
-        {% if resolvesTo %}
-          <p class="form-text">
-            {{ t('crelish', 'Currently resolves to') }}:
-            <a href="{{ resolvesTo.url }}" target="_blank" rel="noopener">{{ resolvesTo.url }}</a>
-            {% if resolvesTo.isFallback() %}<span class="badge text-bg-warning">{{ t('crelish', 'fallback') }}: {{ resolvesTo.reason }}</span>{% endif %}
-          </p>
-        {% endif %}
 
         {% if not isNew %}
-            <h4 class="mt-4">{{ t('crelish', 'QR code') }}</h4>
-            <div class="row">
-              <div class="col-md-3">{{ f.input(link, 'qr_size_mm', t('crelish', 'Print size (mm, incl. quiet zone)'), {'type': 'number', 'extra': 'min="10" max="500" data-qr-setting="size"'}) }}</div>
-              <div class="col-md-3">{{ f.input(link, 'qr_color', t('crelish', 'Colour'), {'type': 'color', 'extra': 'data-qr-setting="color"'}) }}</div>
-              <div class="col-md-3">{{ f.input(link, 'qr_quiet_zone', t('crelish', 'Quiet zone (modules)'), {'type': 'number', 'extra': 'min="4" max="20" data-qr-setting="quiet"'}) }}</div>
+          <div class="row">
+            <div class="col">
+              <div class="card">
+                <div class="card-header">{{ t('crelish', 'QR code') }}</div>
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col-md-3">{{ f.input(link, 'qr_size_mm', t('crelish', 'Print size (mm, incl. quiet zone)'), {'type': 'number', 'extra': 'min="10" max="500" data-qr-setting="size"'}) }}</div>
+                    <div class="col-md-3">{{ f.input(link, 'qr_color', t('crelish', 'Colour'), {'type': 'color', 'extra': 'data-qr-setting="color"', 'extraClass': ' form-control-color'}) }}</div>
+                    <div class="col-md-3">{{ f.input(link, 'qr_quiet_zone', t('crelish', 'Quiet zone (modules)'), {'type': 'number', 'extra': 'min="4" max="20" data-qr-setting="quiet"'}) }}</div>
+                  </div>
+                  <div class="mb-3">
+                    {{ logoWidget|raw }}
+                    <div class="form-text">{{ t('crelish', 'Optional. Overrides the site-wide logo. PNG, JPEG or SVG, ideally square.') }}</div>
+                  </div>
+                  {% if logoProblem %}
+                    <div class="alert alert-warning">{{ t('crelish', "The logo can't be used for the QR code: {problem}", {'problem': logoProblem}) }}</div>
+                  {% endif %}
+                  <div class="d-flex gap-4 align-items-start mb-3">
+                    <figure class="text-center mb-0">
+                      <img id="sl-qr-plain" src="{{ url('/crelish/short-link/qr-preview', {'uuid': link.uuid, 'variant': 'plain'}) }}" width="200" height="200" alt="" class="bg-white p-2 rounded" style="border: 1px solid var(--color-border);">
+                      <figcaption class="text-muted small mt-1">{{ t('crelish', 'Plain') }}</figcaption>
+                    </figure>
+                    {% if hasLogo %}
+                      <figure class="text-center mb-0">
+                        <img id="sl-qr-logo" src="{{ url('/crelish/short-link/qr-preview', {'uuid': link.uuid, 'variant': 'logo'}) }}" width="200" height="200" alt="" class="bg-white p-2 rounded" style="border: 1px solid var(--color-border);">
+                        <figcaption class="text-muted small mt-1">{{ t('crelish', 'With logo') }}</figcaption>
+                      </figure>
+                    {% endif %}
+                  </div>
+                  <div id="sl-qr-logo-warning" class="alert alert-warning"{% if not hasLogo or link.qr_size_mm >= logoMinMm %} hidden{% endif %}>
+                    {{ t('crelish', 'The logo variant is hard to scan below {mm} mm. Use the plain variant for small print.', {'mm': logoMinMm}) }}
+                  </div>
+                  <div class="d-flex flex-wrap gap-2 mb-3">
+                    <a class="c-button c-button--success" href="{{ url('/crelish/short-link/qr-download', {'uuid': link.uuid}) }}">
+                      <i class="fa-sharp fa-regular fa-download"></i> {{ t('crelish', 'Download ZIP') }}
+                    </a>
+                    {% for file in qrFiles %}
+                      <a class="c-button" href="{{ url('/crelish/short-link/qr-download', {'uuid': link.uuid, 'file': file}) }}">{{ file }}</a>
+                    {% endfor %}
+                  </div>
+                  <p class="form-text">{{ t('crelish', 'Downloads use the saved settings. Save after changing them.') }}</p>
+                </div>
+              </div>
             </div>
-            <div class="mb-3">
-              {{ logoWidget|raw }}
-              <div class="form-text">{{ t('crelish', 'Optional. Overrides the site-wide logo. PNG, JPEG or SVG, ideally square.') }}</div>
-            </div>
-            {% if logoProblem %}
-              <div class="alert alert-warning">{{ t('crelish', "The logo can't be used for the QR code: {problem}", {'problem': logoProblem}) }}</div>
-            {% endif %}
-            <div class="d-flex gap-4 align-items-start mb-3">
-              <figure class="text-center">
-                <img id="sl-qr-plain" src="{{ url('/crelish/short-link/qr-preview', {'uuid': link.uuid, 'variant': 'plain'}) }}" width="200" height="200" alt="">
-                <figcaption>{{ t('crelish', 'Plain') }}</figcaption>
-              </figure>
-              {% if hasLogo %}
-                <figure class="text-center">
-                  <img id="sl-qr-logo" src="{{ url('/crelish/short-link/qr-preview', {'uuid': link.uuid, 'variant': 'logo'}) }}" width="200" height="200" alt="">
-                  <figcaption>{{ t('crelish', 'With logo') }}</figcaption>
-                </figure>
-              {% endif %}
-            </div>
-            <div id="sl-qr-logo-warning" class="alert alert-warning"{% if not hasLogo or link.qr_size_mm >= logoMinMm %} hidden{% endif %}>
-              {{ t('crelish', 'The logo variant is hard to scan below {mm} mm. Use the plain variant for small print.', {'mm': logoMinMm}) }}
-            </div>
-            <p>
-              <a class="c-button c-button--success" href="{{ url('/crelish/short-link/qr-download', {'uuid': link.uuid}) }}">
-                <i class="fa-sharp fa-regular fa-download"></i> {{ t('crelish', 'Download ZIP') }}
-              </a>
-              {% for file in qrFiles %}
-                <a class="ms-2" href="{{ url('/crelish/short-link/qr-download', {'uuid': link.uuid, 'file': file}) }}">{{ file }}</a>
-              {% endfor %}
-            </p>
-            <p class="form-text">{{ t('crelish', 'Downloads use the saved settings. Save after changing them.') }}</p>
-          {% endif %}
+          </div>
+        {% endif %}
       </form>
     </div>
 
     {% if not isNew %}
         <div class="tab-pane fade" id="sl-tab-stats">
-          <div class="mb-3" style="max-width: 20rem">{{ periodPicker|raw }}</div>
-          <div class="row text-center mb-4">
-            {% for key, label in {'scan': t('crelish', 'QR scans'), 'click': t('crelish', 'Link clicks'), 'fallback': t('crelish', 'Fallback hits')} %}
-              <div class="col"><div class="fs-2">{{ stats.totals[key] }}</div><div>{{ label }}</div></div>
-            {% endfor %}
-            <div class="col"><div class="fs-2">{{ stats.uniqueSessions }}</div><div>{{ t('crelish', 'Unique sessions (per day, summed)') }}</div></div>
+          <div class="row">
+            <div class="col">
+              <div class="card">
+                <div class="card-header">{{ t('crelish', 'Statistics') }}</div>
+                <div class="card-body">
+                  <div class="mb-3" style="max-width: 20rem">{{ periodPicker|raw }}</div>
+                  <div class="row text-center mb-4">
+                    {% for key, label in {'scan': t('crelish', 'QR scans'), 'click': t('crelish', 'Link clicks'), 'fallback': t('crelish', 'Fallback hits')} %}
+                      <div class="col"><div class="fs-2">{{ stats.totals[key] }}</div><div>{{ label }}</div></div>
+                    {% endfor %}
+                    <div class="col"><div class="fs-2">{{ stats.uniqueSessions }}</div><div>{{ t('crelish', 'Unique sessions (per day, summed)') }}</div></div>
+                  </div>
+                  {% if stats.totals.fallback > 0 and resolvesTo and resolvesTo.isFallback() %}
+                    <div class="alert alert-warning">{{ t('crelish', 'Visitors currently reach the fallback ({reason}).', {'reason': resolvesTo.reason}) }}</div>
+                  {% endif %}
+                  <canvas id="sl-stats-chart" height="120"
+                          data-labels="{{ {'scan': t('crelish', 'QR scans'), 'click': t('crelish', 'Link clicks'), 'fallback': t('crelish', 'Fallback hits')}|json_encode|e('html_attr') }}"></canvas>
+                  <script type="application/json" id="sl-stats-data">{{ stats.days|json_encode(constant('JSON_HEX_TAG'))|raw }}</script>
+                </div>
+              </div>
+            </div>
           </div>
-          {% if stats.totals.fallback > 0 and resolvesTo and resolvesTo.isFallback() %}
-            <div class="alert alert-warning">{{ t('crelish', 'Visitors currently reach the fallback ({reason}).', {'reason': resolvesTo.reason}) }}</div>
-          {% endif %}
-          <canvas id="sl-stats-chart" height="120"
-                  data-labels="{{ {'scan': t('crelish', 'QR scans'), 'click': t('crelish', 'Link clicks'), 'fallback': t('crelish', 'Fallback hits')}|json_encode|e('html_attr') }}"></canvas>
-          <script type="application/json" id="sl-stats-data">{{ stats.days|json_encode(constant('JSON_HEX_TAG'))|raw }}</script>
         </div>
       {% endif %}
   </div>
