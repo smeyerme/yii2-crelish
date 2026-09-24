@@ -108,14 +108,18 @@ $shortlinkErrors = logCount('shortlink', Logger::LEVEL_ERROR);
 check('missing table goes home', 'https://forum-holzbau.test/de', hit('ihf26')->headers->get('location'));
 check('missing table failure is logged', $shortlinkErrors + 1, logCount('shortlink', Logger::LEVEL_ERROR));
 
-echo "\nResolution failures degrade gracefully\n";
+echo "\nA broken target with a throwing cache still redirects and tracks\n";
 shortLinkApp([], [], ['components' => ['cache' => ['class' => ThrowingCache::class]]]);
 seed(['code' => 'brk002', 'target_type' => ShortLink::TARGET_CONTENT, 'target_url' => null, 'target_ctype' => 'news', 'target_uuid' => 'a0000000-0000-4000-8000-00000000000a', 'fallback_url' => 'https://www.example.com/archiv']);
 seed(['code' => 'brk003', 'target_type' => ShortLink::TARGET_CONTENT, 'target_url' => null, 'target_ctype' => 'news', 'target_uuid' => 'a0000000-0000-4000-8000-00000000000b']);
-$resolutionErrors = logCount('shortlink', Logger::LEVEL_ERROR);
-check('resolution failure redirects to the link fallback', 'https://www.example.com/archiv', hit('brk002')->headers->get('location'));
-check('resolution failure is logged', $resolutionErrors + 1, logCount('shortlink', Logger::LEVEL_ERROR));
-check('resolution failure without a link fallback goes home', 'https://forum-holzbau.test/de', hit('brk003')->headers->get('location'));
+$cacheErrors = logCount('shortlink', Logger::LEVEL_ERROR);
+$beforeCacheFailure = count(eventTypes());
+check('broken target with a throwing cache redirects to the link fallback', 'https://www.example.com/archiv', hit('brk002')->headers->get('location'));
+check('broken target with a throwing cache is still tracked as fallback', 'fallback', array_slice(eventTypes(), -1)[0]);
+check('broken target with a throwing cache logs the cache failure', $cacheErrors + 1, logCount('shortlink', Logger::LEVEL_ERROR));
+check('broken target without a link fallback goes home', 'https://forum-holzbau.test/de', hit('brk003')->headers->get('location'));
+check('broken target without a link fallback is also tracked as fallback', 'fallback', array_slice(eventTypes(), -1)[0]);
+check('both broken-target hits with a throwing cache were tracked', $beforeCacheFailure + 2, count(eventTypes()));
 
 echo "\nAjax-flagged requests still get a real redirect\n";
 shortLinkApp([], ['HTTP_X_REQUESTED_WITH' => 'XMLHttpRequest']);

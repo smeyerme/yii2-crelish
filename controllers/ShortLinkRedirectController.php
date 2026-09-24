@@ -91,18 +91,27 @@ class ShortLinkRedirectController extends Controller
   }
 
   /**
-   * Warn once per link and day; a broken link on a flyer would otherwise flood Sentry
+   * Warn once per link and day; a broken link on a flyer would otherwise flood Sentry.
+   *
+   * Must never throw: it runs inside actionIndex's resolve() try/catch, and a
+   * throw there would skip track() and drop the hit instead of just the dedup.
+   * On a cache failure the warning is still emitted, just without dedup.
    */
   private function warnBroken(ShortLink $link): void
   {
-    $cache = Yii::$app->getCache();
     $key = ['shortlink-broken', $link->uuid, date('Y-m-d')];
 
-    if ($cache !== null) {
-      if ($cache->get($key)) {
-        return;
+    try {
+      $cache = Yii::$app->getCache();
+
+      if ($cache !== null) {
+        if ($cache->get($key)) {
+          return;
+        }
+        $cache->set($key, 1, 86400);
       }
-      $cache->set($key, 1, 86400);
+    } catch (\Throwable $e) {
+      Yii::error("Short link broken-warning cache failed for '{$link->code}': " . $e->getMessage(), 'shortlink');
     }
 
     Yii::warning("Short link '{$link->code}' ({$link->uuid}) points to {$link->target_ctype}/{$link->target_uuid}, which cannot be resolved; sent to the fallback", 'shortlink');
