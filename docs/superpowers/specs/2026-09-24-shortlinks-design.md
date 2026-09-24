@@ -93,7 +93,7 @@ resolves identically.
 
 ## 4. Redirect flow
 
-`ShortLinkController::actionRedirect` (public, no auth, no CSRF):
+`ShortLinkRedirectController::actionIndex` (public, no auth, no CSRF):
 
 1. Look up link by lowercase `code`.
 2. Unknown code → site-wide fallback, no tracking, log `info` (category `shortlink`).
@@ -149,7 +149,7 @@ In `params['crelish']['shortLinks']`:
   'siteUrl'       => null,      // absolute main-site URL; null = current request host; required with shortHost
   'fallbackUrl'   => null,      // null = homepage
   'detailPages'   => [],        // ctype => listing page slug
-  'qrLogo'        => null,      // alias/path to SVG or PNG
+  'qrLogo'        => null,      // alias/path to a PNG or JPEG
   'reservedCodes' => [],        // merged with the built-in list
 ],
 ```
