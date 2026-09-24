@@ -23,6 +23,7 @@ Welcome to the Crelish CMS documentation. This folder contains comprehensive doc
 - [Newsletter System](./newsletter.md) - MJML email template generation
 - [Analytics](./analytics.md) - Page views, element tracking, and dashboards
 - [Click Tracking](./click-tracking.md) - Link and element click tracking
+- [Short Links](./shortlinks.md) - Campaign short links with QR export and tracking
 
 ### Advanced
 - [Extending Crelish](./extending.md) - Hooks, custom controllers, sidebar navigation, widgets, and plugins

@@ -2,6 +2,7 @@
 
 namespace giantbits\crelish;
 
+use giantbits\crelish\components\shortlinks\ShortLinkUrlRule;
 use giantbits\crelish\config\ComponentsConfig;
 use giantbits\crelish\config\UrlRulesConfig;
 use Yii;
@@ -199,6 +200,9 @@ class Bootstrap implements BootstrapInterface
   private function configureUrlRules(WebApplication $app): void
   {
     $app->getUrlManager()->addRules(UrlRulesConfig::getRules(), true);
+
+    // Prepended so it runs before CrelishBaseUrlRule and project rules
+    ShortLinkUrlRule::register($app->getUrlManager());
   }
 
   /**

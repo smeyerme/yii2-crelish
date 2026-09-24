@@ -1908,6 +1908,47 @@ a.c-button:hover {
   letter-spacing: 0.05em;
 }
 
+/* ===== TABS =====
+ * Bootstrap .nav-tabs, themed with the shared variables so every tab strip in
+ * the admin (CrelishFormTabs, this stylesheet's consumers, and hand-written
+ * views such as short-link/edit.twig) matches instead of falling back to
+ * Bootstrap's default link-blue. Built entirely from theme variables, so a
+ * single ruleset already covers both `:root` (light) and
+ * `[data-theme="dark"]` — no color literals to duplicate per theme.
+ * CrelishFormTabs marks a tab with validation errors via `.text-danger`
+ * (Bootstrap's `!important` utility); nothing here sets that color, so it
+ * stays visible on top of both the inactive and active states below. */
+.nav-tabs {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.nav-tabs .nav-link {
+  color: var(--color-text-muted);
+  background-color: transparent;
+  border: 1px solid transparent;
+  border-top-left-radius: var(--border-radius-sm);
+  border-top-right-radius: var(--border-radius-sm);
+}
+
+.nav-tabs .nav-link:hover,
+.nav-tabs .nav-link:focus {
+  color: var(--color-text-dark);
+  border-color: transparent;
+}
+
+.nav-tabs .nav-link.active,
+.nav-tabs .nav-item.show .nav-link {
+  color: var(--color-text-dark);
+  background-color: var(--color-bg-main);
+  border-color: var(--color-border) var(--color-border) var(--color-bg-main);
+  border-top: 3px solid var(--color-primary-light);
+}
+
+.nav-tabs .nav-link:focus-visible {
+  outline: 2px solid var(--color-primary-light);
+  outline-offset: 2px;
+}
+
 /* ===== MODERN GRID ===== */
 .grid-modern {
   width: 100%;

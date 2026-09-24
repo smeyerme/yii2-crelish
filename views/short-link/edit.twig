@@ -1,0 +1,309 @@
+{% import _self as f %}
+
+{% macro input(link, name, label, opts) %}
+  {% set error = opts.error ?? name %}
+  <div class="mb-3">
+    <label class="form-label" for="sl-{{ name }}">{{ label }}</label>
+    <input type="{{ opts.type ?? 'text' }}" id="sl-{{ name }}" name="ShortLink[{{ name }}]"
+           class="form-control{{ opts.extraClass ?? '' }}{% if link.hasErrors(error) %} is-invalid{% endif %}"
+           value="{{ opts.value ?? attribute(link, name) }}" {{ (opts.extra ?? '')|raw }}>
+    {% if opts.help is defined %}<div class="form-text">{{ opts.help }}</div>{% endif %}
+    {% if link.hasErrors(error) %}<div class="invalid-feedback">{{ link.getFirstError(error) }}</div>{% endif %}
+  </div>
+{% endmacro %}
+
+{% set isNew = link.isNewRecord %}
+
+<div class="u-window-box-medium shortlink-edit">
+  {% if not isNew %}
+    <ul class="nav nav-tabs mb-4" role="tablist">
+      <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#sl-tab-link" type="button">{{ t('crelish', 'Link') }}</button></li>
+      <li class="nav-item"><button class="nav-link" id="sl-stats-tab" data-bs-toggle="tab" data-bs-target="#sl-tab-stats" type="button">{{ t('crelish', 'Statistics') }}</button></li>
+    </ul>
+  {% endif %}
+
+  <div class="tab-content">
+    <div class="tab-pane fade show active" id="sl-tab-link">
+      <form id="content-form" method="post">
+        <input type="hidden" name="{{ csrfParam }}" value="{{ csrfToken }}">
+        <input type="hidden" id="save_n_return" name="save_n_return" value="0">
+
+        <div class="row">
+          <div class="col col-md-6">
+            <div class="card">
+              <div class="card-header">{{ t('crelish', 'Link') }}</div>
+              <div class="card-body">
+                <div class="row">
+                  <div class="col-md-8">{{ f.input(link, 'systitle', t('crelish', 'Title')) }}</div>
+                  <div class="col-md-4">
+                    {{ f.input(link, 'code', t('crelish', 'Code'), {'help': (link.isNewRecord ? '' : link.getShortUrl()), 'extra': 'autocomplete="off" spellcheck="false"'}) }}
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col-md-4 mb-3">
+                    <label class="form-label" for="sl-state">{{ t('crelish', 'State') }}</label>
+                    <select id="sl-state" name="ShortLink[state]" class="form-select">
+                      {% for value, label in {2: t('crelish', 'Online'), 1: t('crelish', 'Draft'), 0: t('crelish', 'Offline'), 3: t('crelish', 'Archived')} %}
+                        <option value="{{ value }}"{% if link.state == value %} selected{% endif %}>{{ label }}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                  <div class="col-md-4">{{ f.input(link, 'validFromInput', t('crelish', 'Valid from'), {'type': 'datetime-local', 'error': 'valid_from'}) }}</div>
+                  <div class="col-md-4">{{ f.input(link, 'validUntilInput', t('crelish', 'Valid until'), {'type': 'datetime-local', 'error': 'valid_until'}) }}</div>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label" for="sl-note">{{ t('crelish', 'Internal note') }}</label>
+                  <textarea id="sl-note" name="ShortLink[note]" class="form-control" rows="2">{{ link.note }}</textarea>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col col-md-6">
+            <div class="card">
+              <div class="card-header">{{ t('crelish', 'Target') }}</div>
+              <div class="card-body">
+                <div class="mb-3">
+                  <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="ShortLink[target_type]" id="sl-target-content" value="content"{% if link.target_type == 'content' %} checked{% endif %}>
+                    <label class="form-check-label" for="sl-target-content">{{ t('crelish', 'Crelish content') }}</label>
+                  </div>
+                  <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="ShortLink[target_type]" id="sl-target-url" value="url"{% if link.target_type == 'url' %} checked{% endif %}>
+                    <label class="form-check-label" for="sl-target-url">{{ t('crelish', 'External URL') }}</label>
+                  </div>
+                </div>
+
+                <div id="sl-target-content-fields"{% if link.target_type != 'content' %} hidden{% endif %}>
+                  <div class="row">
+                    <div class="col-md-4 mb-3">
+                      <label class="form-label" for="sl-target_ctype">{{ t('crelish', 'Content type') }}</label>
+                      <select id="sl-target_ctype" name="ShortLink[target_ctype]" class="form-select{% if link.hasErrors('target_ctype') %} is-invalid{% endif %}">
+                        <option value="">–</option>
+                        {% for ctype in targetTypes %}
+                          <option value="{{ ctype }}"{% if ctype == link.target_ctype %} selected{% endif %}>{{ ctype }}</option>
+                        {% endfor %}
+                      </select>
+                      {% if link.hasErrors('target_ctype') %}<div class="invalid-feedback">{{ link.getFirstError('target_ctype') }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-5 mb-3 position-relative">
+                      <label class="form-label" for="sl-target-search">{{ t('crelish', 'Record') }}</label>
+                      <input type="search" id="sl-target-search" class="form-control{% if link.hasErrors('target_uuid') %} is-invalid{% endif %}"
+                             value="{{ targetTitle }}" autocomplete="off" placeholder="{{ t('crelish', 'Search by title…') }}">
+                      <input type="hidden" id="sl-target_uuid" name="ShortLink[target_uuid]" value="{{ link.target_uuid }}">
+                      <div id="sl-target-results" class="list-group position-absolute w-100" style="z-index: 10"></div>
+                      {% if link.hasErrors('target_uuid') %}<div class="invalid-feedback">{{ link.getFirstError('target_uuid') }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-3 mb-3">
+                      <label class="form-label" for="sl-target_language">{{ t('crelish', 'Language') }}</label>
+                      <select id="sl-target_language" name="ShortLink[target_language]" class="form-select">
+                        <option value="">{{ t('crelish', 'Visitor language') }}</option>
+                        {% for language in languages %}
+                          <option value="{{ language }}"{% if language == link.target_language %} selected{% endif %}>{{ language }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div id="sl-target-url-fields"{% if link.target_type != 'url' %} hidden{% endif %}>
+                  {{ f.input(link, 'target_url', t('crelish', 'Target URL'), {'type': 'url', 'extra': 'placeholder="https://"'}) }}
+                </div>
+
+                {{ f.input(link, 'fallback_url', t('crelish', 'Fallback URL'), {
+                  'type': 'url',
+                  'extra': 'placeholder="' ~ siteFallback|e('html_attr') ~ '"',
+                  'help': t('crelish', 'Used when the link is offline, outside its validity window, or its target no longer exists.')
+                }) }}
+
+                {% if resolvesTo %}
+                  <p class="form-text">
+                    {{ t('crelish', 'Currently resolves to') }}:
+                    <a href="{{ resolvesTo.url }}" target="_blank" rel="noopener">{{ resolvesTo.url }}</a>
+                    {% if resolvesTo.isFallback() %}<span class="badge text-bg-warning">{{ t('crelish', 'fallback') }}: {{ resolvesTo.reason }}</span>{% endif %}
+                  </p>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {% if not isNew %}
+          <div class="row">
+            <div class="col">
+              <div class="card">
+                <div class="card-header">{{ t('crelish', 'QR code') }}</div>
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col-md-3">{{ f.input(link, 'qr_size_mm', t('crelish', 'Print size (mm, incl. quiet zone)'), {'type': 'number', 'extra': 'min="10" max="500" data-qr-setting="size"'}) }}</div>
+                    <div class="col-md-3">{{ f.input(link, 'qr_color', t('crelish', 'Colour'), {'type': 'color', 'extra': 'data-qr-setting="color"', 'extraClass': ' form-control-color'}) }}</div>
+                    <div class="col-md-3">{{ f.input(link, 'qr_quiet_zone', t('crelish', 'Quiet zone (modules)'), {'type': 'number', 'extra': 'min="4" max="20" data-qr-setting="quiet"'}) }}</div>
+                  </div>
+                  <div class="mb-3">
+                    {{ logoWidget|raw }}
+                    <div class="form-text">{{ t('crelish', 'Optional. Overrides the site-wide logo. PNG, JPEG or SVG, ideally square.') }}</div>
+                  </div>
+                  {% if logoProblem %}
+                    <div class="alert alert-warning">{{ t('crelish', "The logo can't be used for the QR code: {problem}", {'problem': logoProblem}) }}</div>
+                  {% endif %}
+                  <div class="d-flex gap-4 align-items-start mb-3">
+                    <figure class="text-center mb-0">
+                      <img id="sl-qr-plain" src="{{ url('/crelish/short-link/qr-preview', {'uuid': link.uuid, 'variant': 'plain'}) }}" width="200" height="200" alt="" class="bg-white p-2 rounded" style="border: 1px solid var(--color-border);">
+                      <figcaption class="text-muted small mt-1">{{ t('crelish', 'Plain') }}</figcaption>
+                    </figure>
+                    {% if hasLogo %}
+                      <figure class="text-center mb-0">
+                        <img id="sl-qr-logo" src="{{ url('/crelish/short-link/qr-preview', {'uuid': link.uuid, 'variant': 'logo'}) }}" width="200" height="200" alt="" class="bg-white p-2 rounded" style="border: 1px solid var(--color-border);">
+                        <figcaption class="text-muted small mt-1">{{ t('crelish', 'With logo') }}</figcaption>
+                      </figure>
+                    {% endif %}
+                  </div>
+                  <div id="sl-qr-logo-warning" class="alert alert-warning"{% if not hasLogo or link.qr_size_mm >= logoMinMm %} hidden{% endif %}>
+                    {{ t('crelish', 'The logo variant is hard to scan below {mm} mm. Use the plain variant for small print.', {'mm': logoMinMm}) }}
+                  </div>
+                  <div class="d-flex flex-wrap gap-2 mb-3">
+                    <a class="c-button c-button--success" href="{{ url('/crelish/short-link/qr-download', {'uuid': link.uuid}) }}">
+                      <i class="fa-sharp fa-regular fa-download"></i> {{ t('crelish', 'Download ZIP') }}
+                    </a>
+                    {% for file in qrFiles %}
+                      <a class="c-button" href="{{ url('/crelish/short-link/qr-download', {'uuid': link.uuid, 'file': file}) }}">{{ file }}</a>
+                    {% endfor %}
+                  </div>
+                  <p class="form-text">{{ t('crelish', 'Downloads use the saved settings. Save after changing them.') }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        {% endif %}
+      </form>
+    </div>
+
+    {% if not isNew %}
+        <div class="tab-pane fade" id="sl-tab-stats">
+          <div class="row">
+            <div class="col">
+              <div class="card">
+                <div class="card-header">{{ t('crelish', 'Statistics') }}</div>
+                <div class="card-body">
+                  <div class="mb-3" style="max-width: 20rem">{{ periodPicker|raw }}</div>
+                  <div class="row text-center mb-4">
+                    {% for key, label in {'scan': t('crelish', 'QR scans'), 'click': t('crelish', 'Link clicks'), 'fallback': t('crelish', 'Fallback hits')} %}
+                      <div class="col"><div class="fs-2">{{ stats.totals[key] }}</div><div>{{ label }}</div></div>
+                    {% endfor %}
+                    <div class="col"><div class="fs-2">{{ stats.uniqueSessions }}</div><div>{{ t('crelish', 'Unique sessions (per day, summed)') }}</div></div>
+                  </div>
+                  {% if stats.totals.fallback > 0 and resolvesTo and resolvesTo.isFallback() %}
+                    <div class="alert alert-warning">{{ t('crelish', 'Visitors currently reach the fallback ({reason}).', {'reason': resolvesTo.reason}) }}</div>
+                  {% endif %}
+                  <canvas id="sl-stats-chart" height="120"
+                          data-labels="{{ {'scan': t('crelish', 'QR scans'), 'click': t('crelish', 'Link clicks'), 'fallback': t('crelish', 'Fallback hits')}|json_encode|e('html_attr') }}"></canvas>
+                  <script type="application/json" id="sl-stats-data">{{ stats.days|json_encode(constant('JSON_HEX_TAG'))|raw }}</script>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endif %}
+  </div>
+</div>
+
+<script>
+(function () {
+  const form = document.getElementById('content-form');
+
+  const toggleTarget = () => {
+    const type = form.querySelector('input[name="ShortLink[target_type]"]:checked')?.value;
+    document.getElementById('sl-target-content-fields').hidden = type !== 'content';
+    document.getElementById('sl-target-url-fields').hidden = type !== 'url';
+  };
+  form.querySelectorAll('input[name="ShortLink[target_type]"]').forEach(radio => radio.addEventListener('change', toggleTarget));
+
+  const ctype = document.getElementById('sl-target_ctype');
+  const search = document.getElementById('sl-target-search');
+  const uuid = document.getElementById('sl-target_uuid');
+  const results = document.getElementById('sl-target-results');
+  const targetsUrl = {{ url('/crelish/short-link/targets')|json_encode|raw }};
+  let timer;
+
+  ctype.addEventListener('change', () => {
+    uuid.value = '';
+    search.value = '';
+    results.replaceChildren();
+  });
+
+  search.addEventListener('input', () => {
+    uuid.value = '';
+    clearTimeout(timer);
+    timer = setTimeout(async () => {
+      const q = search.value.trim();
+      if (!ctype.value || q.length < 2) {
+        results.replaceChildren();
+        return;
+      }
+      const url = new URL(targetsUrl, location.href);
+      url.searchParams.set('ctype', ctype.value);
+      url.searchParams.set('q', q);
+      const response = await fetch(url, {headers: {'Accept': 'application/json'}});
+      const items = response.ok ? await response.json() : [];
+      results.replaceChildren(...items.map(item => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'list-group-item list-group-item-action';
+        button.textContent = item.title;
+        button.addEventListener('click', () => {
+          uuid.value = item.uuid;
+          search.value = item.title;
+          results.replaceChildren();
+        });
+        return button;
+      }));
+    }, 250);
+  });
+
+  const previews = ['plain', 'logo'].map(variant => document.getElementById('sl-qr-' + variant)).filter(Boolean);
+  const logoWarning = document.getElementById('sl-qr-logo-warning');
+  const settings = form.querySelectorAll('[data-qr-setting]');
+  const refreshPreview = () => {
+    const values = {};
+    settings.forEach(input => { values[input.dataset.qrSetting] = input.value; });
+    previews.forEach(img => {
+      const url = new URL(img.src);
+      Object.entries(values).forEach(([key, value]) => url.searchParams.set(key, value));
+      img.src = url;
+    });
+    if (logoWarning && document.getElementById('sl-qr-logo')) {
+      logoWarning.hidden = Number(values.size) >= {{ logoMinMm ?? 25 }};
+    }
+  };
+  settings.forEach(input => input.addEventListener('change', refreshPreview));
+
+  const statsData = document.getElementById('sl-stats-data');
+  const chartCanvas = document.getElementById('sl-stats-chart');
+  if (statsData && chartCanvas && window.Chart) {
+    const days = JSON.parse(statsData.textContent);
+    const labels = JSON.parse(chartCanvas.dataset.labels);
+    const dates = Object.keys(days);
+    const colors = {scan: '#2f6f4f', click: '#8fb996', fallback: '#d9a441'};
+    new Chart(chartCanvas, {
+      type: 'bar',
+      data: {
+        labels: dates,
+        datasets: Object.keys(colors).map(type => ({label: labels[type], data: dates.map(date => days[date][type]), backgroundColor: colors[type]})),
+      },
+      options: {responsive: true, scales: {x: {stacked: true}, y: {stacked: true, beginAtZero: true, ticks: {precision: 0}}}},
+    });
+  }
+
+  document.addEventListener('crelish:periodchange', event => {
+    const url = new URL(location.href);
+    ['period', 'start_date', 'end_date'].forEach(key => url.searchParams.delete(key));
+    Object.entries(event.detail).forEach(([key, value]) => url.searchParams.set(key, value));
+    url.hash = 'stats';
+    location.href = url;
+  });
+
+  if (location.hash === '#stats') {
+    document.getElementById('sl-stats-tab')?.click();
+  }
+})();
+</script>
