@@ -84,6 +84,10 @@ class CrelishSidebarManager
 
   protected function evaluateCondition($condition): bool
   {
+    if ($condition === 'shortlinks') {
+      return \giantbits\crelish\components\shortlinks\ShortLinkConfig::isEnabled();
+    }
+
     // Example condition evaluation
     if ($condition === 'portal') {
       return str_contains(Yii::$app->basePath, 'portal');

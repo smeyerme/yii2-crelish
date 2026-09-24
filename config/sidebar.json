@@ -29,6 +29,14 @@
       "order": 40
     },
     {
+      "id": "shortlinks",
+      "label": "Short Links",
+      "url": "crelish/short-link/index",
+      "icon": "fa-sharp fa-regular fa-link",
+      "order": 45,
+      "condition": "shortlinks"
+    },
+    {
       "id": "user",
       "label": "User",
       "url": "crelish/user/index",

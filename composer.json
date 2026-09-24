@@ -8,7 +8,7 @@
     ],
     "type": "yii2-extension",
     "license": "BSD-3-Clause",
-    "version": "0.21.17",
+    "version": "0.22.0",
     "minimum-stability": "dev",
     "prefer-stable": true,
     "support": {
@@ -68,7 +68,11 @@
         "sentry/sentry": "^4.19",
         "matomo/device-detector": "^6.5",
         "symfony/mailgun-mailer": "^v7",
-        "symfony/http-client": "^v7"
+        "symfony/http-client": "^v7",
+        "bacon/bacon-qr-code": "^3.0",
+        "setasign/fpdf": "^1.8",
+        "ext-gd": "*",
+        "ext-zip": "*"
     },
     "autoload": {
         "psr-4": {
