@@ -24,6 +24,11 @@ class ElementTitleResolver
     /** @var array|null Cached config from analytics-element-types.php */
     private static ?array $config = null;
 
+    /** Built-in crelish element types; the project config file can override them */
+    private const BUILTIN_TYPES = [
+        'shortlink' => ['table' => 'shortlink', 'titleFields' => ['systitle']],
+    ];
+
     /**
      * Resolve the title for an element by UUID and type.
      *
@@ -198,6 +203,8 @@ class ElementTitleResolver
         } else {
             self::$config = [];
         }
+
+        self::$config = array_merge(self::BUILTIN_TYPES, self::$config);
 
         return self::$config;
     }
