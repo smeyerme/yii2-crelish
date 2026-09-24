@@ -183,17 +183,19 @@ class ShortLinkController extends CrelishBaseController
 
     try {
       $class = CrelishModelResolver::getModelClass($ctype);
-    } catch (\InvalidArgumentException) {
+
+      $records = $class::find()
+        ->select(['uuid', 'systitle'])
+        ->where(['like', 'systitle', $q])
+        ->orderBy(['systitle' => SORT_ASC])
+        ->limit(20)
+        ->asArray()
+        ->all();
+    } catch (\Throwable $e) {
+      Yii::warning('Short links: target search failed for ctype "' . $ctype . '": ' . $e->getMessage(), 'shortlink');
+
       return [];
     }
-
-    $records = $class::find()
-      ->select(['uuid', 'systitle'])
-      ->where(['like', 'systitle', $q])
-      ->orderBy(['systitle' => SORT_ASC])
-      ->limit(20)
-      ->asArray()
-      ->all();
 
     return array_map(fn(array $record) => ['uuid' => $record['uuid'], 'title' => (string)$record['systitle']], $records);
   }
