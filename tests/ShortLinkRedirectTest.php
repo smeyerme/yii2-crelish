@@ -13,9 +13,22 @@ require __DIR__ . '/shortlink/bootstrap.php';
 
 use giantbits\crelish\controllers\ShortLinkRedirectController;
 use giantbits\crelish\models\ShortLink;
+use yii\caching\ArrayCache;
 use yii\db\Query;
 use yii\log\Logger;
 use yii\web\NotFoundHttpException;
+
+/**
+ * Simulates a cache backend that is down; used to make resolution
+ * (specifically warnBroken(), which reads/writes the cache) throw.
+ */
+class ThrowingCache extends ArrayCache
+{
+    public function get($key)
+    {
+        throw new \RuntimeException('cache backend unavailable');
+    }
+}
 
 function seed(array $attributes = []): ShortLink
 {
@@ -91,7 +104,34 @@ check('tracking failure is logged', $errors + 1, logCount('analytics', Logger::L
 
 shortLinkApp();
 Yii::$app->db->createCommand()->dropTable('shortlink')->execute();
+$shortlinkErrors = logCount('shortlink', Logger::LEVEL_ERROR);
 check('missing table goes home', 'https://forum-holzbau.test/de', hit('ihf26')->headers->get('location'));
+check('missing table failure is logged', $shortlinkErrors + 1, logCount('shortlink', Logger::LEVEL_ERROR));
+
+echo "\nResolution failures degrade gracefully\n";
+shortLinkApp([], [], ['components' => ['cache' => ['class' => ThrowingCache::class]]]);
+seed(['code' => 'brk002', 'target_type' => ShortLink::TARGET_CONTENT, 'target_url' => null, 'target_ctype' => 'news', 'target_uuid' => 'a0000000-0000-4000-8000-00000000000a', 'fallback_url' => 'https://www.example.com/archiv']);
+seed(['code' => 'brk003', 'target_type' => ShortLink::TARGET_CONTENT, 'target_url' => null, 'target_ctype' => 'news', 'target_uuid' => 'a0000000-0000-4000-8000-00000000000b']);
+$resolutionErrors = logCount('shortlink', Logger::LEVEL_ERROR);
+check('resolution failure redirects to the link fallback', 'https://www.example.com/archiv', hit('brk002')->headers->get('location'));
+check('resolution failure is logged', $resolutionErrors + 1, logCount('shortlink', Logger::LEVEL_ERROR));
+check('resolution failure without a link fallback goes home', 'https://forum-holzbau.test/de', hit('brk003')->headers->get('location'));
+
+echo "\nAjax-flagged requests still get a real redirect\n";
+shortLinkApp([], ['HTTP_X_REQUESTED_WITH' => 'XMLHttpRequest']);
+seed();
+$ajaxResponse = hit('ihf26');
+check('ajax-flagged request still gets 302', 302, $ajaxResponse->statusCode);
+check('ajax-flagged request still gets a Location header', 'https://www.example.com/ihf', $ajaxResponse->headers->get('location'));
+
+echo "\nMalformed codes never reach the database\n";
+shortLinkApp();
+seed();
+$beforeMalformed = count(eventTypes());
+check('a code with a newline goes to the fallback', 'https://forum-holzbau.test/de', hit("bad\ncode")->headers->get('location'));
+check('a code with a newline is not tracked', $beforeMalformed, count(eventTypes()));
+check('an oversized code goes to the fallback', 'https://forum-holzbau.test/de', hit(str_repeat('a', 200))->headers->get('location'));
+check('an oversized code is not tracked', $beforeMalformed, count(eventTypes()));
 
 echo "\nShort host home and disabled feature\n";
 shortLinkApp();

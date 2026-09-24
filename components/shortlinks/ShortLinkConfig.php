@@ -4,6 +4,7 @@ namespace giantbits\crelish\components\shortlinks;
 
 use giantbits\crelish\components\CrelishBaseHelper;
 use Yii;
+use yii\base\InvalidConfigException;
 
 /**
  * Reads the short link settings from params['crelish']['shortLinks'].
@@ -52,7 +53,18 @@ final class ShortLinkConfig
    */
   public static function siteUrl(): string
   {
-    $url = self::all()['siteUrl'] ?: Yii::$app->request->hostInfo;
+    $url = self::all()['siteUrl'];
+
+    if (!$url) {
+      // Falling back to the request host would resolve to the short host
+      // itself when it is the one being served, sending fallbacks and the
+      // home page into a redirect loop.
+      if (self::shortHost() !== null) {
+        throw new InvalidConfigException('params.crelish.shortLinks.siteUrl is required when shortHost is set.');
+      }
+
+      $url = Yii::$app->request->hostInfo;
+    }
 
     return rtrim((string)$url, '/');
   }

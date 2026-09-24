@@ -12,7 +12,9 @@ declare(strict_types=1);
 require __DIR__ . '/shortlink/bootstrap.php';
 
 use giantbits\crelish\components\shortlinks\ShortLinkCode;
+use giantbits\crelish\components\shortlinks\ShortLinkConfig;
 use giantbits\crelish\models\ShortLink;
+use yii\base\InvalidConfigException;
 
 function makeLink(array $attributes = []): ShortLink
 {
@@ -159,5 +161,17 @@ check('configured siteUrl wins over the request host', 'https://forum-holzbau.co
 shortLinkApp(['shortLinks' => ['shortHost' => 'FHB.link']]);
 check('short host drops the prefix', 'https://fhb.link/ihf26', makeLink()->getShortUrl());
 check('short host QR payload', 'HTTPS://FHB.LINK/IHF26/Q', makeLink()->getQrPayload());
+
+try {
+    ShortLinkConfig::siteUrl();
+    $threwWithoutSiteUrl = false;
+} catch (InvalidConfigException) {
+    $threwWithoutSiteUrl = true;
+}
+check('siteUrl() throws when shortHost is set without siteUrl', true, $threwWithoutSiteUrl);
+
+shortLinkApp(['shortLinks' => ['shortHost' => 'FHB.link', 'siteUrl' => 'https://forum-holzbau.com/']]);
+check('siteUrl() returns the configured value when both are set', 'https://forum-holzbau.com', ShortLinkConfig::siteUrl());
+check('short host still drops the prefix when siteUrl is also set', 'https://fhb.link/ihf26', makeLink()->getShortUrl());
 
 shortLinkDone();

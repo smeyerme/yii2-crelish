@@ -3,6 +3,7 @@
 namespace giantbits\crelish\controllers;
 
 use giantbits\crelish\components\shortlinks\ResolveResult;
+use giantbits\crelish\components\shortlinks\ShortLinkCode;
 use giantbits\crelish\components\shortlinks\ShortLinkConfig;
 use giantbits\crelish\components\shortlinks\ShortLinkResolver;
 use giantbits\crelish\models\ShortLink;
@@ -33,22 +34,36 @@ class ShortLinkRedirectController extends Controller
 
   public function actionIndex(string $code, int $scan = 0): Response
   {
+    $code = ShortLinkCode::normalize($code);
+
+    // The URL rule already constrains the code, but this action is reachable
+    // directly too; never let an unvalidated code reach the database or the log.
+    if (strlen($code) > 64 || !preg_match(ShortLinkCode::PATTERN, $code)) {
+      Yii::info('Malformed short link code ' . $this->logCode($code), 'shortlink');
+      return $this->send(ShortLinkConfig::siteFallbackUrl());
+    }
+
     try {
       $link = ShortLink::findByCode($code);
     } catch (\Throwable $e) {
-      Yii::error("Short link lookup failed for '{$code}': " . $e->getMessage(), 'shortlink');
+      Yii::error('Short link lookup failed for ' . $this->logCode($code) . ': ' . $e->getMessage(), 'shortlink');
       return $this->send(ShortLinkConfig::siteFallbackUrl());
     }
 
     if ($link === null) {
-      Yii::info("Unknown short link code '{$code}'", 'shortlink');
+      Yii::info('Unknown short link code ' . $this->logCode($code), 'shortlink');
       return $this->send(ShortLinkConfig::siteFallbackUrl());
     }
 
-    $result = (new ShortLinkResolver())->resolve($link, Yii::$app->request->headers->get('Accept-Language'));
+    try {
+      $result = (new ShortLinkResolver())->resolve($link, Yii::$app->request->headers->get('Accept-Language'));
 
-    if ($result->reason === ResolveResult::REASON_BROKEN) {
-      $this->warnBroken($link);
+      if ($result->reason === ResolveResult::REASON_BROKEN) {
+        $this->warnBroken($link);
+      }
+    } catch (\Throwable $e) {
+      Yii::error("Short link resolution failed for '{$link->code}': " . $e->getMessage(), 'shortlink');
+      return $this->send($link->fallback_url ?: ShortLinkConfig::siteFallbackUrl());
     }
 
     $this->track($link, $result->isFallback() ? 'fallback' : ($scan ? 'scan' : 'click'));
@@ -93,9 +108,21 @@ class ShortLinkRedirectController extends Controller
     Yii::warning("Short link '{$link->code}' ({$link->uuid}) points to {$link->target_ctype}/{$link->target_uuid}, which cannot be resolved; sent to the fallback", 'shortlink');
   }
 
+  /**
+   * A code as taken from the request may contain anything; never write it
+   * into the log verbatim (log injection, control characters, length).
+   */
+  private function logCode(string $code): string
+  {
+    return json_encode(mb_substr($code, 0, 64));
+  }
+
   private function send(string $url): Response
   {
-    $response = $this->redirect(ShortLinkConfig::absolute($url), 302);
+    // Not $this->redirect(): that defaults checkAjax to true, which swaps the
+    // Location header for X-Redirect on an XHR-flagged request and breaks the
+    // redirect for clients (in-app browsers, QR readers) that set that header.
+    $response = Yii::$app->getResponse()->redirect(ShortLinkConfig::absolute($url), 302, false);
     $response->headers->set('Cache-Control', 'no-store');
     $response->headers->set('X-Robots-Tag', 'noindex');
 
