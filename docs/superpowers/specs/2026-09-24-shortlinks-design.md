@@ -53,7 +53,7 @@ Standard crelish columns are used so existing tooling (`systitle`, `state`,
 | `logo_asset_uuid` | string(36) NULL | overrides site-wide QR logo |
 | `qr_size_mm` | smallint NOT NULL DEFAULT 30 | |
 | `qr_color` | string(7) NOT NULL DEFAULT '#000000' | foreground colour |
-| `qr_quiet_zone` | tinyint NOT NULL DEFAULT 4 | in modules; 4 is the spec minimum and the lower bound in validation |
+| `qr_quiet_zone` | smallint NOT NULL DEFAULT 4 | in modules; 4 is the spec minimum and the lower bound in validation |
 
 Indexes: unique on `code`, index on `state`, index on (`target_ctype`, `target_uuid`).
 
@@ -146,6 +146,7 @@ In `params['crelish']['shortLinks']`:
   'enabled'       => false,     // default off
   'prefix'        => 'go',
   'shortHost'     => null,      // e.g. 'fhb.link'; requires DNS + vhost to same docroot
+  'siteUrl'       => null,      // absolute main-site URL; null = current request host; required with shortHost
   'fallbackUrl'   => null,      // null = homepage
   'detailPages'   => [],        // ctype => listing page slug
   'qrLogo'        => null,      // alias/path to SVG or PNG
@@ -171,7 +172,9 @@ public function trackEvent(string $elementUuid, string $elementType, string $typ
   `first_url` = the request URL, `first_page_uuid` = `$elementUuid` (the session
   started from this short link) and `total_pages = 0` if missing; upgrades
   `is_bot` if the current request is a bot; **does not** increment `total_pages`.
-- Inserts into `analytics_element_views` with `page_uuid = NULL`.
+- Inserts into `analytics_element_views` with `page_uuid = $elementUuid`
+  (the column is NOT NULL in production), `user_agent` and `first_url` truncated
+  to 255 characters (their production column size).
 
 Why: the nightly aggregation and orphan cleanup only keep element views whose
 session exists. A QR scan that redirects off-site has no page view, so without
@@ -233,7 +236,9 @@ plus today's `analytics_element_views` joined to `analytics_sessions` with
 
 ## 8. QR export
 
-Library: `endroid/qr-code ^6`, plus `setasign/fpdf` for `PdfWriter`; requires `ext-gd`.
+Libraries: `bacon/bacon-qr-code ^3` for encoding (already used by the portal project),
+`setasign/fpdf ^1.8` for PDF; requires `ext-gd` and `ext-zip`. Rendering is our
+own code (see section 14).
 
 `QrBundleService::build(ShortLink): string` (path to a temp ZIP):
 
@@ -314,3 +319,33 @@ QR sizes, short-host setup and the session-cookie caveat), linked from
 
 Automatic short links per content item, UTM forwarding, bulk import/export,
 printable label/flyer PDFs, public API, referrer and device columns in analytics.
+
+## 14. Decisions made while planning
+
+These refine the sections above; where they differ, this section wins.
+
+- **QR library.** endroid/qr-code works in whole pixels or points, so an exact
+  mm size and a 4-module quiet zone cannot both be met, and its PDF writer
+  cannot place a logo with a white knockout. We encode with bacon/bacon-qr-code
+  (endroid's own encoder) and draw SVG, EPS, PDF and PNG ourselves from the
+  module matrix. Dark modules are merged into runs and filled as a single path
+  so viewers and RIPs show no seams.
+- **QR size** in mm includes the quiet zone; the file can be placed as-is.
+- **Logo** must be PNG or JPEG (ideally square, >= 600 px). It is flattened onto
+  white because FPDF cannot embed alpha channels. The knockout is at most 22 %
+  of the code width, and its height follows the logo's aspect ratio.
+- **Analytics rows** use `page_uuid = link uuid` (NOT NULL column in production);
+  `user_agent`/`first_url` are truncated to 255 characters.
+- **`siteUrl` config key** makes resolved content URLs and the home fallback
+  absolute on the main site, which a dedicated short host requires.
+- **Public redirect** lives in its own `ShortLinkRedirectController`
+  (plain `yii\web\Controller`): `CrelishBaseController::init()` redirects every
+  non-admin visitor.
+- **Target picker** is a small AJAX search (`short-link/targets`); the
+  relationselect plugin needs a fixed ctype in its field config.
+- **Sidebar item** is a regular `config/sidebar.json` entry with
+  `"condition": "shortlinks"`, evaluated by `CrelishSidebarManager`.
+- **List view** has no bulk delete (the generic one targets the content
+  controller); links are deleted from their edit view.
+- **forum-holzbau has no square signet** yet (only wide wordmarks), so
+  `qrLogo` stays null until one exists.
