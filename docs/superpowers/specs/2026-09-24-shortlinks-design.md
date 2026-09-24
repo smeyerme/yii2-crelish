@@ -149,7 +149,7 @@ In `params['crelish']['shortLinks']`:
   'siteUrl'       => null,      // absolute main-site URL; null = current request host; required with shortHost
   'fallbackUrl'   => null,      // null = homepage
   'detailPages'   => [],        // ctype => listing page slug
-  'qrLogo'        => null,      // alias/path to a PNG or JPEG
+  'qrLogo'        => null,      // alias/path to a PNG, JPEG or SVG
   'reservedCodes' => [],        // merged with the built-in list
 ],
 ```
@@ -331,9 +331,14 @@ These refine the sections above; where they differ, this section wins.
   module matrix. Dark modules are merged into runs and filled as a single path
   so viewers and RIPs show no seams.
 - **QR size** in mm includes the quiet zone; the file can be placed as-is.
-- **Logo** must be PNG or JPEG (ideally square, >= 600 px). It is flattened onto
-  white because FPDF cannot embed alpha channels. The knockout is at most 22 %
-  of the code width, and its height follows the logo's aspect ratio.
+- **Logo** may be PNG, JPEG or SVG (ideally square, >= 600 px). It is flattened
+  onto white because FPDF cannot embed alpha channels; SVG logos are rasterised
+  with ImageMagick for that flattened PNG/PDF output but kept as vector markup
+  for the SVG export (needs the PHP `imagick` extension with SVG support; SVGs
+  with `<!DOCTYPE`/`<!ENTITY` are rejected). The knockout is at most 22 % of
+  the code width, and its height follows the logo's aspect ratio. The admin
+  reports when a configured logo can't be used instead of showing a broken
+  preview and dead download links.
 - **Analytics rows** use `page_uuid = link uuid` (NOT NULL column in production);
   `user_agent`/`first_url` are truncated to 255 characters.
 - **`siteUrl` config key** makes resolved content URLs and the home fallback

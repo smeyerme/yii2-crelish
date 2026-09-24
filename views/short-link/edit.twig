@@ -123,8 +123,11 @@
             </div>
             <div class="mb-3">
               {{ logoWidget|raw }}
-              <div class="form-text">{{ t('crelish', 'Optional. Overrides the site-wide logo. PNG or JPEG, ideally square.') }}</div>
+              <div class="form-text">{{ t('crelish', 'Optional. Overrides the site-wide logo. PNG, JPEG or SVG, ideally square.') }}</div>
             </div>
+            {% if logoProblem %}
+              <div class="alert alert-warning">{{ t('crelish', "The logo can't be used for the QR code: {problem}", {'problem': logoProblem}) }}</div>
+            {% endif %}
             <div class="d-flex gap-4 align-items-start mb-3">
               <figure class="text-center">
                 <img id="sl-qr-plain" src="{{ url('/crelish/short-link/qr-preview', {'uuid': link.uuid, 'variant': 'plain'}) }}" width="200" height="200" alt="">

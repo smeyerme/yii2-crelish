@@ -32,6 +32,25 @@ function transparentLogo(): string
     return $path;
 }
 
+/**
+ * A 200x100 SVG logo with a green rectangle
+ */
+function svgLogo(): string
+{
+    $path = tempnam(sys_get_temp_dir(), 'qr-test-logo-') . '.svg';
+    file_put_contents($path, '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100"><rect x="10" y="10" width="180" height="80" fill="#2f6f4f"/></svg>');
+
+    return $path;
+}
+
+function fileWithContent(string $extension, string $content): string
+{
+    $path = tempnam(sys_get_temp_dir(), 'qr-test-file-') . '.' . $extension;
+    file_put_contents($path, $content);
+
+    return $path;
+}
+
 function pngDpi(string $png): ?int
 {
     $position = strpos($png, 'pHYs');
@@ -40,6 +59,15 @@ function pngDpi(string $png): ?int
     }
 
     return (int)round(unpack('N', substr($png, $position + 4, 4))[1] * 0.0254);
+}
+
+/**
+ * Bit depth from the IHDR chunk (byte at offset 24, right after the 8-byte
+ * signature and 4+4+4-byte length/type/width/height fields)
+ */
+function pngBitDepth(string $png): int
+{
+    return ord($png[24]);
 }
 
 echo "Matrix\n";
@@ -102,9 +130,44 @@ try {
 check('eps refuses a logo', true, $epsThrew);
 
 echo "\nLogo errors\n";
-foreach (['missing file' => '/nonexistent/logo.png', 'text file' => __FILE__] as $label => $path) {
+foreach ([
+    'missing file' => '/nonexistent/logo.png',
+    'text file' => __FILE__,
+    'random text .txt file' => fileWithContent('txt', 'just some random text, not an image at all'),
+] as $label => $path) {
     try {
         QrLogo::fromFile($path);
+        $threw = false;
+    } catch (RuntimeException) {
+        $threw = true;
+    }
+    check("$label is rejected", true, $threw);
+}
+
+echo "\nSVG logo\n";
+$svgLogo = QrLogo::fromFile(svgLogo());
+check('svg logo carries the original markup', true, str_contains((string)$svgLogo->svg, '<svg'));
+check('svg logo keeps the 2:1 aspect ratio', [1200, 600], [$svgLogo->width, $svgLogo->height]);
+check('svg logo\'s rasterised png is 8-bit (fpdf cannot embed anything else)', 8, pngBitDepth($svgLogo->png));
+$withSvgLogo = new QrRenderer(QrMatrix::encode(PAYLOAD, 'H'), 30, 4, '#000000', $svgLogo);
+check('svg output embeds the vector logo', true, str_contains($withSvgLogo->svg(), 'data:image/svg+xml;base64,'));
+check('svg output no longer embeds a png logo', false, str_contains($withSvgLogo->svg(), 'data:image/png;base64,'));
+try {
+    $svgLogoPdf = $withSvgLogo->pdf();
+} catch (\Throwable $e) {
+    $svgLogoPdf = 'failed: ' . $e->getMessage();
+}
+check('svg logo works in pdf', true, str_contains($svgLogoPdf, '/Subtype /Image'));
+check('svg logo png renders', true, getimagesizefromstring($withSvgLogo->png()) !== false);
+
+echo "\nSVG logo rejections\n";
+$dangerousSvgs = [
+    'DOCTYPE declaration' => '<?xml version="1.0"?><!DOCTYPE svg><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"></svg>',
+    'ENTITY declaration' => '<?xml version="1.0"?><!ENTITY xxe SYSTEM "file:///etc/passwd"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10">&xxe;</svg>',
+];
+foreach ($dangerousSvgs as $label => $content) {
+    try {
+        QrLogo::fromFile(fileWithContent('svg', $content));
         $threw = false;
     } catch (RuntimeException) {
         $threw = true;

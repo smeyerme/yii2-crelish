@@ -22,6 +22,9 @@ final class QrBundleService
 
   public ?string $logoError = null;
 
+  private bool $logoProblemComputed = false;
+  private ?string $logoProblemCache = null;
+
   public function __construct(private readonly ?string $logoPath)
   {
   }
@@ -69,6 +72,32 @@ final class QrBundleService
     return $names;
   }
 
+  /**
+   * Why the logo can't be used, or null when there is no logo path or it loads fine.
+   *
+   * Cached per instance: the logo is only ever loaded once for this check.
+   */
+  public function logoProblem(): ?string
+  {
+    if ($this->logoProblemComputed) {
+      return $this->logoProblemCache;
+    }
+
+    $this->logoProblemComputed = true;
+
+    if ($this->logoPath === null) {
+      return $this->logoProblemCache = null;
+    }
+
+    try {
+      QrLogo::fromFile($this->logoPath);
+
+      return $this->logoProblemCache = null;
+    } catch (\Throwable $e) {
+      return $this->logoProblemCache = $e->getMessage();
+    }
+  }
+
   public function renderer(ShortLink $link, string $variant): QrRenderer
   {
     $payload = $link->getQrPayload();
@@ -106,7 +135,7 @@ final class QrBundleService
         $files["logo/{$code}.svg"] = $withLogo->svg();
         $files["logo/{$code}.pdf"] = $withLogo->pdf();
         $files["logo/{$code}.png"] = $withLogo->png();
-      } catch (RuntimeException $e) {
+      } catch (\Throwable $e) {
         $this->logoError = $e->getMessage();
         Yii::warning("QR logo for short link '{$code}' skipped: " . $e->getMessage(), 'shortlink');
       }

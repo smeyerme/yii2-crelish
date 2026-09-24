@@ -15,7 +15,7 @@ Campaign and print links with QR export and tracking: `https://example.com/go/<c
   'siteUrl'       => null,          // absolute main-site URL; required with shortHost
   'fallbackUrl'   => null,          // null = home page
   'detailPages'   => ['news' => 'news'],   // ctype => listing page slug
-  'qrLogo'        => '@webroot/img/qr-signet.png', // PNG/JPEG, ideally square
+  'qrLogo'        => '@webroot/img/qr-signet.png', // PNG, JPEG or SVG, ideally square
   'reservedCodes' => [],
 ],
 ```
@@ -54,7 +54,11 @@ never cache a destination and edits take effect immediately.
 ## Configuration Notes
 
 - **`siteUrl` is required** when `shortHost` is set. Without it, the redirect endpoint throws an InvalidConfigException. This is a deliberate loud failure to prevent endless redirect loops.
-- **QR code logo** must be a PNG or JPEG image, ideally square and at least 600 px wide. The knockout takes at most 22% of the code width.
+- **QR code logo** may be a PNG, JPEG or SVG image, ideally square and at least 600 px wide. SVG logos are embedded as vector graphics
+  in the SVG export and rasterised with ImageMagick (the PHP `imagick` extension with SVG support is required) for the PDF and PNG
+  exports; SVGs containing `<!DOCTYPE` or `<!ENTITY` declarations are rejected. The knockout takes at most 22% of the code width.
+  The admin edit view explains when a configured logo can't be used (e.g. a missing file or an unsupported format) instead of
+  silently showing a broken preview.
 
 ## Tracking
 

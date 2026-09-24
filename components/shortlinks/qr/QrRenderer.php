@@ -87,9 +87,11 @@ final class QrRenderer
 
     if ($this->logo !== null) {
       [$x, $y, $width, $height] = $this->logoBox();
+      $mime = $this->logo->svg !== null ? 'image/svg+xml' : 'image/png';
+      $data = $this->logo->svg !== null ? $this->logo->svg : $this->logo->png;
       $svg .= sprintf(
-        '<image x="%s" y="%s" width="%s" height="%s" preserveAspectRatio="xMidYMid meet" xlink:href="data:image/png;base64,%s"/>' . "\n",
-        self::number($x + $quiet), self::number($y + $quiet), self::number($width), self::number($height), base64_encode($this->logo->png)
+        '<image x="%s" y="%s" width="%s" height="%s" preserveAspectRatio="xMidYMid meet" xlink:href="data:%s;base64,%s"/>' . "\n",
+        self::number($x + $quiet), self::number($y + $quiet), self::number($width), self::number($height), $mime, base64_encode($data)
       );
     }
 

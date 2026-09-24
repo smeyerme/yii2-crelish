@@ -236,7 +236,7 @@ class ShortLinkController extends CrelishBaseController
   protected function qrAndStatsParams(ShortLink $link): array
   {
     if ($link->isNewRecord) {
-      return ['hasLogo' => false, 'qrFiles' => [], 'logoWidget' => '', 'stats' => null, 'periodPicker' => '', 'logoMinMm' => QrBundleService::LOGO_MIN_MM];
+      return ['hasLogo' => false, 'logoProblem' => null, 'qrFiles' => [], 'logoWidget' => '', 'stats' => null, 'periodPicker' => '', 'logoMinMm' => QrBundleService::LOGO_MIN_MM];
     }
 
     $request = Yii::$app->request;
@@ -245,12 +245,16 @@ class ShortLinkController extends CrelishBaseController
       $request->get('start_date'),
       $request->get('end_date')
     );
-    $hasLogo = QrBundleService::logoPathFor($link) !== null;
+    $bundle = QrBundleService::forLink($link);
+    $hasLogoPath = QrBundleService::logoPathFor($link) !== null;
+    $logoProblem = $hasLogoPath ? $bundle->logoProblem() : null;
+    $hasLogo = $hasLogoPath && $logoProblem === null;
 
     $this->view->registerJsFile('https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js', ['position' => \yii\web\View::POS_HEAD]);
 
     return [
       'hasLogo' => $hasLogo,
+      'logoProblem' => $logoProblem,
       'qrFiles' => QrBundleService::fileNames($link, $hasLogo),
       'logoWidget' => $this->logoWidget($link),
       'logoMinMm' => QrBundleService::LOGO_MIN_MM,
@@ -284,7 +288,7 @@ class ShortLinkController extends CrelishBaseController
 
     try {
       $response->data = QrBundleService::forLink($link)->renderer($link, $variant)->svg();
-    } catch (\RuntimeException $e) {
+    } catch (\Throwable $e) {
       $response->statusCode = 404;
       $response->data = '';
     }
@@ -322,7 +326,9 @@ class ShortLinkController extends CrelishBaseController
       }
 
       return Yii::$app->response->sendContentAsFile($files[$file], str_replace('/', '-', $file), ['mimeType' => $mimeTypes[$extension]]);
-    } catch (\RuntimeException $e) {
+    } catch (NotFoundHttpException $e) {
+      throw $e;
+    } catch (\Throwable $e) {
       Yii::error("QR export failed for short link {$link->uuid}: " . $e->getMessage(), 'shortlink');
       Yii::$app->session->setFlash('error', Yii::t('crelish', 'The QR code could not be generated: {error}', ['error' => $e->getMessage()]));
 
