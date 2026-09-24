@@ -44,6 +44,9 @@ to the link's fallback URL, then to `fallbackUrl`, then to the home page. Broken
 resolution or cache failures redirect to the link's fallback or the site fallback and are logged (category 
 `shortlink`); tracking failures are logged under `analytics`.
 
+Every redirect is an HTTP 302 with `Cache-Control: no-store` and `X-Robots-Tag: noindex` headers, so browsers 
+never cache a destination and edits take effect immediately.
+
 ## Configuration Notes
 
 - **`siteUrl` is required** when `shortHost` is set. Without it, the redirect endpoint throws an InvalidConfigException. This is a deliberate loud failure to prevent endless redirect loops.
@@ -70,3 +73,5 @@ alphanumeric mode and gives a smaller code. The ZIP bundle contains:
 - `plain/` SVG, EPS, PDF (vector) and PNG (>= 300 dpi), error correction M, readable from 15 mm
 - `logo/` SVG, PDF and PNG with the logo, error correction H, only for 25 mm and larger (EPS cannot embed images)
 - `README.txt`
+
+The size in mm includes the quiet zone.
