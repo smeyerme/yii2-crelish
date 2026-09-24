@@ -28,8 +28,8 @@ use yii\db\ActiveRecord;
  * @property string|null $target_uuid
  * @property string|null $target_language
  * @property string|null $fallback_url
- * @property int|null $valid_from
- * @property int|null $valid_until
+ * @property int|string|null $valid_from
+ * @property int|string|null $valid_until
  * @property string|null $note
  * @property string|null $logo_asset_uuid
  * @property int $qr_size_mm
