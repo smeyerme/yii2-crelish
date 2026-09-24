@@ -52,7 +52,9 @@ final class ShortLinkStats
 
   /**
    * @param string[] $uuids
-   * @return array<string, array{scan:int, click:int, fallback:int, last:?string}>
+   * @return array<string, array{scan:int, click:int, fallback:int, last:?string}> `last` is
+   *   'Y-m-d H:i:s' when it comes from a raw event, or 'Y-m-d' when it falls back to the
+   *   aggregated table because the nightly job has already pruned the raw rows.
    */
   public function summaries(array $uuids, int $days = 30): array
   {
@@ -84,6 +86,30 @@ final class ShortLinkStats
 
     foreach ($last as $row) {
       $result[$row['uuid']]['last'] = $row['last'];
+    }
+
+    // The nightly job prunes raw events past retention, so a link whose latest hit is
+    // older than that would otherwise report no last hit even though the aggregated
+    // table still has its traffic. Fall back to the aggregated day (day precision) for
+    // any uuid that has no raw (non-bot) hit; a raw timestamp always takes precedence.
+    $missing = [];
+    foreach ($uuids as $uuid) {
+      if ($result[$uuid]['last'] === null) {
+        $missing[] = $uuid;
+      }
+    }
+
+    if ($missing !== []) {
+      $lastAggregated = (new Query())
+        ->select(['uuid' => 'element_uuid', 'last' => new Expression('MAX(date)')])
+        ->from('{{%analytics_element_daily}}')
+        ->where(['element_type' => 'shortlink', 'element_uuid' => $missing])
+        ->groupBy('element_uuid')
+        ->all();
+
+      foreach ($lastAggregated as $row) {
+        $result[$row['uuid']]['last'] = substr((string)$row['last'], 0, 10);
+      }
     }
 
     return $result;

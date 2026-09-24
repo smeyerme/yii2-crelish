@@ -17,6 +17,7 @@ use giantbits\crelish\models\ShortLink;
 
 const A = 'd0000000-0000-4000-8000-00000000000a';
 const B = 'd0000000-0000-4000-8000-00000000000b';
+const C = 'd0000000-0000-4000-8000-00000000000c';
 
 function day(int $ago): string
 {
@@ -60,6 +61,9 @@ raw(A, day(0), 'click', 's2');
 raw(A, day(0), 'fallback', 's3');
 raw(A, day(0), 'scan', 'bot', 1);
 raw(A, day(0), 'click', 's4', 0, 'news');
+// C: an old aggregated day plus a recent raw hit; the raw timestamp must win
+daily(C, day(4), 'scan', 2, 2);
+raw(C, day(0), 'click', 's5');
 
 $stats = new ShortLinkStats();
 check('last aggregated date', day(2), $stats->lastAggregatedDate());
@@ -74,11 +78,12 @@ check('raw day counts', ['scan' => 2, 'click' => 0, 'fallback' => 0], $result['d
 check('bots are excluded from raw data', 0, $result['days'][day(0)]['scan']);
 
 echo "\nSummaries\n";
-$summaries = $stats->summaries([A, B], 30);
+$summaries = $stats->summaries([A, B, C], 30);
 check('summary for A', [10, 3, 1], [$summaries[A]['scan'], $summaries[A]['click'], $summaries[A]['fallback']]);
 check('summary for B', [7, 0, 0], [$summaries[B]['scan'], $summaries[B]['click'], $summaries[B]['fallback']]);
 check('last hit ignores bots', day(0) . ' 10:00:00', $summaries[A]['last']);
-check('no raw hits means no last hit', null, $summaries[B]['last']);
+check('last hit falls back to the aggregated day when there is no raw hit', day(2), $summaries[B]['last']);
+check('a raw timestamp wins over an older aggregated day', day(0) . ' 10:00:00', $summaries[C]['last']);
 check('empty uuid list', [], $stats->summaries([]));
 
 echo "\nNever aggregated\n";
