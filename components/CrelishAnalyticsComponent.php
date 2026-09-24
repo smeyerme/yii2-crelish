@@ -146,6 +146,61 @@ class CrelishAnalyticsComponent extends Component
   }
 
   /**
+   * Track an element event that is not tied to a page view (e.g. a short link redirect)
+   *
+   * Element events are only kept by the nightly aggregation when their session
+   * exists, and a visitor who scans a QR code has no page view yet. So this
+   * creates the session row itself, without counting a page.
+   *
+   * @param string $elementUuid
+   * @param string $elementType
+   * @param string $type event type, e.g. 'scan', 'click', 'fallback'
+   * @return bool
+   */
+  public function trackEvent(string $elementUuid, string $elementType, string $type): bool
+  {
+    if (!$this->enabled || in_array(Yii::$app->request->userIP, $this->excludeIps)) {
+      return false;
+    }
+
+    $db = Yii::$app->db;
+    $isBot = $this->isBot();
+    $userId = !Yii::$app->user->isGuest ? Yii::$app->user->id : null;
+
+    $session = (new Query())
+      ->select(['is_bot'])
+      ->from('analytics_sessions')
+      ->where(['session_id' => $this->_sessionId])
+      ->one();
+
+    if ($session === false) {
+      $db->createCommand()->insert('analytics_sessions', [
+        'session_id' => $this->_sessionId,
+        'user_id' => $userId,
+        'ip_address' => mb_substr((string)Yii::$app->request->userIP, 0, 45),
+        'user_agent' => mb_substr((string)Yii::$app->request->userAgent, 0, 255),
+        'is_bot' => $isBot ? 1 : 0,
+        'first_page_uuid' => $elementUuid,
+        'first_url' => mb_substr(Yii::$app->request->absoluteUrl, 0, 255),
+        'total_pages' => 0,
+      ])->execute();
+    } elseif ($isBot && !$session['is_bot']) {
+      $db->createCommand()->update('analytics_sessions', ['is_bot' => 1], ['session_id' => $this->_sessionId])->execute();
+    }
+
+    return (bool)$db->createCommand()->insert('analytics_element_views', [
+      'element_uuid' => $elementUuid,
+      'element_type' => $elementType,
+      // page_uuid is NOT NULL; the event itself is the "page" here
+      'page_uuid' => $elementUuid,
+      'session_id' => $this->_sessionId,
+      'user_id' => $userId,
+      'created_at' => new Expression('NOW()'),
+      'type' => $type,
+    ])->execute();
+  }
+
+  /**
    * Update session data
    * @param array $data
    * @return bool
