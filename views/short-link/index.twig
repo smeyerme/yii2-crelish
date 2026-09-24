@@ -1,7 +1,7 @@
 {{ use('/yii/widgets/LinkPager') }}
 
 <div class="u-window-box-medium">
-  <form method="get" action="{{ url('crelish/short-link/index') }}" class="mb-3" style="max-width: 16rem">
+  <form method="get" action="{{ url('/crelish/short-link/index') }}" class="mb-3" style="max-width: 16rem">
     <select name="cr_status_filter" class="form-select" onchange="this.form.submit()">
       <option value="">{{ t('crelish', 'All statuses') }}</option>
       {% for key, label in statuses %}
@@ -26,7 +26,7 @@
       {% for link in dataProvider.models %}
         {% if rows[link.uuid] is defined %}
           {% set row = rows[link.uuid] %}
-          <tr style="cursor: pointer" onclick="location.href='{{ url('crelish/short-link/update', {'uuid': link.uuid}) }}'">
+          <tr style="cursor: pointer" onclick="location.href='{{ url('/crelish/short-link/update', {'uuid': link.uuid}) }}'">
             <td>{{ link.systitle }}</td>
             <td>
               <code>{{ link.getShortUrl() }}</code>

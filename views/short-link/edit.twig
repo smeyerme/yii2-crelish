@@ -127,12 +127,12 @@
             </div>
             <div class="d-flex gap-4 align-items-start mb-3">
               <figure class="text-center">
-                <img id="sl-qr-plain" src="{{ url('crelish/short-link/qr-preview', {'uuid': link.uuid, 'variant': 'plain'}) }}" width="200" height="200" alt="">
+                <img id="sl-qr-plain" src="{{ url('/crelish/short-link/qr-preview', {'uuid': link.uuid, 'variant': 'plain'}) }}" width="200" height="200" alt="">
                 <figcaption>{{ t('crelish', 'Plain') }}</figcaption>
               </figure>
               {% if hasLogo %}
                 <figure class="text-center">
-                  <img id="sl-qr-logo" src="{{ url('crelish/short-link/qr-preview', {'uuid': link.uuid, 'variant': 'logo'}) }}" width="200" height="200" alt="">
+                  <img id="sl-qr-logo" src="{{ url('/crelish/short-link/qr-preview', {'uuid': link.uuid, 'variant': 'logo'}) }}" width="200" height="200" alt="">
                   <figcaption>{{ t('crelish', 'With logo') }}</figcaption>
                 </figure>
               {% endif %}
@@ -141,11 +141,11 @@
               {{ t('crelish', 'The logo variant is hard to scan below {mm} mm. Use the plain variant for small print.', {'mm': logoMinMm}) }}
             </div>
             <p>
-              <a class="c-button c-button--success" href="{{ url('crelish/short-link/qr-download', {'uuid': link.uuid}) }}">
+              <a class="c-button c-button--success" href="{{ url('/crelish/short-link/qr-download', {'uuid': link.uuid}) }}">
                 <i class="fa-sharp fa-regular fa-download"></i> {{ t('crelish', 'Download ZIP') }}
               </a>
               {% for file in qrFiles %}
-                <a class="ms-2" href="{{ url('crelish/short-link/qr-download', {'uuid': link.uuid, 'file': file}) }}">{{ file }}</a>
+                <a class="ms-2" href="{{ url('/crelish/short-link/qr-download', {'uuid': link.uuid, 'file': file}) }}">{{ file }}</a>
               {% endfor %}
             </p>
             <p class="form-text">{{ t('crelish', 'Downloads use the saved settings. Save after changing them.') }}</p>
@@ -188,7 +188,7 @@
   const search = document.getElementById('sl-target-search');
   const uuid = document.getElementById('sl-target_uuid');
   const results = document.getElementById('sl-target-results');
-  const targetsUrl = {{ url('crelish/short-link/targets')|json_encode|raw }};
+  const targetsUrl = {{ url('/crelish/short-link/targets')|json_encode|raw }};
   let timer;
 
   ctype.addEventListener('change', () => {
