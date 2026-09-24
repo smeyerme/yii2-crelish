@@ -114,11 +114,62 @@
           </p>
         {% endif %}
 
-        {# QR block: filled in Task 11 #}
+        {% if not isNew %}
+            <h4 class="mt-4">{{ t('crelish', 'QR code') }}</h4>
+            <div class="row">
+              <div class="col-md-3">{{ f.input(link, 'qr_size_mm', t('crelish', 'Print size (mm, incl. quiet zone)'), {'type': 'number', 'extra': 'min="10" max="500" data-qr-setting="size"'}) }}</div>
+              <div class="col-md-3">{{ f.input(link, 'qr_color', t('crelish', 'Colour'), {'type': 'color', 'extra': 'data-qr-setting="color"'}) }}</div>
+              <div class="col-md-3">{{ f.input(link, 'qr_quiet_zone', t('crelish', 'Quiet zone (modules)'), {'type': 'number', 'extra': 'min="4" max="20" data-qr-setting="quiet"'}) }}</div>
+            </div>
+            <div class="mb-3">
+              {{ logoWidget|raw }}
+              <div class="form-text">{{ t('crelish', 'Optional. Overrides the site-wide logo. PNG or JPEG, ideally square.') }}</div>
+            </div>
+            <div class="d-flex gap-4 align-items-start mb-3">
+              <figure class="text-center">
+                <img id="sl-qr-plain" src="{{ url('crelish/short-link/qr-preview', {'uuid': link.uuid, 'variant': 'plain'}) }}" width="200" height="200" alt="">
+                <figcaption>{{ t('crelish', 'Plain') }}</figcaption>
+              </figure>
+              {% if hasLogo %}
+                <figure class="text-center">
+                  <img id="sl-qr-logo" src="{{ url('crelish/short-link/qr-preview', {'uuid': link.uuid, 'variant': 'logo'}) }}" width="200" height="200" alt="">
+                  <figcaption>{{ t('crelish', 'With logo') }}</figcaption>
+                </figure>
+              {% endif %}
+            </div>
+            <div id="sl-qr-logo-warning" class="alert alert-warning"{% if not hasLogo or link.qr_size_mm >= logoMinMm %} hidden{% endif %}>
+              {{ t('crelish', 'The logo variant is hard to scan below {mm} mm. Use the plain variant for small print.', {'mm': logoMinMm}) }}
+            </div>
+            <p>
+              <a class="c-button c-button--success" href="{{ url('crelish/short-link/qr-download', {'uuid': link.uuid}) }}">
+                <i class="fa-sharp fa-regular fa-download"></i> {{ t('crelish', 'Download ZIP') }}
+              </a>
+              {% for file in qrFiles %}
+                <a class="ms-2" href="{{ url('crelish/short-link/qr-download', {'uuid': link.uuid, 'file': file}) }}">{{ file }}</a>
+              {% endfor %}
+            </p>
+            <p class="form-text">{{ t('crelish', 'Downloads use the saved settings. Save after changing them.') }}</p>
+          {% endif %}
       </form>
     </div>
 
-    {# Statistics tab: filled in Task 11 #}
+    {% if not isNew %}
+        <div class="tab-pane fade" id="sl-tab-stats">
+          <div class="mb-3" style="max-width: 20rem">{{ periodPicker|raw }}</div>
+          <div class="row text-center mb-4">
+            {% for key, label in {'scan': t('crelish', 'QR scans'), 'click': t('crelish', 'Link clicks'), 'fallback': t('crelish', 'Fallback hits')} %}
+              <div class="col"><div class="fs-2">{{ stats.totals[key] }}</div><div>{{ label }}</div></div>
+            {% endfor %}
+            <div class="col"><div class="fs-2">{{ stats.uniqueSessions }}</div><div>{{ t('crelish', 'Unique sessions (per day, summed)') }}</div></div>
+          </div>
+          {% if stats.totals.fallback > 0 and resolvesTo and resolvesTo.isFallback() %}
+            <div class="alert alert-warning">{{ t('crelish', 'Visitors currently reach the fallback ({reason}).', {'reason': resolvesTo.reason}) }}</div>
+          {% endif %}
+          <canvas id="sl-stats-chart" height="120"
+                  data-labels="{{ {'scan': t('crelish', 'QR scans'), 'click': t('crelish', 'Link clicks'), 'fallback': t('crelish', 'Fallback hits')}|json_encode|e('html_attr') }}"></canvas>
+          <script type="application/json" id="sl-stats-data">{{ stats.days|json_encode(constant('JSON_HEX_TAG'))|raw }}</script>
+        </div>
+      {% endif %}
   </div>
 </div>
 
@@ -174,5 +225,51 @@
       }));
     }, 250);
   });
+
+  const previews = ['plain', 'logo'].map(variant => document.getElementById('sl-qr-' + variant)).filter(Boolean);
+  const logoWarning = document.getElementById('sl-qr-logo-warning');
+  const settings = form.querySelectorAll('[data-qr-setting]');
+  const refreshPreview = () => {
+    const values = {};
+    settings.forEach(input => { values[input.dataset.qrSetting] = input.value; });
+    previews.forEach(img => {
+      const url = new URL(img.src);
+      Object.entries(values).forEach(([key, value]) => url.searchParams.set(key, value));
+      img.src = url;
+    });
+    if (logoWarning && document.getElementById('sl-qr-logo')) {
+      logoWarning.hidden = Number(values.size) >= {{ logoMinMm ?? 25 }};
+    }
+  };
+  settings.forEach(input => input.addEventListener('change', refreshPreview));
+
+  const statsData = document.getElementById('sl-stats-data');
+  const chartCanvas = document.getElementById('sl-stats-chart');
+  if (statsData && chartCanvas && window.Chart) {
+    const days = JSON.parse(statsData.textContent);
+    const labels = JSON.parse(chartCanvas.dataset.labels);
+    const dates = Object.keys(days);
+    const colors = {scan: '#2f6f4f', click: '#8fb996', fallback: '#d9a441'};
+    new Chart(chartCanvas, {
+      type: 'bar',
+      data: {
+        labels: dates,
+        datasets: Object.keys(colors).map(type => ({label: labels[type], data: dates.map(date => days[date][type]), backgroundColor: colors[type]})),
+      },
+      options: {responsive: true, scales: {x: {stacked: true}, y: {stacked: true, beginAtZero: true, ticks: {precision: 0}}}},
+    });
+  }
+
+  document.addEventListener('crelish:periodchange', event => {
+    const url = new URL(location.href);
+    ['period', 'start_date', 'end_date'].forEach(key => url.searchParams.delete(key));
+    Object.entries(event.detail).forEach(([key, value]) => url.searchParams.set(key, value));
+    url.hash = 'stats';
+    location.href = url;
+  });
+
+  if (location.hash === '#stats') {
+    document.getElementById('sl-stats-tab')?.click();
+  }
 })();
 </script>

@@ -231,11 +231,118 @@ class ShortLinkController extends CrelishBaseController
   }
 
   /**
-   * View parameters for the QR block and statistics tab (filled in Task 11)
+   * View parameters for the QR block and statistics tab
    */
   protected function qrAndStatsParams(ShortLink $link): array
   {
-    return [];
+    if ($link->isNewRecord) {
+      return ['hasLogo' => false, 'qrFiles' => [], 'logoWidget' => '', 'stats' => null, 'periodPicker' => '', 'logoMinMm' => QrBundleService::LOGO_MIN_MM];
+    }
+
+    $request = Yii::$app->request;
+    [$startDate, $endDate, $period] = CrelishAnalyticsPeriod::resolve(
+      $request->get('period', CrelishAnalyticsPeriod::FALLBACK),
+      $request->get('start_date'),
+      $request->get('end_date')
+    );
+    $hasLogo = QrBundleService::logoPathFor($link) !== null;
+
+    $this->view->registerJsFile('https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js', ['position' => \yii\web\View::POS_HEAD]);
+
+    return [
+      'hasLogo' => $hasLogo,
+      'qrFiles' => QrBundleService::fileNames($link, $hasLogo),
+      'logoWidget' => $this->logoWidget($link),
+      'logoMinMm' => QrBundleService::LOGO_MIN_MM,
+      'stats' => (new ShortLinkStats())->forLink($link->uuid, $startDate, $endDate),
+      'periodPicker' => CrelishAnalyticsPeriodPicker::widget(['period' => $period, 'startDate' => $startDate, 'endDate' => $endDate]),
+    ];
+  }
+
+  /**
+   * Live SVG preview; size, colour and quiet zone can be overridden from the unsaved form
+   */
+  public function actionQrPreview(string $uuid, string $variant = 'plain'): Response
+  {
+    $link = $this->findLink($uuid);
+    $request = Yii::$app->request;
+    $overrides = array_filter([
+      'qr_size_mm' => $request->get('size'),
+      'qr_color' => $request->get('color'),
+      'qr_quiet_zone' => $request->get('quiet'),
+    ], fn($value) => $value !== null && $value !== '');
+
+    $link->setAttributes($overrides);
+    if ($overrides !== [] && !$link->validate(array_keys($overrides))) {
+      $link->refresh();
+    }
+
+    $response = Yii::$app->response;
+    $response->format = Response::FORMAT_RAW;
+    $response->headers->set('Content-Type', 'image/svg+xml');
+    $response->headers->set('Cache-Control', 'no-store');
+
+    try {
+      $response->data = QrBundleService::forLink($link)->renderer($link, $variant)->svg();
+    } catch (\RuntimeException $e) {
+      $response->statusCode = 404;
+      $response->data = '';
+    }
+
+    return $response;
+  }
+
+  public function actionQrDownload(string $uuid, ?string $file = null): Response
+  {
+    $link = $this->findLink($uuid);
+    $bundle = QrBundleService::forLink($link);
+    $mimeTypes = ['svg' => 'image/svg+xml', 'eps' => 'application/postscript', 'pdf' => 'application/pdf', 'png' => 'image/png'];
+
+    try {
+      if ($file === null) {
+        $path = $bundle->zip($link);
+
+        if ($bundle->logoError !== null) {
+          Yii::$app->session->setFlash('warning', Yii::t('crelish', 'The logo variant was skipped: {error}', ['error' => $bundle->logoError]));
+        }
+
+        $response = Yii::$app->response->sendFile($path, $link->code . '-qr.zip', ['mimeType' => 'application/zip']);
+        $response->on(Response::EVENT_AFTER_SEND, static function () use ($path) {
+          @unlink($path);
+        });
+
+        return $response;
+      }
+
+      $files = $bundle->files($link);
+      $extension = pathinfo($file, PATHINFO_EXTENSION);
+
+      if (!isset($files[$file], $mimeTypes[$extension])) {
+        throw new NotFoundHttpException();
+      }
+
+      return Yii::$app->response->sendContentAsFile($files[$file], str_replace('/', '-', $file), ['mimeType' => $mimeTypes[$extension]]);
+    } catch (\RuntimeException $e) {
+      Yii::error("QR export failed for short link {$link->uuid}: " . $e->getMessage(), 'shortlink');
+      Yii::$app->session->setFlash('error', Yii::t('crelish', 'The QR code could not be generated: {error}', ['error' => $e->getMessage()]));
+
+      return $this->redirect(['update', 'uuid' => $link->uuid]);
+    }
+  }
+
+  private function logoWidget(ShortLink $link): string
+  {
+    return AssetConnector::widget([
+      'formKey' => 'logo_asset_uuid',
+      'field' => (object)[
+        'key' => 'logo_asset_uuid',
+        'label' => Yii::t('crelish', 'QR logo'),
+        'config' => (object)[],
+        'rules' => [],
+      ],
+      'data' => $link->logo_asset_uuid,
+      'model' => $link,
+    ]);
   }
 
   private function targetLabel(ShortLink $link): string
