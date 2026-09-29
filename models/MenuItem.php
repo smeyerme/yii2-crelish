@@ -5,6 +5,7 @@ namespace giantbits\crelish\models;
 use giantbits\crelish\components\ContentUrlResolver;
 use giantbits\crelish\components\CrelishBaseHelper;
 use giantbits\crelish\components\CrelishTranslationBehavior;
+use giantbits\crelish\components\menus\MenuService;
 use yii\behaviors\AttributeBehavior;
 use yii\behaviors\BlameableBehavior;
 use yii\behaviors\TimestampBehavior;
@@ -70,5 +71,17 @@ class MenuItem extends ActiveRecord
         'class' => CrelishTranslationBehavior::class,
       ],
     ];
+  }
+
+  public function afterSave($insert, $changedAttributes)
+  {
+    parent::afterSave($insert, $changedAttributes);
+    MenuService::invalidate();
+  }
+
+  public function afterDelete()
+  {
+    parent::afterDelete();
+    MenuService::invalidate();
   }
 }
