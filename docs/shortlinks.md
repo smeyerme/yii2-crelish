@@ -26,7 +26,7 @@ Campaign and print links with QR export and tracking: `https://example.com/go/<c
 before page routing. Check that no existing page lives under `/<prefix>/` before enabling. This is not an
 issue on sites with `langprefix` enabled, where pages live under `/<lang>/…` instead.
 
-**Note:** In crelish ≤ 0.21 the `crelish-migrate` console command may register both `migrationPath` and `migrationNamespaces` for the same directory and can fail on already-applied migrations. If this happens, run: `./yii crelish-migrate --migrationPath= --interactive=0`
+**Note:** In crelish ≤ 0.21 the `crelish-migrate` console command may register both `migrationPath` and `migrationNamespaces` for the same directory and can fail on already-applied migrations. If this happens, run: `./yii crelish-migrate --migrationPath= --interactive=0`. Since 0.23.0 `crelish-migrate` registers the migration namespaces only, so this workaround is no longer needed.
 
 ## Targets
 
