@@ -151,4 +151,8 @@ return [
   'Please enter a URL starting with https://, http://, mailto:, tel:, / or #.' => 'Bitte eine URL eingeben, die mit https://, http://, mailto:, tel:, / oder # beginnt.',
   'An item without a link needs a label.' => 'Ein Eintrag ohne Verlinkung braucht eine Bezeichnung.',
   'Unknown target type.' => 'Unbekannter Zieltyp.',
+  'Online' => 'Online',
+  'Offline' => 'Offline',
+  'Status' => 'Status',
+  'Please correct the highlighted fields.' => 'Bitte die markierten Felder korrigieren.',
 ];
