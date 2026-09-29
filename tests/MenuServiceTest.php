@@ -104,4 +104,23 @@ Yii::$app->language = 'en';
 check('cache is per language', 'News', $service->tree('main')[0]['label']);
 Yii::$app->language = 'de';
 
+Yii::$app->set('cache', new class extends \yii\caching\ArrayCache {
+    protected function setValue($key, $value, $duration)
+    {
+        throw new \RuntimeException('cache backend down');
+    }
+
+    protected function setValues($data, $duration)
+    {
+        throw new \RuntimeException('cache backend down');
+    }
+});
+$threw = false;
+try {
+    MenuService::invalidate();
+} catch (\Throwable $e) {
+    $threw = true;
+}
+check('invalidate() survives a failing cache', false, $threw);
+
 shortLinkDone();

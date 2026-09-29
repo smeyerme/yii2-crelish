@@ -28,8 +28,15 @@ class MenuService
 
   public static function invalidate(): void
   {
-    if (Yii::$app !== null && Yii::$app->has('cache')) {
+    if (Yii::$app === null || !Yii::$app->has('cache')) {
+      return;
+    }
+
+    // A failing cache backend must never break the content or menu save that triggered this
+    try {
       TagDependency::invalidate(Yii::$app->cache, self::CACHE_TAG);
+    } catch (\Throwable $e) {
+      Yii::error('Menu cache invalidation failed: ' . $e->getMessage(), 'crelish.menu');
     }
   }
 
