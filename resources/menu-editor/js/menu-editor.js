@@ -6,6 +6,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (!el) return;
 
   createApp(MenuEditor, {
+    menuKey: el.dataset.menuKey,
+    settingsUrl: el.dataset.settingsUrl,
     treeUrl: el.dataset.treeUrl,
     saveUrl: el.dataset.saveUrl,
     typesUrl: el.dataset.typesUrl,

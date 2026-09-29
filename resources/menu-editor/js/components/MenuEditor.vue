@@ -1,48 +1,63 @@
 <template>
   <div class="me">
-    <div class="me-toolbar">
-      <button type="button" class="c-button" @click="addItem" :disabled="!loaded">
-        <i class="fa-sharp fa-regular fa-plus"></i> {{ labels.addItem }}
+    <div class="me-toolbar d-flex flex-wrap align-items-center gap-2 mb-3">
+      <code>chelper.menu('{{ menuKey }}')</code>
+      <a class="c-button" :href="settingsUrl">
+        <i class="fa-sharp fa-regular fa-gear"></i>&nbsp;{{ labels.settings }}
+      </a>
+      <button type="button" class="c-button" @click="addItem" :disabled="locked">
+        <i class="fa-sharp fa-regular fa-plus"></i>&nbsp;{{ labels.addItem }}
       </button>
-      <button type="button" class="c-button c-button--brand" @click="save" :disabled="!loaded || saving">
-        {{ saving ? labels.saving : labels.save }}
-      </button>
-      <span v-if="dirty" class="me-hint">{{ labels.unsaved }}</span>
-      <span v-if="message" class="me-message" :class="'me-message--' + message.kind">
+      <span v-if="saving" class="text-muted">{{ labels.saving }}</span>
+      <span v-else-if="dirty" class="text-muted">{{ labels.unsaved }}</span>
+      <span v-if="message" :class="message.kind === 'success' ? 'text-success' : 'text-danger'">
         {{ message.text }}
         <button v-if="message.reload" type="button" class="c-button" @click="reload">{{ labels.reload }}</button>
       </span>
     </div>
 
-    <div class="me-body">
-      <div class="me-tree-wrap">
-        <p v-if="loaded && items.length === 0" class="me-empty">{{ labels.empty }}</p>
-        <TreeList
-          :list="items"
-          :depth="1"
-          :max-depth="menu.max_depth"
-          :selected-key="selectedKey"
-          :errors="errors"
-          :labels="labels"
-          @select="selectedKey = $event"
-          @remove="remove"
-          @refused="flash('error', labels.tooDeep)"
-        />
+    <div class="row me-body">
+      <div class="col-lg-7">
+        <div class="card me-card">
+          <div class="card-header">{{ labels.structure }}</div>
+          <div class="card-body me-tree-wrap">
+            <p v-if="loaded && items.length === 0" class="text-muted mb-0">{{ labels.empty }}</p>
+            <TreeList
+              :list="items"
+              :depth="1"
+              :max-depth="menu.max_depth"
+              :selected-key="selectedKey"
+              :errors="errors"
+              :labels="labels"
+              :disabled="locked"
+              @select="selectedKey = $event"
+              @remove="remove"
+              @drag-started="refusedShown = false"
+              @refused="refused"
+            />
+          </div>
+        </div>
       </div>
 
-      <div class="me-panel">
-        <ItemPanel
-          v-if="selected"
-          :key="selected.key"
-          :node="selected"
-          :languages="languages"
-          :default-language="defaultLanguage"
-          :types="types"
-          :search-url="searchUrl"
-          :errors="errors[selected.key] || []"
-          :labels="labels"
-        />
-        <p v-else class="me-empty">{{ labels.selectItem }}</p>
+      <div class="col-lg-5">
+        <div class="card me-card me-panel-card">
+          <div class="card-header">{{ labels.item }}</div>
+          <div class="card-body">
+            <ItemPanel
+              v-if="selected"
+              :key="selected.key"
+              :node="selected"
+              :languages="languages"
+              :default-language="defaultLanguage"
+              :types="types"
+              :search-url="searchUrl"
+              :errors="errors[selected.key] || []"
+              :labels="labels"
+              :disabled="locked"
+            />
+            <p v-else class="text-muted mb-0">{{ labels.selectItem }}</p>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -57,6 +72,8 @@ export default {
   name: 'MenuEditor',
   components: { TreeList, ItemPanel },
   props: {
+    menuKey: String,
+    settingsUrl: String,
     treeUrl: String,
     saveUrl: String,
     typesUrl: String,
@@ -77,12 +94,17 @@ export default {
       dirty: false,
       saving: false,
       message: null,
+      refusedShown: false,
       ignoreNextChange: false
     };
   },
   computed: {
     selected() {
       return this.selectedKey ? findNode(this.items, this.selectedKey) : null;
+    },
+    // No edits while a save is in flight: its response replaces the tree
+    locked() {
+      return !this.loaded || this.saving;
     }
   },
   watch: {
@@ -94,17 +116,32 @@ export default {
           return;
         }
         this.dirty = true;
+        if (this.message && this.message.kind === 'success') {
+          this.message = null;
+        }
       }
     }
   },
   async mounted() {
     window.addEventListener('beforeunload', this.guard);
+    // The header-bar Save runs $('#content-form').submit(): jQuery calls the inline onsubmit
+    // property and skips the native POST when it returns false / prevents the default
+    const form = document.getElementById('content-form');
+    if (form) {
+      form.onsubmit = (event) => {
+        if (event) event.preventDefault();
+        this.save();
+        return false;
+      };
+    }
     const [tree, types] = await Promise.all([this.getJson(this.treeUrl), this.getJson(this.typesUrl)]);
     this.types = types || [];
     this.apply(tree);
   },
   beforeUnmount() {
     window.removeEventListener('beforeunload', this.guard);
+    const form = document.getElementById('content-form');
+    if (form) form.onsubmit = () => false;
   },
   methods: {
     async getJson(url) {
@@ -141,6 +178,7 @@ export default {
       this.apply(await this.getJson(this.treeUrl));
     },
     addItem() {
+      if (this.locked) return;
       const clientId = newClientId();
       const i18n = {};
       this.languages.forEach((lang) => {
@@ -156,12 +194,14 @@ export default {
       this.selectedKey = clientId;
     },
     remove(key) {
+      if (this.locked) return;
       removeNode(this.items, key);
       if (this.selectedKey && !findNode(this.items, this.selectedKey)) {
         this.selectedKey = null;
       }
     },
     async save() {
+      if (this.locked) return;
       this.saving = true;
       this.message = null;
       try {
@@ -193,6 +233,11 @@ export default {
         this.saving = false;
       }
     },
+    refused() {
+      if (this.refusedShown) return;
+      this.refusedShown = true;
+      this.flash('error', this.labels.tooDeep);
+    },
     flash(kind, text) {
       this.message = { kind, text, reload: false };
     },
@@ -207,12 +252,31 @@ export default {
 </script>
 
 <style>
-.me-toolbar { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; margin-bottom: 1rem; }
-.me-hint { color: #8a6d3b; }
-.me-message--success { color: #2e7d32; }
-.me-message--error { color: #c62828; }
-.me-body { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 1.5rem; align-items: start; }
-@media (max-width: 900px) { .me-body { grid-template-columns: 1fr; } }
-.me-panel { border: 1px solid #ddd; border-radius: .25rem; padding: 1rem; position: sticky; top: 1rem; }
-.me-empty { color: #777; }
+.me { color: var(--color-text-dark); }
+.me .me-card { height: auto; }
+.me .me-panel-card { position: sticky; top: 1rem; }
+.me button.c-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: .5rem 1rem;
+  border-radius: var(--border-radius-md);
+  background-color: var(--color-bg-light);
+  color: var(--color-text-dark);
+  font-weight: 500;
+  border: 1px solid var(--color-border);
+  line-height: 1.5;
+  transition: var(--transition-standard);
+}
+.me button.c-button:hover:not(:disabled) {
+  background-color: rgba(var(--color-primary-light-rgb), .1);
+  color: var(--color-primary-light);
+  box-shadow: var(--shadow-sm);
+}
+[data-theme="dark"] .me button.c-button { color: var(--color-text-light); }
+[data-theme="dark"] .me button.c-button:hover:not(:disabled) {
+  background-color: rgba(var(--color-primary-light-rgb), .3);
+  color: var(--color-text-light);
+}
+.me button.c-button:disabled { opacity: .5; cursor: not-allowed; }
 </style>

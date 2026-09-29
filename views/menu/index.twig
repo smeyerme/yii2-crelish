@@ -20,7 +20,13 @@
               <span class="badge text-bg-danger">{{ t('crelish', '{n} targets unavailable', {'n': row.unavailable}) }}</span>
             {% endif %}
           </td>
-          <td>{{ row.menu.state == 2 ? t('crelish', 'Online') : t('crelish', 'Offline') }}</td>
+          <td>
+            {% if row.menu.state == 2 %}
+              <span class="badge text-bg-success">{{ t('crelish', 'Online') }}</span>
+            {% else %}
+              <span class="badge text-bg-secondary">{{ t('crelish', 'Offline') }}</span>
+            {% endif %}
+          </td>
           <td class="text-end">
             <a class="c-button" href="{{ url('/crelish/menu/update', {'uuid': row.menu.uuid}) }}" onclick="event.stopPropagation()" title="{{ t('crelish', 'Settings') }}">
               <i class="fa-sharp fa-regular fa-gear"></i>

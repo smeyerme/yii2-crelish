@@ -1,5 +1,4 @@
 {% set labels = {
-  'save': t('crelish', 'Save'),
   'saving': t('crelish', 'Saving…'),
   'saved': t('crelish', 'Saved.'),
   'addItem': t('crelish', 'Add item'),
@@ -27,22 +26,24 @@
   'failed': t('crelish', 'The menu could not be saved.'),
   'tooDeep': t('crelish', 'This menu allows at most {depth} levels.', {'depth': menu.max_depth}),
   'untitled': t('crelish', '(untitled)'),
-  'reload': t('crelish', 'Reload')
+  'reload': t('crelish', 'Reload'),
+  'structure': t('crelish', 'Structure'),
+  'item': t('crelish', 'Item')
 } %}
 
-<div class="u-window-box-medium">
-  <p class="mb-3">
-    <code>chelper.menu('{{ menu.key }}')</code>
-    <a class="c-button" href="{{ url('/crelish/menu/update', {'uuid': menu.uuid}) }}">
-      <i class="fa-sharp fa-regular fa-gear"></i> {{ t('crelish', 'Settings') }}
-    </a>
-  </p>
+<div class="u-window-box-medium menu-edit">
+  {# The header-bar Save submits #content-form; the editor takes over onsubmit and saves via JSON #}
+  <form id="content-form" onsubmit="return false">
+    <input type="hidden" id="save_n_return" name="save_n_return" value="0">
 
-  <div id="menu-editor"
-       data-tree-url="{{ url('/crelish/menu/tree', {'uuid': menu.uuid}) }}"
-       data-save-url="{{ url('/crelish/menu/save', {'uuid': menu.uuid}) }}"
-       data-types-url="{{ url('/crelish/content-target/types') }}"
-       data-search-url="{{ url('/crelish/content-target/search') }}"
-       data-csrf-token="{{ csrfToken }}"
-       data-labels="{{ labels|json_encode }}"></div>
+    <div id="menu-editor"
+         data-menu-key="{{ menu.key }}"
+         data-settings-url="{{ url('/crelish/menu/update', {'uuid': menu.uuid}) }}"
+         data-tree-url="{{ url('/crelish/menu/tree', {'uuid': menu.uuid}) }}"
+         data-save-url="{{ url('/crelish/menu/save', {'uuid': menu.uuid}) }}"
+         data-types-url="{{ url('/crelish/content-target/types') }}"
+         data-search-url="{{ url('/crelish/content-target/search') }}"
+         data-csrf-token="{{ csrfToken }}"
+         data-labels="{{ labels|json_encode }}"></div>
+  </form>
 </div>

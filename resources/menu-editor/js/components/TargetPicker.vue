@@ -1,21 +1,23 @@
 <template>
   <div class="me-picker mb-3">
-    <select v-model="node.target_ctype" class="form-select mb-2" @change="clearTarget">
+    <label class="form-label" :for="'ctype-' + node.key">{{ labels.contentType }}</label>
+    <select :id="'ctype-' + node.key" v-model="node.target_ctype" class="form-select mb-2" @change="clearTarget">
       <option v-for="type in types" :key="type.ctype" :value="type.ctype">{{ type.label }}</option>
     </select>
 
-    <div v-if="node.target_uuid" class="me-picked">
+    <div v-if="node.target_uuid" class="d-flex flex-wrap align-items-center gap-2 mb-2">
+      <span class="text-muted">{{ labels.target }}:</span>
       <strong>{{ node.targetTitle || node.target_uuid }}</strong>
       <span v-if="node.targetAvailable === false" class="badge text-bg-danger">{{ labels.targetUnavailable }}</span>
     </div>
 
-    <input v-model="query" type="search" class="form-control" :placeholder="labels.search" @input="scheduleSearch">
-    <ul v-if="results.length" class="me-results">
-      <li v-for="result in results" :key="result.uuid">
-        <button type="button" class="me-result" @click="pick(result)">{{ result.title }}</button>
-      </li>
-    </ul>
-    <p v-else-if="searched" class="me-empty">{{ labels.noResults }}</p>
+    <input v-model="query" type="search" class="form-control" :placeholder="labels.search" autocomplete="off" @input="scheduleSearch">
+    <div v-if="results.length" class="list-group me-results mt-1">
+      <button v-for="result in results" :key="result.uuid" type="button" class="list-group-item list-group-item-action" @click="pick(result)">
+        {{ result.title }}
+      </button>
+    </div>
+    <p v-else-if="searched" class="text-muted small mt-1 mb-0">{{ labels.noResults }}</p>
   </div>
 </template>
 
@@ -74,8 +76,15 @@ export default {
 </script>
 
 <style>
-.me-picked { display: flex; gap: .5rem; align-items: center; margin-bottom: .5rem; }
-.me-results { list-style: none; padding: 0; margin: .25rem 0 0; border: 1px solid #ddd; border-radius: .25rem; max-height: 16rem; overflow: auto; }
-.me-result { display: block; width: 100%; text-align: left; border: 0; background: none; padding: .35rem .5rem; }
-.me-result:hover { background: #f3eee9; }
+.me-results { max-height: 16rem; overflow: auto; }
+.me .list-group-item {
+  background-color: var(--color-bg-main);
+  color: var(--color-text-dark);
+  border-color: var(--color-border);
+}
+.me .list-group-item-action:hover,
+.me .list-group-item-action:focus {
+  background-color: var(--color-bg-light);
+  color: var(--color-text-dark);
+}
 </style>

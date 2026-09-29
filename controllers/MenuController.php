@@ -40,9 +40,13 @@ class MenuController extends CrelishBaseController
   {
     parent::setupHeaderBar();
 
-    // The base controller adds content-form save/delete buttons for create/update;
-    // the menu views bring their own buttons
-    $this->view->params['headerBarRight'] = $this->action && $this->action->id === 'index' ? ['create'] : [];
+    // Save lives in the header bar and submits #content-form; delete is a POST from the settings view
+    $this->view->params['headerBarRight'] = match ($this->action ? $this->action->id : null) {
+      'index' => ['create'],
+      'create', 'update' => [['save', true, false]],
+      'edit' => [['save', false, false]],
+      default => [],
+    };
   }
 
   public function actionIndex(): string
@@ -147,7 +151,9 @@ class MenuController extends CrelishBaseController
       if ($menu->save()) {
         Yii::$app->session->setFlash('success', Yii::t('crelish', 'Menu saved.'));
 
-        return $this->redirect(['edit', 'uuid' => $menu->uuid]);
+        return $request->post('save_n_return') === '1'
+          ? $this->redirect(['index'])
+          : $this->redirect(['edit', 'uuid' => $menu->uuid]);
       }
 
       Yii::$app->session->setFlash('error', Yii::t('crelish', 'Please correct the highlighted fields.'));
