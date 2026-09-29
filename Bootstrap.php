@@ -105,9 +105,8 @@ class Bootstrap implements BootstrapInterface
     // Register migration command for Crelish tables
     $app->controllerMap['crelish-migrate'] = [
       'class' => 'yii\console\controllers\MigrateController',
-      'migrationPath' => [
-        '@giantbits/crelish/migrations',
-      ],
+      // All crelish migrations are namespaced; disable path scan to avoid listing them twice under non-existent bare class names
+      'migrationPath' => null,
       'migrationNamespaces' => [
         'giantbits\crelish\migrations',
       ],
