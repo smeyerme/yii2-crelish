@@ -2,39 +2,28 @@
 
 namespace giantbits\crelish\components\shortlinks;
 
-use Cocur\Slugify\Slugify;
-use giantbits\crelish\components\CrelishBaseHelper;
-use giantbits\crelish\components\CrelishModelResolver;
+use giantbits\crelish\components\ContentUrlResolver;
 use giantbits\crelish\models\ShortLink;
 use Yii;
-use yii\db\BaseActiveRecord;
 
 /**
  * Decides where a short link sends a visitor right now.
  *
  * Content targets are resolved at redirect time, so links survive slug and
- * title changes. Resolution order: ShortLinkTargetInterface, detailPages
- * config, then a page-style slug attribute.
+ * title changes. Content resolution is delegated to ContentUrlResolver; this class adds link state, language negotiation and fallbacks.
  */
 class ShortLinkResolver
 {
-  /** @var callable(string, string): ?object */
-  private $recordFinder;
+  private ContentUrlResolver $content;
 
   public function __construct(?callable $recordFinder = null)
   {
-    $this->recordFinder = $recordFinder ?? [self::class, 'findRecord'];
+    $this->content = new ContentUrlResolver($recordFinder);
   }
 
   public static function findRecord(string $ctype, string $uuid): ?object
   {
-    if (!CrelishModelResolver::modelExists($ctype)) {
-      return null;
-    }
-
-    $class = CrelishModelResolver::getModelClass($ctype);
-
-    return $class::find()->where(['uuid' => $uuid])->one();
+    return ContentUrlResolver::findRecord($ctype, $uuid);
   }
 
   public function resolve(ShortLink $link, ?string $acceptLanguage = null, ?int $now = null): ResolveResult
@@ -63,32 +52,14 @@ class ShortLinkResolver
       return null;
     }
 
-    $record = ($this->recordFinder)($link->target_ctype, $link->target_uuid);
+    $url = $this->content->resolveContent(
+      (string)$link->target_ctype,
+      (string)$link->target_uuid,
+      $this->language($link, $acceptLanguage),
+      $now
+    );
 
-    if ($record === null || !self::isPublished($record, $now ?? time())) {
-      return null;
-    }
-
-    $language = $this->language($link, $acceptLanguage);
-
-    if ($record instanceof ShortLinkTargetInterface) {
-      $url = $record->getShortLinkUrl($language);
-      return $url ? ShortLinkConfig::absolute($url) : null;
-    }
-
-    $detailPage = ShortLinkConfig::detailPages()[$link->target_ctype] ?? null;
-
-    if ($detailPage !== null) {
-      $slug = Slugify::create()->slugify((string)self::attribute($record, 'systitle'));
-
-      return ShortLinkConfig::absolute(
-        CrelishBaseHelper::urlFromSlug($detailPage, [], $language) . '/' . self::attribute($record, 'uuid') . '/' . $slug
-      );
-    }
-
-    $slug = self::attribute($record, 'slug');
-
-    return $slug ? ShortLinkConfig::absolute(CrelishBaseHelper::urlFromSlug((string)$slug, [], $language)) : null;
+    return $url !== null ? ShortLinkConfig::absolute($url) : null;
   }
 
   public function fallbackFor(ShortLink $link): string
@@ -98,17 +69,7 @@ class ShortLinkResolver
 
   public static function canResolveType(string $ctype): bool
   {
-    if ($ctype === 'page' || isset(ShortLinkConfig::detailPages()[$ctype])) {
-      return true;
-    }
-
-    try {
-      $class = CrelishModelResolver::getModelClass($ctype);
-    } catch (\Throwable) {
-      return false;
-    }
-
-    return is_subclass_of($class, ShortLinkTargetInterface::class);
+    return ContentUrlResolver::canResolveType($ctype);
   }
 
   /**
@@ -116,22 +77,7 @@ class ShortLinkResolver
    */
   public static function resolvableTypes(): array
   {
-    $types = array_merge(['page'], array_keys(ShortLinkConfig::detailPages()));
-
-    try {
-      foreach (CrelishModelResolver::getAllModels() as $ctype => $class) {
-        if (is_subclass_of($class, ShortLinkTargetInterface::class)) {
-          $types[] = $ctype;
-        }
-      }
-    } catch (\Throwable $e) {
-      Yii::warning('Short links: model discovery failed: ' . $e->getMessage(), 'shortlink');
-    }
-
-    $types = array_values(array_unique($types));
-    sort($types);
-
-    return $types;
+    return ContentUrlResolver::resolvableTypes();
   }
 
   private function language(ShortLink $link, ?string $acceptLanguage): string
@@ -179,53 +125,5 @@ class ShortLinkResolver
     usort($weighted, static fn(array $a, array $b) => [$b[1], $a[2]] <=> [$a[1], $b[2]]);
 
     return array_values(array_unique(array_column($weighted, 0)));
-  }
-
-  private static function isPublished(object $record, int $now): bool
-  {
-    $state = self::attribute($record, 'state');
-
-    if ($state !== null && (int)$state !== ShortLink::STATE_ONLINE) {
-      return false;
-    }
-
-    $from = self::timestamp(self::attribute($record, 'from'), false);
-    $to = self::timestamp(self::attribute($record, 'to'), true);
-
-    return ($from === null || $from <= $now) && ($to === null || $to >= $now);
-  }
-
-  private static function timestamp(mixed $value, bool $endOfDay): ?int
-  {
-    if ($value === null || $value === '' || $value === 0 || $value === '0') {
-      return null;
-    }
-
-    if (is_numeric($value)) {
-      return (int)$value;
-    }
-
-    $value = (string)$value;
-
-    if (str_starts_with($value, '0000-00-00')) {
-      return null;
-    }
-
-    if ($endOfDay && preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
-      $value .= ' 23:59:59';
-    }
-
-    $timestamp = strtotime($value);
-
-    return $timestamp === false ? null : $timestamp;
-  }
-
-  private static function attribute(object $record, string $name): mixed
-  {
-    if ($record instanceof BaseActiveRecord) {
-      return $record->hasAttribute($name) ? $record->getAttribute($name) : null;
-    }
-
-    return $record->$name ?? null;
   }
 }

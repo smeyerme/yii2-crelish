@@ -29,6 +29,13 @@
       "order": 40
     },
     {
+      "id": "menus",
+      "label": "Navigation",
+      "url": "crelish/menu/index",
+      "icon": "fa-sharp fa-regular fa-sitemap",
+      "order": 44
+    },
+    {
       "id": "shortlinks",
       "label": "Short Links",
       "url": "crelish/short-link/index",

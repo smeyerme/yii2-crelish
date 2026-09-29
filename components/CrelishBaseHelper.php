@@ -4,6 +4,7 @@ namespace giantbits\crelish\components;
 
 use app\workspace\models\Asset;
 use Cocur\Slugify\Slugify;
+use giantbits\crelish\components\menus\MenuService;
 use MatthiasMullie\Minify\CSS;
 use Yii;
 use yii\base\InvalidConfigException;
@@ -103,6 +104,19 @@ class CrelishBaseHelper
     
     // Generate URL with the new language using urlFromSlug
     return self::urlFromSlug($slug, $params, $langCode, $scheme);
+  }
+
+  /**
+   * Resolved menu for themes: {% for item in chelper.menu('main') %}
+   *
+   * @return array<int, array> nodes with label, url, type, targetUuid, external, newWindow, active, activeTrail, children
+   */
+  public static function menu(string $key): array
+  {
+    static $service = null;
+    $service ??= new MenuService();
+
+    return $service->get($key);
   }
 
   /**

@@ -1,0 +1,66 @@
+<div class="u-window-box-medium menu-edit">
+  <form id="content-form" method="post">
+    <input type="hidden" name="{{ csrfParam }}" value="{{ csrfToken }}">
+    <input type="hidden" id="save_n_return" name="save_n_return" value="0">
+
+    <div class="row">
+      <div class="col col-md-6">
+        <div class="card">
+          <div class="card-header">{{ t('crelish', 'Menu') }}</div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label class="form-label" for="menu-systitle">{{ t('crelish', 'Title') }}</label>
+              <input type="text" id="menu-systitle" name="Menu[systitle]" value="{{ menu.systitle }}" maxlength="128" required
+                     class="form-control{% if menu.hasErrors('systitle') %} is-invalid{% endif %}">
+              {% if menu.hasErrors('systitle') %}<div class="invalid-feedback">{{ menu.getFirstError('systitle') }}</div>{% endif %}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label" for="menu-key">{{ t('crelish', 'Key') }}</label>
+              <input type="text" id="menu-key" name="Menu[key]" value="{{ menu.key }}" maxlength="64" pattern="[a-z0-9_\-]+"
+                     {% if not menu.isNewRecord %}readonly{% else %}required{% endif %} autocomplete="off" spellcheck="false"
+                     class="form-control{% if menu.hasErrors('key') %} is-invalid{% endif %}">
+              <div class="form-text">{{ t('crelish', 'Used by the theme: chelper.menu(\'key\'). Lowercase letters, digits, - and _. Cannot be changed later.') }}</div>
+              {% if menu.hasErrors('key') %}<div class="invalid-feedback">{{ menu.getFirstError('key') }}</div>{% endif %}
+            </div>
+
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label" for="menu-depth">{{ t('crelish', 'Maximum depth') }}</label>
+                <select id="menu-depth" name="Menu[max_depth]" class="form-select{% if menu.hasErrors('max_depth') %} is-invalid{% endif %}">
+                  {% for depth in 1..5 %}
+                    <option value="{{ depth }}"{% if menu.max_depth == depth %} selected{% endif %}>{{ depth }}</option>
+                  {% endfor %}
+                </select>
+                {% if menu.hasErrors('max_depth') %}<div class="invalid-feedback">{{ menu.getFirstError('max_depth') }}</div>{% endif %}
+              </div>
+
+              <div class="col-md-6 mb-3">
+                <label class="form-label" for="menu-state">{{ t('crelish', 'Status') }}</label>
+                <select id="menu-state" name="Menu[state]" class="form-select">
+                  <option value="2"{% if menu.state == 2 %} selected{% endif %}>{{ t('crelish', 'Online') }}</option>
+                  <option value="0"{% if menu.state == 0 %} selected{% endif %}>{{ t('crelish', 'Offline') }}</option>
+                </select>
+              </div>
+            </div>
+
+            {% if not menu.isNewRecord %}
+              <div class="d-flex justify-content-end">
+                <a class="c-button text-danger" href="#"
+                   onclick="if (confirm('{{ t('crelish', 'Delete this menu and all its items?')|e('js') }}')) { document.getElementById('menu-delete-form').submit(); } return false;">
+                  <i class="fa-sharp fa-regular fa-trash"></i>&nbsp;{{ t('crelish', 'Delete menu') }}
+                </a>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+
+  {% if not menu.isNewRecord %}
+    <form id="menu-delete-form" method="post" action="{{ url('/crelish/menu/delete', {'uuid': menu.uuid}) }}" hidden>
+      <input type="hidden" name="{{ csrfParam }}" value="{{ csrfToken }}">
+    </form>
+  {% endif %}
+</div>
