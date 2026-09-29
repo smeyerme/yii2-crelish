@@ -28,7 +28,7 @@ class CrelishMessageSource extends PhpMessageSource
   protected function loadMessages($category, $language)
   {
     $project = parent::loadMessages($category, $language);
-    $package = $this->getPackageSource()->loadPackageMessages($category, $language);
+    $package = $this->loadPackageMessages($category, $language);
 
     foreach ($project as $key => $value) {
       if ($value !== '' && $value !== null) {
@@ -41,10 +41,29 @@ class CrelishMessageSource extends PhpMessageSource
     return $package;
   }
 
-  private function getPackageSource(): CrelishPackageMessageSource
+  /**
+   * Package messages for category/language, or [] when the package ships no
+   * file for it (also after Yii's language fallback), so nothing is logged.
+   */
+  private function loadPackageMessages(string $category, string $language): array
+  {
+    $source = $this->getPackageSource();
+    $languages = array_unique([$language, substr($language, 0, 2)]);
+    $found = false;
+    foreach ($languages as $lang) {
+      if ($lang !== '' && is_file($source->getMessageFilePath($category, $lang))) {
+        $found = true;
+        break;
+      }
+    }
+
+    return $found ? $source->loadMessages($category, $language) : [];
+  }
+
+  private function getPackageSource(): PhpMessageSource
   {
     if ($this->packageSource === null) {
-      $this->packageSource = new CrelishPackageMessageSource([
+      $this->packageSource = new PhpMessageSource([
         'basePath' => $this->packageBasePath,
         'sourceLanguage' => $this->sourceLanguage,
         'fileMap' => $this->fileMap,
@@ -52,19 +71,5 @@ class CrelishMessageSource extends PhpMessageSource
     }
 
     return $this->packageSource;
-  }
-}
-
-/**
- * Plain PhpMessageSource that exposes its (protected) loader, including
- * Yii's language fallback, to CrelishMessageSource.
- *
- * @internal
- */
-class CrelishPackageMessageSource extends PhpMessageSource
-{
-  public function loadPackageMessages(string $category, string $language): array
-  {
-    return $this->loadMessages($category, $language);
   }
 }

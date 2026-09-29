@@ -218,7 +218,7 @@ php yii crelish-translations/prune de           # dry run, lists shadowing keys
 php yii crelish-translations/prune de --apply   # removes them from the project file
 ```
 
-Nothing runs automatically on deploy.
+`--apply` also removes deliberate project customisations of Crelish strings that share a key with the package, so review the dry run first. Nothing runs automatically on deploy.
 
 ## Next Steps
 

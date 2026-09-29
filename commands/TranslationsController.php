@@ -48,8 +48,13 @@ class TranslationsController extends Controller
    */
   public function actionPrune(string $language = 'de'): int
   {
-    $source = Yii::$app->i18n->translations['crelish*'] ?? [];
-    $sourceConfig = is_array($source) ? $source : [];
+    $source = Yii::$app->i18n->translations['crelish*'] ?? null;
+    $sourceConfig = [];
+    if ($source instanceof CrelishMessageSource) {
+      $sourceConfig = ['packageBasePath' => $source->packageBasePath, 'basePath' => $source->basePath];
+    } elseif (is_array($source)) {
+      $sourceConfig = $source;
+    }
     $packageBase = $this->packageBasePath
       ?? $sourceConfig['packageBasePath']
       ?? (new CrelishMessageSource())->packageBasePath;

@@ -96,6 +96,17 @@ msApp($dir, $missing);
 check('specific project file overrides fallback', 'Bewerbe', Yii::t('crelish', 'Apply', [], 'de-CH'));
 check('specific project file still gets package base', 'Elemente', Yii::t('crelish', 'Items', [], 'de-CH'));
 
+echo "log noise\n";
+mkdir($dir . '/proj/fr', 0755, true);
+msWrite($dir . '/proj/de/crelishAnalytics.php', ['Views' => 'Aufrufe']);
+msApp($dir, $missing);
+Yii::$app->i18n->translations['crelish*'] = ['class' => CrelishMessageSource::class, 'basePath' => $dir . '/proj', 'packageBasePath' => $dir . '/pkg', 'sourceLanguage' => 'en'];
+Yii::getLogger()->messages = [];
+check('category without package file: project messages only', 'Aufrufe', Yii::t('crelishAnalytics', 'Views', [], 'de'));
+check('language package does not ship: source message', 'Items', Yii::t('crelish', 'Items', [], 'fr'));
+$noise = array_filter(Yii::getLogger()->messages, static fn($m) => $m[1] <= \yii\log\Logger::LEVEL_WARNING && str_contains((string)$m[0], '/pkg/'));
+check('no error/warning log for absent package files (project-side log is Yii own)', [], array_values($noise));
+
 echo "prune\n";
 $run = static function (bool $apply) use ($dir): array {
     $c = new CapturingTranslationsController('crelish-translations', Yii::$app);
