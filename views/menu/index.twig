@@ -1,0 +1,35 @@
+<div class="u-window-box-medium">
+  <table class="table table-striped table-hover">
+    <thead>
+      <tr>
+        <th>{{ t('crelish', 'Title') }}</th>
+        <th>{{ t('crelish', 'Key') }}</th>
+        <th>{{ t('crelish', 'Items') }}</th>
+        <th>{{ t('crelish', 'Status') }}</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+        <tr style="cursor: pointer" onclick="location.href='{{ url('/crelish/menu/edit', {'uuid': row.menu.uuid}) }}'">
+          <td>{{ row.menu.systitle }}</td>
+          <td><code>{{ row.menu.key }}</code></td>
+          <td>
+            {{ row.count }}
+            {% if row.unavailable > 0 %}
+              <span class="badge text-bg-danger">{{ t('crelish', '{n} targets unavailable', {'n': row.unavailable}) }}</span>
+            {% endif %}
+          </td>
+          <td>{{ row.menu.state == 2 ? t('crelish', 'Online') : t('crelish', 'Offline') }}</td>
+          <td class="text-end">
+            <a class="c-button" href="{{ url('/crelish/menu/update', {'uuid': row.menu.uuid}) }}" onclick="event.stopPropagation()" title="{{ t('crelish', 'Settings') }}">
+              <i class="fa-sharp fa-regular fa-gear"></i>
+            </a>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5">{{ t('crelish', 'No menus yet.') }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

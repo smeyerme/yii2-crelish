@@ -1,0 +1,48 @@
+{% set labels = {
+  'save': t('crelish', 'Save'),
+  'saving': t('crelish', 'Saving…'),
+  'saved': t('crelish', 'Saved.'),
+  'addItem': t('crelish', 'Add item'),
+  'settings': t('crelish', 'Settings'),
+  'delete': t('crelish', 'Delete'),
+  'label': t('crelish', 'Label'),
+  'fromTarget': t('crelish', 'from target'),
+  'target': t('crelish', 'Target'),
+  'content': t('crelish', 'Content'),
+  'url': t('crelish', 'URL'),
+  'none': t('crelish', 'No link'),
+  'contentType': t('crelish', 'Content type'),
+  'search': t('crelish', 'Search…'),
+  'noResults': t('crelish', 'No results'),
+  'newWindow': t('crelish', 'Open in new window'),
+  'online': t('crelish', 'Online'),
+  'offline': t('crelish', 'Offline'),
+  'targetUnavailable': t('crelish', 'Target unavailable'),
+  'noLink': t('crelish', 'no link'),
+  'selectItem': t('crelish', 'Select an item to edit it.'),
+  'empty': t('crelish', 'This menu has no items yet.'),
+  'unsaved': t('crelish', 'You have unsaved changes.'),
+  'conflict': t('crelish', 'Menu was changed by someone else. Please reload.'),
+  'invalid': t('crelish', 'Please fix the highlighted items.'),
+  'failed': t('crelish', 'The menu could not be saved.'),
+  'tooDeep': t('crelish', 'This menu allows at most {depth} levels.', {'depth': menu.max_depth}),
+  'untitled': t('crelish', '(untitled)'),
+  'reload': t('crelish', 'Reload')
+} %}
+
+<div class="u-window-box-medium">
+  <p class="mb-3">
+    <code>chelper.menu('{{ menu.key }}')</code>
+    <a class="c-button" href="{{ url('/crelish/menu/update', {'uuid': menu.uuid}) }}">
+      <i class="fa-sharp fa-regular fa-gear"></i> {{ t('crelish', 'Settings') }}
+    </a>
+  </p>
+
+  <div id="menu-editor"
+       data-tree-url="{{ url('/crelish/menu/tree', {'uuid': menu.uuid}) }}"
+       data-save-url="{{ url('/crelish/menu/save', {'uuid': menu.uuid}) }}"
+       data-types-url="{{ url('/crelish/content-target/types') }}"
+       data-search-url="{{ url('/crelish/content-target/search') }}"
+       data-csrf-token="{{ csrfToken }}"
+       data-labels="{{ labels|json_encode }}"></div>
+</div>
