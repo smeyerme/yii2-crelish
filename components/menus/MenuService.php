@@ -155,4 +155,43 @@ class MenuService
 
     return $current === null || strcasecmp((string)$host, $current) !== 0;
   }
+
+  /**
+   * Tree for themes, with active flags for the current request. Never throws.
+   */
+  public function get(string $key): array
+  {
+    try {
+      $tree = $this->tree($key);
+      $request = Yii::$app->request;
+
+      if (!$request instanceof \yii\web\Request || $tree === []) {
+        return $tree;
+      }
+
+      $languages = Yii::$app->params['crelish']['languages'] ?? [];
+      $roots = array_merge(['/'], array_map(fn($lang) => '/' . $lang, $languages));
+
+      return MenuActiveState::apply($tree, self::currentUuid(), '/' . $request->getPathInfo(), $request->getHostName(), $roots);
+    } catch (\Throwable $e) {
+      Yii::error('Menu "' . $key . '" could not be rendered: ' . $e->getMessage(), 'crelish.menu');
+
+      return [];
+    }
+  }
+
+  private static function currentUuid(): ?string
+  {
+    $content = Yii::$app->params['content'] ?? null;
+
+    if (is_array($content)) {
+      return isset($content['uuid']) ? (string)$content['uuid'] : null;
+    }
+
+    if (is_object($content) && isset($content->uuid)) {
+      return (string)$content->uuid;
+    }
+
+    return null;
+  }
 }
