@@ -33,10 +33,12 @@ issue on sites with `langprefix` enabled, where pages live under `/<lang>/…` i
 A link points to an external URL or to a crelish record. Records are resolved on every hit, so a link
 survives slug and title changes:
 
-1. A model implementing `giantbits\crelish\components\shortlinks\ShortLinkTargetInterface` returns its own URL.
+1. A model implementing `giantbits\crelish\components\UrlTargetInterface` returns its own URL from `getTargetUrl(?string $language)`.
 2. A ctype listed in `detailPages` resolves to `urlFromSlug('<page>')/<uuid>/<slugified systitle>`,
    the convention used by crelish list widgets.
 3. Records with a `slug` attribute (pages) resolve to `urlFromSlug($slug)`.
+
+> `ShortLinkTargetInterface` (`getShortLinkUrl()`) is deprecated since 0.23.0 but still works. `detailPages` can now live at `params['crelish']['detailPages']` (shared with menus); `shortLinks.detailPages` remains a fallback.
 
 A record that is missing, not online (`state != 2`) or outside its `from`/`to` window counts as broken.
 

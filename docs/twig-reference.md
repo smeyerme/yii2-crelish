@@ -231,6 +231,12 @@ Returns the current URL with optional parameter modifications.
 <a href="{{ chelper.currentUrl({page: 2}) }}">Next Page</a>
 ```
 
+### Menus
+
+#### chelper.menu(key)
+
+Returns the resolved navigation menu `key` for the current language with active flags. See [menus.md](menus.md).
+
 ### Click Tracking
 
 #### chelper.getClickTrackingUrl()

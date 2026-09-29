@@ -46,6 +46,7 @@ themes render a resolved tree with their own markup.
 New crelish migration `m260929_120000_create_menu_tables` (namespace
 `giantbits\crelish\migrations`), picked up by the existing migration
 registration in `Bootstrap.php`.
+The migration creates the `translation` table when it does not exist.
 
 ### 2.1 `menu`
 
@@ -137,9 +138,7 @@ shortlinks disabled. `ShortLinkConfig::detailPages()` delegates to the resolver.
 
 `components/shortlinks/ShortLinkTargetInterface.php` becomes
 `components/UrlTargetInterface.php` with `getTargetUrl(?string $language): ?string`.
-The old interface stays as a deprecated alias that extends the new one;
-the resolver accepts either method name (`getShortLinkUrl` is called when only
-the old interface is implemented). Project models keep working without changes.
+The old interface stays unchanged and is marked deprecated; the resolver checks `UrlTargetInterface` first, then `ShortLinkTargetInterface`. Project models keep working without changes.
 
 ### 3.3 Shortlinks
 
@@ -166,6 +165,7 @@ Returns the resolved tree for `Yii::$app->language`. Node shape:
   'label' => string,
   'url' => ?string,          // null for type none
   'type' => 'content'|'url'|'none',
+  'targetUuid' => ?string,
   'external' => bool,        // absolute URL to another host
   'newWindow' => bool,
   'active' => bool,
@@ -195,6 +195,7 @@ Computed per request on top of the cached tree (never cached):
 - Prefix matches only count for the longest matching URL in the menu, so a
   `/de` home item does not light up every page. Exact uuid matches always count.
 - Only same-host URLs take part in path matching.
+- Site roots (`/` and `/<lang>`) only match exactly, never as a prefix.
 - Every ancestor of an active item gets `activeTrail = true`.
 
 ### 4.3 Twig
@@ -220,7 +221,7 @@ Labels are editor input and must be printed with normal auto-escaping.
   - `Menu` / `MenuItem` `afterSave` / `afterDelete` (the tree save invalidates once after commit)
   - `CrelishDynamicModel::save()` and `delete()` (via `updateCache()`), since slugs,
     `navtitle` and publish state of any record may affect a menu
-  - `CrelishTranslationBehavior::saveTranslations()` for `menu_item`
+  - `MenuTreeSaver` after commit (the only write path for menu labels)
 - Content written outside `CrelishDynamicModel` is covered by the TTL.
 
 ## 5. Admin
@@ -277,7 +278,7 @@ where `parentRef` is a uuid or the `clientId` of a new item.
 
 ### 5.5 Tree editor (Vue)
 
-New bundle `resources/menu-editor` (Vue 3 + `vue-draggable-plus`, webpack,
+New bundle `resources/menu-editor` (Vue 3 + `vuedraggable`, webpack,
 same setup as `resources/pagebuilder`), registered via an asset bundle used by
 the `edit` view.
 
@@ -331,16 +332,17 @@ real menu migration.
    hardcoded navigation: News, Bauten, Termine (`veranstaltungen`),
    Holzbaupreise (`preise`), Wettbewerbe, FORUM HOLZ (`forum-holz`), Akademie,
    Über uns (`kontakt`) with children Premium-/Partner, Kontakt/Verein, Presse,
-   Mediadaten, then Newsletter. Page uuids are looked up by slug; labels are
-   set explicitly where they differ from the page `navtitle`. A missing page
+   Mediadaten, then Newsletter. Page uuids are looked up by slug; all labels are
+   set explicitly (identical to today's navigation). A missing page
    fails the migration with a clear message. `deploy:migrate` runs it on deploy.
-3. `themes/fhbmain/layouts/_navigation.twig`: the `<ul class="nav-entries">`
+3. Deploy runs `yii crelish-migrate` before `deploy:migrate`.
+4. `themes/fhbmain/layouts/_navigation.twig`: the `<ul class="nav-entries">`
    block becomes a loop over `chelper.menu('main')`. Classes, ARIA roles and
    dropdown markup stay; `active`/`aria-current` come from `item.active` /
    `item.activeTrail`, `has-dropdown` from `item.children`. The uncommitted
    hardcoded Akademie entry is dropped in favour of the seeded menu.
-4. The mobile-only sister-site links and social icons stay hardcoded (possible
+5. The mobile-only sister-site links and social icons stay hardcoded (possible
    later `meta` menu).
-5. Verify on the dev site: every entry links correctly, active state on list
+6. Verify on the dev site: every entry links correctly, active state on list
    and detail pages (e.g. a news article highlights "News"), dropdown trail on
    "Über uns" children, then deploy.
