@@ -176,8 +176,12 @@ class ContentUrlResolver
     return is_subclass_of($class, UrlTargetInterface::class) || is_subclass_of($class, ShortLinkTargetInterface::class);
   }
 
-  private static function isPublished(object $record, int $now): bool
+  /**
+   * Online (state 2) and inside its optional from/to window.
+   */
+  public static function isPublished(object $record, ?int $now = null): bool
   {
+    $now ??= time();
     $state = self::attribute($record, 'state');
 
     if ($state !== null && (int)$state !== self::STATE_ONLINE) {

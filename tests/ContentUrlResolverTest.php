@@ -108,4 +108,17 @@ check('mapped type is resolvable', true, ContentUrlResolver::canResolveType('new
 check('unmapped type without model is not', false, ContentUrlResolver::canResolveType('sponsor'));
 check('resolvable types are sorted', ['news', 'page'], ContentUrlResolver::resolvableTypes());
 
+echo "\nisPublished\n";
+$now = strtotime('2026-06-15 18:00:00');
+check('state 2 is published', true, ContentUrlResolver::isPublished((object)['state' => 2], $now));
+foreach ([0, 1, 3] as $st) {
+    check("state $st is not published", false, ContentUrlResolver::isPublished((object)['state' => $st], $now));
+}
+check('no state attribute is published', true, ContentUrlResolver::isPublished((object)['slug' => 'x'], $now));
+check('to yesterday is not published', false, ContentUrlResolver::isPublished((object)['state' => 2, 'to' => '2026-06-14'], $now));
+check('from tomorrow is not published', false, ContentUrlResolver::isPublished((object)['state' => 2, 'from' => '2026-06-16'], $now));
+check('date-only to today is published late in the day', true, ContentUrlResolver::isPublished((object)['state' => 2, 'to' => '2026-06-15'], strtotime('2026-06-15 23:30:00')));
+check('zero dates mean no window', true, ContentUrlResolver::isPublished((object)['state' => 2, 'from' => '0000-00-00', 'to' => 0], $now));
+check('default now works', true, ContentUrlResolver::isPublished((object)['state' => 2]));
+
 shortLinkDone();
