@@ -3,8 +3,8 @@
 namespace giantbits\crelish\components\shortlinks;
 
 /**
- * Implement on a content model whose detail URL does not follow the
- * urlFromSlug('<listing>')/<uuid>/<slug> convention.
+ * @deprecated since 0.23.0, implement {@see \giantbits\crelish\components\UrlTargetInterface} instead.
+ * Still honoured by ContentUrlResolver after UrlTargetInterface.
  */
 interface ShortLinkTargetInterface
 {

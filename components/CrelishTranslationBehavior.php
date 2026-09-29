@@ -12,6 +12,20 @@
 		public bool $skipTranslation = false;
 		
 		public array $i18n;
+
+		/** @var array<string,array<string,string>>|null translations set in code, written on the next save */
+		private ?array $pendingTranslations = null;
+
+		/**
+		 * Translations to write on the owner's next save instead of reading the form POST.
+		 * An empty value deletes that language's translation.
+		 *
+		 * @param array<string,array<string,string>> $byLanguage ['en' => ['label' => 'Events'], …]
+		 */
+		public function setTranslations(array $byLanguage): void
+		{
+			$this->pendingTranslations = $byLanguage;
+		}
 		
 		public function events(): array
 		{
@@ -82,53 +96,71 @@
 				return;
 			}
 
+			if ($this->pendingTranslations !== null) {
+				$pending = $this->pendingTranslations;
+				$this->pendingTranslations = null;
+				$this->writeTranslations($pending, true);
+				return;
+			}
+
 			$request = \Yii::$app->request;
-			
+
 			if (!$request instanceof \yii\web\Request) {
 				Yii::debug('No web request (console context), skipping translation save', __METHOD__);
 				return;
 			}
-			
+
 			$postData = $request->post('CrelishDynamicModel', []);
 
 			if(empty($postData['i18n'])) {
 				Yii::debug('No i18n data in POST, skipping translation save', __METHOD__);
 				return;
 			}
-			
-			foreach ($postData['i18n'] as $lang => $attributes) {
-				
-				if (is_array($attributes)) { // This means translations are present
-					foreach ($attributes as $attribute => $value) {
-						
-						if(empty($value)) {
-							continue;
+
+			$this->writeTranslations($postData['i18n'], false);
+		}
+
+		/**
+		 * @param array $byLanguage language => [attribute => value]
+		 * @param bool $deleteEmpty true: an empty value removes the stored translation; false: it is skipped
+		 */
+		private function writeTranslations(array $byLanguage, bool $deleteEmpty): void
+		{
+			foreach ($byLanguage as $lang => $attributes) {
+				if (!is_array($attributes)) {
+					continue;
+				}
+
+				foreach ($attributes as $attribute => $value) {
+					$criteria = [
+						'language' => $lang,
+						'source_model' => $this->owner->tableName(),
+						'source_model_attribute' => $attribute,
+						'source_model_uuid' => $this->owner->uuid,
+					];
+
+					if (empty($value)) {
+						if ($deleteEmpty) {
+							\giantbits\crelish\models\CrelishTranslation::deleteAll($criteria);
 						}
-						
-						$translation = \giantbits\crelish\models\CrelishTranslation::find()
-							->where([
-								'language' => $lang,
-								'source_model' => $this->owner->tableName(),
-								'source_model_attribute' => $attribute,
-								'source_model_uuid' => $this->owner->uuid,
-							])->one();
+						continue;
+					}
 
-						if (!$translation) {
-							$translation = new \giantbits\crelish\models\CrelishTranslation();
-							$translation->uuid = CrelishBaseHelper::GUIDv4();
-							$translation->language = $lang;
-							$translation->source_model = $this->owner->tableName();
-							$translation->source_model_attribute = $attribute;
-							$translation->source_model_uuid = $this->owner->uuid;
-						}
+					$translation = \giantbits\crelish\models\CrelishTranslation::find()->where($criteria)->one();
 
-						$translation->translation = $value;
+					if (!$translation) {
+						$translation = new \giantbits\crelish\models\CrelishTranslation();
+						$translation->uuid = CrelishBaseHelper::GUIDv4();
+						$translation->language = $lang;
+						$translation->source_model = $this->owner->tableName();
+						$translation->source_model_attribute = $attribute;
+						$translation->source_model_uuid = $this->owner->uuid;
+					}
 
-						$saveResult = $translation->save();
+					$translation->translation = $value;
 
-						if (!$saveResult) {
-							Yii::error('Failed to save translation for ' . $attribute . ' (' . $lang . '): ' . json_encode($translation->errors), __METHOD__);
-						}
+					if (!$translation->save()) {
+						Yii::error('Failed to save translation for ' . $attribute . ' (' . $lang . '): ' . json_encode($translation->errors), __METHOD__);
 					}
 				}
 			}

@@ -3,7 +3,7 @@
 namespace giantbits\crelish\controllers;
 
 use giantbits\crelish\components\CrelishBaseController;
-use giantbits\crelish\components\CrelishModelResolver;
+use giantbits\crelish\components\ContentTargetSearch;
 use giantbits\crelish\components\ElementTitleResolver;
 use giantbits\crelish\components\shortlinks\QrBundleService;
 use giantbits\crelish\components\shortlinks\ShortLinkCode;
@@ -175,29 +175,8 @@ class ShortLinkController extends CrelishBaseController
   public function actionTargets(string $ctype, string $q = ''): array
   {
     Yii::$app->response->format = Response::FORMAT_JSON;
-    $q = trim($q);
 
-    if (mb_strlen($q) < 2 || !in_array($ctype, ShortLinkResolver::resolvableTypes(), true)) {
-      return [];
-    }
-
-    try {
-      $class = CrelishModelResolver::getModelClass($ctype);
-
-      $records = $class::find()
-        ->select(['uuid', 'systitle'])
-        ->where(['like', 'systitle', $q])
-        ->orderBy(['systitle' => SORT_ASC])
-        ->limit(20)
-        ->asArray()
-        ->all();
-    } catch (\Throwable $e) {
-      Yii::warning('Short links: target search failed for ctype "' . $ctype . '": ' . $e->getMessage(), 'shortlink');
-
-      return [];
-    }
-
-    return array_map(fn(array $record) => ['uuid' => $record['uuid'], 'title' => (string)$record['systitle']], $records);
+    return ContentTargetSearch::search($ctype, $q);
   }
 
   private function edit(ShortLink $link)

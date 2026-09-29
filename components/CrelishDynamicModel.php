@@ -3,6 +3,7 @@
 namespace giantbits\crelish\components;
 
 use Cocur\Slugify\Slugify;
+use giantbits\crelish\components\menus\MenuService;
 use Yii;
 use yii\base\DynamicModel;
 use yii\helpers\FileHelper;
@@ -342,6 +343,9 @@ class CrelishDynamicModel extends DynamicModel
       if (method_exists('\\app\\workspace\\hooks\\' . ucfirst($this->ctype) . 'Hooks', 'afterSave')) {
         call_user_func(['\\app\\workspace\\hooks\\' . ucfirst($this->ctype) . 'Hooks', 'afterSave'], ['data' => $this]);
       }
+
+      // Slugs, navtitles and publish state feed menus
+      MenuService::invalidate();
     }
 
     // Handle slug storage
@@ -389,6 +393,10 @@ class CrelishDynamicModel extends DynamicModel
     // Call hooks after deletion
     if ($result && method_exists('\\app\\workspace\\hooks\\' . ucfirst($this->ctype) . 'Hooks', 'afterDelete')) {
       call_user_func(['\\app\\workspace\\hooks\\' . ucfirst($this->ctype) . 'Hooks', 'afterDelete'], ['data' => $this]);
+    }
+
+    if ($result) {
+      MenuService::invalidate();
     }
     
     return $result;

@@ -2,6 +2,7 @@
 
 namespace giantbits\crelish\components\shortlinks;
 
+use giantbits\crelish\components\ContentUrlResolver;
 use giantbits\crelish\components\CrelishBaseHelper;
 use Yii;
 use yii\base\InvalidConfigException;
@@ -107,9 +108,7 @@ final class ShortLinkConfig
    */
   public static function detailPages(): array
   {
-    $pages = self::all()['detailPages'];
-
-    return is_array($pages) ? $pages : [];
+    return ContentUrlResolver::detailPages();
   }
 
   public static function qrLogoPath(): ?string
