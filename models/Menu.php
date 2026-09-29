@@ -73,9 +73,54 @@ class Menu extends ActiveRecord
       ['systitle', 'string', 'max' => 128],
       ['max_depth', 'default', 'value' => 2],
       ['max_depth', 'integer', 'min' => 1, 'max' => self::MAX_DEPTH_LIMIT],
+      ['max_depth', 'validateStoredDepth', 'when' => fn() => !$this->isNewRecord],
       ['state', 'default', 'value' => self::STATE_ONLINE],
       ['state', 'in', 'range' => [self::STATE_OFFLINE, self::STATE_ONLINE]],
     ];
+  }
+
+  /**
+   * Reducing the depth must not strand items that already sit deeper.
+   */
+  public function validateStoredDepth(string $attribute): void
+  {
+    if ($this->hasErrors($attribute)) {
+      return;
+    }
+
+    $depth = $this->storedDepth();
+
+    if ($depth > (int)$this->$attribute) {
+      $this->addError($attribute, \Yii::t('crelish', 'This menu already has items {depth} levels deep. Move or remove them before reducing the depth.', ['depth' => $depth]));
+    }
+  }
+
+  /**
+   * Deepest level of the stored items (0 for an empty menu), from the parent chains.
+   */
+  public function storedDepth(): int
+  {
+    $parents = MenuItem::find()
+      ->select(['parent_uuid', 'uuid'])
+      ->where(['menu_uuid' => $this->uuid])
+      ->asArray()
+      ->all();
+    $parentOf = array_column($parents, 'parent_uuid', 'uuid');
+    $max = 0;
+
+    foreach (array_keys($parentOf) as $uuid) {
+      $depth = 1;
+      $seen = [$uuid => true];
+
+      while (($uuid = $parentOf[$uuid] ?? null) !== null && array_key_exists($uuid, $parentOf) && !isset($seen[$uuid])) {
+        $seen[$uuid] = true;
+        $depth++;
+      }
+
+      $max = max($max, $depth);
+    }
+
+    return $max;
   }
 
   public function attributeLabels()

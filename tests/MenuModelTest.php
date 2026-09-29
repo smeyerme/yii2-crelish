@@ -58,6 +58,17 @@ makeItem($main, ['parent_uuid' => $parent->uuid, 'label' => 'Kontakt']);
 check('items relation ordered', 2, count($main->items));
 check('translation behavior attached', true, $parent->getBehavior('translation') !== null);
 
+echo "\nDepth vs stored items\n";
+$main->max_depth = 1;
+check('depth below stored tree is invalid', false, $main->validate());
+check('depth error message (de)', 'Dieses Menü enthält bereits Einträge in 2 Ebenen. Verschieben oder entfernen Sie diese, bevor Sie die Tiefe verringern.', $main->getFirstError('max_depth'));
+$main->max_depth = 2;
+check('depth equal to stored tree is valid', true, $main->validate());
+$main->max_depth = 3;
+check('depth above stored tree is valid', true, $main->validate());
+$fresh = new Menu(['key' => 'fresh', 'systitle' => 'Fresh', 'max_depth' => 1]);
+check('new menu with depth 1 is valid', true, $fresh->validate());
+
 $main->delete();
 check('deleting a menu deletes its items', 0, (int)MenuItem::find()->count());
 

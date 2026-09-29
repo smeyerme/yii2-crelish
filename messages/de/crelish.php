@@ -155,4 +155,5 @@ return [
   'Offline' => 'Offline',
   'Status' => 'Status',
   'Please correct the highlighted fields.' => 'Bitte die markierten Felder korrigieren.',
+  'This menu already has items {depth} levels deep. Move or remove them before reducing the depth.' => 'Dieses Menü enthält bereits Einträge in {depth} Ebenen. Verschieben oder entfernen Sie diese, bevor Sie die Tiefe verringern.',
 ];
