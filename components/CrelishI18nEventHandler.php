@@ -147,7 +147,7 @@ class CrelishI18nEventHandler
    * @param array $translation Translation array
    * @return void
    */
-  private static function writeTranslationFile(string $file, array $translation): void
+  public static function writeTranslationFile(string $file, array $translation): void
   {
     // Ensure the directory exists (handles nested categories like yii/bootstrap5)
     $directory = dirname($file);

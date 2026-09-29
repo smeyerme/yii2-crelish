@@ -11,6 +11,7 @@
 	use app\workspace\models\Page;
 	use Yii;
 	use yii\base\Controller;
+	use giantbits\crelish\components\ContentUrlResolver;
 	use giantbits\crelish\components\CrelishDataManager;
 	use giantbits\crelish\components\CrelishGlobals;
 	
@@ -201,6 +202,11 @@
 				if (!empty($entryDataJoint->getProvider()->models[0])) {
 					$entryModel = $entryDataJoint->getProvider()->models[0];
 				}
+			}
+
+			// Unpublished pages (state != 2 or outside from/to) count as not found; db gives ActiveRecord, json gives array.
+			if ($entryModel !== null && !ContentUrlResolver::isPublished((object)$entryModel)) {
+				$entryModel = null;
 			}
 
 			// 404 Not found fallback (also handles unsupported language)
