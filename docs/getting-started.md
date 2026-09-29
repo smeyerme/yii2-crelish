@@ -207,6 +207,19 @@ your-project/
         └── yii2-crelish/ (Crelish CMS files)
 ```
 
+## Translations
+
+Crelish ships its own translations for the `crelish` category (`messages/<lang>/crelish.php` in the package). They are the base; a project overrides single strings in its own `messages/<lang>/crelish.php`. Empty project values do not override the package value. Only strings found in neither file trigger the missing-translation handler (DeepL).
+
+Projects created before 0.23.1 may hold cached machine translations that shadow Crelish's curated strings. List them with a dry run, then remove them:
+
+```bash
+php yii crelish-translations/prune de           # dry run, lists shadowing keys
+php yii crelish-translations/prune de --apply   # removes them from the project file
+```
+
+Nothing runs automatically on deploy.
+
 ## Next Steps
 
 - [Configure authentication](./authentication.md) for your API

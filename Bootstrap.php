@@ -112,6 +112,11 @@ class Bootstrap implements BootstrapInterface
       ],
     ];
 
+    // Translation maintenance (prune cached machine translations shadowing crelish's own)
+    $app->controllerMap['crelish-translations'] = [
+      'class' => 'giantbits\crelish\commands\TranslationsController',
+    ];
+
     // Register any other console commands here
     // $app->controllerMap['crelish-another-command'] = [
     //     'class' => 'giantbits\crelish\commands\AnotherController',

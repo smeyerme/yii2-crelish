@@ -197,7 +197,7 @@ class ComponentsConfig
       'class' => 'yii\i18n\I18N',
       'translations' => [
         'crelish*' => [
-          'class' => 'yii\i18n\PhpMessageSource',
+          'class' => 'giantbits\crelish\components\CrelishMessageSource',
           'basePath' => '@app/messages',
           'sourceLanguage' => 'en',
           'fileMap' => ['crelish' => 'crelish.php'],
