@@ -121,7 +121,16 @@ export default {
       this.languages = tree.languages;
       this.defaultLanguage = tree.defaultLanguage;
       this.ignoreNextChange = true;
-      this.items = nest(tree.items);
+      const nodes = nest(tree.items);
+      const normalise = (list) => list.forEach((node) => {
+        if (!node.i18n || Array.isArray(node.i18n) || typeof node.i18n !== 'object') node.i18n = {};
+        tree.languages.forEach((lang) => {
+          if (lang !== tree.defaultLanguage) node.i18n[lang] = node.i18n[lang] ?? '';
+        });
+        normalise(node.children);
+      });
+      normalise(nodes);
+      this.items = nodes;
       this.selectedKey = keepSelected && findNode(this.items, keepSelected) ? keepSelected : null;
       this.dirty = false;
       this.loaded = true;
@@ -133,9 +142,13 @@ export default {
     },
     addItem() {
       const clientId = newClientId();
+      const i18n = {};
+      this.languages.forEach((lang) => {
+        if (lang !== this.defaultLanguage) i18n[lang] = '';
+      });
       const firstType = this.types.length ? this.types[0].ctype : 'page';
       this.items.push({
-        key: clientId, uuid: null, clientId, label: '', i18n: {},
+        key: clientId, uuid: null, clientId, label: '', i18n,
         target_type: 'content', target_ctype: firstType, target_uuid: null, target_url: '',
         new_window: false, state: 2, children: [],
         targetTitle: null, targetAvailable: true, fallbackLabel: null

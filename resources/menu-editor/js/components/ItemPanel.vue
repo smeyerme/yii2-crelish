@@ -65,13 +65,6 @@ export default {
       this.activeLanguage = this.defaultLanguage;
     }
   },
-  created() {
-    this.languages.forEach((lang) => {
-      if (lang !== this.defaultLanguage && this.node.i18n[lang] === undefined) {
-        this.node.i18n[lang] = '';
-      }
-    });
-  },
   methods: {
     suggestNewWindow() {
       if (!this.node.uuid && isExternalUrl(this.node.target_url)) {
