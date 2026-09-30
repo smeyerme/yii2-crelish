@@ -10,6 +10,7 @@
       </button>
       <span v-if="saving" class="text-muted">{{ labels.saving }}</span>
       <span v-else-if="dirty" class="text-muted">{{ labels.unsaved }}</span>
+      <span v-if="generalErrors.length" class="text-danger">{{ generalErrors.join(' ') }}</span>
       <span v-if="message" :class="message.kind === 'success' ? 'text-success' : 'text-danger'">
         {{ message.text }}
         <button v-if="message.reload" type="button" class="c-button" @click="reload">{{ labels.reload }}</button>
@@ -95,12 +96,17 @@ export default {
       saving: false,
       message: null,
       refusedShown: false,
-      ignoreNextChange: false
+      ignoreNextChange: false,
+      errorSignatures: {}
     };
   },
   computed: {
     selected() {
       return this.selectedKey ? findNode(this.items, this.selectedKey) : null;
+    },
+    generalErrors() {
+      const general = this.errors._;
+      return Array.isArray(general) ? general : (general ? [String(general)] : []);
     },
     // No edits while a save is in flight: its response replaces the tree
     locked() {
@@ -119,6 +125,7 @@ export default {
         if (this.message && this.message.kind === 'success') {
           this.message = null;
         }
+        this.pruneErrors();
       }
     }
   },
@@ -134,9 +141,13 @@ export default {
         return false;
       };
     }
-    const [tree, types] = await Promise.all([this.getJson(this.treeUrl), this.getJson(this.typesUrl)]);
-    this.types = types || [];
-    this.apply(tree);
+    try {
+      const [tree, types] = await Promise.all([this.getJson(this.treeUrl), this.getJson(this.typesUrl)]);
+      this.types = types || [];
+      this.apply(tree);
+    } catch (e) {
+      this.message = { kind: 'error', text: this.labels.failed, reload: true };
+    }
   },
   beforeUnmount() {
     window.removeEventListener('beforeunload', this.guard);
@@ -148,9 +159,34 @@ export default {
       const response = await fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
       return response.ok ? response.json() : null;
     },
+    // Serialise a node's own fields (not its children) to detect edits
+    signature(node) {
+      const { children, ...own } = node;
+      return JSON.stringify(own);
+    },
+    // Drop errors of nodes that were edited or removed; drop the "please fix" message when none remain
+    pruneErrors() {
+      const keys = Object.keys(this.errors).filter((k) => k !== '_');
+      if (!keys.length) return;
+      let changed = false;
+      const next = { ...this.errors };
+      keys.forEach((key) => {
+        const node = findNode(this.items, key);
+        if (!node || this.errorSignatures[key] !== this.signature(node)) {
+          delete next[key];
+          delete this.errorSignatures[key];
+          changed = true;
+        }
+      });
+      if (!changed) return;
+      this.errors = next;
+      if (!Object.keys(next).length && this.message && this.message.invalid) {
+        this.message = null;
+      }
+    },
     apply(tree) {
       if (!tree) {
-        this.flash('error', this.labels.failed);
+        this.message = { kind: 'error', text: this.labels.failed, reload: true };
         return;
       }
       const keepSelected = this.selectedKey;
@@ -175,7 +211,11 @@ export default {
     async reload() {
       this.message = null;
       this.errors = {};
-      this.apply(await this.getJson(this.treeUrl));
+      try {
+        this.apply(await this.getJson(this.treeUrl));
+      } catch (e) {
+        this.message = { kind: 'error', text: this.labels.failed, reload: true };
+      }
     },
     addItem() {
       if (this.locked) return;
@@ -223,7 +263,12 @@ export default {
           this.errors = body.errors || {};
           const firstKey = Object.keys(this.errors).find((k) => findNode(this.items, k));
           if (firstKey) this.selectedKey = firstKey;
-          this.flash('error', this.labels.invalid);
+          this.errorSignatures = {};
+          Object.keys(this.errors).forEach((k) => {
+            const node = findNode(this.items, k);
+            if (node) this.errorSignatures[k] = this.signature(node);
+          });
+          this.message = { kind: 'error', text: this.labels.invalid, reload: false, invalid: true };
         } else {
           this.flash('error', body.error || this.labels.failed);
         }

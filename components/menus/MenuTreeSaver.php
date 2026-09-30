@@ -104,11 +104,18 @@ class MenuTreeSaver
 
   /**
    * Test seam: runs inside the transaction right before the version bump.
+   *
+   * @internal
    */
   protected function beforeVersionBump(): void
   {
   }
 
+  /**
+   * Test seam: the uuid of the menu being saved.
+   *
+   * @internal
+   */
   protected function menuUuid(): string
   {
     return (string)$this->menu->uuid;

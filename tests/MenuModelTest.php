@@ -61,7 +61,8 @@ check('settings save succeeds', true, $main->save());
 check('settings save after a future saver bump still increases updated', $future + 1, (int)Menu::findOne($main->uuid)->updated);
 $fresh = makeMenu('fresh-insert');
 check('insert still stamps the current time', true, abs((int)$fresh->updated - time()) <= 1 && (int)$fresh->updated === (int)$fresh->created);
-check('next version helper', [time(), $future + 1], [Menu::nextUpdated(0), Menu::nextUpdated($future)]);
+$fromZero = Menu::nextUpdated(0);
+check('next version helper', [true, $future + 1], [abs($fromZero - time()) <= 1, Menu::nextUpdated($future)]);
 $fresh->delete();
 
 echo "\nForeign keys\n";

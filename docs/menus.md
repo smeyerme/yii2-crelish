@@ -70,10 +70,10 @@ cached tree (`MenuService::tree()`) holds only request-independent data:
 `external`, `active` and `activeTrail` are `false` there and are set by
 `MenuService::get()` (what `chelper.menu()` returns) for each request, so
 one cache entry serves every host and a cache warmed from the console is
-correct. The
-cache is cleared when a menu or item is saved and whenever crelish content is
-saved or deleted through the admin. Content written elsewhere (imports,
-direct ActiveRecord writes) shows up at the latest after an hour, or call
+correct. The cache is cleared when a menu or item is saved and whenever
+crelish content is saved or deleted through the admin. Content written
+elsewhere (imports, direct ActiveRecord writes) shows up at the latest after
+an hour, or call
 `giantbits\crelish\components\menus\MenuService::invalidate()`.
 
 ## Custom URLs for content types
