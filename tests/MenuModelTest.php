@@ -64,6 +64,15 @@ check('insert still stamps the current time', true, abs((int)$fresh->updated - t
 check('next version helper', [time(), $future + 1], [Menu::nextUpdated(0), Menu::nextUpdated($future)]);
 $fresh->delete();
 
+echo "\nForeign keys\n";
+$dangling = false;
+try {
+    $app->db->createCommand()->insert('menu_item', ['uuid' => 'dangling-item', 'menu_uuid' => $main->uuid, 'parent_uuid' => 'no-such-parent', 'sort' => 0, 'target_type' => MenuItem::TARGET_NONE, 'new_window' => 0, 'state' => MenuItem::STATE_ONLINE])->execute();
+} catch (\yii\db\IntegrityException $e) {
+    $dangling = true;
+}
+check('harness enforces FKs: dangling parent_uuid is rejected', true, $dangling);
+
 echo "\nItems\n";
 $parent = makeItem($main, ['label' => 'Über uns', 'target_type' => MenuItem::TARGET_NONE, 'target_url' => null]);
 makeItem($main, ['parent_uuid' => $parent->uuid, 'label' => 'Kontakt']);

@@ -45,16 +45,19 @@ check('label falls back to ctype', 'News', ContentTargetSearch::types()[0]['labe
 $dir = sys_get_temp_dir() . '/crelish-types-' . uniqid();
 mkdir($dir . '/workspace/elements', 0777, true);
 file_put_contents($dir . '/workspace/elements/news.json', json_encode(['label' => 'Neuigkeiten']));
+$originalApp = Yii::getAlias('@app', false);
 Yii::setAlias('@app', $dir);
 try {
     $labels = array_column(ContentTargetSearch::types(), 'label', 'ctype');
     check('label read from the element definition', 'Neuigkeiten', $labels['news']);
     check('type without a definition keeps the fallback', 'Page', $labels['page']);
 } finally {
+    Yii::setAlias('@app', $originalApp === false ? null : $originalApp);
     unlink($dir . '/workspace/elements/news.json');
     rmdir($dir . '/workspace/elements');
     rmdir($dir . '/workspace');
     rmdir($dir);
 }
+check('@app alias restored', $originalApp, Yii::getAlias('@app', false));
 
 shortLinkDone();
