@@ -147,7 +147,20 @@ $r = $errors([item(['clientId' => 'dup', 'label' => 'A']), item(['clientId' => '
 check('duplicate item id rejected under that id', [422, [Yii::t('crelish', 'Duplicate item.')]], [$r['status'], $r['body']['errors']['dup'] ?? null]);
 $r = $errors([item(['clientId' => 'a', 'label' => str_repeat('x', 256)])]);
 check('label longer than 255 rejected', 422, $r['status']);
+$i18nError = 'Die Übersetzung (en) muss ein Text mit höchstens 255 Zeichen sein.';
+$r = $errors([item(['clientId' => 'a', 'label' => 'A', 'i18n' => ['en' => ['x']]])]);
+check('array translation rejected with a message', [422, [$i18nError]], [$r['status'], $r['body']['errors']['a'] ?? null]);
+$r = $errors([item(['clientId' => 'a', 'label' => 'A', 'i18n' => ['en' => 12]])]);
+check('number translation rejected', 422, $r['status']);
+$r = $errors([item(['clientId' => 'a', 'label' => 'A', 'i18n' => ['en' => str_repeat('ü', 256)]])]);
+check('translation longer than 255 rejected', [422, [$i18nError]], [$r['status'], $r['body']['errors']['a'] ?? null]);
+check('translation of exactly 255 accepted', 200, $errors([item(['clientId' => 'a', 'label' => 'A', 'i18n' => ['en' => str_repeat('ü', 255)]])])['status']);
+check('null translation accepted as empty', 200, $errors([item(['clientId' => 'a', 'label' => 'A', 'i18n' => ['en' => null]])])['status']);
 check('failed validation wrote nothing', ['A'], MenuItem::find()->select('label')->where(['menu_uuid' => $menu->uuid])->column());
+$r = $errors([item(['clientId' => 'a', 'label' => 'A', 'i18n' => ['en' => 'A (en)', 'fr' => ['ignored'], 'de' => 'ignored too']])]);
+check('unknown or default language keys are ignored', 200, $r['status']);
+$savedA = MenuItem::findOne(['menu_uuid' => $menu->uuid, 'label' => 'A']);
+check('only configured non-default translations stored', ['en'], CrelishTranslation::find()->select('language')->where(['source_model_uuid' => $savedA->uuid])->column());
 
 echo "\nRollback\n";
 // Raw PDO: Yii's SQLite command splits on ';' and would cut the trigger body

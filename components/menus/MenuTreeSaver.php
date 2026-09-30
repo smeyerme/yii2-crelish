@@ -178,6 +178,15 @@ class MenuTreeSaver
       $messages[] = Yii::t('crelish', 'The label is too long (255 characters max).');
     }
 
+    // Only configured non-default languages count; other keys are ignored and never stored
+    foreach (array_slice(MenuAdminTree::languages(), 1) as $language) {
+      $value = $item['i18n'][$language] ?? null;
+
+      if ($value !== null && (!is_string($value) || mb_strlen(trim($value)) > 255)) {
+        $messages[] = Yii::t('crelish', 'The translation ({language}) must be text of at most 255 characters.', ['language' => $language]);
+      }
+    }
+
     switch ($item['target_type']) {
       case MenuItem::TARGET_CONTENT:
         if (!ContentUrlResolver::canResolveType($item['target_ctype'])) {
