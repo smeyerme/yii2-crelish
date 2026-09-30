@@ -99,6 +99,19 @@ check('stale save wrote nothing', 0, (int)MenuItem::find()->where(['label' => 'B
 $menu->refresh();
 check('409 body is exactly the error message', ['error' => Yii::t('crelish', 'Menu was changed by someone else. Please reload.')], saveTree($menu, [item(['clientId' => 'c', 'label' => 'C'])], (int)$menu->updated - 5)['body']);
 
+// Another save commits between the fast-path check and this save's write
+$racing = new class($menu, $resolver) extends MenuTreeSaver {
+    protected function beforeVersionBump(): void
+    {
+        Yii::$app->db->createCommand('UPDATE menu SET updated = updated + 1 WHERE uuid = :uuid', [':uuid' => $this->menuUuid()])->execute();
+    }
+};
+$menu->refresh();
+$before = MenuItem::find()->select('label')->where(['menu_uuid' => $menu->uuid])->orderBy('label')->column();
+$r = $racing->save(['updated' => (int)$menu->updated, 'items' => [item(['clientId' => 'r', 'label' => 'Race'])]]);
+check('concurrent bump after the fast path gives 409', [409, ['error' => Yii::t('crelish', 'Menu was changed by someone else. Please reload.')]], [$r['status'], $r['body']]);
+check('racing save wrote nothing', $before, MenuItem::find()->select('label')->where(['menu_uuid' => $menu->uuid])->orderBy('label')->column());
+
 echo "\nValidation\n";
 $errors = fn(array $items) => saveTree($menu, $items);
 $r = $errors([item(['clientId' => 'x', 'parentRef' => 'ghost', 'label' => 'X'])]);

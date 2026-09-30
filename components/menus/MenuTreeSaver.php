@@ -11,9 +11,10 @@ use Yii;
 
 /**
  * Saves a whole menu tree submitted by the editor: optimistic concurrency
- * check, full validation before any write, then one transaction.
+ * check, full validation before any write, then one transaction that first
+ * claims the menu version with a conditional update (0 rows: 409).
  */
-final class MenuTreeSaver
+class MenuTreeSaver
 {
   public const ALLOWED_URL = '~^(https?://|mailto:|tel:|/(?!/)|#)~i';
 
@@ -29,8 +30,9 @@ final class MenuTreeSaver
    */
   public function save(array $payload): array
   {
+    // Fast path: a stale token is rejected before validation; the write below re-checks atomically
     if ((int)($payload['updated'] ?? -1) !== (int)$this->menu->updated) {
-      return ['status' => 409, 'body' => ['error' => Yii::t('crelish', 'Menu was changed by someone else. Please reload.')]];
+      return $this->conflict();
     }
 
     $items = [];
@@ -65,11 +67,21 @@ final class MenuTreeSaver
       return ['status' => 422, 'body' => ['errors' => $errors]];
     }
 
+    $token = (int)$this->menu->updated;
+    $next = max(time(), $token + 1);
     $transaction = Yii::$app->db->beginTransaction();
 
     try {
+      $this->beforeVersionBump();
+
+      // Claims the version atomically: a save that committed since the check above makes this match nothing
+      if (Menu::updateAll(['updated' => $next], ['uuid' => $this->menu->uuid, 'updated' => $token]) === 0) {
+        $transaction->rollBack();
+
+        return $this->conflict();
+      }
+
       $this->write($items, $existing, $depths);
-      $this->menu->updateAttributes(['updated' => max(time(), (int)$this->menu->updated + 1)]);
       $transaction->commit();
     } catch (\Throwable $e) {
       $transaction->rollBack();
@@ -78,9 +90,28 @@ final class MenuTreeSaver
       return ['status' => 500, 'body' => ['error' => Yii::t('crelish', 'The menu could not be saved.')]];
     }
 
+    $this->menu->updated = $next;
+    $this->menu->setOldAttribute('updated', $next);
     MenuService::invalidate();
 
     return ['status' => 200, 'body' => MenuAdminTree::build($this->menu, $this->resolver)];
+  }
+
+  private function conflict(): array
+  {
+    return ['status' => 409, 'body' => ['error' => Yii::t('crelish', 'Menu was changed by someone else. Please reload.')]];
+  }
+
+  /**
+   * Test seam: runs inside the transaction right before the version bump.
+   */
+  protected function beforeVersionBump(): void
+  {
+  }
+
+  protected function menuUuid(): string
+  {
+    return (string)$this->menu->uuid;
   }
 
   private function normalize(array $raw): array
