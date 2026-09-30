@@ -52,6 +52,18 @@ $main->key = 'renamed';
 $main->save();
 check('key is immutable after create', 'main', Menu::findOne($main->uuid)->key);
 
+echo "\nVersion only moves forward\n";
+$future = time() + 100;
+Menu::updateAll(['updated' => $future], ['uuid' => $main->uuid]);
+$main->refresh();
+$main->systitle = 'Main (settings)';
+check('settings save succeeds', true, $main->save());
+check('settings save after a future saver bump still increases updated', $future + 1, (int)Menu::findOne($main->uuid)->updated);
+$fresh = makeMenu('fresh-insert');
+check('insert still stamps the current time', true, abs((int)$fresh->updated - time()) <= 1 && (int)$fresh->updated === (int)$fresh->created);
+check('next version helper', [time(), $future + 1], [Menu::nextUpdated(0), Menu::nextUpdated($future)]);
+$fresh->delete();
+
 echo "\nItems\n";
 $parent = makeItem($main, ['label' => 'Über uns', 'target_type' => MenuItem::TARGET_NONE, 'target_url' => null]);
 makeItem($main, ['parent_uuid' => $parent->uuid, 'label' => 'Kontakt']);

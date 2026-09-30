@@ -68,7 +68,7 @@ class MenuTreeSaver
     }
 
     $token = (int)$this->menu->updated;
-    $next = max(time(), $token + 1);
+    $next = Menu::nextUpdated($token);
     $transaction = Yii::$app->db->beginTransaction();
 
     try {
