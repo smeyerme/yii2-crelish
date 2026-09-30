@@ -16,6 +16,8 @@ use giantbits\crelish\models\MenuItem;
 function menuApp(array $params = [], array $server = []): \yii\web\Application
 {
     $app = shortLinkApp(array_replace_recursive(['languages' => ['de', 'en']], $params), $server);
+    // SQLite ignores FOREIGN KEY clauses unless enabled; enforce them like MySQL does
+    $app->db->pdo->exec('PRAGMA foreign_keys = ON');
     (new m260929_120000_create_menu_tables(['db' => $app->db, 'compact' => true]))->up();
 
     return $app;

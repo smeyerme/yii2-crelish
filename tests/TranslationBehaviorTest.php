@@ -40,9 +40,15 @@ $reloaded->setTranslations(['en' => ['label' => '']]);
 $reloaded->save(false);
 check('empty value deletes the row', 0, (int)CrelishTranslation::find()->where(['source_model_uuid' => $item->uuid, 'language' => 'en'])->count());
 
-$reloaded = MenuItem::findOne($item->uuid);
-$reloaded->save(false);
-check('pending translations are consumed once', 0, (int)CrelishTranslation::find()->where(['source_model_uuid' => $item->uuid])->count());
+// Same instance, second save: pending translations were cleared by the first save
+$same = MenuItem::findOne($item->uuid);
+$same->setTranslations(['en' => ['label' => 'Events']]);
+$same->save(false);
+Yii::$app->db->createCommand()->delete('translation', ['source_model_uuid' => $item->uuid, 'language' => 'en'])->execute();
+Yii::$app->db->createCommand()->insert('translation', ['uuid' => 'direct-row', 'source_model' => 'menu_item', 'source_model_uuid' => $item->uuid, 'language' => 'en', 'source_model_attribute' => 'label', 'translation' => 'Direct'])->execute();
+$same->save(false);
+check('pending translations are consumed once', 'Direct', CrelishTranslation::findOne(['source_model_uuid' => $item->uuid, 'language' => 'en'])->translation);
+Yii::$app->db->createCommand()->delete('translation', ['source_model_uuid' => $item->uuid])->execute();
 
 echo "\nForm POST path unchanged\n";
 Yii::$app->request->setBodyParams(['CrelishDynamicModel' => ['i18n' => ['fr' => ['label' => 'Agenda'], 'en' => ['label' => '']]]]);
