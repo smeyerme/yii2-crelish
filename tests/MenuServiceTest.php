@@ -54,8 +54,7 @@ check('children kept in order', ['Kontakt', 'LinkedIn'], labels($tree[2]['childr
 check('content url resolved', '/de/news', $tree[0]['url']);
 check('target uuid exposed', P_NEWS, $tree[0]['targetUuid']);
 check('heading has no url', null, $tree[2]['url']);
-check('external detected', [true, true], [$tree[2]['children'][1]['external'], $tree[2]['children'][1]['newWindow']]);
-check('relative url is internal', false, $tree[1]['external']);
+check('external is not part of the built tree (set per request by get())', [false, true], [$tree[2]['children'][1]['external'], $tree[2]['children'][1]['newWindow']]);
 check('flags default to false', [false, false], [$tree[0]['active'], $tree[0]['activeTrail']]);
 
 echo "\nSkipping\n";
