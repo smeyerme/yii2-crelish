@@ -107,7 +107,7 @@ return [
   'Items' => 'Einträge',
   'Maximum depth' => 'Maximale Tiefe',
   'No menus yet.' => 'Noch keine Menüs.',
-  '{n} targets unavailable' => '{n} Ziele nicht verfügbar',
+  '{n, plural, one{# target unavailable} other{# targets unavailable}}' => '{n, plural, one{# Ziel nicht verfügbar} other{# Ziele nicht verfügbar}}',
   'New menu' => 'Neues Menü',
   'Menu saved.' => 'Menü gespeichert.',
   'Menu deleted.' => 'Menü gelöscht.',
