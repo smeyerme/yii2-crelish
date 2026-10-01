@@ -52,9 +52,13 @@ class CrelishTranslationService
         'ko-KR' => 'KO',
     ];
 
+    /**
+     * @param string|null $sourceLanguage language to translate from; defaults to the default
+     *   content language (content fields). Message translation passes Yii's sourceLanguage.
+     */
     public function __construct(?string $sourceLanguage = null)
     {
-        $this->sourceLanguage = $sourceLanguage ?? Yii::$app->sourceLanguage ?? 'de';
+        $this->sourceLanguage = $sourceLanguage ?? CrelishBaseController::defaultContentLanguage();
     }
 
     /**
@@ -88,16 +92,8 @@ class CrelishTranslationService
             return false;
         }
 
-        $sourceLanguage = Yii::$app->sourceLanguage ?? 'de';
-
-        // Don't offer translation if target is same as source
-        if ($targetLanguage === $sourceLanguage ||
-            str_starts_with($targetLanguage, $sourceLanguage) ||
-            str_starts_with($sourceLanguage, $targetLanguage)) {
-            return false;
-        }
-
-        return true;
+        // Content is translated from the default content language; never offer it as a target
+        return !CrelishBaseHelper::isDefaultContentLanguage($targetLanguage, CrelishBaseController::defaultContentLanguage());
     }
 
     /**

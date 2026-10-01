@@ -475,7 +475,8 @@ JS;
 
     // Add auto-translate button if translation service is available
     if (CrelishTranslationService::isAvailable()) {
-      $sourceLanguage = Yii::$app->sourceLanguage ?? 'de';
+      // Content is written in the default content language; Yii's sourceLanguage is the UI message source
+      $sourceLanguage = self::defaultContentLanguage();
       $ctype = $this->ctype ?? '';
       $uuid = $this->uuid ?? '';
 
