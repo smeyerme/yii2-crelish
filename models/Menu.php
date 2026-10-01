@@ -9,6 +9,7 @@ use yii\behaviors\BlameableBehavior;
 use yii\behaviors\TimestampBehavior;
 use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
+use yii\db\Expression;
 
 /**
  * A named navigation menu (main, footer, meta …) that themes render via chelper.menu('<key>').
@@ -152,7 +153,9 @@ class Menu extends ActiveRecord
 
     // The tree saver may have bumped updated past time(); a plain time() here could move it back and revive an old editor token
     if (!$insert && $this->getDirtyAttributes() !== []) {
-      $this->updated = self::nextUpdated((int)$this->getOldAttribute('updated'));
+      // Computed by the database from the current value: a tree save between findOne() and save() must not be undone
+      $function = $this->getDb()->driverName === 'sqlite' ? 'MAX' : 'GREATEST';
+      $this->updated = new Expression($function . '(updated + 1, :now)', [':now' => time()]);
     }
 
     return true;
@@ -198,6 +201,14 @@ class Menu extends ActiveRecord
   public function afterSave($insert, $changedAttributes)
   {
     parent::afterSave($insert, $changedAttributes);
+
+    // beforeSave left an expression in the attribute; show the value the database computed
+    if (!$insert && $this->updated instanceof Expression) {
+      $value = (int)static::find()->select('updated')->where(['uuid' => $this->uuid])->scalar();
+      $this->updated = $value;
+      $this->setOldAttribute('updated', $value);
+    }
+
     MenuService::invalidate();
   }
 
