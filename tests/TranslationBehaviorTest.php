@@ -58,4 +58,18 @@ check('POST value saved', 1, (int)CrelishTranslation::find()->where(['source_mod
 check('POST empty value is skipped, not stored', 0, (int)CrelishTranslation::find()->where(['source_model_uuid' => $item->uuid, 'language' => 'en'])->count());
 Yii::$app->request->setBodyParams([]);
 
+echo "\nZero is a value, not empty\n";
+$zero = MenuItem::findOne($item->uuid);
+$zero->setTranslations(['en' => ['label' => '0']]);
+$zero->save(false);
+check('"0" is stored', '0', CrelishTranslation::findOne(['source_model_uuid' => $item->uuid, 'language' => 'en', 'source_model_attribute' => 'label'])->translation);
+$zero = MenuItem::findOne($item->uuid);
+$zero->setTranslations(['en' => ['label' => '']]);
+$zero->save(false);
+check('empty string still deletes it', 0, (int)CrelishTranslation::find()->where(['source_model_uuid' => $item->uuid, 'language' => 'en'])->count());
+Yii::$app->request->setBodyParams(['CrelishDynamicModel' => ['i18n' => ['en' => ['label' => '0']]]]);
+MenuItem::findOne($item->uuid)->save(false);
+check('POST "0" is stored', '0', CrelishTranslation::findOne(['source_model_uuid' => $item->uuid, 'language' => 'en', 'source_model_attribute' => 'label'])->translation);
+Yii::$app->request->setBodyParams([]);
+
 shortLinkDone();

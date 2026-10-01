@@ -139,7 +139,7 @@
 						'source_model_uuid' => $this->owner->uuid,
 					];
 
-					if (empty($value)) {
+					if ($value === '' || $value === null) {
 						if ($deleteEmpty) {
 							\giantbits\crelish\models\CrelishTranslation::deleteAll($criteria);
 						}
