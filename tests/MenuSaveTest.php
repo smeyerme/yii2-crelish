@@ -154,6 +154,13 @@ $r = $errors([item(['clientId' => 'a', 'label' => 'A', 'i18n' => ['en' => 12]])]
 check('number translation rejected', 422, $r['status']);
 $r = $errors([item(['clientId' => 'a', 'label' => 'A', 'i18n' => ['en' => str_repeat('ü', 256)]])]);
 check('translation longer than 255 rejected', [422, [$i18nError]], [$r['status'], $r['body']['errors']['a'] ?? null]);
+$r = $errors([item(['clientId' => 'a', 'label' => 'A', 'i18n' => 'en'])]);
+check('non-object i18n rejected with a message', [422, [Yii::t('crelish', 'The translations must be an object.')]], [$r['status'], $r['body']['errors']['a'] ?? null]);
+$r = $errors([item(['clientId' => 'a', 'label' => 'A', 'i18n' => 5])]);
+check('numeric i18n rejected', 422, $r['status']);
+$noI18n = item(['clientId' => 'a', 'label' => 'A']);
+unset($noI18n['i18n']);
+check('missing i18n still accepted', 200, $errors([$noI18n])['status']);
 check('translation of exactly 255 accepted', 200, $errors([item(['clientId' => 'a', 'label' => 'A', 'i18n' => ['en' => str_repeat('ü', 255)]])])['status']);
 check('null translation accepted as empty', 200, $errors([item(['clientId' => 'a', 'label' => 'A', 'i18n' => ['en' => null]])])['status']);
 check('failed validation wrote nothing', ['A'], MenuItem::find()->select('label')->where(['menu_uuid' => $menu->uuid])->column());

@@ -133,7 +133,7 @@ class MenuTreeSaver
       'parentRef' => $parent !== '' ? $parent : null,
       'sort' => (int)($raw['sort'] ?? 0),
       'label' => trim((string)($raw['label'] ?? '')),
-      'i18n' => is_array($raw['i18n'] ?? null) ? $raw['i18n'] : [],
+      'i18n' => array_key_exists('i18n', $raw) && $raw['i18n'] !== null ? $raw['i18n'] : [],
       'target_type' => (string)($raw['target_type'] ?? ''),
       'target_ctype' => trim((string)($raw['target_ctype'] ?? '')),
       'target_uuid' => trim((string)($raw['target_uuid'] ?? '')),
@@ -183,6 +183,11 @@ class MenuTreeSaver
 
     if (mb_strlen($item['label']) > 255) {
       $messages[] = Yii::t('crelish', 'The label is too long (255 characters max).');
+    }
+
+    if (!is_array($item['i18n'])) {
+      $messages[] = Yii::t('crelish', 'The translations must be an object.');
+      $item['i18n'] = [];
     }
 
     // Only configured non-default languages count; other keys are ignored and never stored
