@@ -9,6 +9,7 @@ use yii\behaviors\BlameableBehavior;
 use yii\behaviors\TimestampBehavior;
 use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
+use yii\db\Expression;
 
 /**
  * A named navigation menu (main, footer, meta …) that themes render via chelper.menu('<key>').
@@ -41,6 +42,14 @@ class Menu extends ActiveRecord
     return ['uuid'];
   }
 
+  /**
+   * The whole delete (items, translations, the menu row) runs in one transaction.
+   */
+  public function transactions()
+  {
+    return [self::SCENARIO_DEFAULT => self::OP_DELETE];
+  }
+
   public function behaviors()
   {
     return [
@@ -67,9 +76,10 @@ class Menu extends ActiveRecord
     return [
       [['key', 'systitle'], 'required'],
       [['key', 'systitle'], 'trim'],
-      ['key', 'string', 'max' => 64],
-      ['key', 'match', 'pattern' => '/^[a-z0-9_-]+$/'],
-      ['key', 'unique'],
+      // The key is immutable (beforeSave resets it), so only a new menu's key is validated
+      ['key', 'string', 'max' => 64, 'when' => fn($m) => $m->isNewRecord],
+      ['key', 'match', 'pattern' => '/^[a-z0-9_-]+$/', 'when' => fn($m) => $m->isNewRecord],
+      ['key', 'unique', 'when' => fn($m) => $m->isNewRecord],
       ['systitle', 'string', 'max' => 128],
       ['max_depth', 'default', 'value' => 2],
       ['max_depth', 'integer', 'min' => 1, 'max' => self::MAX_DEPTH_LIMIT],
@@ -151,7 +161,9 @@ class Menu extends ActiveRecord
 
     // The tree saver may have bumped updated past time(); a plain time() here could move it back and revive an old editor token
     if (!$insert && $this->getDirtyAttributes() !== []) {
-      $this->updated = self::nextUpdated((int)$this->getOldAttribute('updated'));
+      // Computed by the database from the current value: a tree save between findOne() and save() must not be undone
+      $function = $this->getDb()->driverName === 'sqlite' ? 'MAX' : 'GREATEST';
+      $this->updated = new Expression($function . '(COALESCE(updated, 0) + 1, :now)', [':now' => time()]);
     }
 
     return true;
@@ -174,9 +186,22 @@ class Menu extends ActiveRecord
     // SQLite does not enforce the FK cascade, and translations have no FK at all
     $itemUuids = MenuItem::find()->select('uuid')->where(['menu_uuid' => $this->uuid])->column();
 
-    if ($itemUuids) {
+    if (!$itemUuids) {
+      return true;
+    }
+
+    // delete() already runs inside the AR transaction (transactions() OP_DELETE) and this reuses it;
+    // the own transaction is only a fallback for direct calls, so a failure half-way cannot leave translations gone but items behind
+    $db = static::getDb();
+    $transaction = $db->getTransaction() === null ? $db->beginTransaction() : null;
+
+    try {
       CrelishTranslation::deleteAll(['source_model' => MenuItem::tableName(), 'source_model_uuid' => $itemUuids]);
       MenuItem::deleteAll(['uuid' => $itemUuids]);
+      $transaction?->commit();
+    } catch (\Throwable $e) {
+      $transaction?->rollBack();
+      throw $e;
     }
 
     return true;
@@ -185,6 +210,14 @@ class Menu extends ActiveRecord
   public function afterSave($insert, $changedAttributes)
   {
     parent::afterSave($insert, $changedAttributes);
+
+    // beforeSave left an expression in the attribute; show the value the database computed
+    if (!$insert && $this->updated instanceof Expression) {
+      $value = (int)static::find()->select('updated')->where(['uuid' => $this->uuid])->scalar();
+      $this->updated = $value;
+      $this->setOldAttribute('updated', $value);
+    }
+
     MenuService::invalidate();
   }
 

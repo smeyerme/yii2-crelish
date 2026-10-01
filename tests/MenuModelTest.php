@@ -12,6 +12,7 @@ declare(strict_types=1);
 require __DIR__ . '/menu/bootstrap.php';
 
 use giantbits\crelish\migrations\m260929_120000_create_menu_tables;
+use giantbits\crelish\models\CrelishTranslation;
 use giantbits\crelish\models\Menu;
 use giantbits\crelish\models\MenuItem;
 
@@ -59,6 +60,19 @@ $main->refresh();
 $main->systitle = 'Main (settings)';
 check('settings save succeeds', true, $main->save());
 check('settings save after a future saver bump still increases updated', $future + 1, (int)Menu::findOne($main->uuid)->updated);
+$stale = Menu::findOne($main->uuid);
+$bumped = time() + 500;
+Menu::updateAll(['updated' => $bumped], ['uuid' => $main->uuid]);
+$stale->systitle = 'Stale edit';
+check('stale model saves', true, $stale->save());
+check('stale save does not move updated backwards', $bumped + 1, (int)Menu::findOne($main->uuid)->updated);
+check('in-memory updated shows the stored value', $bumped + 1, $stale->updated);
+check('in-memory updated is not dirty after save', [], array_keys($stale->getDirtyAttributes()));
+Menu::updateAll(['updated' => null], ['uuid' => $main->uuid]);
+$nullMenu = Menu::findOne($main->uuid);
+$nullMenu->systitle = 'Null version';
+check('menu with NULL updated saves', true, $nullMenu->save());
+check('NULL updated becomes a value', true, (int)Menu::findOne($main->uuid)->updated >= time() - 1);
 $fresh = makeMenu('fresh-insert');
 check('insert still stamps the current time', true, abs((int)$fresh->updated - time()) <= 1 && (int)$fresh->updated === (int)$fresh->created);
 $fromZero = Menu::nextUpdated(0);
@@ -91,7 +105,49 @@ check('depth above stored tree is valid', true, $main->validate());
 $fresh = new Menu(['key' => 'fresh', 'systitle' => 'Fresh', 'max_depth' => 1]);
 check('new menu with depth 1 is valid', true, $fresh->validate());
 
+echo "\nKey rules apply on create only\n";
+$legacy = makeMenu('legacy');
+Yii::$app->db->createCommand()->update('menu', ['key' => 'Bad Key'], ['uuid' => $legacy->uuid])->execute();
+$legacy = Menu::findOne($legacy->uuid);
+$legacy->systitle = 'Legacy renamed';
+check('existing menu with an invalid stored key still validates', true, $legacy->validate());
+$legacy->key = 'main';
+check('existing menu with an edited, duplicate key still validates (beforeSave resets it)', true, $legacy->validate());
+$legacy->delete();
+
+echo "\nDeletion is atomic\n";
+makeItem($main, ['label' => 'Tr']);
+$trItem = MenuItem::find()->where(['menu_uuid' => $main->uuid])->one();
+$trItem->setTranslations(['en' => ['label' => 'Tr en']]);
+$trItem->save(false);
+$trBefore = (int)CrelishTranslation::find()->count();
+Yii::$app->db->pdo->exec("CREATE TRIGGER block_item_delete BEFORE DELETE ON menu_item BEGIN SELECT RAISE(ABORT, 'blocked'); END");
+$failed = false;
+try {
+  $main->delete();
+} catch (\Throwable $e) {
+  $failed = true;
+}
+check('forced item-delete failure surfaces', true, $failed);
+check('translations are rolled back', $trBefore, (int)CrelishTranslation::find()->count());
+check('menu survives the failed delete', true, Menu::findOne($main->uuid) !== null);
+Yii::$app->db->createCommand('DROP TRIGGER block_item_delete')->execute();
+
+$itemsBefore = (int)MenuItem::find()->count();
+Yii::$app->db->pdo->exec("CREATE TRIGGER block_menu_delete BEFORE DELETE ON menu BEGIN SELECT RAISE(ABORT, 'blocked'); END");
+$failed = false;
+try {
+  $main->delete();
+} catch (\Throwable $e) {
+  $failed = true;
+}
+check('forced menu-row delete failure surfaces', true, $failed);
+check('items survive a failed menu-row delete', $itemsBefore, (int)MenuItem::find()->count());
+check('translations survive a failed menu-row delete', $trBefore, (int)CrelishTranslation::find()->count());
+Yii::$app->db->createCommand('DROP TRIGGER block_menu_delete')->execute();
+
 $main->delete();
 check('deleting a menu deletes its items', 0, (int)MenuItem::find()->count());
+check('deleting a menu deletes its translations', 0, (int)CrelishTranslation::find()->where(['source_model' => 'menu_item'])->count());
 
 shortLinkDone();
