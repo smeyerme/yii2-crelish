@@ -220,6 +220,8 @@ php yii crelish-translations/prune de --apply   # removes them from the project 
 
 `--apply` also removes deliberate project customisations of Crelish strings that share a key with the package, so review the dry run first. Nothing runs automatically on deploy.
 
+Content translations (the `translation` table, written through the language tabs) are swapped into a record for display only: a db-backed record found while `Yii::$app->language` has a translation shows the translated values, but saving it never writes them into the default-language columns. Only a value you change deliberately is saved. The admin always edits the default-language content in the main fields, whatever the admin UI language; the translations stay in their tabs. Code that needs the raw column values can wrap the lookup in `CrelishTranslationBehavior::withoutTranslations(fn() => …)`.
+
 ## Next Steps
 
 - [Configure authentication](./authentication.md) for your API
