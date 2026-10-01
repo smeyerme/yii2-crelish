@@ -101,19 +101,21 @@
 			$languages = $short !== false && $short !== $language ? [$language, $short] : [$language];
 			$rows = $this->findTranslations($languages);
 			
-			// A regional locale (en-US) without rows of its own uses its language code (en)
-			$translations = array_values(array_filter($rows, fn($row) => $row['language'] === $language));
-			
-			if (!$translations) {
-				$translations = $rows;
-			}
-			
+			// Per field: the language code row (en) is the base, the exact locale row (en-US) overlays it
 			$translationsByAttribute = [];
+			$exact = [];
 			
-			foreach ($translations as $row) {
+			foreach ($rows as $row) {
 				$attribute = $row['source_model_attribute'];
-				$translationsByAttribute[$attribute] = $row['translation'];
+				
+				if ($row['language'] === $language) {
+					$exact[$attribute] = $row['translation'];
+				} else {
+					$translationsByAttribute[$attribute] = $row['translation'];
+				}
 			}
+			
+			$translationsByAttribute = array_replace($translationsByAttribute, $exact);
 			
 			if (count($translationsByAttribute) > 0) {
 				foreach ($translationsByAttribute as $attribute => $translation) {

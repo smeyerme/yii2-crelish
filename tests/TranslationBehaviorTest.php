@@ -186,4 +186,19 @@ check('de-CH default + app en: translation swapped', 'New', MenuItem::findOne($s
 Yii::$app->params['crelish']['languages'] = $languagesBefore;
 Yii::$app->language = 'de';
 
+echo "\nLocale fallback per field\n";
+// menu_item has no title column; target_url stands in for a second translated field
+$pf = makeItem($menu, ['label' => 'Label DE', 'target_url' => '/de/titel']);
+foreach ([['en', 'label', 'Label EN'], ['en', 'target_url', 'Title EN'], ['en-US', 'label', 'Label US']] as $i => [$lang, $attr, $value]) {
+  Yii::$app->db->createCommand()->insert('translation', ['uuid' => 'pf-' . $i, 'source_model' => 'menu_item', 'source_model_uuid' => $pf->uuid, 'language' => $lang, 'source_model_attribute' => $attr, 'translation' => $value])->execute();
+}
+Yii::$app->language = 'en-US';
+$found = MenuItem::findOne($pf->uuid);
+check('en-US: exact row wins for label', 'Label US', $found->label);
+check('en-US: en row fills the field without an en-US row', 'Title EN', $found->target_url);
+Yii::$app->language = 'en';
+$found = MenuItem::findOne($pf->uuid);
+check('en: only en rows', ['Label EN', 'Title EN'], [$found->label, $found->target_url]);
+Yii::$app->language = 'de';
+
 shortLinkDone();
