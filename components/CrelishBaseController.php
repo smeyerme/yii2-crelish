@@ -468,7 +468,7 @@ JS;
     foreach (Yii::$app->params['crelish']['languages'] as $lang) {
       $html .= Html::tag('option', strtoupper($lang), [
         'value' => $lang,
-        'selected' => ($lang == Yii::$app->language)
+        'selected' => ($lang == self::defaultContentLanguage())
       ]);
     }
     $html .= '</select>';
@@ -782,7 +782,7 @@ JS;
         
         // For translatable fields, try to get from i18n array
         if (property_exists($field, 'translatable') && $field->translatable === true) {
-          $currentLang = $lang ?: Yii::$app->language;
+          $currentLang = $lang ?: self::defaultContentLanguage();
           
           // Make sure i18n is initialized
           if (!isset($this->model->i18n) || !is_array($this->model->i18n)) {
@@ -880,7 +880,19 @@ JS;
 
   private function isTranslation($lang): bool
   {
-    return !empty($lang) && $lang != Yii::$app->language;
+    return !empty($lang) && $lang != self::defaultContentLanguage();
+  }
+
+  /**
+   * The language of the default content columns, i.e. what the main form fields edit:
+   * the first configured content language, independent of the admin UI language.
+   * Without a language list, the two-letter application language.
+   */
+  public static function defaultContentLanguage(): string
+  {
+    $languages = Yii::$app->params['crelish']['languages'] ?? [];
+
+    return $languages ? (string)reset($languages) : ContentUrlResolver::currentLanguage();
   }
 
   private function handleTranslationOptions(&$field, &$fieldOptions, &$widgetOptions, $lang): void
@@ -907,7 +919,7 @@ JS;
 
       // For translatable fields, try to get from i18n array
       if (property_exists($field, 'translatable') && $field->translatable === true) {
-        $currentLang = Yii::$app->language;
+        $currentLang = self::defaultContentLanguage();
 
         // Make sure i18n is initialized
         if (!isset($this->model->i18n) || !is_array($this->model->i18n)) {
