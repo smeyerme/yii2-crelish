@@ -175,9 +175,21 @@ class Menu extends ActiveRecord
     // SQLite does not enforce the FK cascade, and translations have no FK at all
     $itemUuids = MenuItem::find()->select('uuid')->where(['menu_uuid' => $this->uuid])->column();
 
-    if ($itemUuids) {
+    if (!$itemUuids) {
+      return true;
+    }
+
+    // Reuse a caller's transaction, otherwise a failure half-way would leave translations gone but items behind
+    $db = static::getDb();
+    $transaction = $db->getTransaction() === null ? $db->beginTransaction() : null;
+
+    try {
       CrelishTranslation::deleteAll(['source_model' => MenuItem::tableName(), 'source_model_uuid' => $itemUuids]);
       MenuItem::deleteAll(['uuid' => $itemUuids]);
+      $transaction?->commit();
+    } catch (\Throwable $e) {
+      $transaction?->rollBack();
+      throw $e;
     }
 
     return true;

@@ -12,6 +12,7 @@ declare(strict_types=1);
 require __DIR__ . '/menu/bootstrap.php';
 
 use giantbits\crelish\migrations\m260929_120000_create_menu_tables;
+use giantbits\crelish\models\CrelishTranslation;
 use giantbits\crelish\models\Menu;
 use giantbits\crelish\models\MenuItem;
 
@@ -91,7 +92,36 @@ check('depth above stored tree is valid', true, $main->validate());
 $fresh = new Menu(['key' => 'fresh', 'systitle' => 'Fresh', 'max_depth' => 1]);
 check('new menu with depth 1 is valid', true, $fresh->validate());
 
+echo "\nKey rules apply on create only\n";
+$legacy = makeMenu('legacy');
+Yii::$app->db->createCommand()->update('menu', ['key' => 'Bad Key'], ['uuid' => $legacy->uuid])->execute();
+$legacy = Menu::findOne($legacy->uuid);
+$legacy->systitle = 'Legacy renamed';
+check('existing menu with an invalid stored key still validates', true, $legacy->validate());
+$legacy->key = 'main';
+check('existing menu with an edited, duplicate key still validates (beforeSave resets it)', true, $legacy->validate());
+$legacy->delete();
+
+echo "\nDeletion is atomic\n";
+makeItem($main, ['label' => 'Tr']);
+$trItem = MenuItem::find()->where(['menu_uuid' => $main->uuid])->one();
+$trItem->setTranslations(['en' => ['label' => 'Tr en']]);
+$trItem->save(false);
+$trBefore = (int)CrelishTranslation::find()->count();
+Yii::$app->db->pdo->exec("CREATE TRIGGER block_item_delete BEFORE DELETE ON menu_item BEGIN SELECT RAISE(ABORT, 'blocked'); END");
+$failed = false;
+try {
+  $main->delete();
+} catch (\Throwable $e) {
+  $failed = true;
+}
+check('forced item-delete failure surfaces', true, $failed);
+check('translations are rolled back', $trBefore, (int)CrelishTranslation::find()->count());
+check('menu survives the failed delete', true, Menu::findOne($main->uuid) !== null);
+Yii::$app->db->createCommand('DROP TRIGGER block_item_delete')->execute();
+
 $main->delete();
 check('deleting a menu deletes its items', 0, (int)MenuItem::find()->count());
+check('deleting a menu deletes its translations', 0, (int)CrelishTranslation::find()->where(['source_model' => 'menu_item'])->count());
 
 shortLinkDone();
