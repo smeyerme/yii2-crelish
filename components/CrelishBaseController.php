@@ -475,7 +475,8 @@ JS;
 
     // Add auto-translate button if translation service is available
     if (CrelishTranslationService::isAvailable()) {
-      $sourceLanguage = Yii::$app->sourceLanguage ?? 'de';
+      // Content is written in the default content language; Yii's sourceLanguage is the UI message source
+      $sourceLanguage = self::defaultContentLanguage();
       $ctype = $this->ctype ?? '';
       $uuid = $this->uuid ?? '';
 
@@ -518,10 +519,15 @@ JS;
 
     if (!translateBtn || !languageSelect) return;
 
+    // Two-letter code, like CrelishBaseHelper::isDefaultContentLanguage() (de, de-CH, de_AT match)
+    function languageCode(language) {
+        return String(language).split(/[-_]/)[0].toLowerCase();
+    }
+
     // Show/hide translate button based on selected language
     function updateTranslateButtonVisibility() {
         var selectedLang = languageSelect.value;
-        if (selectedLang !== sourceLanguage && !selectedLang.startsWith(sourceLanguage)) {
+        if (languageCode(selectedLang) !== languageCode(sourceLanguage)) {
             translateBtn.style.display = 'inline-block';
         } else {
             translateBtn.style.display = 'none';
@@ -880,7 +886,7 @@ JS;
 
   private function isTranslation($lang): bool
   {
-    return !empty($lang) && $lang != self::defaultContentLanguage();
+    return !empty($lang) && !CrelishBaseHelper::isDefaultContentLanguage((string)$lang, self::defaultContentLanguage());
   }
 
   /**

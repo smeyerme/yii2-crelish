@@ -34,6 +34,46 @@ class CrelishBaseHelper
   }
 
   /**
+   * Whether $language is the default content language, compared by two-letter
+   * language code on both sides (de, de-CH and de_AT all match a de-CH default).
+   *
+   * @param string|null $default the default to compare with; null uses defaultContentLanguage()
+   */
+  public static function isDefaultContentLanguage(?string $language, ?string $default = null): bool
+  {
+    $default ??= self::defaultContentLanguage();
+
+    if ($language === null || $language === '' || $default === null || $default === '') {
+      return false;
+    }
+
+    return strtolower((string)strtok($language, '-_')) === strtolower((string)strtok($default, '-_'));
+  }
+
+  /**
+   * The content language a form widget for a translatable field edits, read from the
+   * form key the admin form passes: i18n[<lang>][<key>] for a translation, the plain
+   * key for the main field (default content language).
+   *
+   * Null when the field is not translatable or fewer than two languages are configured:
+   * the admin form then renders no language fields, so a widget keeps its own handling.
+   */
+  public static function formFieldLanguage(object $field, ?string $formKey): ?string
+  {
+    $languages = Yii::$app->params['crelish']['languages'] ?? [];
+
+    if (($field->translatable ?? false) !== true || !is_array($languages) || count($languages) < 2) {
+      return null;
+    }
+
+    if (preg_match('/^i18n\[([^\]]+)\]\[/', (string)$formKey, $match)) {
+      return $match[1];
+    }
+
+    return self::defaultContentLanguage();
+  }
+
+  /**
    * @var array Cache for language code extraction
    */
   private static $langCodeCache = [];

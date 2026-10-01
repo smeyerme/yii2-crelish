@@ -2,6 +2,7 @@
 
 namespace giantbits\crelish\plugins\jsoneditor;
 
+use giantbits\crelish\components\CrelishBaseHelper;
 use giantbits\crelish\components\CrelishFormWidget;
 use Yii;
 use yii\helpers\Html;
@@ -93,8 +94,17 @@ class JsonEditor extends CrelishFormWidget
    */
   public function run()
   {
-    // Ensure i18n structure is prepared for translatable fields
-    $this->prepareI18nStructure();
+    // The content language the admin form renders this field for: the default content
+    // language for the main field, the tab language for i18n[<lang>][<key>]. Null when the
+    // form renders no language fields (not translatable, single language).
+    $lang = CrelishBaseHelper::formFieldLanguage($this->field, $this->formKey);
+    $isTranslation = $lang !== null && !CrelishBaseHelper::isDefaultContentLanguage($lang);
+
+    // Ensure i18n structure is prepared for translatable fields (only without a form language;
+    // its schema defaults would otherwise hide the column and stored translation values)
+    if ($lang === null) {
+      $this->prepareI18nStructure();
+    }
     
     // Check if field is required
     $isRequired = false;
@@ -111,12 +121,16 @@ class JsonEditor extends CrelishFormWidget
     $jsonData = $this->data;
     
     // Handle translatable fields
-    $currentLang = Yii::$app->language;
+    $currentLang = $lang ?? Yii::$app->language;
     $isTranslatable = property_exists($this->field, 'translatable') && $this->field->translatable === true;
     
-    // Special handling for translated fields that come from i18n data
-    if ($isTranslatable) {
-      // Now check if we have a value for the current field
+    if ($isTranslation) {
+      // Like the core fields: the posted value, else the stored translation, else the column value
+      $jsonData = $this->model->i18n[$lang][$this->field->key]
+        ?? $this->model->allTranslations[$this->field->key][$lang]
+        ?? $jsonData;
+    } elseif ($isTranslatable && $lang === null) {
+      // Special handling for translated fields that come from i18n data
       if (isset($this->model->i18n[$currentLang][$this->field->key])) {
         $jsonData = $this->model->i18n[$currentLang][$this->field->key];
       }
@@ -127,7 +141,7 @@ class JsonEditor extends CrelishFormWidget
       $jsonData = $this->getDefaultFromSchema();
       
       // Store the default value in the model
-      if ($isTranslatable) {
+      if ($isTranslatable && $lang === null) {
         $this->model->i18n[$currentLang][$this->field->key] = $jsonData;
       }
     }
@@ -135,9 +149,9 @@ class JsonEditor extends CrelishFormWidget
     // Ensure data is in JSON string format for the hidden input
     $jsonString = is_string($jsonData) ? $jsonData : Json::encode($jsonData);
     
-    // Prepare the editor container
-    $editorId = 'json-editor-' . $this->field->key;
-    $inputName = $this->getInputName();
+    // Prepare the editor container (one per language, so translation ids get a suffix)
+    $editorId = 'json-editor-' . $this->field->key . ($isTranslation ? '-' . $lang : '');
+    $inputName = $this->getInputName($lang);
     
     // Get the schema as JSON string if available
     $schemaAttr = '';
@@ -150,8 +164,10 @@ class JsonEditor extends CrelishFormWidget
     $modeAttr = ' data-mode="' . $preferredMode . '"';
     
     // Create the form group container
+    // Like the core fields: the language on the form group, translations marked lang-ver
     $html = Html::beginTag('div', [
-      'class' => 'form-group field-crelishdynamicmodel-' . $this->formKey . ($isRequired ? ' required' : '')
+      'class' => 'form-group field-crelishdynamicmodel-' . $this->formKey . ($isRequired ? ' required' : '') . ($isTranslation ? ' lang-ver' : ''),
+      'data-language' => $lang
     ]);
     
     // Create the editor label
@@ -165,7 +181,7 @@ class JsonEditor extends CrelishFormWidget
     // Add language attribute for translatable fields
     $langAttr = '';
     if ($isTranslatable) {
-      $langAttr = ' data-language="' . $currentLang . '"';
+      $langAttr = ' data-language="' . Html::encode($currentLang) . '"';
     }
     
     // Create container for the JSON editor
@@ -236,10 +252,18 @@ class JsonEditor extends CrelishFormWidget
   
   /**
    * Get the appropriate input name based on translatable status
+   * @param string|null $lang the form language (formFieldLanguage()); null: legacy handling
    * @return string The input name
    */
-  protected function getInputName()
+  protected function getInputName(?string $lang = null)
   {
+    // Same keys as the core fields: the column for the default content language, i18n otherwise
+    if ($lang !== null) {
+      return CrelishBaseHelper::isDefaultContentLanguage($lang)
+        ? "CrelishDynamicModel[{$this->field->key}]"
+        : "CrelishDynamicModel[i18n][{$lang}][{$this->field->key}]";
+    }
+
     $isTranslatable = property_exists($this->field, 'translatable') && $this->field->translatable === true;
     $currentLang = Yii::$app->language;
     
