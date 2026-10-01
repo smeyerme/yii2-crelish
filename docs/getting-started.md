@@ -222,6 +222,15 @@ php yii crelish-translations/prune de --apply   # removes them from the project 
 
 Content translations (the `translation` table, written through the language tabs) are swapped into a record for display only: a db-backed record found while `Yii::$app->language` has a translation shows the translated values, but saving it never writes them into the default-language columns. Rows stored for the default content language itself are ignored; the columns are authoritative. Only a value you change deliberately is saved. In the admin editor the main fields always hold the default content language (the first entry of `params['crelish']['languages']`), whatever the admin UI language; every other language is edited in its translation tab. Code that needs the raw column values can wrap the lookup in `CrelishTranslationBehavior::withoutTranslations(fn() => …)`.
 
+Languages are compared by two-letter code, so with `['de-CH', 'en']` an app language `de` counts as the default content language. For a regional locale such as `en-US`, each field uses its `en-US` row if there is one and otherwise its `en` row. Auto-translate (DeepL) always translates from the default content language, not from Yii's `sourceLanguage`.
+
+Older versions could store translation rows for the default content language itself. They are ignored, and you can remove them:
+
+```bash
+php yii crelish-translations/stale-defaults           # dry run, counts per source model
+php yii crelish-translations/stale-defaults --apply   # deletes them
+```
+
 ## Next Steps
 
 - [Configure authentication](./authentication.md) for your API
