@@ -34,6 +34,23 @@ class CrelishBaseHelper
   }
 
   /**
+   * Whether $language is the default content language, compared by two-letter
+   * language code on both sides (de, de-CH and de_AT all match a de-CH default).
+   *
+   * @param string|null $default the default to compare with; null uses defaultContentLanguage()
+   */
+  public static function isDefaultContentLanguage(?string $language, ?string $default = null): bool
+  {
+    $default ??= self::defaultContentLanguage();
+
+    if ($language === null || $language === '' || $default === null || $default === '') {
+      return false;
+    }
+
+    return strtolower((string)strtok($language, '-_')) === strtolower((string)strtok($default, '-_'));
+  }
+
+  /**
    * @var array Cache for language code extraction
    */
   private static $langCodeCache = [];

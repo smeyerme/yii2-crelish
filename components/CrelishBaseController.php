@@ -880,7 +880,7 @@ JS;
 
   private function isTranslation($lang): bool
   {
-    return !empty($lang) && $lang != self::defaultContentLanguage();
+    return !empty($lang) && !CrelishBaseHelper::isDefaultContentLanguage((string)$lang, self::defaultContentLanguage());
   }
 
   /**

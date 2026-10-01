@@ -13,6 +13,7 @@ declare(strict_types=1);
 require __DIR__ . '/menu/bootstrap.php';
 
 use giantbits\crelish\components\CrelishBaseController;
+use giantbits\crelish\components\CrelishBaseHelper;
 
 $app = menuApp(['languages' => ['de', 'en']]);
 
@@ -44,6 +45,22 @@ echo "\nAdmin UI in German\n";
 Yii::$app->language = 'de';
 check('still de', 'de', CrelishBaseController::defaultContentLanguage());
 check('en still a translation tab', true, $call('isTranslation', 'en'));
+
+echo "\nTwo-letter comparison with the default content language\n";
+Yii::$app->params['crelish']['languages'] = ['de-CH', 'en'];
+check('de is the default content language of [de-CH, en]', true, CrelishBaseHelper::isDefaultContentLanguage('de'));
+check('de-CH is too', true, CrelishBaseHelper::isDefaultContentLanguage('de-CH'));
+check('de_AT is too', true, CrelishBaseHelper::isDefaultContentLanguage('de_AT'));
+check('en is not', false, CrelishBaseHelper::isDefaultContentLanguage('en'));
+check('empty is not', false, CrelishBaseHelper::isDefaultContentLanguage(''));
+check('admin: de is not a translation with [de-CH, en]', false, $call('isTranslation', 'de'));
+check('admin: de-CH is not a translation', false, $call('isTranslation', 'de-CH'));
+check('admin: en still is', true, $call('isTranslation', 'en'));
+Yii::$app->params['crelish']['languages'] = ['de', 'en'];
+check('de-CH is the default content language of [de, en]', true, CrelishBaseHelper::isDefaultContentLanguage('de-CH'));
+Yii::$app->params['crelish']['languages'] = [];
+check('no language list: nothing is the default', false, CrelishBaseHelper::isDefaultContentLanguage('de'));
+Yii::$app->params['crelish']['languages'] = ['de', 'en'];
 
 echo "\nNo language list configured\n";
 Yii::$app->params['crelish']['languages'] = [];

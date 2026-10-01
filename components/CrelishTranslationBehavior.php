@@ -95,8 +95,7 @@
 			$short = strtok($language, '-_');
 
 			// The columns hold the default content language; rows stored for it are never authoritative
-			$default = CrelishBaseHelper::defaultContentLanguage();
-			if ($default !== null && ($language === $default || $short === $default)) {
+			if (CrelishBaseHelper::isDefaultContentLanguage($language)) {
 				return;
 			}
 			$languages = $short !== false && $short !== $language ? [$language, $short] : [$language];

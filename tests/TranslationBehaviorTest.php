@@ -177,4 +177,13 @@ check('no language list: unchanged, the de row is swapped in', 'Alt', MenuItem::
 Yii::$app->params['crelish']['languages'] = $languagesBefore;
 Yii::$app->language = 'de';
 
+echo "\nA full locale as default content language is compared by its language code\n";
+Yii::$app->params['crelish']['languages'] = ['de-CH', 'en'];
+Yii::$app->language = 'de';
+check('de-CH default + app de: column, not the stale de row', 'Neu', MenuItem::findOne($stale->uuid)->label);
+Yii::$app->language = 'en';
+check('de-CH default + app en: translation swapped', 'New', MenuItem::findOne($stale->uuid)->label);
+Yii::$app->params['crelish']['languages'] = $languagesBefore;
+Yii::$app->language = 'de';
+
 shortLinkDone();
