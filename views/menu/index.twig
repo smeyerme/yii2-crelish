@@ -12,12 +12,12 @@
     <tbody>
       {% for row in rows %}
         <tr style="cursor: pointer" onclick="location.href='{{ url('/crelish/menu/edit', {'uuid': row.menu.uuid}) }}'">
-          <td>{{ row.menu.systitle }}</td>
+          <td><a href="{{ url('/crelish/menu/edit', {'uuid': row.menu.uuid}) }}" onclick="event.stopPropagation()">{{ row.menu.systitle }}</a></td>
           <td><code>{{ row.menu.key }}</code></td>
           <td>
             {{ row.count }}
             {% if row.unavailable > 0 %}
-              <span class="badge text-bg-danger">{{ t('crelish', '{n} targets unavailable', {'n': row.unavailable}) }}</span>
+              <span class="badge text-bg-danger">{{ t('crelish', '{n, plural, one{# target unavailable} other{# targets unavailable}}', {'n': row.unavailable}) }}</span>
             {% endif %}
           </td>
           <td>
