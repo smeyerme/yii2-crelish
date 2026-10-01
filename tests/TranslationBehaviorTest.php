@@ -177,4 +177,35 @@ check('no language list: unchanged, the de row is swapped in', 'Alt', MenuItem::
 Yii::$app->params['crelish']['languages'] = $languagesBefore;
 Yii::$app->language = 'de';
 
+echo "\nA full locale as default content language is compared by its language code\n";
+Yii::$app->params['crelish']['languages'] = ['de-CH', 'en'];
+Yii::$app->language = 'de';
+check('de-CH default + app de: column, not the stale de row', 'Neu', MenuItem::findOne($stale->uuid)->label);
+Yii::$app->language = 'en';
+check('de-CH default + app en: translation swapped', 'New', MenuItem::findOne($stale->uuid)->label);
+Yii::$app->params['crelish']['languages'] = $languagesBefore;
+Yii::$app->language = 'de';
+
+echo "\nLocale fallback per field\n";
+// menu_item has no title column; target_url stands in for a second translated field
+$pf = makeItem($menu, ['label' => 'Label DE', 'target_url' => '/de/titel']);
+foreach ([['en', 'label', 'Label EN'], ['en', 'target_url', 'Title EN'], ['en-US', 'label', 'Label US']] as $i => [$lang, $attr, $value]) {
+  Yii::$app->db->createCommand()->insert('translation', ['uuid' => 'pf-' . $i, 'source_model' => 'menu_item', 'source_model_uuid' => $pf->uuid, 'language' => $lang, 'source_model_attribute' => $attr, 'translation' => $value])->execute();
+}
+Yii::$app->language = 'en-US';
+$found = MenuItem::findOne($pf->uuid);
+check('en-US: exact row wins for label', 'Label US', $found->label);
+check('en-US: en row fills the field without an en-US row', 'Title EN', $found->target_url);
+Yii::$app->language = 'en';
+$found = MenuItem::findOne($pf->uuid);
+check('en: only en rows', ['Label EN', 'Title EN'], [$found->label, $found->target_url]);
+Yii::$app->language = 'en-US';
+$found = MenuItem::findOne($pf->uuid);
+$found->sort = 9;
+$found->save(false);
+Yii::$app->language = 'de';
+$raw = Yii::$app->db->createCommand('SELECT label, target_url, sort FROM menu_item WHERE uuid = :u', [':u' => $pf->uuid])->queryOne();
+check('en-US mixed rows: unrelated save keeps the default columns', ['Label DE', '/de/titel', 9], [$raw['label'], $raw['target_url'], (int)$raw['sort']]);
+check('en-US mixed rows: translation rows untouched', 3, (int)CrelishTranslation::find()->where(['source_model_uuid' => $pf->uuid])->count());
+
 shortLinkDone();

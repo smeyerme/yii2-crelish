@@ -180,7 +180,7 @@ class TranslationController extends CrelishBaseController
 		}
 
 		try {
-			$translationService = new CrelishTranslationService();
+			$translationService = new CrelishTranslationService(CrelishBaseController::defaultContentLanguage());
 			$translations = $translationService->translateModel($ctype, $uuid, $targetLanguage);
 
 			if (empty($translations)) {
