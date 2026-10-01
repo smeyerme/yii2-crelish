@@ -143,7 +143,9 @@ export default {
     }
     try {
       const [tree, types] = await Promise.all([this.getJson(this.treeUrl), this.getJson(this.typesUrl)]);
-      this.types = types || [];
+      // A failed or malformed types response would leave the type select silently empty
+      if (!Array.isArray(types)) throw new Error('types');
+      this.types = types;
       this.apply(tree);
     } catch (e) {
       this.message = { kind: 'error', text: this.labels.failed, reload: true };
@@ -211,6 +213,7 @@ export default {
     async reload() {
       this.message = null;
       this.errors = {};
+      this.errorSignatures = {};
       try {
         this.apply(await this.getJson(this.treeUrl));
       } catch (e) {
@@ -255,6 +258,7 @@ export default {
 
         if (response.status === 200) {
           this.errors = {};
+          this.errorSignatures = {};
           this.apply(body);
           this.flash('success', this.labels.saved);
         } else if (response.status === 409) {

@@ -57,6 +57,7 @@ export default {
       this.node.fallbackLabel = null;
       this.node.targetAvailable = true;
       this.results = [];
+      this.query = '';
       this.searched = false;
     },
     scheduleSearch() {
