@@ -23,6 +23,17 @@ use yii\web\UploadedFile;
 class CrelishBaseHelper
 {
   /**
+   * The language held in the default content columns: the first entry of
+   * params['crelish']['languages'], or null when no language list is configured.
+   */
+  public static function defaultContentLanguage(): ?string
+  {
+    $languages = Yii::$app->params['crelish']['languages'] ?? [];
+
+    return $languages ? (string)reset($languages) : null;
+  }
+
+  /**
    * @var array Cache for language code extraction
    */
   private static $langCodeCache = [];

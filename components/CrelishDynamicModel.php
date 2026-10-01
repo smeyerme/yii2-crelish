@@ -175,7 +175,13 @@ class CrelishDynamicModel extends DynamicModel
     switch ($this->_elementDefinition->storage) {
       case 'db':
         $modelClass = CrelishModelResolver::getModelClass($this->_ctype);
-        $rawData = $modelClass::find()->where(['uuid' => $this->_uuid])->one();
+        $find = fn() => $modelClass::find()->where(['uuid' => $this->_uuid])->one();
+        // In the admin the editor works on the default-language columns, whatever the admin
+        // UI language; translations come separately via loadAllTranslations() below. The
+        // frontend (matrix, data include, asset processors) keeps the translated values.
+        $rawData = Yii::$app->controller instanceof CrelishBaseController
+          ? CrelishTranslationBehavior::withoutTranslations($find)
+          : $find();
 
         // Kein Treffer: die uuid kam ungeprüft aus der URL und darf nicht im
         // Modell stehen bleiben, wo sie andernorts in Markup und Storage-Keys
