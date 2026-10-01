@@ -48,7 +48,7 @@ Always print `item.label` with auto-escaping (never `|raw`).
 | `url` | URL, `null` for *No link* |
 | `type` | `content`, `url` or `none` |
 | `targetUuid` | uuid of the linked record (content items) |
-| `external` | absolute URL to another host |
+| `external` | absolute URL to another host than the current request's (set per request, never cached) |
 | `newWindow` | editor chose *open in new window* |
 | `active` | this item leads to the current page |
 | `activeTrail` | a descendant is active |
@@ -62,10 +62,18 @@ An unknown key or any error renders an empty menu and logs to category `crelish.
 
 ## Caching
 
-Trees are cached per menu key and language (tag `crelish.menu`, 1 h). The
-cache is cleared when a menu or item is saved and whenever crelish content is
-saved or deleted through the admin. Content written elsewhere (imports,
-direct ActiveRecord writes) shows up at the latest after an hour, or call
+Trees are cached per menu key and full locale, i.e. `Yii::$app->language`
+such as `de-CH` (key `crelish.menu.<key>.<locale>`, tag `crelish.menu`, 1 h),
+because item labels are translated by the full locale. Content URLs are
+built with the two-letter language code (`/de/…`) for every locale. The
+cached tree (`MenuService::tree()`) holds only request-independent data:
+`external`, `active` and `activeTrail` are `false` there and are set by
+`MenuService::get()` (what `chelper.menu()` returns) for each request, so
+one cache entry serves every host and a cache warmed from the console is
+correct. The cache is cleared when a menu or item is saved and whenever
+crelish content is saved or deleted through the admin. Content written
+elsewhere (imports, direct ActiveRecord writes) shows up at the latest after
+an hour, or call
 `giantbits\crelish\components\menus\MenuService::invalidate()`.
 
 ## Custom URLs for content types

@@ -38,6 +38,22 @@ class OldStyleTarget implements ShortLinkTargetInterface
     }
 }
 
+class BothTarget implements UrlTargetInterface, ShortLinkTargetInterface
+{
+    public string $uuid = 'f0000000-0000-4000-8000-000000000003';
+    public int $state = 2;
+
+    public function getTargetUrl(?string $language): ?string
+    {
+        return '/new/' . $language;
+    }
+
+    public function getShortLinkUrl(?string $language): ?string
+    {
+        return '/old/' . $language;
+    }
+}
+
 const NEWS = 'a0000000-0000-4000-8000-000000000001';
 const PAGE = 'b0000000-0000-4000-8000-000000000001';
 
@@ -48,6 +64,7 @@ function contentRecords(array $overrides = []): array
         'page/' . PAGE => (object)['uuid' => PAGE, 'state' => 2, 'systitle' => 'Programm (intern)', 'navtitle' => 'Programm', 'slug' => 'programm'],
         'seminar/' . (new NewStyleTarget())->uuid => new NewStyleTarget(),
         'event/' . (new OldStyleTarget())->uuid => new OldStyleTarget(),
+        'both/' . (new BothTarget())->uuid => new BothTarget(),
         'sponsor/s1' => (object)['uuid' => 's1', 'state' => 2, 'systitle' => 'Sponsor'],
     ], $overrides);
 }
@@ -66,6 +83,8 @@ echo "Target types\n";
 check('url passes through', 'https://www.example.com/x', $r->resolve('url', null, null, 'https://www.example.com/x', null, $now));
 check('empty url is unavailable', null, $r->resolve('url', null, null, '', null, $now));
 check('none has no url', null, $r->resolve('none', null, null, null, null, $now));
+check('content without uuid is unavailable', null, $r->resolve('content', 'page', '', null, null, $now));
+check('content without ctype is unavailable', null, $r->resolve('content', '', PAGE, null, null, $now));
 check('unknown type has no url', null, $r->resolve('bogus', 'page', PAGE, null, null, $now));
 
 echo "\nContent strategies\n";
@@ -73,6 +92,7 @@ check('page resolves by slug (site-relative)', '/de/programm', $r->resolve('cont
 check('news resolves through detailPages', '/de/news/' . NEWS . '/holzbau-forum-2026-programm', $r->resolveContent('news', NEWS, null, $now));
 check('UrlTargetInterface wins', '/de/seminare/holzbau', $r->resolveContent('seminar', (new NewStyleTarget())->uuid, null, $now));
 check('deprecated ShortLinkTargetInterface still works', 'https://events.example.com/ihf?lang=de', $r->resolveContent('event', (new OldStyleTarget())->uuid, null, $now));
+check('UrlTargetInterface beats the deprecated interface on the same record', '/new/de', $r->resolveContent('both', (new BothTarget())->uuid, null, $now));
 check('type without mapping or slug is unavailable', null, $r->resolveContent('sponsor', 's1', null, $now));
 check('missing record is unavailable', null, $r->resolveContent('news', 'missing', null, $now));
 

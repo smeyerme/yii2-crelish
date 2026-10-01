@@ -34,6 +34,6 @@ module.exports = {
   ],
   resolve: {
     extensions: ['.js', '.vue'],
-    alias: { vue: 'vue/dist/vue.esm-bundler.js' }
+    alias: { vue: 'vue/dist/vue.runtime.esm-bundler.js' }
   }
 };

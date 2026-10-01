@@ -11,7 +11,7 @@ use yii\caching\TagDependency;
 /**
  * Resolved menu trees for themes.
  *
- * tree() is cached per menu key and language; every write that can change a
+ * tree() is cached per menu key and full locale (Yii::$app->language); every write that can change a
  * menu (menu/item saves, any content save or delete) calls invalidate().
  */
 class MenuService
@@ -41,7 +41,11 @@ class MenuService
   }
 
   /**
-   * Cached tree for the current language, without active flags.
+   * Cached tree for the current language, without the request-dependent
+   * flags: external, active and activeTrail are false here; get() sets them.
+   *
+   * Keyed by the full Yii::$app->language (e.g. de-CH), because item labels
+   * are translated by that full locale; content URLs use the two-letter code.
    */
   public function tree(string $key): array
   {
@@ -52,7 +56,7 @@ class MenuService
     }
 
     return Yii::$app->cache->getOrSet(
-      'crelish.menu.' . $key . '.' . $language,
+      'crelish.menu.' . $key . '.' . Yii::$app->language,
       fn() => $this->build($key, $language),
       self::CACHE_TTL,
       new TagDependency(['tags' => [self::CACHE_TAG]])
@@ -139,7 +143,7 @@ class MenuService
         'url' => $url,
         'type' => $item->target_type,
         'targetUuid' => $item->target_type === MenuItem::TARGET_CONTENT ? $item->target_uuid : null,
-        'external' => $url !== null && self::isExternal($url),
+        'external' => false,
         'newWindow' => (bool)$item->new_window,
         'active' => false,
         'activeTrail' => false,
@@ -150,29 +154,35 @@ class MenuService
     return $nodes;
   }
 
-  private static function isExternal(string $url): bool
+  /**
+   * Sets external on every node: an absolute http(s) URL to a host other
+   * than $host (any absolute URL when there is no request host).
+   */
+  private static function markExternal(array $nodes, ?string $host): array
   {
-    if (!preg_match('~^https?://~i', $url)) {
-      return false;
+    foreach ($nodes as $i => $node) {
+      $url = (string)$node['url'];
+      $nodes[$i]['external'] = preg_match('~^https?://~i', $url) === 1
+        && ($host === null || strcasecmp((string)parse_url($url, PHP_URL_HOST), $host) !== 0);
+      $nodes[$i]['children'] = self::markExternal($node['children'], $host);
     }
 
-    $host = parse_url($url, PHP_URL_HOST);
-    $request = Yii::$app->request;
-    $current = $request instanceof \yii\web\Request ? $request->getHostName() : null;
-
-    return $current === null || strcasecmp((string)$host, $current) !== 0;
+    return $nodes;
   }
 
   /**
-   * Tree for themes, with active flags for the current request. Never throws.
+   * Tree for themes, with the request-dependent flags (external, active,
+   * activeTrail) for the current request. Never throws.
    */
   public function get(string $key): array
   {
     try {
       $tree = $this->tree($key);
       $request = Yii::$app->request;
+      $isWeb = $request instanceof \yii\web\Request;
+      $tree = self::markExternal($tree, $isWeb ? $request->getHostName() : null);
 
-      if (!$request instanceof \yii\web\Request || $tree === []) {
+      if (!$isWeb || $tree === []) {
         return $tree;
       }
 

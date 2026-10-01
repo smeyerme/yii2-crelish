@@ -52,6 +52,28 @@ $main->key = 'renamed';
 $main->save();
 check('key is immutable after create', 'main', Menu::findOne($main->uuid)->key);
 
+echo "\nVersion only moves forward\n";
+$future = time() + 100;
+Menu::updateAll(['updated' => $future], ['uuid' => $main->uuid]);
+$main->refresh();
+$main->systitle = 'Main (settings)';
+check('settings save succeeds', true, $main->save());
+check('settings save after a future saver bump still increases updated', $future + 1, (int)Menu::findOne($main->uuid)->updated);
+$fresh = makeMenu('fresh-insert');
+check('insert still stamps the current time', true, abs((int)$fresh->updated - time()) <= 1 && (int)$fresh->updated === (int)$fresh->created);
+$fromZero = Menu::nextUpdated(0);
+check('next version helper', [true, $future + 1], [abs($fromZero - time()) <= 1, Menu::nextUpdated($future)]);
+$fresh->delete();
+
+echo "\nForeign keys\n";
+$dangling = false;
+try {
+    $app->db->createCommand()->insert('menu_item', ['uuid' => 'dangling-item', 'menu_uuid' => $main->uuid, 'parent_uuid' => 'no-such-parent', 'sort' => 0, 'target_type' => MenuItem::TARGET_NONE, 'new_window' => 0, 'state' => MenuItem::STATE_ONLINE])->execute();
+} catch (\yii\db\IntegrityException $e) {
+    $dangling = true;
+}
+check('harness enforces FKs: dangling parent_uuid is rejected', true, $dangling);
+
 echo "\nItems\n";
 $parent = makeItem($main, ['label' => 'Über uns', 'target_type' => MenuItem::TARGET_NONE, 'target_url' => null]);
 makeItem($main, ['parent_uuid' => $parent->uuid, 'label' => 'Kontakt']);

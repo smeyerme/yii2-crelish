@@ -1,7 +1,7 @@
 # Menus follow-ups: triaged fixes
 
 Date: 2026-09-30
-Status: Proposed. Nothing here has been implemented yet.
+Status: Groups A, B and C are implemented on feature/menus-followups (2026-09-30), reviewed and ready for release. D and E are open.
 Source: deferred findings from the per-task reviews, the final whole-branch review and the browser checks of the menus feature (0.23.0).
 Already handled in 0.23.1: unpublished pages now return 404, and crelish's own translations are used, plus the `crelish-translations/prune` command.
 
@@ -101,3 +101,14 @@ Verification: `npm run build`, then a browser check of each item in light and da
 - **One-shot `ignoreNextChange` flag in the editor:** works as intended. A snapshot comparison would be nicer, but there is no observed bug.
 - **`beforeunload` prompt not browser-tested:** the code is trivial and browser dialogs block automation.
 - **Role gate (login-only):** the user decided to keep it consistent with the rest of crelish.
+
+## Found while doing A–C (open, low priority)
+
+Collected from the group reviews and the final review. None blocks a release.
+
+- **Content types fail to load silently.** A non-OK response from `content-target/types` leaves the type select empty until reload. Show the load-failure message with Reload, as B1 does for the tree.
+- **A settings save can move `updated` backwards.** The settings form computes `nextUpdated()` from the in-memory old value. A tree save between `findOne()` and `save()` can lower `updated` again. The window is milliseconds. Fix by basing it on the current row value, or on `GREATEST(updated + 1, :now)` in SQL.
+- **A non-array `i18n` payload wipes translations.** A hand-crafted payload with a non-array `i18n` deletes the item's translations instead of returning 422. The editor always sends an object. Reject a present non-array `i18n` with 422.
+- **Editor state is not tidied.** `errorSignatures` is not reset on a successful save or reload, and `errors._` stays until the next save. Both are bounded and invisible to users.
+- **Changing the content type keeps the search term.** It clears the results but neither clears the query nor searches again.
+- **Translations can be stored and looked up under different language codes (pre-existing).** `CrelishTranslationBehavior` stores editor translations under two-letter codes but looks them up by the full `Yii::$app->language`. Only sites running full locales such as `en-US` are affected. forum-holzbau uses `de`.

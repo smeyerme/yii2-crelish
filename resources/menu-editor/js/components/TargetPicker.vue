@@ -31,10 +31,27 @@ export default {
     labels: Object
   },
   data() {
-    return { query: '', results: [], searched: false, timer: null };
+    return { query: '', results: [], searched: false, timer: null, requestId: 0 };
+  },
+  watch: {
+    'node.key'() {
+      this.cancelPending();
+      this.results = [];
+      this.query = '';
+      this.searched = false;
+    }
+  },
+  beforeUnmount() {
+    this.cancelPending();
   },
   methods: {
+    cancelPending() {
+      clearTimeout(this.timer);
+      this.timer = null;
+      this.requestId++;
+    },
     clearTarget() {
+      this.cancelPending();
       this.node.target_uuid = null;
       this.node.targetTitle = null;
       this.node.fallbackLabel = null;
@@ -48,21 +65,28 @@ export default {
     },
     async search() {
       const q = this.query.trim();
+      const ctype = this.node.target_ctype;
+      const requestId = ++this.requestId;
       if (q.length < 2) {
         this.results = [];
         this.searched = false;
         return;
       }
-      const url = `${this.searchUrl}${this.searchUrl.includes('?') ? '&' : '?'}ctype=${encodeURIComponent(this.node.target_ctype)}&q=${encodeURIComponent(q)}`;
+      const url = `${this.searchUrl}${this.searchUrl.includes('?') ? '&' : '?'}ctype=${encodeURIComponent(ctype)}&q=${encodeURIComponent(q)}`;
+      let results;
       try {
         const response = await fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
-        this.results = response.ok ? await response.json() : [];
+        results = response.ok ? await response.json() : [];
       } catch (e) {
-        this.results = [];
+        results = [];
       }
+      // Ignore stale responses (newer request, or ctype/query changed meanwhile)
+      if (requestId !== this.requestId || ctype !== this.node.target_ctype || q !== this.query.trim()) return;
+      this.results = results;
       this.searched = true;
     },
     pick(result) {
+      this.cancelPending();
       this.node.target_uuid = result.uuid;
       this.node.targetTitle = result.title;
       this.node.fallbackLabel = result.title;
