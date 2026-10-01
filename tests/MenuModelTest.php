@@ -128,6 +128,19 @@ check('translations are rolled back', $trBefore, (int)CrelishTranslation::find()
 check('menu survives the failed delete', true, Menu::findOne($main->uuid) !== null);
 Yii::$app->db->createCommand('DROP TRIGGER block_item_delete')->execute();
 
+$itemsBefore = (int)MenuItem::find()->count();
+Yii::$app->db->pdo->exec("CREATE TRIGGER block_menu_delete BEFORE DELETE ON menu BEGIN SELECT RAISE(ABORT, 'blocked'); END");
+$failed = false;
+try {
+  $main->delete();
+} catch (\Throwable $e) {
+  $failed = true;
+}
+check('forced menu-row delete failure surfaces', true, $failed);
+check('items survive a failed menu-row delete', $itemsBefore, (int)MenuItem::find()->count());
+check('translations survive a failed menu-row delete', $trBefore, (int)CrelishTranslation::find()->count());
+Yii::$app->db->createCommand('DROP TRIGGER block_menu_delete')->execute();
+
 $main->delete();
 check('deleting a menu deletes its items', 0, (int)MenuItem::find()->count());
 check('deleting a menu deletes its translations', 0, (int)CrelishTranslation::find()->where(['source_model' => 'menu_item'])->count());

@@ -42,6 +42,14 @@ class Menu extends ActiveRecord
     return ['uuid'];
   }
 
+  /**
+   * The whole delete (items, translations, the menu row) runs in one transaction.
+   */
+  public function transactions()
+  {
+    return [self::SCENARIO_DEFAULT => self::OP_DELETE];
+  }
+
   public function behaviors()
   {
     return [
