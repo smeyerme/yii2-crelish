@@ -96,7 +96,8 @@ class CrelishDbStorage implements CrelishDataStorage
         $data['created'] = time();
       }
     } else {
-      $model = $modelClass::findOne(['uuid' => $data['uuid']]);
+      // Default-language column values, so a translation shown in the UI language is not saved over them
+      $model = CrelishTranslationBehavior::withoutTranslations(fn() => $modelClass::findOne(['uuid' => $data['uuid']]));
 
       if (!$model) {
         return false;
