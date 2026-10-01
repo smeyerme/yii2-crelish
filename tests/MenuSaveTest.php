@@ -188,4 +188,15 @@ $r = saveTree($cacheMenu, [item(['uuid' => $cacheItem->uuid, 'label' => 'Neu'])]
 check('label change saved', 200, $r['status']);
 check('successful save invalidates the cached tree', 'Neu', $service->tree('cachetest')[0]['label']);
 
+echo "\nRenaming the default label to its current translation in an English admin\n";
+$i18nMenu = makeMenu('i18nrename');
+$i18nItem = makeItem($i18nMenu, ['label' => 'Termine']);
+$i18nItem->setTranslations(['en' => ['label' => 'Events']]);
+$i18nItem->save(false);
+Yii::$app->language = 'en';
+$r = saveTree($i18nMenu, [item(['uuid' => $i18nItem->uuid, 'label' => 'Events', 'i18n' => ['en' => 'Events']])]);
+Yii::$app->language = 'de';
+check('save ok', 200, $r['status']);
+check('default column takes the new label', 'Events', Yii::$app->db->createCommand('SELECT label FROM menu_item WHERE uuid = :u', [':u' => $i18nItem->uuid])->queryScalar());
+
 shortLinkDone();

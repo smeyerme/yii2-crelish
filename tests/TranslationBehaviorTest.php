@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/menu/bootstrap.php';
 
+use giantbits\crelish\components\CrelishTranslationBehavior;
 use giantbits\crelish\models\CrelishTranslation;
 use giantbits\crelish\models\MenuItem;
 
@@ -100,5 +101,80 @@ try {
 check('array POST value does not throw', false, $threw);
 check('array POST value stores no row', 0, (int)CrelishTranslation::find()->where(['source_model_uuid' => $loc->uuid, 'language' => 'fr'])->count());
 Yii::$app->request->setBodyParams([]);
+
+echo "\nTranslated values are never written into the default column\n";
+$wb = makeItem($menu, ['label' => 'Termine', 'sort' => 1]);
+$wb->setTranslations(['en' => ['label' => 'Events']]);
+$wb->save(false);
+Yii::$app->language = 'en';
+$found = MenuItem::findOne($wb->uuid);
+check('display still translated', 'Events', $found->label);
+$found->sort = 5;
+$found->save(false);
+Yii::$app->language = 'de';
+$raw = Yii::$app->db->createCommand('SELECT label, sort FROM menu_item WHERE uuid = :u', [':u' => $wb->uuid])->queryOne();
+check('unrelated save keeps the default column', ['Termine', 5], [$raw['label'], (int)$raw['sort']]);
+check('translation row untouched', 'Events', CrelishTranslation::findOne(['source_model_uuid' => $wb->uuid, 'language' => 'en'])->translation);
+
+Yii::$app->language = 'en-US';
+$found = MenuItem::findOne($wb->uuid);
+check('en-US displays the en row', 'Events', $found->label);
+$found->sort = 6;
+$found->save(false);
+Yii::$app->language = 'de';
+check('fallback path keeps the default column', 'Termine', Yii::$app->db->createCommand('SELECT label FROM menu_item WHERE uuid = :u', [':u' => $wb->uuid])->queryScalar());
+
+Yii::$app->language = 'en';
+$found = MenuItem::findOne($wb->uuid);
+$found->label = 'Neu';
+$found->save(false);
+Yii::$app->language = 'de';
+check('deliberate change is still written', 'Neu', Yii::$app->db->createCommand('SELECT label FROM menu_item WHERE uuid = :u', [':u' => $wb->uuid])->queryScalar());
+
+Yii::$app->language = 'en';
+$found = MenuItem::findOne($wb->uuid);
+$found->sort = 7;
+$found->save(false);
+$found->label = 'Events';
+$found->save(false);
+Yii::$app->language = 'de';
+check('after the first update the swap is forgotten; an explicit later set is written', 'Events', Yii::$app->db->createCommand('SELECT label FROM menu_item WHERE uuid = :u', [':u' => $wb->uuid])->queryScalar());
+Yii::$app->db->createCommand()->update('menu_item', ['label' => 'Termine'], ['uuid' => $wb->uuid])->execute();
+
+echo "\nwithoutTranslations()\n";
+Yii::$app->language = 'en';
+check('inside: raw column value', 'Termine', CrelishTranslationBehavior::withoutTranslations(fn() => MenuItem::findOne($wb->uuid)->label));
+check('outside: translated again', 'Events', MenuItem::findOne($wb->uuid)->label);
+check('nested: inner and outer raw', ['Termine', 'Termine'], CrelishTranslationBehavior::withoutTranslations(function () use ($wb) {
+  $inner = CrelishTranslationBehavior::withoutTranslations(fn() => MenuItem::findOne($wb->uuid)->label);
+  return [$inner, MenuItem::findOne($wb->uuid)->label];
+}));
+$caught = false;
+try {
+  CrelishTranslationBehavior::withoutTranslations(function () { throw new RuntimeException('boom'); });
+} catch (RuntimeException $e) {
+  $caught = true;
+}
+check('exception propagates', true, $caught);
+check('switch restored after exception', 'Events', MenuItem::findOne($wb->uuid)->label);
+Yii::$app->language = 'de';
+
+echo "\nRows for the default content language are never swapped in\n";
+$stale = makeItem($menu, ['label' => 'Neu']);
+Yii::$app->db->createCommand()->insert('translation', ['uuid' => 'stale-de', 'source_model' => 'menu_item', 'source_model_uuid' => $stale->uuid, 'language' => 'de', 'source_model_attribute' => 'label', 'translation' => 'Alt'])->execute();
+Yii::$app->db->createCommand()->insert('translation', ['uuid' => 'stale-en', 'source_model' => 'menu_item', 'source_model_uuid' => $stale->uuid, 'language' => 'en', 'source_model_attribute' => 'label', 'translation' => 'New'])->execute();
+$languagesBefore = Yii::$app->params['crelish']['languages'];
+Yii::$app->params['crelish']['languages'] = ['de', 'en'];
+Yii::$app->language = 'de';
+check('de shows the column, not the stale de row', 'Neu', MenuItem::findOne($stale->uuid)->label);
+Yii::$app->language = 'de-CH';
+check('de-CH shows the column too', 'Neu', MenuItem::findOne($stale->uuid)->label);
+Yii::$app->language = 'en';
+check('en still swaps its translation', 'New', MenuItem::findOne($stale->uuid)->label);
+Yii::$app->params['crelish']['languages'] = [];
+Yii::$app->language = 'de';
+check('no language list: unchanged, the de row is swapped in', 'Alt', MenuItem::findOne($stale->uuid)->label);
+Yii::$app->params['crelish']['languages'] = $languagesBefore;
+Yii::$app->language = 'de';
 
 shortLinkDone();

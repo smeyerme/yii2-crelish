@@ -17,6 +17,32 @@
 		private ?array $pendingTranslations = null;
 
 		/**
+		 * Attributes loadTranslations() swapped for display, with the column value and the translation.
+		 * They are restored before an update so a translation never lands in the default column.
+		 *
+		 * @var array<string,array{original:mixed,translated:mixed}>
+		 */
+		private array $swapped = [];
+
+		/** @var int > 0 while withoutTranslations() runs; loadTranslations() is then a no-op */
+		private static int $suspended = 0;
+
+		/**
+		 * Runs $fn with translation loading switched off for every model, so records found
+		 * inside carry their default-language column values. Nesting-safe.
+		 */
+		public static function withoutTranslations(callable $fn): mixed
+		{
+			self::$suspended++;
+
+			try {
+				return $fn();
+			} finally {
+				self::$suspended--;
+			}
+		}
+
+		/**
 		 * Translations to write on the owner's next save instead of reading the form POST.
 		 * An empty value deletes that language's translation.
 		 *
@@ -31,19 +57,48 @@
 		{
 			return [
 				BaseActiveRecord::EVENT_AFTER_INSERT => 'saveTranslations',
-				BaseActiveRecord::EVENT_AFTER_UPDATE => 'saveTranslations',
+				BaseActiveRecord::EVENT_BEFORE_UPDATE => 'restoreSwappedAttributes',
+				BaseActiveRecord::EVENT_AFTER_UPDATE => 'afterUpdate',
 				BaseActiveRecord::EVENT_AFTER_FIND => 'loadTranslations'
 			];
+		}
+
+		public function afterUpdate(): void
+		{
+			$this->swapped = [];
+			$this->saveTranslations();
+		}
+
+		/**
+		 * Puts the column value back for every attribute that still holds the translation
+		 * loadTranslations() swapped in, so it is not dirty and not written. A value the
+		 * caller changed is left alone and saved as usual.
+		 */
+		public function restoreSwappedAttributes(): void
+		{
+			foreach ($this->swapped as $attribute => $values) {
+				if ($this->owner->{$attribute} === $values['translated']) {
+					$this->owner->{$attribute} = $values['original'];
+				}
+			}
 		}
 		
 		public function loadTranslations(): void
 		{
-			if ($this->skipTranslation) {
+			$this->swapped = [];
+
+			if ($this->skipTranslation || self::$suspended > 0) {
 				return;
 			}
 			
 			$language = (string)Yii::$app->language;
 			$short = strtok($language, '-_');
+
+			// The columns hold the default content language; rows stored for it are never authoritative
+			$default = CrelishBaseHelper::defaultContentLanguage();
+			if ($default !== null && ($language === $default || $short === $default)) {
+				return;
+			}
 			$languages = $short !== false && $short !== $language ? [$language, $short] : [$language];
 			$rows = $this->findTranslations($languages);
 			
@@ -63,11 +118,16 @@
 			
 			if (count($translationsByAttribute) > 0) {
 				foreach ($translationsByAttribute as $attribute => $translation) {
+					$original = $this->owner->{$attribute} ?? null;
+
 					if (isset($this->owner->{$attribute}) && is_array($this->owner->{$attribute})) {
 						$this->owner->{$attribute} = array_merge($this->owner->{$attribute}, [$translation]);
 					} else {
 						$this->owner->{$attribute} = $translation;
 					}
+
+					// Arrays too: the merged array is compared as a whole and the original put back
+					$this->swapped[$attribute] = ['original' => $original, 'translated' => $this->owner->{$attribute}];
 				}
 			}
 		}

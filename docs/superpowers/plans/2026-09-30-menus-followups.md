@@ -7,7 +7,7 @@ Already handled in 0.23.1: unpublished pages now return 404, and crelish's own t
 
 Each item names the problem, the fix, the files and the test. Items within a group are ordered by value. The groups are sized for one PR each, as a 0.23.x or 0.24.0 release.
 
-## Top priority (open): translated values written into the default column
+## Fixed in 0.23.4: translated values written into the default column
 
 Found during the review of round 2. This bug predates the menus work and affects every crelish content type that uses `CrelishTranslationBehavior`.
 
@@ -131,3 +131,10 @@ Collected from the group reviews and the final review. None blocks a release.
 - **Locale fallback per record, not per field.** If a record has any `en-US` row, all its `en` rows are ignored, and fields that only have an `en` translation show the default column. Fix: start from the short-code rows keyed by attribute, then overlay the exact-locale rows.
 - **Cache cleared inside the transaction.** `MenuService::invalidate()` runs inside the save/delete transaction, so a concurrent read can re-cache the old menu until the TTL expires. Fix: invalidate after commit.
 - **`required` on `key` applies on update.** A hand-crafted settings POST with an empty key fails validation, although the key is reset anyway. Fix: add `when => isNewRecord`, or drop `key` from safe attributes on update.
+
+## Open after 0.23.4 (i18n, low priority)
+
+- **The JSON editor widgets still edit in the admin UI language.** `plugins/jsoneditor/JsonEditor.php` (~114, 222, 244) and `plugins/jsoneditornew/JsonEditorNew.php` (~629, 884, 904) still use `Yii::$app->language` for translatable fields. They render `i18n[<admin lang>]`, so with an English admin on a `[de, en]` install a translatable JSON field edits `en` and is hidden behind the preselected default. Fix: use `CrelishBaseController::defaultContentLanguage()` and the per-language form key, like the core fields since 0.23.4.
+- **Auto-translate uses the wrong source language.** It uses `Yii::$app->sourceLanguage ?? 'de'` (`CrelishBaseController` ~478). Yii's default `sourceLanguage` is `en-US`, so when it differs from `languages[0]` it translates from the wrong source. Fix: use the default content language.
+- **A full locale in the language list is not handled.** If `params.crelish.languages[0]` is a full locale (`de-CH`) and the app language is `de`, the default-language skip doesn't match. Fix: compare two-letter codes on both sides.
+- **Stale default-language rows are not cleaned up.** Rows written by the old bug are ignored since 0.23.4 but stay in the table. An optional cleanup command could delete translation rows whose language is the default content language.

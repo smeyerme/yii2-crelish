@@ -4,6 +4,7 @@ namespace giantbits\crelish\components\menus;
 
 use giantbits\crelish\components\ContentUrlResolver;
 use giantbits\crelish\components\CrelishBaseHelper;
+use giantbits\crelish\components\CrelishTranslationBehavior;
 use giantbits\crelish\models\CrelishTranslation;
 use giantbits\crelish\models\Menu;
 use giantbits\crelish\models\MenuItem;
@@ -54,7 +55,11 @@ class MenuTreeSaver
       $items[$item['id']] = $item;
     }
 
-    $existing = MenuItem::find()->where(['menu_uuid' => $this->menu->uuid])->indexBy('uuid')->all();
+    // Raw column values: under a non-default admin language the swapped translation would
+    // make a rename to exactly that translation look unchanged
+    $existing = CrelishTranslationBehavior::withoutTranslations(
+      fn() => MenuItem::find()->where(['menu_uuid' => $this->menu->uuid])->indexBy('uuid')->all()
+    );
     $depths = [];
 
     foreach ($items as $id => $item) {
