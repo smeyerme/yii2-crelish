@@ -75,6 +75,20 @@ makeItem($menu, ['label' => 'Termine', 'target_url' => '/de/termine', 'sort' => 
 $service = new MenuService(new ContentUrlResolver(fn() => null));
 check('request path drives active state', ['News:active'], flags($service->get('main')));
 check('cached tree stays flag-free', false, $service->tree('main')[0]['active']);
+
+// external depends on the request host, so it is set per request, not cached
+makeItem($menu, ['label' => 'Presse', 'target_url' => 'https://forum-holzbau.test/de/presse', 'sort' => 2]);
+makeItem($menu, ['label' => 'LinkedIn', 'target_url' => 'https://www.linkedin.com/company/x', 'sort' => 3]);
+$external = fn(array $nodes) => array_column(array_map(fn($n) => [$n['label'], $n['external']], $nodes), 1, 0);
+check('same-host absolute url is internal on its own host', ['News' => false, 'Termine' => false, 'Presse' => false, 'LinkedIn' => true], $external($service->get('main')));
+Yii::$app->request->setHostInfo('https://other-host.test');
+check('same cached tree, other host: that url is external', ['News' => false, 'Termine' => false, 'Presse' => true, 'LinkedIn' => true], $external($service->get('main')));
+check('cached tree carries no external flag', [false, false], [$service->tree('main')[2]['external'], $service->tree('main')[3]['external']]);
+Yii::$app->request->setHostInfo('https://forum-holzbau.test');
+$webRequest = Yii::$app->request;
+Yii::$app->set('request', new \yii\console\Request());
+check('without a web request every absolute url is external', ['News' => false, 'Termine' => false, 'Presse' => true, 'LinkedIn' => true], $external($service->get('main')));
+Yii::$app->set('request', $webRequest);
 check('unknown key', [], $service->get('missing'));
 Yii::$app->set('cache', new class extends \yii\caching\ArrayCache {
     public function getOrSet($key, $callable, $duration = null, $dependency = null)

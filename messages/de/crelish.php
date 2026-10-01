@@ -146,6 +146,7 @@ return [
   'The parent item does not exist.' => 'Der übergeordnete Eintrag existiert nicht.',
   'Items cannot be nested inside themselves.' => 'Einträge können nicht in sich selbst verschachtelt werden.',
   'The label is too long (255 characters max).' => 'Die Bezeichnung ist zu lang (max. 255 Zeichen).',
+  'The translation ({language}) must be text of at most 255 characters.' => 'Die Übersetzung ({language}) muss ein Text mit höchstens 255 Zeichen sein.',
   'This content type cannot be linked.' => 'Dieser Inhaltstyp kann nicht verlinkt werden.',
   'Please choose the content to link.' => 'Bitte den zu verlinkenden Inhalt wählen.',
   'Please enter a URL starting with https://, http://, mailto:, tel:, / or #.' => 'Bitte eine URL eingeben, die mit https://, http://, mailto:, tel:, / oder # beginnt.',

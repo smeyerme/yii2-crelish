@@ -54,8 +54,7 @@ check('children kept in order', ['Kontakt', 'LinkedIn'], labels($tree[2]['childr
 check('content url resolved', '/de/news', $tree[0]['url']);
 check('target uuid exposed', P_NEWS, $tree[0]['targetUuid']);
 check('heading has no url', null, $tree[2]['url']);
-check('external detected', [true, true], [$tree[2]['children'][1]['external'], $tree[2]['children'][1]['newWindow']]);
-check('relative url is internal', false, $tree[1]['external']);
+check('external is not part of the built tree (set per request by get())', [false, true], [$tree[2]['children'][1]['external'], $tree[2]['children'][1]['newWindow']]);
 check('flags default to false', [false, false], [$tree[0]['active'], $tree[0]['activeTrail']]);
 
 echo "\nSkipping\n";
@@ -102,6 +101,29 @@ $termine->delete();
 check('item delete invalidates', ['News', 'Über uns'], labels($service->tree('main')));
 Yii::$app->language = 'en';
 check('cache is per language', 'News', $service->tree('main')[0]['label']);
+Yii::$app->language = 'de';
+
+// The translation behavior loads by the full locale, so the cache must be keyed by it too
+$locales = makeMenu('locales');
+$colour = makeItem($locales, ['label' => 'Farbe', 'target_url' => '/de/farbe']);
+foreach (['en-US' => 'Color', 'en-GB' => 'Colour'] as $locale => $text) {
+    Yii::$app->db->createCommand()->insert('translation', ['uuid' => \giantbits\crelish\components\CrelishBaseHelper::GUIDv4(), 'language' => $locale,
+        'source_model' => MenuItem::tableName(), 'source_model_uuid' => $colour->uuid, 'source_model_attribute' => 'label', 'translation' => $text])->execute();
+}
+Yii::$app->language = 'en-US';
+$us = $service->tree('locales')[0];
+Yii::$app->language = 'en-GB';
+$gb = $service->tree('locales')[0];
+check('full locales get their own cache entries', [true, true], [Yii::$app->cache->exists('crelish.menu.locales.en-US'), Yii::$app->cache->exists('crelish.menu.locales.en-GB')]);
+check('labels follow the full locale through the cache', ['Color', 'Colour'], [$us['label'], $gb['label']]);
+check('content urls keep the two-letter code', ['/en/news', '/en/news'], (function () use ($service) {
+    $urls = [];
+    foreach (['en-US', 'en-GB'] as $locale) {
+        Yii::$app->language = $locale;
+        $urls[] = $service->tree('main')[0]['url'];
+    }
+    return $urls;
+})());
 Yii::$app->language = 'de';
 
 Yii::$app->set('cache', new class extends \yii\caching\ArrayCache {

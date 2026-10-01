@@ -145,7 +145,24 @@ class Menu extends ActiveRecord
       $this->key = $this->getOldAttribute('key');
     }
 
-    return parent::beforeSave($insert);
+    if (!parent::beforeSave($insert)) {
+      return false;
+    }
+
+    // The tree saver may have bumped updated past time(); a plain time() here could move it back and revive an old editor token
+    if (!$insert && $this->getDirtyAttributes() !== []) {
+      $this->updated = self::nextUpdated((int)$this->getOldAttribute('updated'));
+    }
+
+    return true;
+  }
+
+  /**
+   * Next value of the optimistic-concurrency version: never lower than now, always above the old one.
+   */
+  public static function nextUpdated(int $old): int
+  {
+    return max(time(), $old + 1);
   }
 
   public function beforeDelete()
