@@ -159,4 +159,22 @@ check('exception propagates', true, $caught);
 check('switch restored after exception', 'Events', MenuItem::findOne($wb->uuid)->label);
 Yii::$app->language = 'de';
 
+echo "\nRows for the default content language are never swapped in\n";
+$stale = makeItem($menu, ['label' => 'Neu']);
+Yii::$app->db->createCommand()->insert('translation', ['uuid' => 'stale-de', 'source_model' => 'menu_item', 'source_model_uuid' => $stale->uuid, 'language' => 'de', 'source_model_attribute' => 'label', 'translation' => 'Alt'])->execute();
+Yii::$app->db->createCommand()->insert('translation', ['uuid' => 'stale-en', 'source_model' => 'menu_item', 'source_model_uuid' => $stale->uuid, 'language' => 'en', 'source_model_attribute' => 'label', 'translation' => 'New'])->execute();
+$languagesBefore = Yii::$app->params['crelish']['languages'];
+Yii::$app->params['crelish']['languages'] = ['de', 'en'];
+Yii::$app->language = 'de';
+check('de shows the column, not the stale de row', 'Neu', MenuItem::findOne($stale->uuid)->label);
+Yii::$app->language = 'de-CH';
+check('de-CH shows the column too', 'Neu', MenuItem::findOne($stale->uuid)->label);
+Yii::$app->language = 'en';
+check('en still swaps its translation', 'New', MenuItem::findOne($stale->uuid)->label);
+Yii::$app->params['crelish']['languages'] = [];
+Yii::$app->language = 'de';
+check('no language list: unchanged, the de row is swapped in', 'Alt', MenuItem::findOne($stale->uuid)->label);
+Yii::$app->params['crelish']['languages'] = $languagesBefore;
+Yii::$app->language = 'de';
+
 shortLinkDone();

@@ -890,9 +890,7 @@ JS;
    */
   public static function defaultContentLanguage(): string
   {
-    $languages = Yii::$app->params['crelish']['languages'] ?? [];
-
-    return $languages ? (string)reset($languages) : ContentUrlResolver::currentLanguage();
+    return CrelishBaseHelper::defaultContentLanguage() ?? ContentUrlResolver::currentLanguage();
   }
 
   private function handleTranslationOptions(&$field, &$fieldOptions, &$widgetOptions, $lang): void
