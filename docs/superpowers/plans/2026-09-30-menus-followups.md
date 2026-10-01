@@ -1,7 +1,7 @@
 # Menus follow-ups: triaged fixes
 
 Date: 2026-09-30
-Status: A, B and C were released in 0.23.2. D, E1 and the "Found while doing A–C" items are implemented on feature/menus-followups-2 (2026-10-01). E2 is open (product decision). One new Important item is at the top.
+Status: A, B and C were released in 0.23.2. D and the "Found while doing A–C" items are implemented on feature/menus-followups-2 (2026-10-01). E1 was fixed in forum-holzbau (SitemapController filters pages by their publication window). E2 is open (product decision). One new Important item is at the top.
 Source: deferred findings from the per-task reviews, the final whole-branch review and the browser checks of the menus feature (0.23.0).
 Already handled in 0.23.1: unpublished pages now return 404, and crelish's own translations are used, plus the `crelish-translations/prune` command.
 
@@ -17,6 +17,7 @@ Found during the review of round 2. This bug predates the menus work and affects
   - Never write behavior-swapped values back. For example, keep the original column values (`getOldAttribute`) and restore them in `beforeSave` for attributes the form did not explicitly post for the default language.
   - Alternatively, load admin edit models with `skipTranslation`.
   - Add a regression test covering both the admin edit path and the storage save path.
+  - The fix must also cover values loaded through the 0.23.3 locale fallback (`en-US` → `en`). The regression test should include a full-locale admin language.
 
 
 ## Group A: Save and cache correctness (recommended, ~half a day)
@@ -124,3 +125,9 @@ Collected from the group reviews and the final review. None blocks a release.
 - **Editor state is not tidied.** `errorSignatures` is not reset on a successful save or reload, and `errors._` stays until the next save. Both are bounded and invisible to users.
 - **Changing the content type keeps the search term.** It clears the results but neither clears the query nor searches again.
 - **Translations can be stored and looked up under different language codes (pre-existing).** `CrelishTranslationBehavior` stores editor translations under two-letter codes but looks them up by the full `Yii::$app->language`. Only sites running full locales such as `en-US` are affected. forum-holzbau uses `de`.
+
+## Open after round 2 (low priority)
+
+- **Locale fallback per record, not per field.** If a record has any `en-US` row, all its `en` rows are ignored, and fields that only have an `en` translation show the default column. Fix: start from the short-code rows keyed by attribute, then overlay the exact-locale rows.
+- **Cache cleared inside the transaction.** `MenuService::invalidate()` runs inside the save/delete transaction, so a concurrent read can re-cache the old menu until the TTL expires. Fix: invalidate after commit.
+- **`required` on `key` applies on update.** A hand-crafted settings POST with an empty key fails validation, although the key is reset anyway. Fix: add `when => isNewRecord`, or drop `key` from safe attributes on update.
