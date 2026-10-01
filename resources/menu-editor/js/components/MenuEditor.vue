@@ -141,13 +141,7 @@ export default {
         return false;
       };
     }
-    try {
-      const [tree, types] = await Promise.all([this.getJson(this.treeUrl), this.getJson(this.typesUrl)]);
-      this.types = types || [];
-      this.apply(tree);
-    } catch (e) {
-      this.message = { kind: 'error', text: this.labels.failed, reload: true };
-    }
+    await this.load();
   },
   beforeUnmount() {
     window.removeEventListener('beforeunload', this.guard);
@@ -208,14 +202,22 @@ export default {
       this.dirty = false;
       this.loaded = true;
     },
-    async reload() {
-      this.message = null;
-      this.errors = {};
+    // Tree and content types together: a failure of either shows the failure message with Reload
+    async load() {
       try {
-        this.apply(await this.getJson(this.treeUrl));
+        const [tree, types] = await Promise.all([this.getJson(this.treeUrl), this.getJson(this.typesUrl)]);
+        if (!tree || !Array.isArray(types)) throw new Error('load');
+        this.types = types;
+        this.apply(tree);
       } catch (e) {
         this.message = { kind: 'error', text: this.labels.failed, reload: true };
       }
+    },
+    async reload() {
+      this.message = null;
+      this.errors = {};
+      this.errorSignatures = {};
+      await this.load();
     },
     addItem() {
       if (this.locked) return;
@@ -255,6 +257,7 @@ export default {
 
         if (response.status === 200) {
           this.errors = {};
+          this.errorSignatures = {};
           this.apply(body);
           this.flash('success', this.labels.saved);
         } else if (response.status === 409) {
