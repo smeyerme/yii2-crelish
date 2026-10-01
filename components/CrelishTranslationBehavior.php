@@ -42,12 +42,13 @@
 				return;
 			}
 			
-			$translations = \giantbits\crelish\models\CrelishTranslation::find()
-				->where([
-					'language' => Yii::$app->language,
-					'source_model' => $this->owner->tableName(),
-					'source_model_uuid' => $this->owner->uuid, // $this->owner is the model instance
-				])->asArray()->all();
+			$language = (string)Yii::$app->language;
+			$translations = $this->findTranslations($language);
+			
+			// A regional locale (en-US) without rows of its own uses its language code (en)
+			if (!$translations && ($short = strtok($language, '-_')) !== false && $short !== $language) {
+				$translations = $this->findTranslations($short);
+			}
 			
 			$translationsByAttribute = [];
 			
@@ -65,6 +66,16 @@
 					}
 				}
 			}
+		}
+		
+		private function findTranslations(string $language): array
+		{
+			return \giantbits\crelish\models\CrelishTranslation::find()
+				->where([
+					'language' => $language,
+					'source_model' => $this->owner->tableName(),
+					'source_model_uuid' => $this->owner->uuid, // $this->owner is the model instance
+				])->asArray()->all();
 		}
 		
 		public function loadAllTranslations(): array
@@ -132,6 +143,11 @@
 				}
 
 				foreach ($attributes as $attribute => $value) {
+					// A form post can send nested values; they cannot be stored as a translation
+					if (!$deleteEmpty && (is_array($value) || is_object($value))) {
+						continue;
+					}
+
 					$criteria = [
 						'language' => $lang,
 						'source_model' => $this->owner->tableName(),

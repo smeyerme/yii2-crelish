@@ -72,4 +72,33 @@ MenuItem::findOne($item->uuid)->save(false);
 check('POST "0" is stored', '0', CrelishTranslation::findOne(['source_model_uuid' => $item->uuid, 'language' => 'en', 'source_model_attribute' => 'label'])->translation);
 Yii::$app->request->setBodyParams([]);
 
+echo "\nRegional locale falls back to the language code\n";
+$loc = makeItem($menu, ['label' => 'Ort']);
+$loc->setTranslations(['en' => ['label' => 'Place']]);
+$loc->save(false);
+Yii::$app->language = 'en-US';
+check('en-US uses the en row', 'Place', MenuItem::findOne($loc->uuid)->label);
+$loc = MenuItem::findOne($loc->uuid);
+$loc->setTranslations(['en-US' => ['label' => 'Spot']]);
+$loc->save(false);
+check('exact en-US row wins over en', 'Spot', MenuItem::findOne($loc->uuid)->label);
+Yii::$app->language = 'en';
+check('plain en still reads the en row', 'Place', MenuItem::findOne($loc->uuid)->label);
+Yii::$app->language = 'de-CH';
+$plain = makeItem($menu, ['label' => 'Kontakt']);
+check('de-CH without rows keeps the column value', 'Kontakt', MenuItem::findOne($plain->uuid)->label);
+Yii::$app->language = 'de';
+
+echo "\nPOST path skips array values\n";
+Yii::$app->request->setBodyParams(['CrelishDynamicModel' => ['i18n' => ['fr' => ['label' => []]]]]);
+$threw = false;
+try {
+  MenuItem::findOne($loc->uuid)->save(false);
+} catch (\Throwable $e) {
+  $threw = true;
+}
+check('array POST value does not throw', false, $threw);
+check('array POST value stores no row', 0, (int)CrelishTranslation::find()->where(['source_model_uuid' => $loc->uuid, 'language' => 'fr'])->count());
+Yii::$app->request->setBodyParams([]);
+
 shortLinkDone();
