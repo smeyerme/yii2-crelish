@@ -138,3 +138,8 @@ Collected from the group reviews and the final review. None blocks a release.
 - **A full locale in the language list was not handled.** `CrelishBaseHelper::isDefaultContentLanguage()` compares two-letter codes on both sides; the behavior's default-language skip, the admin `isTranslation()` and the auto-translate check use it. Tests: `tests/AdminContentLanguageTest.php`, `tests/TranslationBehaviorTest.php`.
 - **Stale default-language rows were not cleaned up.** `php yii crelish-translations/stale-defaults` lists translation rows stored for the default content language per `source_model` (dry run); `--apply` deletes them. Test: `tests/TranslationStaleDefaultsTest.php`.
 - **Locale fallback per record, not per field.** `loadTranslations()` now starts from the two-letter rows keyed by attribute and overlays the exact-locale rows, still in one query. Test: `tests/TranslationBehaviorTest.php`.
+
+## Open after 0.23.5 (i18n)
+
+- **The Form.io JSON editor still edits in the admin UI language.** `plugins/formiojsoneditor/FormioJsonEditor.php` has the same pattern as the two JSON editors fixed in 0.23.5 (`Yii::$app->language`, `i18n[<admin lang>]`). Fix: use `CrelishBaseHelper::formFieldLanguage()` like `JsonEditor`/`JsonEditorNew`.
+- **Translation fields are prefilled with the main-language value (pre-existing).** A translation field without a stored translation shows the default column value, so saving the form stores a copy that goes stale when the default text later changes. Fix: prefill empty and show the default as placeholder, or don't store values identical to the column.

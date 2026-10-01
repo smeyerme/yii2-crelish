@@ -199,6 +199,13 @@ check('en-US: en row fills the field without an en-US row', 'Title EN', $found->
 Yii::$app->language = 'en';
 $found = MenuItem::findOne($pf->uuid);
 check('en: only en rows', ['Label EN', 'Title EN'], [$found->label, $found->target_url]);
+Yii::$app->language = 'en-US';
+$found = MenuItem::findOne($pf->uuid);
+$found->sort = 9;
+$found->save(false);
 Yii::$app->language = 'de';
+$raw = Yii::$app->db->createCommand('SELECT label, target_url, sort FROM menu_item WHERE uuid = :u', [':u' => $pf->uuid])->queryOne();
+check('en-US mixed rows: unrelated save keeps the default columns', ['Label DE', '/de/titel', 9], [$raw['label'], $raw['target_url'], (int)$raw['sort']]);
+check('en-US mixed rows: translation rows untouched', 3, (int)CrelishTranslation::find()->where(['source_model_uuid' => $pf->uuid])->count());
 
 shortLinkDone();

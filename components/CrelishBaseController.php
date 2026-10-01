@@ -519,10 +519,15 @@ JS;
 
     if (!translateBtn || !languageSelect) return;
 
+    // Two-letter code, like CrelishBaseHelper::isDefaultContentLanguage() (de, de-CH, de_AT match)
+    function languageCode(language) {
+        return String(language).split(/[-_]/)[0].toLowerCase();
+    }
+
     // Show/hide translate button based on selected language
     function updateTranslateButtonVisibility() {
         var selectedLang = languageSelect.value;
-        if (selectedLang !== sourceLanguage && !selectedLang.startsWith(sourceLanguage)) {
+        if (languageCode(selectedLang) !== languageCode(sourceLanguage)) {
             translateBtn.style.display = 'inline-block';
         } else {
             translateBtn.style.display = 'none';
