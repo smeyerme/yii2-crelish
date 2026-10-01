@@ -43,11 +43,15 @@
 			}
 			
 			$language = (string)Yii::$app->language;
-			$translations = $this->findTranslations($language);
+			$short = strtok($language, '-_');
+			$languages = $short !== false && $short !== $language ? [$language, $short] : [$language];
+			$rows = $this->findTranslations($languages);
 			
 			// A regional locale (en-US) without rows of its own uses its language code (en)
-			if (!$translations && ($short = strtok($language, '-_')) !== false && $short !== $language) {
-				$translations = $this->findTranslations($short);
+			$translations = array_values(array_filter($rows, fn($row) => $row['language'] === $language));
+			
+			if (!$translations) {
+				$translations = $rows;
 			}
 			
 			$translationsByAttribute = [];
@@ -68,11 +72,11 @@
 			}
 		}
 		
-		private function findTranslations(string $language): array
+		private function findTranslations(array $languages): array
 		{
 			return \giantbits\crelish\models\CrelishTranslation::find()
 				->where([
-					'language' => $language,
+					'language' => $languages,
 					'source_model' => $this->owner->tableName(),
 					'source_model_uuid' => $this->owner->uuid, // $this->owner is the model instance
 				])->asArray()->all();

@@ -163,7 +163,7 @@ class Menu extends ActiveRecord
     if (!$insert && $this->getDirtyAttributes() !== []) {
       // Computed by the database from the current value: a tree save between findOne() and save() must not be undone
       $function = $this->getDb()->driverName === 'sqlite' ? 'MAX' : 'GREATEST';
-      $this->updated = new Expression($function . '(updated + 1, :now)', [':now' => time()]);
+      $this->updated = new Expression($function . '(COALESCE(updated, 0) + 1, :now)', [':now' => time()]);
     }
 
     return true;
@@ -190,7 +190,8 @@ class Menu extends ActiveRecord
       return true;
     }
 
-    // Reuse a caller's transaction, otherwise a failure half-way would leave translations gone but items behind
+    // delete() already runs inside the AR transaction (transactions() OP_DELETE) and this reuses it;
+    // the own transaction is only a fallback for direct calls, so a failure half-way cannot leave translations gone but items behind
     $db = static::getDb();
     $transaction = $db->getTransaction() === null ? $db->beginTransaction() : null;
 
