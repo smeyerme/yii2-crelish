@@ -51,6 +51,29 @@ class CrelishBaseHelper
   }
 
   /**
+   * The content language a form widget for a translatable field edits, read from the
+   * form key the admin form passes: i18n[<lang>][<key>] for a translation, the plain
+   * key for the main field (default content language).
+   *
+   * Null when the field is not translatable or fewer than two languages are configured:
+   * the admin form then renders no language fields, so a widget keeps its own handling.
+   */
+  public static function formFieldLanguage(object $field, ?string $formKey): ?string
+  {
+    $languages = Yii::$app->params['crelish']['languages'] ?? [];
+
+    if (($field->translatable ?? false) !== true || !is_array($languages) || count($languages) < 2) {
+      return null;
+    }
+
+    if (preg_match('/^i18n\[([^\]]+)\]\[/', (string)$formKey, $match)) {
+      return $match[1];
+    }
+
+    return self::defaultContentLanguage();
+  }
+
+  /**
    * @var array Cache for language code extraction
    */
   private static $langCodeCache = [];
