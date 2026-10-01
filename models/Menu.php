@@ -67,9 +67,10 @@ class Menu extends ActiveRecord
     return [
       [['key', 'systitle'], 'required'],
       [['key', 'systitle'], 'trim'],
-      ['key', 'string', 'max' => 64],
-      ['key', 'match', 'pattern' => '/^[a-z0-9_-]+$/'],
-      ['key', 'unique'],
+      // The key is immutable (beforeSave resets it), so only a new menu's key is validated
+      ['key', 'string', 'max' => 64, 'when' => fn($m) => $m->isNewRecord],
+      ['key', 'match', 'pattern' => '/^[a-z0-9_-]+$/', 'when' => fn($m) => $m->isNewRecord],
+      ['key', 'unique', 'when' => fn($m) => $m->isNewRecord],
       ['systitle', 'string', 'max' => 128],
       ['max_depth', 'default', 'value' => 2],
       ['max_depth', 'integer', 'min' => 1, 'max' => self::MAX_DEPTH_LIMIT],
