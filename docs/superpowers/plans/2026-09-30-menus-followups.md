@@ -126,11 +126,6 @@ Collected from the group reviews and the final review. None blocks a release.
 - **Changing the content type keeps the search term.** It clears the results but neither clears the query nor searches again.
 - **Translations can be stored and looked up under different language codes (pre-existing).** `CrelishTranslationBehavior` stores editor translations under two-letter codes but looks them up by the full `Yii::$app->language`. Only sites running full locales such as `en-US` are affected. forum-holzbau uses `de`.
 
-## Open after round 2 (low priority)
-
-- **Cache cleared inside the transaction.** `MenuService::invalidate()` runs inside the save/delete transaction, so a concurrent read can re-cache the old menu until the TTL expires. Fix: invalidate after commit.
-- **`required` on `key` applies on update.** A hand-crafted settings POST with an empty key fails validation, although the key is reset anyway. Fix: add `when => isNewRecord`, or drop `key` from safe attributes on update.
-
 ## Fixed in 0.23.5 (i18n)
 
 - **The JSON editor widgets edited in the admin UI language.** `JsonEditor` and `JsonEditorNew` now take their language from the form key the admin form passes (`CrelishBaseHelper::formFieldLanguage()`): the main field posts the default content language column, each other language posts `i18n[<lang>]` with its stored translation, and the form group carries `data-language` (translations also `lang-ver`) like the core fields. Without language fields (single language, not translatable) the output is unchanged. Test: `tests/JsonEditorLanguageTest.php`.
@@ -139,7 +134,13 @@ Collected from the group reviews and the final review. None blocks a release.
 - **Stale default-language rows were not cleaned up.** `php yii crelish-translations/stale-defaults` lists translation rows stored for the default content language per `source_model` (dry run); `--apply` deletes them. Test: `tests/TranslationStaleDefaultsTest.php`.
 - **Locale fallback per record, not per field.** `loadTranslations()` now starts from the two-letter rows keyed by attribute and overlays the exact-locale rows, still in one query. Test: `tests/TranslationBehaviorTest.php`.
 
-## Open after 0.23.5 (i18n)
+## Fixed in 0.23.6
 
-- **The Form.io JSON editor still edits in the admin UI language.** `plugins/formiojsoneditor/FormioJsonEditor.php` has the same pattern as the two JSON editors fixed in 0.23.5 (`Yii::$app->language`, `i18n[<admin lang>]`). Fix: use `CrelishBaseHelper::formFieldLanguage()` like `JsonEditor`/`JsonEditorNew`.
-- **Translation fields are prefilled with the main-language value (pre-existing).** A translation field without a stored translation shows the default column value, so saving the form stores a copy that goes stale when the default text later changes. Fix: prefill empty and show the default as placeholder, or don't store values identical to the column.
+- **Menu cache cleared inside the transaction.** Menu and item hooks call `MenuService::invalidateAfterCommit()`: without an open transaction it invalidates at once; inside one it registers a handler on `Connection::EVENT_COMMIT_TRANSACTION` (fired only when the outermost transaction commits), once per transaction; a rollback invalidates too (a read inside the transaction may have cached uncommitted data). Covers the tree editor's save, `Menu::delete()` (AR transaction) and any caller's own transaction. `MenuTreeSaver` still invalidates after its commit. Test: `tests/MenuServiceTest.php` ("Invalidation after commit").
+- **`required` on menu `key` applied on update.** The required rule for `key` now has `when => isNewRecord` like the other key rules; `systitle` stays required. Test: `tests/MenuModelTest.php`.
+- **The Form.io JSON editor edited in the admin UI language.** `FormioJsonEditor` uses `CrelishBaseHelper::formFieldLanguage()` like `JsonEditor`/`JsonEditorNew`: main field = default content language column, `i18n[<lang>]` per translation, `data-language`/`lang-ver` on the form group, suffixed editor ids. Output without language fields is byte-identical. Test: `tests/JsonEditorLanguageTest.php`.
+- **Translation fields prefilled with the default value.** Text inputs and textareas without a stored translation render empty with the default as placeholder (max. 120 characters, a placeholder configured on the field wins; type compared case-insensitively) (`CrelishBaseController::handleTranslationOptions()`). Every other core type keeps the default preselected, since an empty select would post its first option; the unchanged default is then not stored. On the form POST path, `CrelishTranslationBehavior` stores no translation identical (after trim) to the saved default column value and deletes an existing row instead; `setTranslations()` is unchanged. Tests: `tests/AdminContentLanguageTest.php`, `tests/TranslationBehaviorTest.php`.
+
+## Open after 0.23.6 (i18n)
+
+- **Plugin widgets and JSON editors still show the default value in translation tabs.** `buildCustomOrDefaultField()`/`buildWidgetField()` pass the column value as `data` for translation fields, and the three JSON editors fall back to it. Rendering them empty is not safe as is: an empty JSON editor posts its schema default (`[]`, `{}` or default-filled objects), which would be stored as a translation and blank out the default. Needs a decision (e.g. treat empty/schema-default JSON as "no translation" on POST). The POST identical-value check already drops untouched copies that come back byte-identical.

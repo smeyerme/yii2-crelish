@@ -6,13 +6,16 @@ use giantbits\crelish\components\ContentUrlResolver;
 use giantbits\crelish\models\Menu;
 use giantbits\crelish\models\MenuItem;
 use Yii;
+use yii\base\Event;
 use yii\caching\TagDependency;
+use yii\db\Connection;
 
 /**
  * Resolved menu trees for themes.
  *
  * tree() is cached per menu key and full locale (Yii::$app->language); every write that can change a
- * menu (menu/item saves, any content save or delete) calls invalidate().
+ * menu (menu/item saves, any content save or delete) calls invalidate(). Menu and item hooks use
+ * invalidateAfterCommit(), so a concurrent read cannot re-cache the old tree before the write is visible.
  */
 class MenuService
 {
@@ -38,6 +41,38 @@ class MenuService
     } catch (\Throwable $e) {
       Yii::error('Menu cache invalidation failed: ' . $e->getMessage(), 'crelish.menu');
     }
+  }
+
+  /**
+   * Invalidates now, or, while a transaction is open on $db, once the outermost transaction ends
+   * (Connection::EVENT_COMMIT_TRANSACTION / EVENT_ROLLBACK_TRANSACTION fire only at level 0).
+   * A rollback invalidates too: a tree() read inside the transaction may have cached uncommitted data.
+   */
+  public static function invalidateAfterCommit(?Connection $db = null): void
+  {
+    $db ??= Yii::$app?->has('db') ? Yii::$app->db : null;
+
+    if ($db === null || $db->getTransaction() === null) {
+      self::invalidate();
+      return;
+    }
+
+    $handler = [self::class, 'onTransactionEnd'];
+    // off() first, so several writes in one transaction register the handler once
+    $db->off(Connection::EVENT_COMMIT_TRANSACTION, $handler);
+    $db->off(Connection::EVENT_ROLLBACK_TRANSACTION, $handler);
+    $db->on(Connection::EVENT_COMMIT_TRANSACTION, $handler);
+    $db->on(Connection::EVENT_ROLLBACK_TRANSACTION, $handler);
+  }
+
+  /**
+   * @internal
+   */
+  public static function onTransactionEnd(Event $event): void
+  {
+    $event->sender->off(Connection::EVENT_COMMIT_TRANSACTION, [self::class, 'onTransactionEnd']);
+    $event->sender->off(Connection::EVENT_ROLLBACK_TRANSACTION, [self::class, 'onTransactionEnd']);
+    self::invalidate();
   }
 
   /**

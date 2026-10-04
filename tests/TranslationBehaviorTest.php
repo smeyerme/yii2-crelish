@@ -208,4 +208,41 @@ $raw = Yii::$app->db->createCommand('SELECT label, target_url, sort FROM menu_it
 check('en-US mixed rows: unrelated save keeps the default columns', ['Label DE', '/de/titel', 9], [$raw['label'], $raw['target_url'], (int)$raw['sort']]);
 check('en-US mixed rows: translation rows untouched', 3, (int)CrelishTranslation::find()->where(['source_model_uuid' => $pf->uuid])->count());
 
+echo "\nPOST value identical to the default column means: no translation\n";
+$same = makeItem($menu, ['label' => 'Gleich']);
+$count = fn(string $lang) => (int)CrelishTranslation::find()->where(['source_model_uuid' => $same->uuid, 'language' => $lang, 'source_model_attribute' => 'label'])->count();
+Yii::$app->request->setBodyParams(['CrelishDynamicModel' => ['i18n' => ['en' => ['label' => 'Gleich'], 'fr' => ['label' => ' Gleich ']]]]);
+MenuItem::findOne($same->uuid)->save(false);
+check('identical POST value stores no row', 0, $count('en'));
+check('identical after trim stores no row', 0, $count('fr'));
+Yii::$app->db->createCommand()->insert('translation', ['uuid' => 'same-en', 'source_model' => 'menu_item', 'source_model_uuid' => $same->uuid, 'language' => 'en', 'source_model_attribute' => 'label', 'translation' => 'Stale copy'])->execute();
+Yii::$app->request->setBodyParams(['CrelishDynamicModel' => ['i18n' => ['en' => ['label' => 'Gleich']]]]);
+MenuItem::findOne($same->uuid)->save(false);
+check('identical POST value deletes an existing row', 0, $count('en'));
+Yii::$app->request->setBodyParams(['CrelishDynamicModel' => ['i18n' => ['en' => ['label' => 'Same']]]]);
+MenuItem::findOne($same->uuid)->save(false);
+Yii::$app->request->setBodyParams(['CrelishDynamicModel' => ['i18n' => ['en' => ['target_type' => MenuItem::TARGET_URL]]]]);
+MenuItem::findOne($same->uuid)->save(false);
+check('unchanged preselected list value (the default) is not stored', 0, (int)CrelishTranslation::find()->where(['source_model_uuid' => $same->uuid, 'source_model_attribute' => 'target_type'])->count());
+check('different POST value is stored', 'Same', CrelishTranslation::findOne(['source_model_uuid' => $same->uuid, 'language' => 'en', 'source_model_attribute' => 'label'])?->translation);
+// Default changed in the same POST: the comparison is with the value being saved
+Yii::$app->request->setBodyParams(['CrelishDynamicModel' => ['i18n' => ['fr' => ['label' => 'Neu']]]]);
+$changed = MenuItem::findOne($same->uuid);
+$changed->label = 'Neu';
+$changed->save(false);
+check('comparison uses the saved default value', 0, $count('fr'));
+Yii::$app->request->setBodyParams(['CrelishDynamicModel' => ['i18n' => ['en' => ['nonexistent' => 'x']]]]);
+$threw = false;
+try {
+  MenuItem::findOne($same->uuid)->save(false);
+} catch (\Throwable $e) {
+  $threw = true;
+}
+check('unknown attribute does not throw', false, $threw);
+Yii::$app->request->setBodyParams([]);
+$same = MenuItem::findOne($same->uuid);
+$same->setTranslations(['en' => ['label' => 'Neu']]);
+$same->save(false);
+check('setTranslations() path unchanged: identical value is stored', 'Neu', CrelishTranslation::findOne(['source_model_uuid' => $same->uuid, 'language' => 'en', 'source_model_attribute' => 'label'])?->translation);
+
 shortLinkDone();

@@ -1,7 +1,7 @@
 <?php
 
 /**
- * The JSON editor plugins (jsonEditor, jsonEditorNew) follow the admin form's
+ * The JSON editor plugins (jsonEditor, jsonEditorNew, formioJsonEditor) follow the admin form's
  * language logic: the main field edits the default content language, each other
  * configured language gets an i18n[<lang>] field, and data-language matches, so the
  * language selector shows the right one. Rendered through the controller's
@@ -134,6 +134,72 @@ foreach (['jsonEditor' => 'json-editor-', 'jsonEditorNew' => 'json-editor-new-']
     check('translatable field: the form renders no language fields (as before)', '', jeController($model)(jeField($type, 'content', true)));
     echo "\n";
 }
+
+function formioIds(string $html): array
+{
+    preg_match_all('/<div id="(formio-editor[^"]+)"/', $html, $m);
+
+    return $m[1];
+}
+
+$type = 'formioJsonEditor';
+jeApp(['de', 'en']);
+Yii::$app->language = 'en';
+
+echo "$type: admin UI en, content languages [de, en]\n";
+$model = new JsonEditorTestModel();
+$model->content = '[{"t":"Deutsch"}]';
+$model->allTranslations = ['content' => ['en' => '[{"t":"English"}]']];
+$html = jeController($model)(jeField($type, 'content', true));
+$inputs = jeInputs($html);
+check('main field posts the default column', ['de', '[{"t":"Deutsch"}]'], $inputs['CrelishDynamicModel[content]'] ?? null);
+check('en field posts i18n[en] with its stored translation', ['en', '[{"t":"English"}]'], $inputs['CrelishDynamicModel[i18n][en][content]'] ?? null);
+check('exactly two fields: main and en', 2, count($inputs));
+check('form groups carry data-language de and en', 2, preg_match_all('/<div class="form-group[^"]*"[^>]*data-language="(de|en)"/', $html));
+check('en form group is marked as translation', 1, preg_match('/<div class="form-group[^"]*lang-ver[^"]*"[^>]*data-language="en"/', $html));
+check('editor containers have distinct ids', ['formio-editor-content', 'formio-editor-content-en'], formioIds($html));
+check('no field for the admin UI language beyond the two', 0, preg_match('/i18n\]\[de\]/', $html));
+
+echo "\n$type: admin UI de, content languages [de, en]\n";
+Yii::$app->language = 'de';
+$inputs = jeInputs(jeController($model)(jeField($type, 'content', true)));
+check('same two fields whatever the admin language', ['CrelishDynamicModel[content]', 'CrelishDynamicModel[i18n][en][content]'], array_keys($inputs));
+Yii::$app->language = 'en';
+
+echo "\n$type: no stored translation falls back to the column (like the core fields)\n";
+$model = new JsonEditorTestModel();
+$model->content = '[{"t":"Deutsch"}]';
+$inputs = jeInputs(jeController($model)(jeField($type, 'content', true)));
+check('en field shows the column value', ['en', '[{"t":"Deutsch"}]'], $inputs['CrelishDynamicModel[i18n][en][content]'] ?? null);
+
+echo "\n$type: a re-rendered POST value wins\n";
+$model = new JsonEditorTestModel();
+$model->content = '[{"t":"Deutsch"}]';
+$model->allTranslations = ['content' => ['en' => '[{"t":"English"}]']];
+$model->i18n = ['en' => ['content' => '[{"t":"Posted"}]']];
+$inputs = jeInputs(jeController($model)(jeField($type, 'content', true)));
+check('en field shows the posted value', ['en', '[{"t":"Posted"}]'], $inputs['CrelishDynamicModel[i18n][en][content]'] ?? null);
+check('main field still the column', ['de', '[{"t":"Deutsch"}]'], $inputs['CrelishDynamicModel[content]'] ?? null);
+
+echo "\n$type: non-translatable field is untouched\n";
+$model = new JsonEditorTestModel();
+$model->config = '{"a":1}';
+$html = jeController($model)(jeField($type, 'config', false));
+check('plain name, no language', ['CrelishDynamicModel[config]' => [null, '{"a":1}']], jeInputs($html));
+check('no data-language anywhere', 0, substr_count($html, 'data-language'));
+
+echo "\n$type: single-language install\n";
+jeApp(['de']);
+Yii::$app->language = 'de';
+$model = new JsonEditorTestModel();
+$model->config = '{"a":1}';
+$html = jeController($model)(jeField($type, 'config', false));
+check('plain name, no language', ['CrelishDynamicModel[config]' => [null, '{"a":1}']], jeInputs($html));
+check('no data-language anywhere', 0, substr_count($html, 'data-language'));
+check('editor id unchanged', ['formio-editor-config'], formioIds($html));
+$model->content = '[{"t":"Deutsch"}]';
+check('translatable field: the form renders no language fields (as before)', '', jeController($model)(jeField($type, 'content', true)));
+echo "\n";
 
 Yii::$app->language = 'de';
 shortLinkDone();

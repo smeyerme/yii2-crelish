@@ -76,12 +76,12 @@ class MenuItem extends ActiveRecord
   public function afterSave($insert, $changedAttributes)
   {
     parent::afterSave($insert, $changedAttributes);
-    MenuService::invalidate();
+    MenuService::invalidateAfterCommit(static::getDb());
   }
 
   public function afterDelete()
   {
     parent::afterDelete();
-    MenuService::invalidate();
+    MenuService::invalidateAfterCommit(static::getDb());
   }
 }

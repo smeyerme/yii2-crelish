@@ -84,6 +84,88 @@ Yii::$app->params['crelish']['languages'] = [];
 check('no language list: nothing is the default', false, CrelishBaseHelper::isDefaultContentLanguage('de'));
 Yii::$app->params['crelish']['languages'] = ['de', 'en'];
 
+echo "\nTranslation fields without a stored translation render empty\n";
+class AdminLangTestModel extends \yii\base\Model
+{
+    public $i18n = [];
+    public $allTranslations = null;
+    public $systitle;
+    public $body;
+    public $other;
+
+    public function rules()
+    {
+        return [[['systitle', 'body', 'other', 'i18n'], 'safe']];
+    }
+}
+Yii::$app->params['crelish']['languages'] = ['de', 'en', 'fr'];
+Yii::$app->language = 'de';
+Yii::$app->assetManager->bundles = [\yii\web\JqueryAsset::class => false, \yii\widgets\ActiveFormAsset::class => false, \yii\validators\ValidationAsset::class => false];
+$render = static function (AdminLangTestModel $model, object $field) use ($controller): string {
+    $controller->model = $model;
+    $form = new \yii\widgets\ActiveForm(['id' => 'test-form', 'enableClientScript' => false]);
+
+    return (string)(new ReflectionMethod(CrelishBaseController::class, 'renderField'))->invoke($controller, $field, $form);
+};
+/** [value, placeholder] of the input/textarea named <Model>[i18n][<lang>][<key>] */
+$translationInput = static function (string $html, string $lang, string $key): array {
+    $name = preg_quote(htmlspecialchars("AdminLangTestModel[i18n][$lang][$key]"), '/');
+    if (preg_match('/<textarea[^>]*name="' . $name . '"[^>]*>(.*?)<\/textarea>/s', $html, $m)) {
+        preg_match('/placeholder="([^"]*)"/', $m[0], $p);
+        return [html_entity_decode($m[1]), isset($p[1]) ? html_entity_decode($p[1]) : null];
+    }
+    if (!preg_match('/<input[^>]*name="' . $name . '"[^>]*>/', $html, $m)) {
+        return ['missing', null];
+    }
+    preg_match('/ value="([^"]*)"/', $m[0], $v);
+    preg_match('/placeholder="([^"]*)"/', $m[0], $p);
+    return [isset($v[1]) ? html_entity_decode($v[1]) : '', isset($p[1]) ? html_entity_decode($p[1]) : null];
+};
+$model = new AdminLangTestModel();
+$model->systitle = 'Willkommen';
+$model->allTranslations = ['systitle' => ['en' => 'Welcome']];
+$field = (object)['key' => 'systitle', 'label' => 'Title', 'type' => 'textInput', 'translatable' => true];
+$html = $render($model, $field);
+check('stored translation is the value', 'Welcome', $translationInput($html, 'en', 'systitle')[0]);
+check('missing translation renders empty with the default as placeholder', ['', 'Willkommen'], $translationInput($html, 'fr', 'systitle'));
+check('main field keeps the default value and no placeholder', 1, preg_match('/<input type="text"[^>]*name="AdminLangTestModel\[systitle\]" value="Willkommen"(?![^>]*placeholder)[^>]*>/', $html));
+$model = new AdminLangTestModel();
+$model->systitle = 'Willkommen';
+$html = $render($model, $field);
+check('no translation at all: empty with placeholder', [['', 'Willkommen'], ['', 'Willkommen']], [$translationInput($html, 'en', 'systitle'), $translationInput($html, 'fr', 'systitle')]);
+$model->i18n = ['fr' => ['systitle' => 'Bienvenue']];
+check('a re-rendered POST value is kept', ['Bienvenue', 'Willkommen'], $translationInput($render($model, $field), 'fr', 'systitle'));
+$model = new AdminLangTestModel();
+$model->body = str_repeat('Lang ', 40);
+$model->allTranslations = ['body' => ['en' => 'Long']];
+$html = $render($model, (object)['key' => 'body', 'label' => 'Body', 'type' => 'textarea', 'translatable' => true]);
+$fr = $translationInput($html, 'fr', 'body');
+check('textarea: empty value', '', $fr[0]);
+check('textarea: long default truncated to 120 characters', [120, '…'], [mb_strlen((string)$fr[1]), mb_substr((string)$fr[1], -1)]);
+check('textarea: stored translation is the value', 'Long', $translationInput($html, 'en', 'body')[0]);
+$model = new AdminLangTestModel();
+$model->other = 'b';
+$model->allTranslations = ['other' => ['en' => 'a']];
+$html = $render($model, (object)['key' => 'other', 'label' => 'Other', 'type' => 'dropDownList', 'items' => ['a' => 'A', 'b' => 'B'], 'translatable' => true]);
+check('list field without a stored translation: the default stays preselected (identical values are not stored)', 1, preg_match('/name="AdminLangTestModel\[i18n\]\[fr\]\[other\]"[^>]*>\s*<option value="a">A<\/option>\s*<option value="b" selected>/s', $html));
+check('list field: stored translation selected', 1, preg_match('/name="AdminLangTestModel\[i18n\]\[en\]\[other\]"[^>]*>\s*<option value="a" selected/s', $html));
+$model = new AdminLangTestModel();
+$model->body = 'Text';
+$html = $render($model, (object)['key' => 'body', 'label' => 'Body', 'type' => 'textArea', 'translatable' => true]);
+check('type textArea (workspace spelling): empty with placeholder', ['', 'Text'], $translationInput($html, 'fr', 'body'));
+$html = $render($model, (object)['key' => 'body', 'label' => 'Body', 'type' => 'textInput', 'translatable' => true, 'options' => ['placeholder' => 'Eigener Hinweis']]);
+check('a placeholder configured on the field is kept', ['', 'Eigener Hinweis'], $translationInput($html, 'fr', 'body'));
+Yii::$app->params['crelish']['languages'] = ['de', 'en'];
+
+echo "\nSingle-language install: plain field unchanged\n";
+Yii::$app->params['crelish']['languages'] = ['de'];
+$model = new AdminLangTestModel();
+$model->systitle = 'Willkommen';
+$html = $render($model, (object)['key' => 'systitle', 'label' => 'Title', 'type' => 'textInput']);
+check('value, no placeholder', 1, preg_match('/name="AdminLangTestModel\[systitle\]" value="Willkommen"(?![^>]*placeholder)/', $html));
+check('translatable field renders nothing (as before)', '', $render($model, (object)['key' => 'systitle', 'label' => 'Title', 'type' => 'textInput', 'translatable' => true]));
+Yii::$app->params['crelish']['languages'] = ['de', 'en'];
+
 echo "\nNo language list configured\n";
 Yii::$app->params['crelish']['languages'] = [];
 Yii::$app->language = 'en-US';
