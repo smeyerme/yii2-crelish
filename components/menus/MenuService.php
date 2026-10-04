@@ -44,9 +44,9 @@ class MenuService
   }
 
   /**
-   * Invalidates now, or, while a transaction is open on $db, once the outermost transaction commits
-   * (Connection::EVENT_COMMIT_TRANSACTION fires only at level 0). A rollback drops the pending
-   * invalidation: nothing changed, so the cached trees are still right.
+   * Invalidates now, or, while a transaction is open on $db, once the outermost transaction ends
+   * (Connection::EVENT_COMMIT_TRANSACTION / EVENT_ROLLBACK_TRANSACTION fire only at level 0).
+   * A rollback invalidates too: a tree() read inside the transaction may have cached uncommitted data.
    */
   public static function invalidateAfterCommit(?Connection $db = null): void
   {
@@ -57,31 +57,22 @@ class MenuService
       return;
     }
 
-    $onCommit = [self::class, 'onCommit'];
-    $onRollBack = [self::class, 'onRollBack'];
+    $handler = [self::class, 'onTransactionEnd'];
     // off() first, so several writes in one transaction register the handler once
-    $db->off(Connection::EVENT_COMMIT_TRANSACTION, $onCommit);
-    $db->off(Connection::EVENT_ROLLBACK_TRANSACTION, $onRollBack);
-    $db->on(Connection::EVENT_COMMIT_TRANSACTION, $onCommit);
-    $db->on(Connection::EVENT_ROLLBACK_TRANSACTION, $onRollBack);
+    $db->off(Connection::EVENT_COMMIT_TRANSACTION, $handler);
+    $db->off(Connection::EVENT_ROLLBACK_TRANSACTION, $handler);
+    $db->on(Connection::EVENT_COMMIT_TRANSACTION, $handler);
+    $db->on(Connection::EVENT_ROLLBACK_TRANSACTION, $handler);
   }
 
   /**
    * @internal
    */
-  public static function onCommit(Event $event): void
+  public static function onTransactionEnd(Event $event): void
   {
-    self::onRollBack($event);
+    $event->sender->off(Connection::EVENT_COMMIT_TRANSACTION, [self::class, 'onTransactionEnd']);
+    $event->sender->off(Connection::EVENT_ROLLBACK_TRANSACTION, [self::class, 'onTransactionEnd']);
     self::invalidate();
-  }
-
-  /**
-   * @internal
-   */
-  public static function onRollBack(Event $event): void
-  {
-    $event->sender->off(Connection::EVENT_COMMIT_TRANSACTION, [self::class, 'onCommit']);
-    $event->sender->off(Connection::EVENT_ROLLBACK_TRANSACTION, [self::class, 'onRollBack']);
   }
 
   /**

@@ -147,8 +147,14 @@ $model = new AdminLangTestModel();
 $model->other = 'b';
 $model->allTranslations = ['other' => ['en' => 'a']];
 $html = $render($model, (object)['key' => 'other', 'label' => 'Other', 'type' => 'dropDownList', 'items' => ['a' => 'A', 'b' => 'B'], 'translatable' => true]);
-check('list field without a stored translation: nothing selected (no copy)', 0, preg_match('/name="AdminLangTestModel\[i18n\]\[fr\]\[other\]".*?<option value="b" selected/s', $html));
+check('list field without a stored translation: the default stays preselected (identical values are not stored)', 1, preg_match('/name="AdminLangTestModel\[i18n\]\[fr\]\[other\]"[^>]*>\s*<option value="a">A<\/option>\s*<option value="b" selected>/s', $html));
 check('list field: stored translation selected', 1, preg_match('/name="AdminLangTestModel\[i18n\]\[en\]\[other\]"[^>]*>\s*<option value="a" selected/s', $html));
+$model = new AdminLangTestModel();
+$model->body = 'Text';
+$html = $render($model, (object)['key' => 'body', 'label' => 'Body', 'type' => 'textArea', 'translatable' => true]);
+check('type textArea (workspace spelling): empty with placeholder', ['', 'Text'], $translationInput($html, 'fr', 'body'));
+$html = $render($model, (object)['key' => 'body', 'label' => 'Body', 'type' => 'textInput', 'translatable' => true, 'options' => ['placeholder' => 'Eigener Hinweis']]);
+check('a placeholder configured on the field is kept', ['', 'Eigener Hinweis'], $translationInput($html, 'fr', 'body'));
 Yii::$app->params['crelish']['languages'] = ['de', 'en'];
 
 echo "\nSingle-language install: plain field unchanged\n";

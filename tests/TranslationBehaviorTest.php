@@ -221,6 +221,9 @@ MenuItem::findOne($same->uuid)->save(false);
 check('identical POST value deletes an existing row', 0, $count('en'));
 Yii::$app->request->setBodyParams(['CrelishDynamicModel' => ['i18n' => ['en' => ['label' => 'Same']]]]);
 MenuItem::findOne($same->uuid)->save(false);
+Yii::$app->request->setBodyParams(['CrelishDynamicModel' => ['i18n' => ['en' => ['target_type' => MenuItem::TARGET_URL]]]]);
+MenuItem::findOne($same->uuid)->save(false);
+check('unchanged preselected list value (the default) is not stored', 0, (int)CrelishTranslation::find()->where(['source_model_uuid' => $same->uuid, 'source_model_attribute' => 'target_type'])->count());
 check('different POST value is stored', 'Same', CrelishTranslation::findOne(['source_model_uuid' => $same->uuid, 'language' => 'en', 'source_model_attribute' => 'label'])?->translation);
 // Default changed in the same POST: the comparison is with the value being saved
 Yii::$app->request->setBodyParams(['CrelishDynamicModel' => ['i18n' => ['fr' => ['label' => 'Neu']]]]);

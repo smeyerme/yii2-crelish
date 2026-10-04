@@ -74,7 +74,8 @@ correct. The cache is cleared when a menu or item is saved and whenever
 crelish content is saved or deleted through the admin. Menu and item writes
 inside a transaction (the tree editor's save, a menu delete) clear it only
 after the outermost transaction commits, so a concurrent request cannot
-re-cache the old tree; a rollback leaves the cache as it is. Content written
+re-cache the old tree; a rollback clears it too, since a read inside the
+transaction may have cached uncommitted data. Content written
 elsewhere (imports, direct ActiveRecord writes) shows up at the latest after
 an hour, or call
 `giantbits\crelish\components\menus\MenuService::invalidate()`.
