@@ -74,9 +74,10 @@ class Menu extends ActiveRecord
   public function rules()
   {
     return [
-      [['key', 'systitle'], 'required'],
       [['key', 'systitle'], 'trim'],
       // The key is immutable (beforeSave resets it), so only a new menu's key is validated
+      ['key', 'required', 'when' => fn($m) => $m->isNewRecord],
+      ['systitle', 'required'],
       ['key', 'string', 'max' => 64, 'when' => fn($m) => $m->isNewRecord],
       ['key', 'match', 'pattern' => '/^[a-z0-9_-]+$/', 'when' => fn($m) => $m->isNewRecord],
       ['key', 'unique', 'when' => fn($m) => $m->isNewRecord],
