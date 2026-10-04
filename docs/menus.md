@@ -71,7 +71,10 @@ cached tree (`MenuService::tree()`) holds only request-independent data:
 `MenuService::get()` (what `chelper.menu()` returns) for each request, so
 one cache entry serves every host and a cache warmed from the console is
 correct. The cache is cleared when a menu or item is saved and whenever
-crelish content is saved or deleted through the admin. Content written
+crelish content is saved or deleted through the admin. Menu and item writes
+inside a transaction (the tree editor's save, a menu delete) clear it only
+after the outermost transaction commits, so a concurrent request cannot
+re-cache the old tree; a rollback leaves the cache as it is. Content written
 elsewhere (imports, direct ActiveRecord writes) shows up at the latest after
 an hour, or call
 `giantbits\crelish\components\menus\MenuService::invalidate()`.

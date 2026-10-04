@@ -218,12 +218,12 @@ class Menu extends ActiveRecord
       $this->setOldAttribute('updated', $value);
     }
 
-    MenuService::invalidate();
+    MenuService::invalidateAfterCommit(static::getDb());
   }
 
   public function afterDelete()
   {
     parent::afterDelete();
-    MenuService::invalidate();
+    MenuService::invalidateAfterCommit(static::getDb());
   }
 }
