@@ -14,6 +14,9 @@ use yii\web\NotFoundHttpException;
 
 class CrelishBaseController extends Controller
 {
+  /** Characters of the default value shown as placeholder in an empty translation field */
+  private const TRANSLATION_PLACEHOLDER_LENGTH = 120;
+
   protected $uuid, $filePath, $elementDefinition;
   public $ctype;
   public $model;
@@ -899,13 +902,28 @@ JS;
     return CrelishBaseHelper::defaultContentLanguage() ?? ContentUrlResolver::currentLanguage();
   }
 
+  /**
+   * A translation field shows its stored translation. Without one it stays empty (the default
+   * is used, see CrelishTranslationBehavior), so saving the form stores no copy of the default;
+   * text inputs and textareas show the default as placeholder.
+   */
   private function handleTranslationOptions(&$field, &$fieldOptions, &$widgetOptions, $lang): void
   {
+    $stored = $this->model->allTranslations[$field->key][$lang] ?? null;
 
-    if (!empty($this->model->allTranslations[$field->key])) {
-      $currentValue = $this->model->allTranslations[$field->key][$lang] ?? $this->model->{$field->key};
-      $fieldOptions['value'] = $currentValue;
-      $widgetOptions['options']['value'] = $currentValue;
+    if ($stored !== null) {
+      $fieldOptions['value'] = $stored;
+      $widgetOptions['options']['value'] = $stored;
+      return;
+    }
+
+    $default = $this->model->{$field->key} ?? null;
+
+    if (in_array($field->type, ['textInput', 'textarea'], true) && is_string($default) && trim($default) !== '') {
+      $default = trim($default);
+      $fieldOptions['placeholder'] = mb_strlen($default) > self::TRANSLATION_PLACEHOLDER_LENGTH
+        ? mb_substr($default, 0, self::TRANSLATION_PLACEHOLDER_LENGTH - 1) . '…'
+        : $default;
     }
   }
 

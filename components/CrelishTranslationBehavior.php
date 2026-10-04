@@ -227,6 +227,13 @@
 						continue;
 					}
 
+					// Form POST: a value identical to the default column is no translation (the default
+					// is used), so no copy is stored that would go stale when the default changes
+					if (!$deleteEmpty && $this->isDefaultValue($attribute, $value)) {
+						\giantbits\crelish\models\CrelishTranslation::deleteAll($criteria);
+						continue;
+					}
+
 					$translation = \giantbits\crelish\models\CrelishTranslation::find()->where($criteria)->one();
 
 					if (!$translation) {
@@ -245,5 +252,19 @@
 					}
 				}
 			}
+		}
+
+		/**
+		 * Whether $value equals the owner's default column value (strings compared after trim).
+		 */
+		private function isDefaultValue(string|int $attribute, mixed $value): bool
+		{
+			$default = $this->owner->{$attribute} ?? null;
+
+			if (is_string($value) && is_string($default)) {
+				return trim($value) === trim($default);
+			}
+
+			return $default !== null && $value === $default;
 		}
 	}
