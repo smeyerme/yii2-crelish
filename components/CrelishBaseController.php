@@ -14,6 +14,9 @@ use yii\web\NotFoundHttpException;
 
 class CrelishBaseController extends Controller
 {
+  /** Characters of the default value shown as placeholder in an empty translation field */
+  private const TRANSLATION_PLACEHOLDER_LENGTH = 120;
+
   protected $uuid, $filePath, $elementDefinition;
   public $ctype;
   public $model;
@@ -899,14 +902,31 @@ JS;
     return CrelishBaseHelper::defaultContentLanguage() ?? ContentUrlResolver::currentLanguage();
   }
 
+  /**
+   * A translation field shows its stored translation. Without one, text inputs and textareas
+   * stay empty with the default as placeholder (the default is used, see CrelishTranslationBehavior),
+   * so saving the form stores no copy of it. Every other type keeps the default preselected:
+   * an empty select would post its first option, a value nobody chose; the unchanged default
+   * is not stored on save.
+   */
   private function handleTranslationOptions(&$field, &$fieldOptions, &$widgetOptions, $lang): void
   {
+    $stored = $this->model->allTranslations[$field->key][$lang] ?? null;
+    $default = $this->model->{$field->key} ?? null;
 
-    if (!empty($this->model->allTranslations[$field->key])) {
-      $currentValue = $this->model->allTranslations[$field->key][$lang] ?? $this->model->{$field->key};
-      $fieldOptions['value'] = $currentValue;
-      $widgetOptions['options']['value'] = $currentValue;
+    if ($stored === null && in_array(strtolower((string)$field->type), ['textinput', 'textarea'], true)) {
+      if (is_string($default) && trim($default) !== '') {
+        $default = trim($default);
+        $fieldOptions['placeholder'] ??= mb_strlen($default) > self::TRANSLATION_PLACEHOLDER_LENGTH
+          ? mb_substr($default, 0, self::TRANSLATION_PLACEHOLDER_LENGTH - 1) . '…'
+          : $default;
+      }
+      return;
     }
+
+    $value = $stored ?? $default;
+    $fieldOptions['value'] = $value;
+    $widgetOptions['options']['value'] = $value;
   }
 
   private function buildWidgetField($form, $field, $fieldKey, $inputOptions, $widgetOptions)

@@ -113,6 +113,20 @@ $legacy->systitle = 'Legacy renamed';
 check('existing menu with an invalid stored key still validates', true, $legacy->validate());
 $legacy->key = 'main';
 check('existing menu with an edited, duplicate key still validates (beforeSave resets it)', true, $legacy->validate());
+$blank = makeMenu('blankkey');
+$blank->key = '';
+$blank->systitle = 'Blank renamed';
+check('existing menu with an empty posted key still validates', true, $blank->validate());
+check('...and saves', true, $blank->save());
+check('...and keeps its key', ['blankkey', 'Blank renamed'], (function () use ($blank) {
+    $stored = Menu::findOne($blank->uuid);
+    return [$stored->key, $stored->systitle];
+})());
+$blank->systitle = '';
+check('systitle stays required on update', false, $blank->validate());
+$blank->delete();
+$new = new Menu(['key' => '', 'systitle' => 'New', 'max_depth' => 2]);
+check('key is still required on create', true, $new->validate() === false && $new->hasErrors('key'));
 $legacy->delete();
 
 echo "\nDeletion is atomic\n";
