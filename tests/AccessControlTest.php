@@ -207,6 +207,51 @@ foreach ((new \giantbits\crelish\controllers\AssetController('asset', Yii::$app)
 sort($guestActions);
 check('asset: only glide and download allow guests', ['download', 'glide'], $guestActions);
 
+echo "\nTranslation save only writes existing message files of allowed languages\n";
+/**
+ * @return string 'ok' or the exception class
+ */
+function saveTranslations(string $language, array $translations): string
+{
+    accessApp(9, ['REQUEST_METHOD' => 'POST'], ['languages' => ['de', 'fr']]);
+    Yii::$app->request->setBodyParams(['Translations' => $translations]);
+    $controller = new \giantbits\crelish\controllers\TranslationController('translation', Yii::$app);
+
+    try {
+        $controller->actionSave($language);
+        return 'ok';
+    } catch (\Throwable $e) {
+        return get_class($e);
+    }
+}
+
+$bad = \yii\web\BadRequestHttpException::class;
+check('valid language and category is saved', 'ok', saveTranslations('de', ['app' => ['Hello' => 'Servus']]));
+check('saved file has the new value', ['Hello' => 'Servus'], include $root . '/messages/de/app.php');
+check('language traversal is rejected', $bad, saveTranslations('../../config', ['app' => ['x' => 'y']]));
+check('language traversal writes nothing', false, file_exists($root . '/config/app.php'));
+check('language outside the configured languages is rejected', $bad, saveTranslations('xx', ['app' => ['x' => 'y']]));
+check('category traversal is rejected', $bad, saveTranslations('de', ['../../web/shell' => ['x' => '<?php echo 1;']]));
+check('category traversal writes nothing', false, file_exists($root . '/web/shell.php'));
+check('category with a dot is rejected', $bad, saveTranslations('de', ['app.php' => ['x' => 'y']]));
+check('unknown category is rejected', $bad, saveTranslations('de', ['newcategory' => ['x' => 'y']]));
+check('unknown category writes nothing', false, file_exists($root . '/messages/de/newcategory.php'));
+check('allowed language without message files is rejected', $bad, saveTranslations('fr', ['app' => ['x' => 'y']]));
+check('non-array translations are rejected', $bad, saveTranslations('de', ['app' => 'oops']));
+check('nothing was changed by the rejected requests', ['Hello' => 'Servus'], include $root . '/messages/de/app.php');
+
+accessApp(9, [], ['languages' => ['de']]);
+$controller = new \giantbits\crelish\controllers\TranslationController('translation', Yii::$app);
+try {
+    $controller->actionIndex('../../config');
+    $result = 'ok';
+} catch (\Throwable $e) {
+    $result = get_class($e);
+}
+check('translation index rejects a traversal language', $bad, $result);
+$rules = $controller->behaviors()['access']['rules'] ?? [];
+check('translation controller has an AccessControl rule for logged-in users', true, ($controller->behaviors()['access']['class'] ?? null) === \yii\filters\AccessControl::class && in_array(['allow' => true, 'roles' => ['@']], $rules, true));
+
 echo "\nEvery admin controller is guarded\n";
 foreach (glob(dirname(__DIR__) . '/controllers/*Controller.php') as $file) {
     $class = 'giantbits\\crelish\\controllers\\' . basename($file, '.php');
