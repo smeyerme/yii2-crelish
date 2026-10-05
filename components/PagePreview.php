@@ -213,7 +213,10 @@ class PagePreview
 
     $response->headers->set('X-Robots-Tag', 'noindex, nofollow');
     $response->headers->set('Cache-Control', 'no-store, private');
+    // Links and requests from the preview must not pass the tokenised URL on as referer
+    $response->headers->set('Referrer-Policy', 'no-referrer');
     $view->registerMetaTag(['name' => 'robots', 'content' => 'noindex, nofollow'], 'robots');
+    $view->registerMetaTag(['name' => 'referrer', 'content' => 'no-referrer'], 'referrer');
 
     $view->on(View::EVENT_BEGIN_BODY, static function (): void {
       echo self::bannerHtml();

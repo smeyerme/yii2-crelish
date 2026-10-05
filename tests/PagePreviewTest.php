@@ -179,6 +179,12 @@ check('outside preview mode visits are tracked (control)', ['page_views' => 1, '
 trackingApp(true);
 check('in preview mode nothing is tracked', ['page_views' => 0, 'element_views' => 0, 'sessions' => 0, 'token stored' => false], trackedRows());
 
+echo "\nPreview responses send no referrer\n";
+shortLinkApp();
+PagePreview::registerPreviewMode(Yii::$app->view, Yii::$app->response);
+check('Referrer-Policy header', 'no-referrer', Yii::$app->response->headers->get('Referrer-Policy'));
+check('referrer meta tag', true, str_contains(implode('', Yii::$app->view->metaTags), '<meta name="referrer" content="no-referrer">'));
+
 echo "\nAdmin header bar buttons\n";
 shortLinkApp();
 $finder = fn(string $ctype, string $uuid) => $ctype === 'page' && $uuid === PREVIEW_PAGE ? $draft : null;
