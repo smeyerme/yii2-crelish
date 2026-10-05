@@ -1,7 +1,7 @@
 # Menus follow-ups: triaged fixes
 
 Date: 2026-09-30
-Status: A, B and C were released in 0.23.2. D and the "Found while doing A–C" items are implemented on feature/menus-followups-2 (2026-10-01). E1 was fixed in forum-holzbau (SitemapController filters pages by their publication window). E2 is open (product decision). One new Important item is at the top.
+Status: A, B and C were released in 0.23.2. D and the "Found while doing A–C" items are implemented on feature/menus-followups-2 (2026-10-01). E1 was fixed in forum-holzbau (SitemapController filters pages by their publication window). E2 is implemented in 0.24.0 (signed preview links). One new Important item is at the top.
 Source: deferred findings from the per-task reviews, the final whole-branch review and the browser checks of the menus feature (0.23.0).
 Already handled in 0.23.1: unpublished pages now return 404, and crelish's own translations are used, plus the `crelish-translations/prune` command.
 
@@ -101,6 +101,7 @@ Verification: `npm run build`, then a browser check of each item in light and da
 **E1. Sitemap and other page listings.** Check whether the sitemap, search or page listings include unpublished pages. Since 0.23.1 those return 404, so listing them now produces dead links.
 
 **E2. Editor preview of offline pages.** 0.23.1 returns 404 for everyone, as decided. If editors need previews, add an opt-in, for example a signed preview URL from the page edit view, rather than letting logged-in users bypass the rule.
+*Implemented in 0.24.0:* `PagePreview` signs `?preview=` tokens (page uuid + expiry, `previewSecret`/cookie key, `previewTtl`); `CrelishFrontendController` serves an unpublished page with a valid token as a noindex/no-store preview with a banner; the page edit header bar has Preview and Copy preview link buttons. Docs: getting-started.md, "Previewing unpublished pages". Test: tests/PagePreviewTest.php.
 
 ## Not worth fixing (and why)
 

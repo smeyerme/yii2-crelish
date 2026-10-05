@@ -207,6 +207,25 @@ your-project/
         └── yii2-crelish/ (Crelish CMS files)
 ```
 
+## Previewing unpublished pages
+
+Pages that are offline (state other than 2) or outside their from/to window return 404 for everyone. To check or share such a page, open it in the admin and use the **Preview** button in the header bar of the edit view (pages only, not on create). It opens a signed preview link in a new tab; the link button next to it copies the link for sharing, e.g. with a client.
+
+The link is the page's normal URL in the default content language plus `?preview=<token>`. The token holds the page uuid and an expiry time and is signed (HMAC via `Yii::$app->security->hashData()`). It is valid only for that page and until it expires; a tampered, expired or foreign token gives the usual 404. A published page ignores the parameter and is served as normal, so the buttons are shown for published pages too.
+
+```php
+'params' => [
+    'crelish' => [
+        'previewTtl' => 86400,           // link lifetime in seconds (default: 24 hours)
+        'previewSecret' => '<random>',   // signing key; defaults to request.cookieValidationKey
+    ],
+],
+```
+
+Changing `previewSecret` (or the cookie validation key it falls back to) invalidates all issued links. Without either key the buttons are hidden and no token validates.
+
+A preview response sends `X-Robots-Tag: noindex, nofollow` and `Cache-Control: no-store, private`, adds `<meta name="robots" content="noindex, nofollow">`, and shows a small dismissible bar at the top of the page ("Vorschau – diese Seite ist nicht veröffentlicht"). The bar is injected at `View::EVENT_BEGIN_BODY` with inline styles, so themes need no changes as long as their layout calls `beginBody()`.
+
 ## Translations
 
 Crelish ships its own translations for the `crelish` category (`messages/<lang>/crelish.php` in the package). They are the base; a project overrides single strings in its own `messages/<lang>/crelish.php`. Empty project values do not override the package value. Only strings found in neither file trigger the missing-translation handler (DeepL).
