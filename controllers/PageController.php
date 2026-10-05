@@ -18,7 +18,7 @@ class PageController extends CrelishBaseController
     return [
       'access' => [
         'class' => AccessControl::class,
-        'only' => ['create', 'index', 'delete'],
+        'only' => ['create', 'index', 'delete', 'update'],
         'rules' => [
           [
             'allow' => true,
