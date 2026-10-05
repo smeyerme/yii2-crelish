@@ -1,0 +1,185 @@
+<?php
+
+namespace giantbits\crelish\components;
+
+use Yii;
+use yii\base\InvalidConfigException;
+use yii\db\BaseActiveRecord;
+use yii\helpers\Html;
+use yii\web\Response;
+use yii\web\View;
+
+/**
+ * Signed preview links for unpublished pages.
+ *
+ * A token carries the page uuid and an expiry timestamp, signed with
+ * Security::hashData() (HMAC) and base64url encoded for the query string.
+ * Key: params['crelish']['previewSecret'], else the request's
+ * cookieValidationKey; without either, previews are disabled.
+ * TTL: params['crelish']['previewTtl'] seconds, default 86400.
+ */
+class PagePreview
+{
+  public const PARAM = 'preview';
+  public const DEFAULT_TTL = 86400;
+
+  /** Payload version/purpose marker, keeps these signatures apart from other uses of the same key */
+  private const PREFIX = 'p1';
+  private const MAX_TOKEN_LENGTH = 512;
+
+  public static function isEnabled(): bool
+  {
+    return self::key() !== null;
+  }
+
+  /**
+   * @throws InvalidConfigException when no signing key is configured
+   */
+  public static function createToken(string $pageUuid, ?int $now = null): string
+  {
+    $key = self::key();
+
+    if ($key === null) {
+      throw new InvalidConfigException('Page preview needs params[crelish][previewSecret] or request.cookieValidationKey.');
+    }
+
+    $expires = ($now ?? time()) + self::ttl();
+    $signed = Yii::$app->security->hashData(self::PREFIX . '|' . $pageUuid . '|' . $expires, $key);
+
+    return rtrim(strtr(base64_encode($signed), '+/', '-_'), '=');
+  }
+
+  /**
+   * False for anything but an untampered, unexpired token for this page; never throws.
+   */
+  public static function validateToken(string $token, string $pageUuid, ?int $now = null): bool
+  {
+    try {
+      $key = self::key();
+
+      if ($key === null || $pageUuid === '' || $token === '' || strlen($token) > self::MAX_TOKEN_LENGTH
+        || !preg_match('/^[A-Za-z0-9_-]+$/', $token)) {
+        return false;
+      }
+
+      $signed = base64_decode(strtr($token, '-_', '+/'), true);
+
+      // Only the canonical encoding counts, so no two strings map to the same token
+      if ($signed === false || rtrim(strtr(base64_encode($signed), '+/', '-_'), '=') !== $token) {
+        return false;
+      }
+
+      $payload = Yii::$app->security->validateData($signed, $key);
+
+      if (!is_string($payload)) {
+        return false;
+      }
+
+      $parts = explode('|', $payload);
+
+      if (count($parts) !== 3 || $parts[0] !== self::PREFIX || !ctype_digit($parts[2])) {
+        return false;
+      }
+
+      return hash_equals($parts[1], $pageUuid) && (int)$parts[2] >= ($now ?? time());
+    } catch (\Throwable $e) {
+      Yii::warning('Page preview: token validation failed: ' . $e->getMessage(), 'crelish');
+      return false;
+    }
+  }
+
+  /**
+   * Whether the frontend serves this page as a preview: only an unpublished
+   * page with a valid token for it. Published pages never are previews.
+   */
+  public static function shouldServe(object $page, mixed $token, ?int $now = null): bool
+  {
+    $now ??= time();
+
+    if (!is_string($token) || $token === '' || ContentUrlResolver::isPublished($page, $now)) {
+      return false;
+    }
+
+    $uuid = self::attribute($page, 'uuid');
+
+    return is_string($uuid) && $uuid !== '' && self::validateToken($token, $uuid, $now);
+  }
+
+  /**
+   * Absolute frontend URL of the page in the default content language with a fresh preview token.
+   *
+   * @return string|null null when the page has no uuid or slug
+   * @throws InvalidConfigException when no signing key is configured
+   */
+  public static function url(object $page, ?int $now = null): ?string
+  {
+    $uuid = (string)self::attribute($page, 'uuid');
+    $slug = (string)self::attribute($page, 'slug');
+
+    if ($uuid === '' || $slug === '') {
+      return null;
+    }
+
+    return CrelishBaseHelper::urlFromSlug($slug, [self::PARAM => self::createToken($uuid, $now)], CrelishBaseHelper::defaultContentLanguage(), true);
+  }
+
+  /**
+   * Keep the preview out of search engines and caches, and mark it with a banner.
+   */
+  public static function registerPreviewMode(View $view, Response $response): void
+  {
+    $response->headers->set('X-Robots-Tag', 'noindex, nofollow');
+    $response->headers->set('Cache-Control', 'no-store, private');
+    $view->registerMetaTag(['name' => 'robots', 'content' => 'noindex, nofollow'], 'robots');
+
+    $view->on(View::EVENT_BEGIN_BODY, static function (): void {
+      echo self::bannerHtml();
+    });
+  }
+
+  public static function bannerHtml(): string
+  {
+    $label = Html::encode(Yii::t('crelish', 'Preview – this page is not published'));
+    $close = Html::encode(Yii::t('crelish', 'Close'));
+
+    return '<div class="crelish-preview-banner" role="status" style="position:sticky;top:0;left:0;right:0;z-index:2147483647;'
+      . 'display:flex;align-items:center;justify-content:center;gap:12px;margin:0;padding:6px 40px;'
+      . 'background:#222;color:#fff;font:600 14px/1.4 system-ui,-apple-system,sans-serif;text-align:center;'
+      . 'box-shadow:0 1px 4px rgba(0,0,0,.3);">'
+      . '<span>' . $label . '</span>'
+      . '<button type="button" onclick="this.parentNode.remove()" aria-label="' . $close . '" title="' . $close . '" '
+      . 'style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:0;'
+      . 'color:inherit;font:inherit;font-size:20px;line-height:1;cursor:pointer;padding:0 6px;">&times;</button>'
+      . '</div>';
+  }
+
+  public static function ttl(): int
+  {
+    $ttl = Yii::$app->params['crelish']['previewTtl'] ?? null;
+
+    return is_numeric($ttl) && (int)$ttl > 0 ? (int)$ttl : self::DEFAULT_TTL;
+  }
+
+  private static function key(): ?string
+  {
+    $secret = Yii::$app->params['crelish']['previewSecret'] ?? null;
+
+    if (is_string($secret) && $secret !== '') {
+      return $secret;
+    }
+
+    $request = Yii::$app->has('request') ? Yii::$app->getRequest() : null;
+    $cookieKey = $request instanceof \yii\web\Request ? $request->cookieValidationKey : null;
+
+    return is_string($cookieKey) && $cookieKey !== '' ? $cookieKey : null;
+  }
+
+  private static function attribute(object $record, string $name): mixed
+  {
+    if ($record instanceof BaseActiveRecord) {
+      return $record->hasAttribute($name) ? $record->getAttribute($name) : null;
+    }
+
+    return $record->$name ?? null;
+  }
+}

@@ -161,4 +161,9 @@ return [
   'Structure' => 'Struktur',
   'Item' => 'Eintrag',
   'This menu already has items {depth} levels deep. Move or remove them before reducing the depth.' => 'Dieses Menü enthält bereits Einträge in {depth} Ebenen. Verschieben oder entfernen Sie diese, bevor Sie die Tiefe verringern.',
+  'Preview – this page is not published' => 'Vorschau – diese Seite ist nicht veröffentlicht',
+  'Close' => 'Schließen',
+  'Copy preview link' => 'Vorschau-Link kopieren',
+  'Preview link copied' => 'Vorschau-Link kopiert',
+  'Open preview (valid for {hours} h)' => 'Vorschau öffnen (gültig für {hours} Std.)',
 ];
