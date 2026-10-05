@@ -41,15 +41,9 @@ class AuthController extends Controller
             'class' => VerbFilter::class,
             'actions' => [
                 'login' => ['post'],
-                'refresh' => ['post'],
                 'validate-token' => ['post', 'get'],
             ],
         ];
-        
-        // Make the debug endpoint accessible without authentication
-        if (isset($behaviors['authenticator'])) {
-            $behaviors['authenticator']['optional'][] = 'debug';
-        }
         
         return $behaviors;
     }
@@ -265,33 +259,15 @@ class AuthController extends Controller
             ]);
             
         } catch (\Exception $e) {
+            // No exception text: it tells a caller why a forged token failed
+            Yii::info('validate-token: ' . get_class($e), __METHOD__);
             return $this->createResponse(
                 null,
                 false,
-                'Invalid token: ' . $e->getMessage(),
+                'Invalid token',
                 401
             );
         }
     }
     
-    /**
-     * Debug authentication
-     * 
-     * This endpoint will return debugging information about the current request's
-     * authentication status across multiple methods (JWT, Bearer, Query, Session).
-     * 
-     * @return array Debug information
-     */
-    public function actionDebug(): array
-    {
-        // Import the AuthDebug class
-        $debugInfo = \giantbits\crelish\modules\api\components\AuthDebug::debugAll();
-        
-        return $this->createResponse(
-            $debugInfo,
-            true,
-            'Authentication debug information',
-            200
-        );
-    }
 } 

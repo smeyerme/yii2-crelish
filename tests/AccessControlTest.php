@@ -473,6 +473,19 @@ check('state "2" (string) is active', DISABLED_USER, (function () {
     return CrelishUser::findIdentity(DISABLED_USER)?->getId();
 })());
 
+echo "\nAPI auth controller\n";
+$module = apiApp(null, ['HTTP_AUTHORIZATION' => 'Bearer not.a.jwt'], ['jwtSecretKey' => STRONG_SECRET]);
+$auth = new \giantbits\crelish\modules\api\controllers\AuthController('auth', $module);
+check('auth/debug is gone', true, $auth->createAction('debug') === null);
+check('AuthDebug is gone', false, class_exists(\giantbits\crelish\modules\api\components\AuthDebug::class));
+check('no verb rule for the missing refresh action', false, array_key_exists('refresh', $auth->behaviors()['verbs']['actions']));
+$result = $auth->actionValidateToken();
+check('validate-token: garbage gets 401', 401, $result['code']);
+check('validate-token: generic message, no exception text', 'Invalid token', $result['message']);
+$module = apiApp(null, ['HTTP_AUTHORIZATION' => 'Bearer ' . jwtFor(API_ADMIN, STRONG_SECRET)]);
+$result = (new \giantbits\crelish\modules\api\controllers\AuthController('auth', $module))->actionValidateToken();
+check('validate-token: JWT disabled gets the generic message', ['code' => 401, 'message' => 'Invalid token'], ['code' => $result['code'], 'message' => $result['message']]);
+
 echo "\nEvery admin controller is guarded\n";
 foreach (glob(dirname(__DIR__) . '/controllers/*Controller.php') as $file) {
     $class = 'giantbits\\crelish\\controllers\\' . basename($file, '.php');
