@@ -128,6 +128,72 @@ class PagePreview
   }
 
   /**
+   * Why a page is not published: 'offline' (state 0 or unknown), 'draft' (1),
+   * 'archived' (3) or 'window' (online but outside from/to); null when published.
+   */
+  public static function unpublishedReason(object $page, ?int $now = null): ?string
+  {
+    if (ContentUrlResolver::isPublished($page, $now)) {
+      return null;
+    }
+
+    $state = self::attribute($page, 'state');
+
+    if ($state === null || (int)$state === ContentUrlResolver::STATE_ONLINE) {
+      return 'window';
+    }
+
+    return match ((int)$state) {
+      1 => 'draft',
+      3 => 'archived',
+      default => 'offline',
+    };
+  }
+
+  /**
+   * URL for the page frame of the admin edit view: the live URL (as before) for
+   * a published page, the signed preview URL otherwise, so editors see the page
+   * instead of a 404. Falls back to the live URL when previews are disabled.
+   */
+  public static function frameUrl(object $page, ?int $now = null): string
+  {
+    $liveUrl = Yii::$app->getRequest()->getHostInfo() . '/' . self::attribute($page, 'slug');
+
+    if (self::unpublishedReason($page, $now) === null || !self::isEnabled()) {
+      return $liveUrl;
+    }
+
+    try {
+      return self::url($page, $now) ?? $liveUrl;
+    } catch (\Throwable $e) {
+      Yii::warning('Page preview: no preview url for the page frame: ' . $e->getMessage(), 'crelish');
+      return $liveUrl;
+    }
+  }
+
+  /**
+   * Strip above the page frame telling the editor it shows a preview and why; empty when published.
+   */
+  public static function frameNotice(object $page, ?int $now = null): string
+  {
+    $label = match (self::unpublishedReason($page, $now)) {
+      null => null,
+      'draft' => Yii::t('crelish', 'Preview – page is a draft'),
+      'archived' => Yii::t('crelish', 'Preview – page is archived'),
+      'window' => Yii::t('crelish', 'Preview – page is outside its publication window'),
+      default => Yii::t('crelish', 'Preview – page is offline'),
+    };
+
+    if ($label === null) {
+      return '';
+    }
+
+    return '<div class="crelish-frame-notice border-top border-4 border-warning rounded-top pt-2 mb-2">'
+      . '<span class="badge text-bg-warning"><i class="fa-sharp fa-regular fa-eye"></i> ' . Html::encode($label) . '</span>'
+      . '</div>';
+  }
+
+  /**
    * Admin header bar: "Preview" (opens the signed URL in a new tab) and "Copy preview link".
    * Empty unless editing an existing page and previews are enabled.
    *

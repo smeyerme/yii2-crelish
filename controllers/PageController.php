@@ -5,6 +5,7 @@ namespace giantbits\crelish\controllers;
 use giantbits\crelish\components\CrelishDataManager;
 use giantbits\crelish\components\CrelishDynamicModel;
 use giantbits\crelish\components\CrelishBaseController;
+use giantbits\crelish\components\PagePreview;
 use yii\filters\AccessControl;
 use giantbits\crelish\components\CrelishArrayHelper;
 use Yii;
@@ -216,6 +217,9 @@ class PageController extends CrelishBaseController
       'content' => $content,
       'ctype' => $this->ctype,
       'uuid' => $this->uuid,
+      // Unpublished pages: signed preview URL plus a notice above the frame (no 404 in the frame)
+      'frameUrl' => $this->model ? PagePreview::frameUrl($this->model) : null,
+      'frameNotice' => $this->model ? PagePreview::frameNotice($this->model) : '',
     ]);
   }
 

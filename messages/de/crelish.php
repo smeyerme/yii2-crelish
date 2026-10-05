@@ -166,4 +166,8 @@ return [
   'Copy preview link' => 'Vorschau-Link kopieren',
   'Preview link copied' => 'Vorschau-Link kopiert',
   'Open preview (valid for {hours} h)' => 'Vorschau öffnen (gültig für {hours} Std.)',
+  'Preview – page is offline' => 'Vorschau – Seite ist offline',
+  'Preview – page is a draft' => 'Vorschau – Seite ist ein Entwurf',
+  'Preview – page is archived' => 'Vorschau – Seite ist archiviert',
+  'Preview – page is outside its publication window' => 'Vorschau – Seite ist außerhalb des Veröffentlichungszeitraums',
 ];

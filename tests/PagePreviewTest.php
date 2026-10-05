@@ -229,4 +229,42 @@ check('no buttons for a missing page', '', PagePreview::headerBarButtons('page',
 shortLinkApp(['previewSecret' => ''], [], ['components' => ['request' => ['cookieValidationKey' => '']]]);
 check('no buttons when previews are disabled', '', PagePreview::headerBarButtons('page', PREVIEW_PAGE, $finder, $now));
 
+echo "\nAdmin page frame\n";
+shortLinkApp();
+$at = fn(array $attributes) => (object)array_merge(['uuid' => PREVIEW_PAGE, 'slug' => 'programm', 'state' => 2], $attributes);
+check('reason: published page has none', null, PagePreview::unpublishedReason($at([]), $now));
+check('reason: state 0 is offline', 'offline', PagePreview::unpublishedReason($at(['state' => 0]), $now));
+check('reason: state "1" is a draft', 'draft', PagePreview::unpublishedReason($at(['state' => '1']), $now));
+check('reason: state 3 is archived', 'archived', PagePreview::unpublishedReason($at(['state' => 3]), $now));
+check('reason: unknown state counts as offline', 'offline', PagePreview::unpublishedReason($at(['state' => 7]), $now));
+check('reason: from in the future is outside the window', 'window', PagePreview::unpublishedReason($at(['from' => '2026-12-01']), $now));
+check('reason: to in the past is outside the window', 'window', PagePreview::unpublishedReason($at(['to' => '2026-01-31']), $now));
+check('reason: no state, inside the window', null, PagePreview::unpublishedReason($at(['state' => null, 'from' => '2026-01-01', 'to' => '2026-12-31']), $now));
+check('reason: state wins over the window', 'draft', PagePreview::unpublishedReason($at(['state' => 1, 'from' => '2026-12-01']), $now));
+
+$token = PagePreview::createToken(PREVIEW_PAGE, $now);
+check('frame url: published page keeps the live url', 'https://forum-holzbau.test/programm', PagePreview::frameUrl($at([]), $now));
+check('frame url: unpublished page gets the signed preview url', 'https://forum-holzbau.test/de/programm?preview=' . $token, PagePreview::frameUrl($at(['state' => 1]), $now));
+check('frame url: scheduled page gets the signed preview url', 'https://forum-holzbau.test/de/programm?preview=' . $token, PagePreview::frameUrl($at(['from' => '2026-12-01']), $now));
+check('frame url: page without slug', 'https://forum-holzbau.test/', PagePreview::frameUrl((object)['uuid' => PREVIEW_PAGE, 'state' => 1], $now));
+shortLinkApp(['previewSecret' => ''], [], ['components' => ['request' => ['cookieValidationKey' => '', 'enableCookieValidation' => false]]]);
+check('frame url: previews disabled falls back to the live url', 'https://forum-holzbau.test/programm', PagePreview::frameUrl($at(['state' => 1]), $now));
+
+shortLinkApp();
+check('frame notice: none for a published page', '', PagePreview::frameNotice($at([]), $now));
+$notices = [
+    'offline' => [0, null, 'Vorschau – Seite ist offline'],
+    'draft' => [1, null, 'Vorschau – Seite ist ein Entwurf'],
+    'archived' => [3, null, 'Vorschau – Seite ist archiviert'],
+    'window' => [2, '2026-12-01', 'Vorschau – Seite ist außerhalb des Veröffentlichungszeitraums'],
+];
+foreach ($notices as $reason => [$state, $from, $label]) {
+    $html = PagePreview::frameNotice($at(['state' => $state, 'from' => $from]), $now);
+    check("frame notice $reason: German label", true, str_contains($html, $label));
+    check("frame notice $reason: Bootstrap warning strip and badge", true, str_contains($html, 'border-warning') && str_contains($html, 'text-bg-warning'));
+    check("frame notice $reason: no hardcoded colours", 0, preg_match('/#[0-9a-f]{3,6}\b|rgb\(|style=/i', $html));
+}
+Yii::$app->language = 'en';
+check('frame notice: English source string', true, str_contains(PagePreview::frameNotice($at(['state' => 1]), $now), 'Preview – page is a draft'));
+
 shortLinkDone();
