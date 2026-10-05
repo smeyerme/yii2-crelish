@@ -243,12 +243,12 @@ check('reason: no state, inside the window', null, PagePreview::unpublishedReaso
 check('reason: state wins over the window', 'draft', PagePreview::unpublishedReason($at(['state' => 1, 'from' => '2026-12-01']), $now));
 
 $token = PagePreview::createToken(PREVIEW_PAGE, $now);
-check('frame url: published page keeps the live url', 'https://forum-holzbau.test/programm', PagePreview::frameUrl($at([]), $now));
+check('frame url: published page gets its live url in the default content language', 'https://forum-holzbau.test/de/programm', PagePreview::frameUrl($at([]), $now));
 check('frame url: unpublished page gets the signed preview url', 'https://forum-holzbau.test/de/programm?preview=' . $token, PagePreview::frameUrl($at(['state' => 1]), $now));
 check('frame url: scheduled page gets the signed preview url', 'https://forum-holzbau.test/de/programm?preview=' . $token, PagePreview::frameUrl($at(['from' => '2026-12-01']), $now));
 check('frame url: page without slug', 'https://forum-holzbau.test/', PagePreview::frameUrl((object)['uuid' => PREVIEW_PAGE, 'state' => 1], $now));
 shortLinkApp(['previewSecret' => ''], [], ['components' => ['request' => ['cookieValidationKey' => '', 'enableCookieValidation' => false]]]);
-check('frame url: previews disabled falls back to the live url', 'https://forum-holzbau.test/programm', PagePreview::frameUrl($at(['state' => 1]), $now));
+check('frame url: previews disabled falls back to the live url', 'https://forum-holzbau.test/de/programm', PagePreview::frameUrl($at(['state' => 1]), $now));
 
 shortLinkApp();
 check('frame notice: none for a published page', '', PagePreview::frameNotice($at([]), $now));
@@ -266,5 +266,44 @@ foreach ($notices as $reason => [$state, $from, $label]) {
 }
 Yii::$app->language = 'en';
 check('frame notice: English source string', true, str_contains(PagePreview::frameNotice($at(['state' => 1]), $now), 'Preview – page is a draft'));
+
+echo "\nPage frame reads the stored page\n";
+/**
+ * Stored page record (resolved for ctype "page" by CrelishModelResolver's legacy fallback)
+ */
+class PreviewTestPageRecord extends \yii\db\ActiveRecord
+{
+    public static function tableName(): string
+    {
+        return 'page';
+    }
+}
+class_alias(PreviewTestPageRecord::class, 'app\\workspace\\models\\Page');
+
+shortLinkApp();
+Yii::$app->db->createCommand()->createTable('page', [
+    'uuid' => 'varchar(36) NOT NULL PRIMARY KEY',
+    'slug' => 'varchar(255) NULL',
+    'state' => 'integer NULL',
+    'from' => 'varchar(32) NULL',
+    'to' => 'varchar(32) NULL',
+])->execute();
+Yii::$app->db->createCommand()->insert('page', ['uuid' => PREVIEW_PAGE, 'slug' => 'partner', 'state' => 0])->execute();
+Yii::$app->db->createCommand()->insert('page', ['uuid' => OTHER_PAGE, 'slug' => 'programm', 'state' => 2])->execute();
+
+// CrelishDynamicModel::loadModelData() skips empty values, so the form model of an offline page has no state
+$formModel = (object)['uuid' => PREVIEW_PAGE, 'slug' => 'partner'];
+check('form model without state looks published (the bug)', null, PagePreview::unpublishedReason($formModel, $now));
+
+$stored = PagePreview::framePage(PREVIEW_PAGE);
+check('framePage loads the stored page', 'partner', $stored->slug ?? null);
+check('stored offline page: reason offline', 'offline', PagePreview::unpublishedReason($stored, $now));
+check('stored offline page: frame gets the signed preview url', 'https://forum-holzbau.test/de/partner?preview=' . PagePreview::createToken(PREVIEW_PAGE, $now), PagePreview::frameUrl($stored, $now));
+check('stored offline page: notice shown', true, str_contains(PagePreview::frameNotice($stored, $now), 'Vorschau – Seite ist offline'));
+$live = PagePreview::framePage(OTHER_PAGE);
+check('stored published page: live url', 'https://forum-holzbau.test/de/programm', PagePreview::frameUrl($live, $now));
+check('stored published page: no notice', '', PagePreview::frameNotice($live, $now));
+check('framePage of an unknown uuid is null', null, PagePreview::framePage('c0000000-0000-4000-8000-000000000000'));
+check('framePage of an empty uuid is null', null, PagePreview::framePage(''));
 
 shortLinkDone();

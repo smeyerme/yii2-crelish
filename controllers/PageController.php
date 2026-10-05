@@ -212,14 +212,16 @@ class PageController extends CrelishBaseController
     $content = $this->buildForm();
 		
 		\Yii::$app->view->params['model'] = $this->model;
+    $framePage = is_string($this->uuid) ? PagePreview::framePage($this->uuid) : null;
 
     return $this->render('create.twig', [
       'content' => $content,
       'ctype' => $this->ctype,
       'uuid' => $this->uuid,
-      // Unpublished pages: signed preview URL plus a notice above the frame (no 404 in the frame)
-      'frameUrl' => $this->model ? PagePreview::frameUrl($this->model) : null,
-      'frameNotice' => $this->model ? PagePreview::frameNotice($this->model) : '',
+      // Unpublished pages: signed preview URL plus a notice above the frame (no 404 in the frame).
+      // Read from the stored page: the form model lacks empty values such as state 0.
+      'frameUrl' => $framePage ? PagePreview::frameUrl($framePage) : null,
+      'frameNotice' => $framePage ? PagePreview::frameNotice($framePage) : '',
     ]);
   }
 

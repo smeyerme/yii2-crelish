@@ -151,13 +151,17 @@ class PagePreview
   }
 
   /**
-   * URL for the page frame of the admin edit view: the live URL (as before) for
-   * a published page, the signed preview URL otherwise, so editors see the page
-   * instead of a 404. Falls back to the live URL when previews are disabled.
+   * URL for the page frame of the admin edit view: the live URL in the default
+   * content language for a published page, the signed preview URL otherwise, so
+   * editors see the page instead of a 404. Falls back to the live URL when
+   * previews are disabled. Pass the stored page (framePage()), not the form model.
    */
   public static function frameUrl(object $page, ?int $now = null): string
   {
-    $liveUrl = Yii::$app->getRequest()->getHostInfo() . '/' . self::attribute($page, 'slug');
+    $slug = (string)self::attribute($page, 'slug');
+    $liveUrl = $slug === ''
+      ? Yii::$app->getRequest()->getHostInfo() . '/'
+      : CrelishBaseHelper::urlFromSlug($slug, [], CrelishBaseHelper::defaultContentLanguage(), true);
 
     if (self::unpublishedReason($page, $now) === null || !self::isEnabled()) {
       return $liveUrl;
@@ -168,6 +172,26 @@ class PagePreview
     } catch (\Throwable $e) {
       Yii::warning('Page preview: no preview url for the page frame: ' . $e->getMessage(), 'crelish');
       return $liveUrl;
+    }
+  }
+
+  /**
+   * The stored page (default-language column values) for the admin page frame.
+   *
+   * Not the form model: CrelishDynamicModel::loadModelData() skips empty values,
+   * so state 0 (offline) never reaches it and the page would look published.
+   */
+  public static function framePage(string $uuid): ?object
+  {
+    if ($uuid === '') {
+      return null;
+    }
+
+    try {
+      return CrelishTranslationBehavior::withoutTranslations(static fn() => ContentUrlResolver::findRecord('page', $uuid));
+    } catch (\Throwable $e) {
+      Yii::warning('Page preview: page ' . $uuid . ' not loaded for the page frame: ' . $e->getMessage(), 'crelish');
+      return null;
     }
   }
 
