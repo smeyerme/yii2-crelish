@@ -10,6 +10,8 @@ use yii\filters\auth\QueryParamAuth as BaseQueryParamAuth;
  */
 class QueryParamAuth extends BaseQueryParamAuth
 {
+    use AuthenticatesIdentity;
+
     /**
      * @var bool whether to enable debug logging
      */
@@ -21,15 +23,15 @@ class QueryParamAuth extends BaseQueryParamAuth
     public $tryJwtDecode = true;
     
     /**
-     * @inheritdoc
+     * Identity for this request's credentials, or null (see AuthenticatesIdentity)
      */
-    public function authenticate($user, $request, $response)
+    protected function findIdentity($user, $request, $response)
     {
         $token = $request->get($this->tokenParam);
         
-        if (!empty($token)) {
+        if (is_string($token) && $token !== '') {
             if ($this->enableDebug) {
-                Yii::info("Found token in query param '{$this->tokenParam}': " . substr($token, 0, 20) . "...", __METHOD__);
+                Yii::info("Token present in query param '{$this->tokenParam}'", __METHOD__);
             }
             
             // First try: Standard method - use token directly
@@ -42,31 +44,16 @@ class QueryParamAuth extends BaseQueryParamAuth
                 return $identity;
             }
             
-            // Second try: Check if token is a numeric user ID
-            if (is_numeric($token)) {
-                if ($this->enableDebug) {
-                    Yii::info("Token is numeric, trying to find user by ID", __METHOD__);
-                }
-                
-                $identityClass = $user->identityClass;
-                $identity = $identityClass::findIdentity($token);
-                
-                if ($identity !== null) {
-                    if ($this->enableDebug) {
-                        Yii::info("User authenticated via numeric ID token", __METHOD__);
-                    }
-                    return $identity;
-                }
-            }
-            
-            // Third try: Check if token is a JWT with user info
+            // (A numeric token is no longer taken as a user id: knowing an id is not authentication)
+
+            // Second try: Check if token is a JWT with user info
             if ($this->tryJwtDecode) {
                 try {
                     if ($this->enableDebug) {
                         Yii::info("Attempting to decode token as JWT", __METHOD__);
                     }
                     
-                    $secretKey = Yii::$app->params['jwtSecretKey'] ?? 'your-secret-key-here';
+                    $secretKey = JwtSecret::requireKey(); // throws while JWT is disabled
                     $decoded = (array)\Firebase\JWT\JWT::decode($token, new \Firebase\JWT\Key($secretKey, 'HS256'));
                     
                     // Try to authenticate using the 'sub' field (user ID)

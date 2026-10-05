@@ -504,9 +504,9 @@ class ContentController extends CrelishBaseController
         break;
 
       case 'update':
-        // For update actions, add back button, clone, and save buttons (with delete)
+        // For update actions, add back button, preview (pages only), clone, and save buttons (with delete)
         $this->view->params['headerBarLeft'][] = 'back-button';
-        $this->view->params['headerBarRight'] = ['clone', ['save', true, true]];
+        $this->view->params['headerBarRight'] = ['preview', 'clone', ['save', true, true]];
         break;
 
       case 'selector':

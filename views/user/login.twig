@@ -93,6 +93,10 @@
       <p>{{ t('crelish', 'Enter your credentials to continue') }}</p>
     </div>
 
+    {% if setupMessage is defined and setupMessage %}
+      <div class="alert alert-warning" role="alert">{{ setupMessage }}</div>
+    {% endif %}
+
     {% set form = active_form_begin({
       'id': 'login'
     }) %}

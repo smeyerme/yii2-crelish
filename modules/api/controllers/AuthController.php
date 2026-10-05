@@ -10,6 +10,7 @@ use yii\filters\Cors;
 use yii\web\UnauthorizedHttpException;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
+use giantbits\crelish\modules\api\components\JwtSecret;
 
 /**
  * Auth controller for the API
@@ -40,15 +41,9 @@ class AuthController extends Controller
             'class' => VerbFilter::class,
             'actions' => [
                 'login' => ['post'],
-                'refresh' => ['post'],
                 'validate-token' => ['post', 'get'],
             ],
         ];
-        
-        // Make the debug endpoint accessible without authentication
-        if (isset($behaviors['authenticator'])) {
-            $behaviors['authenticator']['optional'][] = 'debug';
-        }
         
         return $behaviors;
     }
@@ -113,14 +108,14 @@ class AuthController extends Controller
             );
         }
         
-        // Generate JWT token
-        $jwtToken = $this->generateJwtToken($user, $accessToken);
+        // Generate JWT token (null while JWT is disabled; the access token still works)
+        $jwtToken = JwtSecret::isEnabled() ? $this->generateJwtToken($user, $accessToken) : null;
         
         // Return both tokens
         return $this->createResponse([
             'access_token' => $accessToken,  // The token stored in the database (authKey)
             'jwt_token' => $jwtToken,        // The JWT token for Bearer authentication
-            'expires_at' => time() + 3600,   // 1 hour expiration for JWT
+            'expires_at' => $jwtToken === null ? null : time() + 3600,   // 1 hour expiration for JWT
         ]);
     }
     
@@ -136,7 +131,8 @@ class AuthController extends Controller
         // Use Yii's user component for authentication
         $user = Yii::$app->user->identityClass::findByUsername($username);
         
-        if ($user && $user->validatePassword($password)) {
+        // Inactive accounts (state other than CrelishUser::STATE_ACTIVE) get no tokens
+        if ($user && \giantbits\crelish\components\CrelishUser::isActiveRecord($user) && $user->validatePassword($password)) {
             return $user;
         }
         
@@ -164,8 +160,8 @@ class AuthController extends Controller
             'access_token' => $accessToken,          // Include the database token in the JWT
         ];
         
-        // Secret key - should be stored in configuration
-        $key = Yii::$app->params['jwtSecretKey'] ?? 'your-secret-key-here';
+        // Secret key from params['jwtSecretKey']; throws while JWT is disabled
+        $key = JwtSecret::requireKey();
         
         // Generate token
         return JWT::encode($payload, $key, 'HS256');
@@ -219,7 +215,7 @@ class AuthController extends Controller
         
         try {
             // Decode JWT token
-            $key = Yii::$app->params['jwtSecretKey'] ?? 'your-secret-key-here';
+            $key = JwtSecret::requireKey(); // throws while JWT is disabled
             $decoded = JWT::decode($token, new Key($key, 'HS256'));
             
             // Verify token hasn't expired
@@ -263,33 +259,15 @@ class AuthController extends Controller
             ]);
             
         } catch (\Exception $e) {
+            // No exception text: it tells a caller why a forged token failed
+            Yii::info('validate-token: ' . get_class($e), __METHOD__);
             return $this->createResponse(
                 null,
                 false,
-                'Invalid token: ' . $e->getMessage(),
+                'Invalid token',
                 401
             );
         }
     }
     
-    /**
-     * Debug authentication
-     * 
-     * This endpoint will return debugging information about the current request's
-     * authentication status across multiple methods (JWT, Bearer, Query, Session).
-     * 
-     * @return array Debug information
-     */
-    public function actionDebug(): array
-    {
-        // Import the AuthDebug class
-        $debugInfo = \giantbits\crelish\modules\api\components\AuthDebug::debugAll();
-        
-        return $this->createResponse(
-            $debugInfo,
-            true,
-            'Authentication debug information',
-            200
-        );
-    }
 } 

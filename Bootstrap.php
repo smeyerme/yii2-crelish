@@ -193,6 +193,14 @@ class Bootstrap implements BootstrapInterface
       // If no existing config, use Crelish defaults (already set in $components)
     }
 
+    // Session cookie defaults (HttpOnly, SameSite=Lax, Secure on HTTPS); the project's session config wins
+    if (!$app->has('session', true)) {
+      $components['session'] = ComponentsConfig::sessionConfig(
+        $app->getComponents(true)['session'] ?? null,
+        $app->getRequest()->getIsSecureConnection()
+      );
+    }
+
     $app->setComponents($components);
   }
 

@@ -77,13 +77,11 @@ class SessionAuth extends AuthMethod
         $sessionName = Yii::$app->session->getName();
         $cookies = Yii::$app->request->cookies;
         $hasSessionCookie = $cookies->has($sessionName);
-        $sessionCookieValue = $hasSessionCookie ? substr($cookies->getValue($sessionName), 0, 10) . '...' : 'none';
         
         $details = [
             'session_active' => Yii::$app->session->isActive,
             'session_name' => $sessionName,
             'has_session_cookie' => $hasSessionCookie,
-            'session_cookie_value' => $sessionCookieValue,
             'user_is_guest' => Yii::$app->user->isGuest,
             'user_id' => Yii::$app->user->isGuest ? null : Yii::$app->user->id,
             'available_cookies' => array_keys($cookies->toArray()),

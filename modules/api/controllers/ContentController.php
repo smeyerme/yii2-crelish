@@ -2,6 +2,7 @@
 
 namespace giantbits\crelish\modules\api\controllers;
 
+use giantbits\crelish\components\CrelishAccess;
 use Yii;
 use yii\web\NotFoundHttpException;
 use yii\web\BadRequestHttpException;
@@ -20,20 +21,17 @@ class ContentController extends BaseController
   {
     $behaviors = parent::behaviors();
 
-    // Add specific access control to content endpoints
+    // Admin only (login + admin role) for every action; no guest access.
+    // The user deny stays as a second line should reads ever be opened to other roles.
+    $behaviors['authenticator']['optional'] = [];
     $behaviors['access'] = [
       'class' => 'yii\filters\AccessControl',
       'rules' => [
         [
-          'allow' => true,
-          'actions' => ['index', 'view'],
-          'roles' => ['?', '@'], // Allow both guest and authenticated users for read operations
+          'allow' => false,
+          'matchCallback' => static fn() => !CrelishAccess::isAdmin() && (!is_string($type = Yii::$app->request->get('type')) || strtolower($type) === 'user'),
         ],
-        [
-          'allow' => true,
-          'actions' => ['create', 'update', 'delete'],
-          'roles' => ['@'], // Only authenticated users for write operations
-        ],
+        CrelishAccess::adminRule(),
       ],
     ];
 

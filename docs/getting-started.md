@@ -152,12 +152,13 @@ After installation, you can access the admin panel at:
 https://your-domain.com/crelish
 ```
 
-The default login credentials are:
+Create the first admin on the server:
 
-- Username: `admin`
-- Password: `admin`
+```bash
+php yii crelish/admin/create-default-admin
+```
 
-**Important**: Change the default password immediately after your first login.
+Only in `YII_ENV_DEV` does the login page create a default admin (`admin@local.host`) when the user table is empty; change its password immediately.
 
 ### Creating Your First Content
 
@@ -206,6 +207,38 @@ your-project/
     └── giantbits/
         └── yii2-crelish/ (Crelish CMS files)
 ```
+
+## Previewing unpublished pages
+
+Pages that are offline (state other than 2) or outside their from/to window return 404 for everyone. To check or share such a page, open it in the admin and use the **Preview** button in the header bar of the edit view (pages only, not on create). It opens a signed preview link in a new tab; the link button next to it copies the link for sharing, e.g. with a client.
+
+The link is the page's normal URL in the default content language plus `?preview=<token>`. The token holds the page uuid and an expiry time and is signed (HMAC via `Yii::$app->security->hashData()`). It is valid only for that page and until it expires; a tampered, expired or foreign token gives the usual 404. A published page ignores the parameter and is served as normal, so the buttons are shown for published pages too.
+
+```php
+'params' => [
+    'crelish' => [
+        'previewTtl' => 86400,           // link lifetime in seconds (default: 24 hours)
+        'previewSecret' => '<random>',   // signing key, at least 32 characters; defaults to request.cookieValidationKey
+    ],
+],
+```
+
+Changing `previewSecret` (or the cookie validation key it falls back to) invalidates all issued links. A `previewSecret` that is not a string of at least 32 characters is ignored (with a warning in the log) and the cookie validation key is used. Without either key the buttons are hidden and no token validates.
+
+A preview response sends `X-Robots-Tag: noindex, nofollow`, `Cache-Control: no-store, private` and `Referrer-Policy: no-referrer`, adds `<meta name="robots" content="noindex, nofollow">` and `<meta name="referrer" content="no-referrer">`, is not tracked by analytics (so the token never ends up in the analytics tables), and shows a small dismissible bar at the top of the page ("Vorschau – diese Seite ist nicht veröffentlicht"). The bar is injected at `View::EVENT_BEGIN_BODY` with inline styles, so themes need no changes as long as their layout calls `beginBody()`.
+
+In the page edit view, the frame next to the form shows an unpublished page through a fresh preview link instead of the 404, with a warning strip above it naming the reason (offline, draft, archived, or outside the publication window). Published pages are framed with their normal URL.
+
+## Security
+
+- **Admin access** (everything under `/crelish/`) requires a logged-in user with role 9. Guests are sent to the login form, logged-in users without the admin role to the home page, and AJAX/JSON requests get a 403; the action does not run. The check is `CrelishAccess::guard()` in `CrelishBaseController::beforeAction()`; admin controllers on another base class use `CrelishAccess::adminRule()` in their AccessControl.
+- **Public exceptions** are listed in `CrelishAccess::PUBLIC_ROUTES`: `user/login`, `user/logout`, `asset/glide` and `asset/download` (images and downloads of the public site), `track/click` (frontend click tracking). The frontend, short link redirects and the API module are separate controllers.
+- **API** (`/crelish-api/content/...`) requires an admin (login + role 9) for every action: the admin session, an access token, or a JWT. There is no debug endpoint.
+- **Login** is by email and password only, and only for active accounts (state 2). Offline, draft/pending and archived users cannot log in, their sessions end and their tokens stop working.
+- **Session cookie**: Crelish sets `httponly`, `sameSite: Lax` and, on HTTPS requests, `secure` as defaults; anything in the project's own `session` config wins.
+- **`jwtSecretKey`** (`params['jwtSecretKey']`) must be a random string of at least 32 characters. If it is missing, shorter, or one of the shipped placeholders, JWT authentication is off (no tokens are issued or accepted, a warning is logged); session and access-token authentication still work.
+- **`previewSecret`** (`params['crelish']['previewSecret']`) must be at least 32 characters, otherwise the cookie validation key signs preview links.
+- **Translations** (admin, Translations) only write existing message files of the configured languages.
 
 ## Translations
 

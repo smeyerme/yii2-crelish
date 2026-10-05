@@ -2,7 +2,8 @@
 	<div class="split">
 		<div>{{ content | raw }}</div>
 		<div>
-			<iframe id="page-frame" src="{{ app.request.hostInfo }}/{{ app.view.params.model.slug }}" ></iframe>
+			{{ frameNotice|default('')|raw }}
+			<iframe id="page-frame" src="{{ frameUrl ?? (app.request.hostInfo ~ '/' ~ app.view.params.model.slug) }}" ></iframe>
 		</div>
 	</div>
 </div>
