@@ -51,9 +51,10 @@ class AssetController extends CrelishBaseController
         'class' => AccessControl::class,
         'rules' => [
           [
+            // Public frontend media (see CrelishAccess::PUBLIC_ROUTES); everything else, incl. api-*, is admin only
             'allow' => true,
-            'actions' => ['login', 'glide', 'download', 'api-search', 'api-get', 'api-upload', 'api-upload-chunk', 'api-finalize-upload', 'api-delete'],
-            'roles' => ['?', '@'], // Allow both guests and authenticated users to access these endpoints
+            'actions' => ['glide', 'download'],
+            'roles' => ['?', '@'],
           ],
           [
             'allow' => true,
@@ -68,6 +69,9 @@ class AssetController extends CrelishBaseController
   public function init()
   {
     parent::init();
+    // The admin's asset widgets (asset-connector, image-editor, newsletter image selector)
+    // POST to api-* via fetch() without a CSRF token, so CSRF validation stays off here.
+    // These actions are admin only (CrelishAccess guard + rules above).
     $this->enableCsrfValidation = false;
   }
 

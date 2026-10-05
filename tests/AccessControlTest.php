@@ -196,6 +196,17 @@ accessApp(1);
 check('role 1: user logout runs', true, $result);
 check('public routes are listed in one place', ['user/login', 'user/logout', 'asset/glide', 'asset/download', 'track/click'], array_keys(CrelishAccess::PUBLIC_ROUTES));
 
+echo "\nAsset API is not open to guests\n";
+accessApp();
+$guestActions = [];
+foreach ((new \giantbits\crelish\controllers\AssetController('asset', Yii::$app))->behaviors()['access']['rules'] as $rule) {
+    if (in_array('?', $rule['roles'] ?? [], true)) {
+        $guestActions = array_merge($guestActions, $rule['actions'] ?? ['*']);
+    }
+}
+sort($guestActions);
+check('asset: only glide and download allow guests', ['download', 'glide'], $guestActions);
+
 echo "\nEvery admin controller is guarded\n";
 foreach (glob(dirname(__DIR__) . '/controllers/*Controller.php') as $file) {
     $class = 'giantbits\\crelish\\controllers\\' . basename($file, '.php');
