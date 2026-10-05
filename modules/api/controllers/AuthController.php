@@ -10,6 +10,7 @@ use yii\filters\Cors;
 use yii\web\UnauthorizedHttpException;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
+use giantbits\crelish\modules\api\components\JwtSecret;
 
 /**
  * Auth controller for the API
@@ -113,14 +114,14 @@ class AuthController extends Controller
             );
         }
         
-        // Generate JWT token
-        $jwtToken = $this->generateJwtToken($user, $accessToken);
+        // Generate JWT token (null while JWT is disabled; the access token still works)
+        $jwtToken = JwtSecret::isEnabled() ? $this->generateJwtToken($user, $accessToken) : null;
         
         // Return both tokens
         return $this->createResponse([
             'access_token' => $accessToken,  // The token stored in the database (authKey)
             'jwt_token' => $jwtToken,        // The JWT token for Bearer authentication
-            'expires_at' => time() + 3600,   // 1 hour expiration for JWT
+            'expires_at' => $jwtToken === null ? null : time() + 3600,   // 1 hour expiration for JWT
         ]);
     }
     
@@ -164,8 +165,8 @@ class AuthController extends Controller
             'access_token' => $accessToken,          // Include the database token in the JWT
         ];
         
-        // Secret key - should be stored in configuration
-        $key = Yii::$app->params['jwtSecretKey'] ?? 'your-secret-key-here';
+        // Secret key from params['jwtSecretKey']; throws while JWT is disabled
+        $key = JwtSecret::requireKey();
         
         // Generate token
         return JWT::encode($payload, $key, 'HS256');
@@ -219,7 +220,7 @@ class AuthController extends Controller
         
         try {
             // Decode JWT token
-            $key = Yii::$app->params['jwtSecretKey'] ?? 'your-secret-key-here';
+            $key = JwtSecret::requireKey(); // throws while JWT is disabled
             $decoded = JWT::decode($token, new Key($key, 'HS256'));
             
             // Verify token hasn't expired

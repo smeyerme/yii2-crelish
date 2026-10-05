@@ -286,6 +286,105 @@ $link = $docsDir . '/access-test-link-' . getmypid() . '.md';
 check('docs: a symlink pointing outside is not served', null, $docs->docFile(basename($link, '.md')));
 @unlink($link);
 
+echo "\nAPI module\n";
+const API_ADMIN = 'a0000000-0000-4000-8000-0000000000a9';
+const STRONG_SECRET = 'a-long-random-jwt-secret-for-the-tests-0123456789';
+
+/**
+ * Fresh app with a user table, CrelishUser as identity class and the API module.
+ */
+function apiApp(mixed $role = null, array $server = [], array $appParams = []): \giantbits\crelish\modules\api\Module
+{
+    $app = accessApp($role, $server);
+    $app->params = array_merge($app->params, $appParams);
+    $app->user->identityClass = \giantbits\crelish\components\CrelishUser::class;
+    $app->db->createCommand()->createTable('user', [
+        'uuid' => 'varchar(36) NOT NULL PRIMARY KEY',
+        'email' => 'varchar(255) NULL',
+        'authKey' => 'varchar(255) NULL',
+        'role' => 'integer NULL',
+        'state' => 'integer NULL',
+    ])->execute();
+    $app->db->createCommand()->insert('user', ['uuid' => API_ADMIN, 'email' => 'admin@example.test', 'authKey' => 'admin-auth-key-0123456789', 'role' => 9, 'state' => 2])->execute();
+    $app->db->createCommand()->insert('user', ['uuid' => 'a0000000-0000-4000-8000-0000000000e0', 'email' => 'empty@example.test', 'authKey' => '', 'role' => 9, 'state' => 2])->execute();
+
+    $module = new \giantbits\crelish\modules\api\Module('crelish-api', $app);
+    $app->setModule('crelish-api', $module);
+
+    return $module;
+}
+
+class AccessTestUserRecord extends \yii\db\ActiveRecord
+{
+    public static function tableName(): string
+    {
+        return 'user';
+    }
+}
+class_alias(AccessTestUserRecord::class, 'app\\workspace\\models\\User');
+
+/**
+ * Run the API content controller's beforeAction with these query params.
+ */
+function apiGuard(\giantbits\crelish\modules\api\Module $module, string $actionId, array $query): bool|string
+{
+    Yii::$app->request->setQueryParams($query);
+
+    try {
+        $controller = new \giantbits\crelish\modules\api\controllers\ContentController('content', $module);
+        $action = $controller->createAction($actionId);
+        $controller->action = $action;
+        return $controller->beforeAction($action);
+    } catch (\Throwable $e) {
+        return get_class($e);
+    }
+}
+
+function jwtFor(string $sub, string $key): string
+{
+    return \Firebase\JWT\JWT::encode(['iat' => time(), 'exp' => time() + 3600, 'sub' => $sub], $key, 'HS256');
+}
+
+$unauthorized = \yii\web\UnauthorizedHttpException::class;
+$forbidden = \yii\web\ForbiddenHttpException::class;
+check('api guest: index is unauthorized', $unauthorized, apiGuard(apiApp(), 'index', ['type' => 'page']));
+check('api guest: view is unauthorized', $unauthorized, apiGuard(apiApp(), 'view', ['type' => 'page', 'id' => 'x']));
+check('api guest: user list is unauthorized', $unauthorized, apiGuard(apiApp(), 'index', ['type' => 'user']));
+check('api session admin: index passes', true, apiGuard(apiApp(9), 'index', ['type' => 'page']));
+check('api session admin: user list passes', true, apiGuard(apiApp(9), 'index', ['type' => 'user']));
+check('api session admin: create passes', true, apiGuard(apiApp(9), 'create', ['type' => 'page']));
+check('api role 1: page list passes', true, apiGuard(apiApp(1), 'index', ['type' => 'page']));
+check('api role 1: user list is forbidden', $forbidden, apiGuard(apiApp(1), 'index', ['type' => 'user']));
+check('api role 1: user record is forbidden', $forbidden, apiGuard(apiApp(1), 'view', ['type' => 'user', 'id' => API_ADMIN]));
+check('api role 1: create is forbidden', $forbidden, apiGuard(apiApp(1), 'create', ['type' => 'page']));
+check('api role 1: delete is forbidden', $forbidden, apiGuard(apiApp(1), 'delete', ['type' => 'page', 'id' => 'x']));
+
+echo "\nAPI tokens\n";
+check('numeric access_token is no login', $unauthorized, apiGuard(apiApp(null, ['QUERY_STRING' => '']), 'index', ['type' => 'page', 'access_token' => '1']));
+check('empty bearer token is no login', $unauthorized, apiGuard(apiApp(null, ['HTTP_AUTHORIZATION' => 'Bearer ']), 'index', ['type' => 'page']));
+check('auth key as access_token still logs in', true, apiGuard(apiApp(), 'index', ['type' => 'page', 'access_token' => 'admin-auth-key-0123456789']));
+apiApp();
+check('findIdentity of an unknown user is null', null, \giantbits\crelish\components\CrelishUser::findIdentity('no-such-user'));
+check('findIdentityByAccessToken of an empty token is null', null, \giantbits\crelish\components\CrelishUser::findIdentityByAccessToken(''));
+
+use giantbits\crelish\modules\api\components\JwtSecret;
+
+foreach (['missing' => [], 'the built-in default' => ['jwtSecretKey' => 'your-secret-key-here'], 'the config/params.php default' => ['jwtSecretKey' => 'your-secret-key-change-this-in-production'], 'a short secret' => ['jwtSecretKey' => 'short-secret'], 'a non-string' => ['jwtSecretKey' => 12345678901234567890123456789012345]] as $name => $appParams) {
+    apiApp(null, [], $appParams);
+    check("jwt secret $name: JWT is disabled", false, JwtSecret::isEnabled());
+    check("jwt secret $name: no default is put into params", $appParams['jwtSecretKey'] ?? null, Yii::$app->params['jwtSecretKey'] ?? null);
+}
+$forgedDefault = jwtFor(API_ADMIN, 'your-secret-key-here');
+check('jwt forged with the default key: bearer is unauthorized', $unauthorized, apiGuard(apiApp(null, ['HTTP_AUTHORIZATION' => 'Bearer ' . $forgedDefault]), 'index', ['type' => 'page']));
+check('jwt forged with the default key: query param is unauthorized', $unauthorized, apiGuard(apiApp(), 'index', ['type' => 'page', 'access_token' => $forgedDefault]));
+$short = jwtFor(API_ADMIN, str_repeat('k', 31));
+check('jwt with a 31-char secret: bearer is unauthorized', $unauthorized, apiGuard(apiApp(null, ['HTTP_AUTHORIZATION' => 'Bearer ' . $short], ['jwtSecretKey' => str_repeat('k', 31)]), 'index', ['type' => 'page']));
+apiApp(null, [], ['jwtSecretKey' => STRONG_SECRET]);
+check('jwt with a strong secret is enabled', true, JwtSecret::isEnabled());
+check('jwt with a strong secret: valid token logs in', true, apiGuard(apiApp(null, ['HTTP_AUTHORIZATION' => 'Bearer ' . jwtFor(API_ADMIN, STRONG_SECRET)], ['jwtSecretKey' => STRONG_SECRET]), 'index', ['type' => 'page']));
+check('jwt with a strong secret: token signed with another key is unauthorized', $unauthorized, apiGuard(apiApp(null, ['HTTP_AUTHORIZATION' => 'Bearer ' . $forgedDefault], ['jwtSecretKey' => STRONG_SECRET]), 'index', ['type' => 'page']));
+check('jwt with a strong secret: unknown sub is unauthorized', $unauthorized, apiGuard(apiApp(null, ['HTTP_AUTHORIZATION' => 'Bearer ' . jwtFor('nobody', STRONG_SECRET)], ['jwtSecretKey' => STRONG_SECRET]), 'index', ['type' => 'page']));
+
 echo "\nEvery admin controller is guarded\n";
 foreach (glob(dirname(__DIR__) . '/controllers/*Controller.php') as $file) {
     $class = 'giantbits\\crelish\\controllers\\' . basename($file, '.php');

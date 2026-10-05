@@ -45,7 +45,7 @@ class AuthDebug
             
             try {
                 // Decode JWT token
-                $key = Yii::$app->params['jwtSecretKey'] ?? 'your-secret-key-here';
+                $key = JwtSecret::requireKey(); // throws while JWT is disabled
                 $decoded = (array)JWT::decode($token, new Key($key, 'HS256'));
                 
                 $result['jwt_decode_success'] = true;

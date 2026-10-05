@@ -160,7 +160,17 @@
 		 */
 		public static function findIdentity($id)
 		{
-			$user = User::findOne(['uuid' => $id]);
+			if (!is_scalar($id) || (string)$id === '') {
+				return null;
+			}
+
+			$user = User::findOne(['uuid' => (string)$id]);
+
+			// IdentityInterface: null when there is no such user (an empty identity would count as logged in)
+			if ($user === null) {
+				return null;
+			}
+
 			$userData = new static($user);
 			
 			if (class_exists('Company')) {
@@ -182,6 +192,11 @@
 		 */
 		public static function findIdentityByAccessToken($token, $type = null)
 		{
+			// An empty token must not match users whose authKey is empty
+			if (!is_string($token) || $token === '') {
+				return null;
+			}
+
 			Yii::info("Looking for user with token: " . substr($token, 0, 10) . "...", __METHOD__);
 			
 			// First try to find user by authKey (standard token)
@@ -197,7 +212,7 @@
 			if ($type && (strpos($type, 'JwtHttpBearerAuth') !== false)) {
 				try {
 					// Try to decode the token to get the user ID
-					$key = \Yii::$app->params['jwtSecretKey'] ?? 'your-secret-key-here';
+					$key = \giantbits\crelish\modules\api\components\JwtSecret::requireKey(); // throws while JWT is disabled
 					$decoded = (array)\Firebase\JWT\JWT::decode($token, new \Firebase\JWT\Key($key, 'HS256'));
 					
 					if (isset($decoded['sub'])) {
