@@ -252,6 +252,19 @@ check('translation index rejects a traversal language', $bad, $result);
 $rules = $controller->behaviors()['access']['rules'] ?? [];
 check('translation controller has an AccessControl rule for logged-in users', true, ($controller->behaviors()['access']['class'] ?? null) === \yii\filters\AccessControl::class && in_array(['allow' => true, 'roles' => ['@']], $rules, true));
 
+echo "\nAdmin controllers outside CrelishBaseController\n";
+$target = [\giantbits\crelish\controllers\ContentTargetController::class, 'content-target', 'search'];
+accessApp();
+[$result] = runGuard(...$target);
+check('content-target: guest is stopped', true, $result !== true);
+accessApp(1);
+[$result] = runGuard(...$target);
+check('content-target: role 1 is forbidden', \yii\web\ForbiddenHttpException::class, strtok((string)$result, ':'));
+accessApp(9);
+[$result] = runGuard(...$target);
+check('content-target: admin passes', true, $result);
+check('adminRule requires login', ['@'], CrelishAccess::adminRule()['roles']);
+
 echo "\nEvery admin controller is guarded\n";
 foreach (glob(dirname(__DIR__) . '/controllers/*Controller.php') as $file) {
     $class = 'giantbits\\crelish\\controllers\\' . basename($file, '.php');
