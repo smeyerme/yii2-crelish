@@ -99,6 +99,39 @@ class ComponentsConfig
   }
 
   /**
+   * Session component definition with Crelish's cookie defaults: HttpOnly,
+   * SameSite=Lax (admin endpoints that run without CSRF validation rely on it)
+   * and Secure when the request is HTTPS (plain-http dev keeps working).
+   * Everything in the project's own session config wins; an already
+   * instantiated session is returned unchanged.
+   *
+   * @param mixed $existing the application's current session definition
+   * @return mixed the definition to set
+   */
+  public static function sessionConfig(mixed $existing, bool $secureRequest): mixed
+  {
+    if (is_object($existing) && !$existing instanceof \Closure) {
+      return $existing;
+    }
+
+    if (is_string($existing)) {
+      $existing = ['class' => $existing];
+    }
+
+    if (!is_array($existing)) {
+      $existing = [];
+    }
+
+    $cookieParams = ['httponly' => true, 'sameSite' => 'Lax'];
+
+    if ($secureRequest) {
+      $cookieParams['secure'] = true;
+    }
+
+    return \yii\helpers\ArrayHelper::merge(['class' => 'yii\web\Session', 'cookieParams' => $cookieParams], $existing);
+  }
+
+  /**
    * Get user component configuration
    */
   private static function getUserConfig(): array

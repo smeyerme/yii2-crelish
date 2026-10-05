@@ -1,7 +1,7 @@
 # Menus follow-ups: triaged fixes
 
 Date: 2026-09-30
-Status: A, B and C were released in 0.23.2. D and the "Found while doing A–C" items are implemented on feature/menus-followups-2 (2026-10-01). E1 was fixed in forum-holzbau (SitemapController filters pages by their publication window). E2 is open (product decision). One new Important item is at the top.
+Status: A, B and C were released in 0.23.2. D and the "Found while doing A–C" items are implemented on feature/menus-followups-2 (2026-10-01). E1 was fixed in forum-holzbau (SitemapController filters pages by their publication window). E2 is implemented in 0.24.0 (signed preview links). One new Important item is at the top.
 Source: deferred findings from the per-task reviews, the final whole-branch review and the browser checks of the menus feature (0.23.0).
 Already handled in 0.23.1: unpublished pages now return 404, and crelish's own translations are used, plus the `crelish-translations/prune` command.
 
@@ -101,6 +101,7 @@ Verification: `npm run build`, then a browser check of each item in light and da
 **E1. Sitemap and other page listings.** Check whether the sitemap, search or page listings include unpublished pages. Since 0.23.1 those return 404, so listing them now produces dead links.
 
 **E2. Editor preview of offline pages.** 0.23.1 returns 404 for everyone, as decided. If editors need previews, add an opt-in, for example a signed preview URL from the page edit view, rather than letting logged-in users bypass the rule.
+*Implemented in 0.24.0:* `PagePreview` signs `?preview=` tokens (page uuid + expiry, `previewSecret`/cookie key, `previewTtl`); `CrelishFrontendController` serves an unpublished page with a valid token as a noindex/no-store preview with a banner; the page edit header bar has Preview and Copy preview link buttons. Docs: getting-started.md, "Previewing unpublished pages". Test: tests/PagePreviewTest.php.
 
 ## Not worth fixing (and why)
 
@@ -144,3 +145,15 @@ Collected from the group reviews and the final review. None blocks a release.
 ## Open after 0.23.6 (i18n)
 
 - **Plugin widgets and JSON editors still show the default value in translation tabs.** `buildCustomOrDefaultField()`/`buildWidgetField()` pass the column value as `data` for translation fields, and the three JSON editors fall back to it. Rendering them empty is not safe as is: an empty JSON editor posts its schema default (`[]`, `{}` or default-filled objects), which would be stored as a translation and blank out the default. Needs a decision (e.g. treat empty/schema-default JSON as "no translation" on POST). The POST identical-value check already drops untouched copies that come back byte-identical.
+
+## Security hardening in 0.24.0
+
+Found in a security review of the admin (all pre-existing except the preview items). Docs: getting-started.md, "Security". Tests: `tests/AccessControlTest.php`, `tests/PagePreviewTest.php`.
+
+- **The admin guard did not stop the action.** `CrelishBaseController::init()` only queued a redirect for guests and users with role < 9; the action still ran. The guard is now `CrelishAccess::guard()` in `beforeAction()` (login redirect for guests, home for non-admins, 403 for AJAX/JSON), with the public routes in `CrelishAccess::PUBLIC_ROUTES`. `ContentTargetController` uses `CrelishAccess::adminRule()`.
+- **Guests could upload, search and delete assets** via `asset/api-*`. Only `glide` and `download` stay public. CSRF stays off for the asset controller because the admin widgets post via fetch() without a token.
+- **Translation save wrote any `.php` path.** Language and category are now allow-listed (configured languages / application language, existing message files).
+- **Documentation `read` followed `../`.** Page names are restricted and must resolve inside the docs directory.
+- **API open to guests, forgeable JWTs.** `crelish-api/content` requires authentication (writes and `user` records: admin). No default `jwtSecretKey`; JWT is off unless the secret is a non-placeholder of >= 32 characters. `CrelishUser::findIdentity()` returns null for unknown ids, empty access tokens match nobody, numeric `?access_token=` is no longer a user id.
+- **Preview:** preview visits are not tracked, preview responses send `Referrer-Policy: no-referrer`, a `previewSecret` under 32 characters is ignored with a warning. The admin page frame loads unpublished pages through the preview link and shows why the page is not published.
+- **Second review round:** the login form logged in by posted uuid without a password (removed; email + password only). Session cookie defaults HttpOnly / SameSite=Lax / Secure on HTTPS (project config wins). The API content endpoints are admin only. Disabled accounts (state other than 2) get no identity, token or API login. `auth/debug` is removed, `validate-token` errors are generic, tokens and session cookie values are no longer logged. The default admin is only created in `YII_ENV_DEV`.

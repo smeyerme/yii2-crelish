@@ -3,6 +3,7 @@
 namespace giantbits\crelish\controllers;
 
 use giantbits\crelish\components\ContentTargetSearch;
+use giantbits\crelish\components\CrelishAccess;
 use yii\filters\AccessControl;
 use yii\web\Controller;
 use yii\web\Response;
@@ -17,7 +18,8 @@ class ContentTargetController extends Controller
     return [
       'access' => [
         'class' => AccessControl::class,
-        'rules' => [['allow' => true, 'roles' => ['@']]],
+        // Admin only (login + admin role), like every CrelishBaseController
+        'rules' => [CrelishAccess::adminRule()],
       ],
     ];
   }

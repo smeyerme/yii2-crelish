@@ -205,8 +205,13 @@
 			}
 
 			// Unpublished pages (state != 2 or outside from/to) count as not found; db gives ActiveRecord, json gives array.
+			// Exception: a page with a valid signed ?preview= token is served as a preview (noindex, no-store, banner).
 			if ($entryModel !== null && !ContentUrlResolver::isPublished((object)$entryModel)) {
-				$entryModel = null;
+				if ($ctype === 'page' && PagePreview::shouldServe((object)$entryModel, \Yii::$app->request->get(PagePreview::PARAM))) {
+					PagePreview::registerPreviewMode(Yii::$app->view, Yii::$app->response);
+				} else {
+					$entryModel = null;
+				}
 			}
 
 			// 404 Not found fallback (also handles unsupported language)

@@ -5,6 +5,7 @@ namespace giantbits\crelish\controllers;
 use giantbits\crelish\components\CrelishDataManager;
 use giantbits\crelish\components\CrelishDynamicModel;
 use giantbits\crelish\components\CrelishBaseController;
+use giantbits\crelish\components\PagePreview;
 use yii\filters\AccessControl;
 use giantbits\crelish\components\CrelishArrayHelper;
 use Yii;
@@ -18,7 +19,7 @@ class PageController extends CrelishBaseController
     return [
       'access' => [
         'class' => AccessControl::class,
-        'only' => ['create', 'index', 'delete'],
+        'only' => ['create', 'index', 'delete', 'update'],
         'rules' => [
           [
             'allow' => true,
@@ -99,7 +100,7 @@ class PageController extends CrelishBaseController
       case 'update':
         // For update actions, add back button and save buttons (with delete)
         $this->view->params['headerBarLeft'][] = 'back-button';
-        $this->view->params['headerBarRight'] = [['save', true, true]]; // Show save and return, with delete
+        $this->view->params['headerBarRight'] = ['preview', ['save', true, true]]; // Preview link, save and return, with delete
         break;
         
       default:
@@ -211,11 +212,16 @@ class PageController extends CrelishBaseController
     $content = $this->buildForm();
 		
 		\Yii::$app->view->params['model'] = $this->model;
+    $framePage = is_string($this->uuid) ? PagePreview::framePage($this->uuid) : null;
 
     return $this->render('create.twig', [
       'content' => $content,
       'ctype' => $this->ctype,
       'uuid' => $this->uuid,
+      // Unpublished pages: signed preview URL plus a notice above the frame (no 404 in the frame).
+      // Read from the stored page: the form model lacks empty values such as state 0.
+      'frameUrl' => $framePage ? PagePreview::frameUrl($framePage) : null,
+      'frameNotice' => $framePage ? PagePreview::frameNotice($framePage) : '',
     ]);
   }
 

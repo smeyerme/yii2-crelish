@@ -5,7 +5,9 @@ namespace giantbits\crelish\controllers;
 use giantbits\crelish\components\CrelishBaseController;
 use giantbits\crelish\components\CrelishTranslationService;
 use Yii;
+use yii\filters\AccessControl;
 use yii\helpers\Html;
+use yii\web\BadRequestHttpException;
 use yii\web\Response;
 
 class TranslationController extends CrelishBaseController
@@ -43,7 +45,24 @@ class TranslationController extends CrelishBaseController
 	
 	public function actionSave($language)
 	{
+		$language = $this->validLanguage($language);
 		$allTranslations = Yii::$app->request->post('Translations', []);
+
+		if (!is_array($allTranslations)) {
+			throw new BadRequestHttpException('Invalid translations.');
+		}
+
+		// Validate everything before writing anything
+		$known = array_map(static fn($file) => basename($file, '.php'), $this->getTranslationFiles($language));
+		foreach ($allTranslations as $category => $translations) {
+			if (!is_string($category) || !preg_match('/^[A-Za-z0-9_-]+$/', $category) || !in_array($category, $known, true)) {
+				throw new BadRequestHttpException('Unknown translation category.');
+			}
+			if (!is_array($translations)) {
+				throw new BadRequestHttpException('Invalid translations.');
+			}
+		}
+
 		foreach ($allTranslations as $category => $translations) {
 			$content = "<?php\nreturn " . var_export($translations, true) . ";\n";
 			$path = Yii::getAlias('@app/messages/' . $language . '/' . $category . '.php');
@@ -55,6 +74,25 @@ class TranslationController extends CrelishBaseController
 		Yii::$app->session->setFlash('success', 'Translations updated successfully.');
 		return $this->redirect(['/crelish/translation/index', 'language' => $language]);
 	}
+
+	/**
+	 * The language selector offers params[crelish][languages]; without a ?language=
+	 * the index uses the application language. Anything else is rejected, so the
+	 * value can never point outside @app/messages.
+	 *
+	 * @throws BadRequestHttpException
+	 */
+	protected function validLanguage($language): string
+	{
+		$allowed = Yii::$app->params['crelish']['languages'] ?? [];
+		$allowed[] = Yii::$app->language;
+
+		if (!is_string($language) || !preg_match('/^[A-Za-z]{2,3}([_-][A-Za-z0-9]{2,8})*$/', $language) || !in_array($language, $allowed, true)) {
+			throw new BadRequestHttpException('Invalid language.');
+		}
+
+		return $language;
+	}
 	
 	
 	public function actionIndex($language = null)
@@ -62,6 +100,7 @@ class TranslationController extends CrelishBaseController
       if(!$language) {
         $language = Yii::$app->language;
       }
+      $language = $this->validLanguage($language);
 
 		$translations = $this->getAllTranslations($language);
 		
@@ -214,7 +253,14 @@ class TranslationController extends CrelishBaseController
 	{
 		$behaviors = parent::behaviors();
 
-		// Allow AJAX requests for translate action
+		// Logged-in users only; the admin role is enforced by the CrelishBaseController guard
+		$behaviors['access'] = [
+			'class' => AccessControl::class,
+			'rules' => [
+				['allow' => true, 'roles' => ['@']],
+			],
+		];
+
 		return $behaviors;
 	}
 

@@ -13,6 +13,8 @@ use Firebase\JWT\ExpiredException;
  */
 class JwtHttpBearerAuth extends AuthMethod
 {
+    use AuthenticatesIdentity;
+
     /**
      * @var string the HTTP header name
      */
@@ -34,9 +36,9 @@ class JwtHttpBearerAuth extends AuthMethod
     public $allowDirectJwtAuth = true;
 
     /**
-     * @inheritdoc
+     * Identity for this request's credentials, or null (see AuthenticatesIdentity)
      */
-    public function authenticate($user, $request, $response)
+    protected function findIdentity($user, $request, $response)
     {
         $authHeader = $request->getHeaders()->get($this->header);
         
@@ -48,7 +50,7 @@ class JwtHttpBearerAuth extends AuthMethod
         }
         
         if ($this->enableDebug) {
-            Yii::info("Processing {$this->header} header: " . substr($authHeader, 0, 20) . "...", __METHOD__);
+            Yii::info("Processing {$this->header} header", __METHOD__);
         }
         
         if (!preg_match($this->pattern, $authHeader, $matches)) {
@@ -66,7 +68,7 @@ class JwtHttpBearerAuth extends AuthMethod
         
         try {
             // Decode JWT token using updated method signature with Key object
-            $secretKey = Yii::$app->params['jwtSecretKey'] ?? 'your-secret-key-here';
+            $secretKey = JwtSecret::requireKey(); // throws while JWT is disabled
             $decoded = (array)JWT::decode($token, new Key($secretKey, 'HS256'));
             
             if ($this->enableDebug) {

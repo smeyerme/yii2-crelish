@@ -105,35 +105,65 @@
 		public $stripeId;
 		public $cardBrand;
 		public $cardLastFour;
+
+		/** Users with this state can log in and authenticate; 0 offline, 1 draft (e.g. pending registration), 3 archived cannot */
+		public const STATE_ACTIVE = 2;
+
+		/**
+		 * Whether a user record (or identity) belongs to an active account.
+		 */
+		public static function isActiveRecord($user): bool
+		{
+			if ($user === null || $user === false) {
+				return false;
+			}
+
+			$state = $user->state ?? null;
+
+			return is_numeric($state) && (int)$state === self::STATE_ACTIVE;
+		}
+
+		public function isActive(): bool
+		{
+			return self::isActiveRecord($this);
+		}
 		
-		/**'
-		 * [crelishLogin description].
+		/**
+		 * Logs a user in with email and password (admin login form, frontend login widgets).
 		 *
-		 * @param [type] $data [description]
+		 * Only active users (state 2) with a matching password are logged in. Any other key in
+		 * $data, such as "uuid", is ignored: this is fed with request data, and a uuid is no secret.
 		 *
-		 * @return [type] [description]
+		 * @param mixed $data ['email' => ..., 'password' => ...], usually straight from the POST
+		 * @return bool whether the user is logged in
 		 */
 		public static function crelishLogin($data)
 		{
-			
-			// Fetch the single wanted user only.
-			if (!empty($data['uuid'])) {
-				$user = User::findOne(['uuid' => $data['uuid']]);
-				if (!empty($user) && $user->state == 2) {
-					$user->initials = substr($user->nameFirst, 0, 1) . substr($user->nameLast, 0, 1);
-					return \Yii::$app->user->login(new static($user), 3600);
-				}
-			} else {
-				$user = User::findOne(['email' => $data['email']]);
-				if (!empty($user) && $user->state == 2) {
-					if (\Yii::$app->getSecurity()->validatePassword($data['password'], $user['password'])) {
-						$user->initials = substr($user->nameFirst, 0, 1) . substr($user->nameLast, 0, 1);
-						return \Yii::$app->user->login(new static($user), 3600);
-					}
-				}
+			$email = is_array($data) ? ($data['email'] ?? null) : null;
+			$password = is_array($data) ? ($data['password'] ?? null) : null;
+
+			if (!is_string($email) || $email === '' || !is_string($password) || $password === '') {
+				return false;
 			}
-			
-			return false;
+
+			$user = User::findOne(['email' => $email]);
+
+			if (!self::isActiveRecord($user) || !is_string($user['password']) || $user['password'] === '') {
+				return false;
+			}
+
+			try {
+				if (!\Yii::$app->getSecurity()->validatePassword($password, $user['password'])) {
+					return false;
+				}
+			} catch (\yii\base\InvalidArgumentException $e) {
+				// stored value is no password hash
+				return false;
+			}
+
+			$user->initials = substr((string)$user->nameFirst, 0, 1) . substr((string)$user->nameLast, 0, 1);
+
+			return \Yii::$app->user->login(new static($user), 3600);
 		}
 		
 		public function getInitials()
@@ -160,7 +190,18 @@
 		 */
 		public static function findIdentity($id)
 		{
-			$user = User::findOne(['uuid' => $id]);
+			if (!is_scalar($id) || (string)$id === '') {
+				return null;
+			}
+
+			$user = User::findOne(['uuid' => (string)$id]);
+
+			// IdentityInterface: null when there is no such user (an empty identity would count as
+			// logged in) or the account is not active (ends the sessions of disabled users)
+			if (!self::isActiveRecord($user)) {
+				return null;
+			}
+
 			$userData = new static($user);
 			
 			if (class_exists('Company')) {
@@ -182,14 +223,18 @@
 		 */
 		public static function findIdentityByAccessToken($token, $type = null)
 		{
-			Yii::info("Looking for user with token: " . substr($token, 0, 10) . "...", __METHOD__);
+			// An empty token must not match users whose authKey is empty
+			if (!is_string($token) || $token === '') {
+				return null;
+			}
+
 			
 			// First try to find user by authKey (standard token)
 			$user = User::findOne(['authKey' => $token]);
 			
 			if ($user) {
-				Yii::info("User found by authKey", __METHOD__);
-				return new static($user);
+				// An inactive account's token authenticates nobody (and no JWT fallback either)
+				return self::isActiveRecord($user) ? new static($user) : null;
 			}
 			
 			// If the type is JwtHttpBearerAuth, the token is already verified by the component
@@ -197,14 +242,14 @@
 			if ($type && (strpos($type, 'JwtHttpBearerAuth') !== false)) {
 				try {
 					// Try to decode the token to get the user ID
-					$key = \Yii::$app->params['jwtSecretKey'] ?? 'your-secret-key-here';
+					$key = \giantbits\crelish\modules\api\components\JwtSecret::requireKey(); // throws while JWT is disabled
 					$decoded = (array)\Firebase\JWT\JWT::decode($token, new \Firebase\JWT\Key($key, 'HS256'));
 					
 					if (isset($decoded['sub'])) {
 						$userId = $decoded['sub'];
 						$user = User::findOne(['uuid' => $userId]);
 						
-						if ($user) {
+						if (self::isActiveRecord($user)) {
 							Yii::info("User found by JWT payload (sub)", __METHOD__);
 							return new static($user);
 						}

@@ -3,6 +3,7 @@
 namespace giantbits\crelish\components\widgets;
 
 use giantbits\crelish\components\CrelishBaseHelper;
+use giantbits\crelish\components\PagePreview;
 use Yii;
 use yii\base\Widget;
 use yii\helpers\Html;
@@ -582,6 +583,14 @@ class HeaderBar extends Widget
              . '" title="' . \Yii::t('crelish', 'Clone') . '">'
              . '<i class="fa-sharp fa-regular fa-copy"></i>'
              . '</a>';
+      },
+      'preview' => function () {
+        // Signed preview link of the page being edited; renders nothing for other content types
+        $controller = \Yii::$app->controller;
+        $ctype = ($controller->ctype ?? null) ?: \Yii::$app->request->get('ctype');
+        $uuid = \Yii::$app->request->get('uuid');
+
+        return PagePreview::headerBarButtons(is_string($ctype) ? $ctype : null, is_string($uuid) ? $uuid : null);
       },
       'delete' => function () {
         return '<button class="c-button c-button--error btn-delete-grid hidden">

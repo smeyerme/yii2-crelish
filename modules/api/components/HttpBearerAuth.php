@@ -12,6 +12,8 @@ use Firebase\JWT\Key;
  */
 class HttpBearerAuth extends BaseHttpBearerAuth
 {
+  use AuthenticatesIdentity;
+
   /**
    * @var bool whether to enable debug logging
    */
@@ -23,9 +25,9 @@ class HttpBearerAuth extends BaseHttpBearerAuth
   public $tryJwtDecode = true;
 
   /**
-   * @inheritdoc
+   * Identity for this request's credentials, or null (see AuthenticatesIdentity)
    */
-  public function authenticate($user, $request, $response)
+  protected function findIdentity($user, $request, $response)
   {
     $authHeader = $request->getHeaders()->get($this->header);
 
@@ -37,7 +39,7 @@ class HttpBearerAuth extends BaseHttpBearerAuth
     }
 
     if ($this->enableDebug) {
-      Yii::info("Processing {$this->header} header: " . substr($authHeader, 0, 20) . "...", __METHOD__);
+      Yii::info("Processing {$this->header} header", __METHOD__);
     }
 
     if (!preg_match($this->pattern, $authHeader, $matches)) {
@@ -50,7 +52,7 @@ class HttpBearerAuth extends BaseHttpBearerAuth
     $token = $matches[1];
 
     if ($this->enableDebug) {
-      Yii::info("Extracted token: " . substr($token, 0, 10) . "...", __METHOD__);
+      Yii::info("Bearer token present", __METHOD__);
     }
 
     // STEP 1: Try authenticating with the token directly
@@ -76,11 +78,11 @@ class HttpBearerAuth extends BaseHttpBearerAuth
           Yii::info("Trying JWT token decoding", __METHOD__);
         }
 
-        $secretKey = Yii::$app->params['jwtSecretKey'] ?? 'your-secret-key-here';
+        $secretKey = JwtSecret::requireKey(); // throws while JWT is disabled
         $decoded = (array)JWT::decode($token, new Key($secretKey, 'HS256'));
 
         if ($this->enableDebug) {
-          Yii::info("JWT decoded successfully. Payload: " . json_encode($decoded), __METHOD__);
+          Yii::info("JWT decoded successfully", __METHOD__);
         }
 
         // Try authenticating with user ID from JWT

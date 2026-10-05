@@ -2,6 +2,7 @@
 
 namespace giantbits\crelish\modules\api;
 
+use giantbits\crelish\modules\api\components\JwtSecret;
 use Yii;
 use yii\filters\auth\CompositeAuth;
 use yii\filters\auth\HttpBearerAuth;
@@ -87,10 +88,10 @@ class Module extends \yii\base\Module
             ],
         ];
         
-        // Set a default JWT secret key if not defined
-        if (!isset(Yii::$app->params['jwtSecretKey'])) {
-            Yii::$app->params['jwtSecretKey'] = 'your-secret-key-here';
-            Yii::warning('Using default JWT secret key. Please set a secure key in your application parameters.', __METHOD__);
+        // No default key: a known key would let anyone forge tokens. Without a usable
+        // params['jwtSecretKey'] JWT authentication is off (session and access tokens still work).
+        if (!JwtSecret::isEnabled()) {
+            Yii::warning('JWT authentication is disabled: set params[jwtSecretKey] to a random secret of at least ' . JwtSecret::MIN_LENGTH . ' characters to enable it.', __METHOD__);
         }
     }
 } 
