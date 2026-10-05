@@ -99,7 +99,7 @@ class PageController extends CrelishBaseController
       case 'update':
         // For update actions, add back button and save buttons (with delete)
         $this->view->params['headerBarLeft'][] = 'back-button';
-        $this->view->params['headerBarRight'] = [['save', true, true]]; // Show save and return, with delete
+        $this->view->params['headerBarRight'] = ['preview', ['save', true, true]]; // Preview link, save and return, with delete
         break;
         
       default:

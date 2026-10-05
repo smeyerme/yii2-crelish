@@ -131,4 +131,19 @@ $body = ob_get_clean();
 check('banner rendered at the start of the body', true, str_contains($body, 'Vorschau – diese Seite ist nicht veröffentlicht'));
 check('banner is marked as preview banner', true, str_contains($body, 'crelish-preview-banner'));
 
+echo "\nAdmin header bar buttons\n";
+shortLinkApp();
+$finder = fn(string $ctype, string $uuid) => $ctype === 'page' && $uuid === PREVIEW_PAGE ? $draft : null;
+$buttons = PagePreview::headerBarButtons('page', PREVIEW_PAGE, $finder, $now);
+$token = PagePreview::createToken(PREVIEW_PAGE, $now);
+$expectedUrl = 'https://forum-holzbau.test/de/programm?preview=' . $token;
+check('preview button opens the signed url in a new tab', true, str_contains($buttons, 'href="' . $expectedUrl . '" target="_blank" rel="noopener noreferrer"'));
+check('copy button carries the signed url', true, str_contains($buttons, 'data-preview-url="' . $expectedUrl . '"'));
+check('buttons use c-button', true, str_contains($buttons, 'class="c-button'));
+check('no buttons for other content types', '', PagePreview::headerBarButtons('news', PREVIEW_PAGE, $finder, $now));
+check('no buttons without uuid (create)', '', PagePreview::headerBarButtons('page', null, $finder, $now));
+check('no buttons for a missing page', '', PagePreview::headerBarButtons('page', OTHER_PAGE, $finder, $now));
+shortLinkApp(['previewSecret' => ''], [], ['components' => ['request' => ['cookieValidationKey' => '']]]);
+check('no buttons when previews are disabled', '', PagePreview::headerBarButtons('page', PREVIEW_PAGE, $finder, $now));
+
 shortLinkDone();

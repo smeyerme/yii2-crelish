@@ -124,6 +124,84 @@ class PagePreview
   }
 
   /**
+   * Admin header bar: "Preview" (opens the signed URL in a new tab) and "Copy preview link".
+   * Empty unless editing an existing page and previews are enabled.
+   *
+   * @param callable(string, string): ?object|null $recordFinder defaults to ContentUrlResolver::findRecord
+   */
+  public static function headerBarButtons(?string $ctype, ?string $uuid, ?callable $recordFinder = null, ?int $now = null): string
+  {
+    if ($ctype !== 'page' || $uuid === null || $uuid === '' || !self::isEnabled()) {
+      return '';
+    }
+
+    try {
+      $page = ($recordFinder ?? [ContentUrlResolver::class, 'findRecord'])('page', $uuid);
+      $url = $page === null ? null : self::url($page, $now);
+    } catch (\Throwable $e) {
+      Yii::warning('Page preview: no preview link for ' . $uuid . ': ' . $e->getMessage(), 'crelish');
+      return '';
+    }
+
+    if ($url === null) {
+      return '';
+    }
+
+    $href = Html::encode($url);
+    $previewTitle = Html::encode(Yii::t('crelish', 'Open preview (valid for {hours} h)', ['hours' => round(self::ttl() / 3600, 1)]));
+    $copyTitle = Html::encode(Yii::t('crelish', 'Copy preview link'));
+    $copied = Html::encode(Yii::t('crelish', 'Preview link copied'));
+
+    self::registerCopyScript();
+
+    return '<span class="c-input-group crelish-preview-buttons">'
+      . '<a class="c-button btn-preview" href="' . $href . '" target="_blank" rel="noopener noreferrer" title="' . $previewTitle . '">'
+      . '<i class="fa-sharp fa-regular fa-eye"></i> ' . Html::encode(Yii::t('crelish', 'Preview'))
+      . '</a>'
+      . '<button type="button" class="c-button btn-copy-preview" data-preview-url="' . $href . '" data-copied="' . $copied . '"'
+      . ' title="' . $copyTitle . '" aria-label="' . $copyTitle . '">'
+      . '<i class="fa-sharp fa-regular fa-link"></i>'
+      . '</button>'
+      . '</span>';
+  }
+
+  private static function registerCopyScript(): void
+  {
+    if (!Yii::$app->has('view')) {
+      return;
+    }
+
+    $js = <<<JS
+      document.addEventListener('click', function (event) {
+        var button = event.target.closest('.btn-copy-preview');
+        if (!button) {
+          return;
+        }
+        var url = button.getAttribute('data-preview-url');
+        var done = function () {
+          var icon = button.querySelector('i');
+          var title = button.getAttribute('title');
+          icon.className = 'fa-sharp fa-regular fa-check';
+          button.setAttribute('title', button.getAttribute('data-copied'));
+          setTimeout(function () {
+            icon.className = 'fa-sharp fa-regular fa-link';
+            button.setAttribute('title', title);
+          }, 2000);
+        };
+        if (navigator.clipboard && window.isSecureContext) {
+          navigator.clipboard.writeText(url).then(done, function () {
+            window.prompt(button.getAttribute('title'), url);
+          });
+        } else {
+          window.prompt(button.getAttribute('title'), url);
+        }
+      });
+      JS;
+
+    Yii::$app->view->registerJs($js, View::POS_END, 'crelish-preview-copy');
+  }
+
+  /**
    * Keep the preview out of search engines and caches, and mark it with a banner.
    */
   public static function registerPreviewMode(View $view, Response $response): void
