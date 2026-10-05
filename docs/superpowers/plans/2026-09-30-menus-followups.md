@@ -145,3 +145,14 @@ Collected from the group reviews and the final review. None blocks a release.
 ## Open after 0.23.6 (i18n)
 
 - **Plugin widgets and JSON editors still show the default value in translation tabs.** `buildCustomOrDefaultField()`/`buildWidgetField()` pass the column value as `data` for translation fields, and the three JSON editors fall back to it. Rendering them empty is not safe as is: an empty JSON editor posts its schema default (`[]`, `{}` or default-filled objects), which would be stored as a translation and blank out the default. Needs a decision (e.g. treat empty/schema-default JSON as "no translation" on POST). The POST identical-value check already drops untouched copies that come back byte-identical.
+
+## Security hardening in 0.24.0
+
+Found in a security review of the admin (all pre-existing except the preview items). Docs: getting-started.md, "Security". Tests: `tests/AccessControlTest.php`, `tests/PagePreviewTest.php`.
+
+- **The admin guard did not stop the action.** `CrelishBaseController::init()` only queued a redirect for guests and users with role < 9; the action still ran. The guard is now `CrelishAccess::guard()` in `beforeAction()` (login redirect for guests, home for non-admins, 403 for AJAX/JSON), with the public routes in `CrelishAccess::PUBLIC_ROUTES`. `ContentTargetController` uses `CrelishAccess::adminRule()`.
+- **Guests could upload, search and delete assets** via `asset/api-*`. Only `glide` and `download` stay public. CSRF stays off for the asset controller because the admin widgets post via fetch() without a token.
+- **Translation save wrote any `.php` path.** Language and category are now allow-listed (configured languages / application language, existing message files).
+- **Documentation `read` followed `../`.** Page names are restricted and must resolve inside the docs directory.
+- **API open to guests, forgeable JWTs.** `crelish-api/content` requires authentication (writes and `user` records: admin). No default `jwtSecretKey`; JWT is off unless the secret is a non-placeholder of >= 32 characters. `CrelishUser::findIdentity()` returns null for unknown ids, empty access tokens match nobody, numeric `?access_token=` is no longer a user id.
+- **Preview:** preview visits are not tracked, preview responses send `Referrer-Policy: no-referrer`, a `previewSecret` under 32 characters is ignored with a warning. The admin page frame loads unpublished pages through the preview link and shows why the page is not published.
