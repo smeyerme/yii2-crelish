@@ -424,6 +424,55 @@ check('login: then the admin passes the guard', true, (function (): bool {
     return CrelishAccess::isAdmin();
 })());
 
+echo "\nDisabled accounts\n";
+const DISABLED_USER = 'a0000000-0000-4000-8000-0000000000d0';
+
+/**
+ * API app with an extra admin account in the given state.
+ */
+function disabledApp(mixed $state, array $server = [], array $appParams = []): \giantbits\crelish\modules\api\Module
+{
+    $module = apiApp(null, $server, $appParams);
+    Yii::$app->db->createCommand()->insert('user', [
+        'uuid' => DISABLED_USER, 'email' => 'disabled@example.test', 'authKey' => 'disabled-auth-key-0123456789',
+        'role' => 9, 'state' => $state, 'password' => ADMIN_PASSWORD_HASH,
+    ])->execute();
+
+    return $module;
+}
+
+/**
+ * API auth/login with these credentials; returns the response code.
+ */
+function apiLogin(\giantbits\crelish\modules\api\Module $module, string $username, string $password): int
+{
+    Yii::$app->request->setBodyParams(['username' => $username, 'password' => $password]);
+    $result = (new \giantbits\crelish\modules\api\controllers\AuthController('auth', $module))->actionLogin();
+
+    return $result['code'];
+}
+
+use giantbits\crelish\components\CrelishUser;
+
+foreach ([0 => 'offline', 1 => 'draft/pending', 3 => 'archived'] as $state => $name) {
+    $module = disabledApp($state);
+    check("state $state ($name): findIdentity is null", null, CrelishUser::findIdentity(DISABLED_USER));
+    check("state $state ($name): findIdentityByAccessToken is null", null, CrelishUser::findIdentityByAccessToken('disabled-auth-key-0123456789'));
+    check("state $state ($name): API login is refused", 401, apiLogin($module, 'disabled@example.test', ADMIN_PASSWORD));
+    check("state $state ($name): login form is refused", false, (bool)CrelishUser::crelishLogin(['email' => 'disabled@example.test', 'password' => ADMIN_PASSWORD]));
+    check("state $state ($name): access_token is unauthorized", $unauthorized, apiGuard(disabledApp($state), 'index', ['type' => 'page', 'access_token' => 'disabled-auth-key-0123456789']));
+    check("state $state ($name): JWT is unauthorized", $unauthorized, apiGuard(disabledApp($state, ['HTTP_AUTHORIZATION' => 'Bearer ' . jwtFor(DISABLED_USER, STRONG_SECRET)], ['jwtSecretKey' => STRONG_SECRET]), 'index', ['type' => 'page']));
+}
+$module = disabledApp(2);
+check('state 2: findIdentity works', DISABLED_USER, CrelishUser::findIdentity(DISABLED_USER)?->getId());
+check('state 2: findIdentityByAccessToken works', DISABLED_USER, CrelishUser::findIdentityByAccessToken('disabled-auth-key-0123456789')?->getId());
+check('state 2: API login works', 200, apiLogin($module, 'disabled@example.test', ADMIN_PASSWORD));
+check('API login with a wrong password is refused', 401, apiLogin(apiApp(), 'admin@example.test', 'wrong'));
+check('state "2" (string) is active', DISABLED_USER, (function () {
+    disabledApp('2');
+    return CrelishUser::findIdentity(DISABLED_USER)?->getId();
+})());
+
 echo "\nEvery admin controller is guarded\n";
 foreach (glob(dirname(__DIR__) . '/controllers/*Controller.php') as $file) {
     $class = 'giantbits\\crelish\\controllers\\' . basename($file, '.php');

@@ -137,7 +137,8 @@ class AuthController extends Controller
         // Use Yii's user component for authentication
         $user = Yii::$app->user->identityClass::findByUsername($username);
         
-        if ($user && $user->validatePassword($password)) {
+        // Inactive accounts (state other than CrelishUser::STATE_ACTIVE) get no tokens
+        if ($user && \giantbits\crelish\components\CrelishUser::isActiveRecord($user) && $user->validatePassword($password)) {
             return $user;
         }
         

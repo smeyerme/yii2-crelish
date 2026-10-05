@@ -105,6 +105,28 @@
 		public $stripeId;
 		public $cardBrand;
 		public $cardLastFour;
+
+		/** Users with this state can log in and authenticate; 0 offline, 1 draft (e.g. pending registration), 3 archived cannot */
+		public const STATE_ACTIVE = 2;
+
+		/**
+		 * Whether a user record (or identity) belongs to an active account.
+		 */
+		public static function isActiveRecord($user): bool
+		{
+			if ($user === null || $user === false) {
+				return false;
+			}
+
+			$state = $user->state ?? null;
+
+			return is_numeric($state) && (int)$state === self::STATE_ACTIVE;
+		}
+
+		public function isActive(): bool
+		{
+			return self::isActiveRecord($this);
+		}
 		
 		/**
 		 * Logs a user in with email and password (admin login form, frontend login widgets).
@@ -126,7 +148,7 @@
 
 			$user = User::findOne(['email' => $email]);
 
-			if (empty($user) || $user->state != 2 || !is_string($user['password']) || $user['password'] === '') {
+			if (!self::isActiveRecord($user) || !is_string($user['password']) || $user['password'] === '') {
 				return false;
 			}
 
@@ -174,8 +196,9 @@
 
 			$user = User::findOne(['uuid' => (string)$id]);
 
-			// IdentityInterface: null when there is no such user (an empty identity would count as logged in)
-			if ($user === null) {
+			// IdentityInterface: null when there is no such user (an empty identity would count as
+			// logged in) or the account is not active (ends the sessions of disabled users)
+			if (!self::isActiveRecord($user)) {
 				return null;
 			}
 
@@ -211,8 +234,8 @@
 			$user = User::findOne(['authKey' => $token]);
 			
 			if ($user) {
-				Yii::info("User found by authKey", __METHOD__);
-				return new static($user);
+				// An inactive account's token authenticates nobody (and no JWT fallback either)
+				return self::isActiveRecord($user) ? new static($user) : null;
 			}
 			
 			// If the type is JwtHttpBearerAuth, the token is already verified by the component
@@ -227,7 +250,7 @@
 						$userId = $decoded['sub'];
 						$user = User::findOne(['uuid' => $userId]);
 						
-						if ($user) {
+						if (self::isActiveRecord($user)) {
 							Yii::info("User found by JWT payload (sub)", __METHOD__);
 							return new static($user);
 						}
