@@ -52,13 +52,6 @@ class CrelishBaseController extends Controller
 
       Yii::$app->view->registerJs($js, \yii\web\View::POS_HEAD);
     }
-
-    if ((Yii::$app->user->isGuest || Yii::$app->user->identity->role < 9)
-      && Yii::$app->requestedRoute != 'crelish/user/login'
-      && Yii::$app->requestedRoute != 'crelish/asset/glide'
-      && !str_starts_with(Yii::$app->requestedRoute, 'crelish/asset/api-')) {
-      return Yii::$app->response->redirect(['/']);
-    }
   }
 
   public function behaviors()
@@ -78,6 +71,12 @@ class CrelishBaseController extends Controller
    */
   public function beforeAction($action)
   {
+    // Admin guard first: guests and users without the admin role are stopped
+    // here, except on the public routes listed in CrelishAccess::PUBLIC_ROUTES
+    if (!CrelishAccess::guard($action)) {
+      return false;
+    }
+
     if (!parent::beforeAction($action)) {
       return false;
     }
