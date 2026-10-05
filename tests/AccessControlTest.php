@@ -361,7 +361,10 @@ check('api guest: user list is unauthorized', $unauthorized, apiGuard(apiApp(), 
 check('api session admin: index passes', true, apiGuard(apiApp(9), 'index', ['type' => 'page']));
 check('api session admin: user list passes', true, apiGuard(apiApp(9), 'index', ['type' => 'user']));
 check('api session admin: create passes', true, apiGuard(apiApp(9), 'create', ['type' => 'page']));
-check('api role 1: page list passes', true, apiGuard(apiApp(1), 'index', ['type' => 'page']));
+check('api role 1: page list is forbidden', $forbidden, apiGuard(apiApp(1), 'index', ['type' => 'page']));
+check('api role 1: page record is forbidden', $forbidden, apiGuard(apiApp(1), 'view', ['type' => 'page', 'id' => 'x']));
+check('api role 1: "User" (other case) is forbidden', $forbidden, apiGuard(apiApp(1), 'index', ['type' => 'User']));
+check('api session admin: "User" passes', true, apiGuard(apiApp(9), 'index', ['type' => 'User']));
 check('api role 1: user list is forbidden', $forbidden, apiGuard(apiApp(1), 'index', ['type' => 'user']));
 check('api role 1: user record is forbidden', $forbidden, apiGuard(apiApp(1), 'view', ['type' => 'user', 'id' => API_ADMIN]));
 check('api role 1: create is forbidden', $forbidden, apiGuard(apiApp(1), 'create', ['type' => 'page']));

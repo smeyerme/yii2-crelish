@@ -21,22 +21,17 @@ class ContentController extends BaseController
   {
     $behaviors = parent::behaviors();
 
-    // No guest access. Reads need a login; writes and user records need the admin role.
+    // Admin only (login + admin role) for every action; no guest access.
+    // The user deny stays as a second line should reads ever be opened to other roles.
     $behaviors['authenticator']['optional'] = [];
     $behaviors['access'] = [
       'class' => 'yii\filters\AccessControl',
       'rules' => [
         [
           'allow' => false,
-          'roles' => ['@'],
-          'matchCallback' => static fn() => Yii::$app->request->get('type') === 'user' && !CrelishAccess::isAdmin(),
+          'matchCallback' => static fn() => !CrelishAccess::isAdmin() && (!is_string($type = Yii::$app->request->get('type')) || strtolower($type) === 'user'),
         ],
-        [
-          'allow' => true,
-          'actions' => ['index', 'view'],
-          'roles' => ['@'],
-        ],
-        CrelishAccess::adminRule(['actions' => ['create', 'update', 'delete']]),
+        CrelishAccess::adminRule(),
       ],
     ];
 
