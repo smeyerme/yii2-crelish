@@ -66,7 +66,7 @@ check('configured TTL: expired after', false, PagePreview::validateToken($short,
 echo "\nKeys\n";
 shortLinkApp();
 $byCookieKey = PagePreview::createToken(PREVIEW_PAGE, $now);
-shortLinkApp(['previewSecret' => 'a-dedicated-preview-secret']);
+shortLinkApp(['previewSecret' => 'a-dedicated-preview-secret-of-32-chars']);
 $bySecret = PagePreview::createToken(PREVIEW_PAGE, $now);
 check('previewSecret signs differently than the cookie key', false, $bySecret === $byCookieKey);
 check('previewSecret token is valid with the secret', true, PagePreview::validateToken($bySecret, PREVIEW_PAGE, $now));
@@ -184,6 +184,35 @@ shortLinkApp();
 PagePreview::registerPreviewMode(Yii::$app->view, Yii::$app->response);
 check('Referrer-Policy header', 'no-referrer', Yii::$app->response->headers->get('Referrer-Policy'));
 check('referrer meta tag', true, str_contains(implode('', Yii::$app->view->metaTags), '<meta name="referrer" content="no-referrer">'));
+
+echo "\npreviewSecret must be a string of at least 32 characters\n";
+shortLinkApp();
+$byCookieKey = PagePreview::createToken(PREVIEW_PAGE, $now);
+foreach (['a short string' => 'too-short-secret', 'a 31-char string' => str_repeat('s', 31), 'an integer' => 12345678901234567890, 'an array' => [str_repeat('s', 40)], 'true' => true] as $name => $secret) {
+    shortLinkApp(['previewSecret' => $secret]);
+    check("previewSecret $name is ignored (cookie key signs)", $byCookieKey, PagePreview::createToken(PREVIEW_PAGE, $now));
+}
+shortLinkApp(['previewSecret' => str_repeat('s', 32)]);
+check('previewSecret of 32 characters is used', false, PagePreview::createToken(PREVIEW_PAGE, $now) === $byCookieKey);
+$logger = new class extends \yii\log\Logger {
+    public array $warnings = [];
+
+    public function log($message, $level, $category = 'application')
+    {
+        if ($level === self::LEVEL_WARNING) {
+            $this->warnings[] = $message;
+        }
+    }
+};
+shortLinkApp(['previewSecret' => 'too-short-secret']);
+Yii::setLogger($logger);
+PagePreview::createToken(PREVIEW_PAGE, $now);
+check('an ignored previewSecret logs a warning', true, (bool)array_filter($logger->warnings, fn($m) => is_string($m) && str_contains($m, 'previewSecret')));
+$logger->warnings = [];
+shortLinkApp(['previewSecret' => '']);
+PagePreview::createToken(PREVIEW_PAGE, $now);
+check('an empty previewSecret (unset) logs nothing', [], $logger->warnings);
+Yii::setLogger(null);
 
 echo "\nAdmin header bar buttons\n";
 shortLinkApp();

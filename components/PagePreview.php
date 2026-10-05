@@ -14,8 +14,9 @@ use yii\web\View;
  *
  * A token carries the page uuid and an expiry timestamp, signed with
  * Security::hashData() (HMAC) and base64url encoded for the query string.
- * Key: params['crelish']['previewSecret'], else the request's
- * cookieValidationKey; without either, previews are disabled.
+ * Key: params['crelish']['previewSecret'] (a string of at least 32 characters,
+ * otherwise ignored with a warning), else the request's cookieValidationKey;
+ * without either, previews are disabled.
  * TTL: params['crelish']['previewTtl'] seconds, default 86400.
  */
 class PagePreview
@@ -26,6 +27,9 @@ class PagePreview
   /** Payload version/purpose marker, keeps these signatures apart from other uses of the same key */
   private const PREFIX = 'p1';
   private const MAX_TOKEN_LENGTH = 512;
+  public const MIN_SECRET_LENGTH = 32;
+
+  private static ?int $warnedApp = null;
 
   public static function isEnabled(): bool
   {
@@ -250,8 +254,15 @@ class PagePreview
   {
     $secret = Yii::$app->params['crelish']['previewSecret'] ?? null;
 
-    if (is_string($secret) && $secret !== '') {
+    if (is_string($secret) && strlen($secret) >= self::MIN_SECRET_LENGTH) {
       return $secret;
+    }
+
+    // Set but unusable: ignore it (fall back to the cookie key), warn once per application
+    if ($secret !== null && $secret !== '' && self::$warnedApp !== spl_object_id(Yii::$app)) {
+      self::$warnedApp = spl_object_id(Yii::$app);
+      Yii::warning('Page preview: params[crelish][previewSecret] is ignored, it must be a string of at least '
+        . self::MIN_SECRET_LENGTH . ' characters; using request.cookieValidationKey.', 'crelish');
     }
 
     $request = Yii::$app->has('request') ? Yii::$app->getRequest() : null;
