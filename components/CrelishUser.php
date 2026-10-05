@@ -228,7 +228,6 @@
 				return null;
 			}
 
-			Yii::info("Looking for user with token: " . substr($token, 0, 10) . "...", __METHOD__);
 			
 			// First try to find user by authKey (standard token)
 			$user = User::findOne(['authKey' => $token]);

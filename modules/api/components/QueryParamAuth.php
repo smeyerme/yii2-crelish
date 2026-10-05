@@ -31,7 +31,7 @@ class QueryParamAuth extends BaseQueryParamAuth
         
         if (is_string($token) && $token !== '') {
             if ($this->enableDebug) {
-                Yii::info("Found token in query param '{$this->tokenParam}': " . substr($token, 0, 20) . "...", __METHOD__);
+                Yii::info("Token present in query param '{$this->tokenParam}'", __METHOD__);
             }
             
             // First try: Standard method - use token directly

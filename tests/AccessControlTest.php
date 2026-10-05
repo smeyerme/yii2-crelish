@@ -486,6 +486,55 @@ $module = apiApp(null, ['HTTP_AUTHORIZATION' => 'Bearer ' . jwtFor(API_ADMIN, ST
 $result = (new \giantbits\crelish\modules\api\controllers\AuthController('auth', $module))->actionValidateToken();
 check('validate-token: JWT disabled gets the generic message', ['code' => 401, 'message' => 'Invalid token'], ['code' => $result['code'], 'message' => $result['message']]);
 
+echo "\nNo tokens in the log\n";
+/**
+ * Logger that keeps every message
+ */
+class AccessTestLogger extends \yii\log\Logger
+{
+    public array $all = [];
+
+    public function log($message, $level, $category = 'application')
+    {
+        // Yii's own SQL traces/profiling show bound values (e.g. the authKey lookup); framework debug output
+        if (str_starts_with((string)$category, 'yii\\db\\')) {
+            return;
+        }
+        $this->all[] = is_string($message) ? $message : json_encode($message);
+    }
+}
+
+/**
+ * Messages logged while the API authenticates this request.
+ */
+function loggedDuring(array $server, array $query, array $appParams = ['jwtSecretKey' => STRONG_SECRET]): string
+{
+    $module = apiApp(null, $server + ['HTTP_COOKIE' => 'PHPSESSID=sessioncookievalue123456'], $appParams);
+    $logger = new AccessTestLogger();
+    Yii::setLogger($logger);
+    apiGuard($module, 'index', $query);
+    Yii::setLogger(null);
+
+    return implode("\n", $logger->all);
+}
+
+$secretJwt = \Firebase\JWT\JWT::encode(['iat' => time(), 'exp' => time() + 3600, 'sub' => API_ADMIN, 'access_token' => 'payloadtokenSECRET42'], STRONG_SECRET, 'HS256');
+$logs = [
+    'bearer JWT' => loggedDuring(['HTTP_AUTHORIZATION' => 'Bearer ' . $secretJwt], ['type' => 'page']),
+    'bearer auth key' => loggedDuring(['HTTP_AUTHORIZATION' => 'Bearer admin-auth-key-0123456789'], ['type' => 'page']),
+    'bearer unknown token' => loggedDuring(['HTTP_AUTHORIZATION' => 'Bearer unknownTOKENsecret99'], ['type' => 'page']),
+    'query auth key' => loggedDuring([], ['type' => 'page', 'access_token' => 'admin-auth-key-0123456789']),
+    'query JWT' => loggedDuring([], ['type' => 'page', 'access_token' => $secretJwt]),
+];
+foreach ($logs as $name => $log) {
+    check("log ($name): no JWT", false, str_contains($log, substr($secretJwt, 0, 12)) || str_contains($log, substr($secretJwt, 37, 12)));
+    check("log ($name): no JWT payload access_token", false, str_contains($log, 'payloadtoken'));
+    check("log ($name): no auth key", false, str_contains($log, 'admin-auth'));
+    check("log ($name): no unknown token", false, str_contains($log, 'unknownTOK'));
+    check("log ($name): no session cookie value", false, str_contains($log, 'sessioncook'));
+}
+check('log: something was logged at all (sanity)', true, $logs['bearer JWT'] !== '');
+
 echo "\nEvery admin controller is guarded\n";
 foreach (glob(dirname(__DIR__) . '/controllers/*Controller.php') as $file) {
     $class = 'giantbits\\crelish\\controllers\\' . basename($file, '.php');

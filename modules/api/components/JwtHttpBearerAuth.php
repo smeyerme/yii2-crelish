@@ -50,7 +50,7 @@ class JwtHttpBearerAuth extends AuthMethod
         }
         
         if ($this->enableDebug) {
-            Yii::info("Processing {$this->header} header: " . substr($authHeader, 0, 20) . "...", __METHOD__);
+            Yii::info("Processing {$this->header} header", __METHOD__);
         }
         
         if (!preg_match($this->pattern, $authHeader, $matches)) {

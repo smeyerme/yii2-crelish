@@ -39,7 +39,7 @@ class HttpBearerAuth extends BaseHttpBearerAuth
     }
 
     if ($this->enableDebug) {
-      Yii::info("Processing {$this->header} header: " . substr($authHeader, 0, 20) . "...", __METHOD__);
+      Yii::info("Processing {$this->header} header", __METHOD__);
     }
 
     if (!preg_match($this->pattern, $authHeader, $matches)) {
@@ -52,7 +52,7 @@ class HttpBearerAuth extends BaseHttpBearerAuth
     $token = $matches[1];
 
     if ($this->enableDebug) {
-      Yii::info("Extracted token: " . substr($token, 0, 10) . "...", __METHOD__);
+      Yii::info("Bearer token present", __METHOD__);
     }
 
     // STEP 1: Try authenticating with the token directly
@@ -82,7 +82,7 @@ class HttpBearerAuth extends BaseHttpBearerAuth
         $decoded = (array)JWT::decode($token, new Key($secretKey, 'HS256'));
 
         if ($this->enableDebug) {
-          Yii::info("JWT decoded successfully. Payload: " . json_encode($decoded), __METHOD__);
+          Yii::info("JWT decoded successfully", __METHOD__);
         }
 
         // Try authenticating with user ID from JWT
