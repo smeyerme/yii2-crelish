@@ -202,10 +202,15 @@ class PagePreview
   }
 
   /**
-   * Keep the preview out of search engines and caches, and mark it with a banner.
+   * Keep the preview out of search engines, caches and analytics, and mark it with a banner.
    */
   public static function registerPreviewMode(View $view, Response $response): void
   {
+    // Preview visits are not analytics: the URL (and a referer to it) carries the token
+    if (Yii::$app->has('crelishAnalytics')) {
+      Yii::$app->get('crelishAnalytics')->enabled = false;
+    }
+
     $response->headers->set('X-Robots-Tag', 'noindex, nofollow');
     $response->headers->set('Cache-Control', 'no-store, private');
     $view->registerMetaTag(['name' => 'robots', 'content' => 'noindex, nofollow'], 'robots');

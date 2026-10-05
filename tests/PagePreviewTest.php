@@ -131,6 +131,54 @@ $body = ob_get_clean();
 check('banner rendered at the start of the body', true, str_contains($body, 'Vorschau – diese Seite ist nicht veröffentlicht'));
 check('banner is marked as preview banner', true, str_contains($body, 'crelish-preview-banner'));
 
+echo "\nPreview visits are not tracked\n";
+/**
+ * Fresh app with the page view table, optionally in preview mode.
+ */
+function trackingApp(bool $preview): void
+{
+    shortLinkApp([], ['REQUEST_URI' => '/de/programm?preview=secret-token', 'HTTP_REFERER' => 'https://forum-holzbau.test/de/programm?preview=secret-token']);
+    Yii::$app->db->createCommand()->createTable('analytics_page_views', [
+        'id' => 'integer PRIMARY KEY AUTOINCREMENT',
+        'page_uuid' => 'varchar(36) NOT NULL',
+        'page_type' => 'varchar(50) NULL',
+        'url' => 'varchar(255) NULL',
+        'referer' => 'varchar(255) NULL',
+        'session_id' => 'varchar(100) NULL',
+        'user_id' => 'integer NULL',
+        'user_agent' => 'varchar(255) NULL',
+        'ip_address' => 'varchar(45) NULL',
+        'is_bot' => 'smallint DEFAULT 0',
+        'created_at' => 'datetime NULL',
+    ])->execute();
+
+    if ($preview) {
+        PagePreview::registerPreviewMode(Yii::$app->view, Yii::$app->response);
+    }
+
+    $analytics = Yii::$app->crelishAnalytics;
+    $analytics->trackPageView(['uuid' => PREVIEW_PAGE, 'ctype' => 'page']);
+    $analytics->trackElementView(PREVIEW_PAGE, 'page', PREVIEW_PAGE, 'list');
+    $analytics->trackEvent(PREVIEW_PAGE, 'page', 'click');
+}
+
+function trackedRows(): array
+{
+    $db = Yii::$app->db;
+
+    return [
+        'page_views' => (int)$db->createCommand('SELECT COUNT(*) FROM analytics_page_views')->queryScalar(),
+        'element_views' => (int)$db->createCommand('SELECT COUNT(*) FROM analytics_element_views')->queryScalar(),
+        'sessions' => (int)$db->createCommand('SELECT COUNT(*) FROM analytics_sessions')->queryScalar(),
+        'token stored' => (int)$db->createCommand("SELECT (SELECT COUNT(*) FROM analytics_page_views WHERE url LIKE '%preview=%' OR referer LIKE '%preview=%') + (SELECT COUNT(*) FROM analytics_sessions WHERE first_url LIKE '%preview=%')")->queryScalar() > 0,
+    ];
+}
+
+trackingApp(false);
+check('outside preview mode visits are tracked (control)', ['page_views' => 1, 'element_views' => 2, 'sessions' => 1, 'token stored' => true], trackedRows());
+trackingApp(true);
+check('in preview mode nothing is tracked', ['page_views' => 0, 'element_views' => 0, 'sessions' => 0, 'token stored' => false], trackedRows());
+
 echo "\nAdmin header bar buttons\n";
 shortLinkApp();
 $finder = fn(string $ctype, string $uuid) => $ctype === 'page' && $uuid === PREVIEW_PAGE ? $draft : null;
