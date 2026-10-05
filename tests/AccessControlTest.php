@@ -535,6 +535,32 @@ foreach ($logs as $name => $log) {
 }
 check('log: something was logged at all (sanity)', true, $logs['bearer JWT'] !== '');
 
+echo "\nDefault admin bootstrap\n";
+/**
+ * UserController::ensureBootstrapAdmin() with injected user count and creator.
+ *
+ * @return array{0: ?string, 1: bool} setup message, whether the default admin was created
+ */
+function bootstrapAdmin(bool $devEnv, int $users): array
+{
+    accessApp();
+    $created = false;
+    $controller = new \giantbits\crelish\controllers\UserController('user', Yii::$app);
+    $message = $controller->ensureBootstrapAdmin($devEnv, static fn() => $users, static function () use (&$created): void {
+        $created = true;
+    });
+
+    return [$message, $created];
+}
+
+[$message, $created] = bootstrapAdmin(false, 0);
+check('no users, not dev: no default admin is created', false, $created);
+check('no users, not dev: the login page says how to create an admin', true, is_string($message) && str_contains($message, 'crelish/admin/create-default-admin'));
+check('no users, dev: the default admin is created (as before)', [null, true], bootstrapAdmin(true, 0));
+check('users exist, not dev: nothing happens', [null, false], bootstrapAdmin(false, 3));
+check('users exist, dev: nothing happens', [null, false], bootstrapAdmin(true, 3));
+check('test environment is not dev', false, YII_ENV_DEV);
+
 echo "\nEvery admin controller is guarded\n";
 foreach (glob(dirname(__DIR__) . '/controllers/*Controller.php') as $file) {
     $class = 'giantbits\\crelish\\controllers\\' . basename($file, '.php');

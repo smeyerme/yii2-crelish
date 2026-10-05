@@ -170,4 +170,5 @@ return [
   'Preview – page is a draft' => 'Vorschau – Seite ist ein Entwurf',
   'Preview – page is archived' => 'Vorschau – Seite ist archiviert',
   'Preview – page is outside its publication window' => 'Vorschau – Seite ist außerhalb des Veröffentlichungszeitraums',
+  'No user account exists yet. Create an admin on the server with: {command}' => 'Es gibt noch kein Benutzerkonto. Legen Sie auf dem Server einen Admin an mit: {command}',
 ];

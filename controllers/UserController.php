@@ -96,19 +96,7 @@
 				return $this->redirect(Url::to(['/crelish/content/index']));
 			}
 			
-			$dataManager = new CrelishDataManager('user');
-			$users = $dataManager->rawAll();
-			
-			if (sizeof($users) == 0) {
-				// Generate default admin.
-				$adminUser = new CrelishDynamicModel(['ctype' => 'user']);
-				$adminUser->email = 'admin@local.host';
-				$adminUser->password = Yii::$app->security->generatePasswordHash('basta!');
-				$adminUser->state = 2;
-				$adminUser->authKey = \Yii::$app->security->generateRandomString();
-				$adminUser->role = 9;
-				$adminUser->save();
-			}
+			$setupMessage = $this->ensureBootstrapAdmin();
 			
 			$model = new CrelishDynamicModel(['ctype' => 'user']);
 			
@@ -124,7 +112,44 @@
 				'model' => $model,
 				'ctype' => $this->ctype,
 				'uuid' => $this->uuid,
+				'setupMessage' => $setupMessage,
 			]);
+		}
+
+		/**
+		 * Without any user, dev environments get the default admin (admin@local.host)
+		 * as before. Anywhere else no account with a known password is created: an
+		 * error is logged and the login page says how to create an admin.
+		 *
+		 * @param bool|null $devEnv defaults to YII_ENV_DEV
+		 * @param callable|null $userCount fn(): int, defaults to counting the user ctype
+		 * @param callable|null $createAdmin creates the default admin
+		 * @return string|null message for the login page
+		 */
+		public function ensureBootstrapAdmin(?bool $devEnv = null, ?callable $userCount = null, ?callable $createAdmin = null): ?string
+		{
+			$userCount ??= static fn(): int => count((new CrelishDataManager('user'))->rawAll());
+
+			if ($userCount() > 0) {
+				return null;
+			}
+
+			if (!($devEnv ?? YII_ENV_DEV)) {
+				Yii::error('No user exists and the default admin is only created in YII_ENV dev. Create an admin with: php yii crelish/admin/create-default-admin', __METHOD__);
+				return Yii::t('crelish', 'No user account exists yet. Create an admin on the server with: {command}', ['command' => 'php yii crelish/admin/create-default-admin']);
+			}
+
+			($createAdmin ?? static function (): void {
+				$adminUser = new CrelishDynamicModel(['ctype' => 'user']);
+				$adminUser->email = 'admin@local.host';
+				$adminUser->password = Yii::$app->security->generatePasswordHash('basta!');
+				$adminUser->state = 2;
+				$adminUser->authKey = \Yii::$app->security->generateRandomString();
+				$adminUser->role = 9;
+				$adminUser->save();
+			})();
+
+			return null;
 		}
 		
 		/**
