@@ -106,34 +106,42 @@
 		public $cardBrand;
 		public $cardLastFour;
 		
-		/**'
-		 * [crelishLogin description].
+		/**
+		 * Logs a user in with email and password (admin login form, frontend login widgets).
 		 *
-		 * @param [type] $data [description]
+		 * Only active users (state 2) with a matching password are logged in. Any other key in
+		 * $data, such as "uuid", is ignored: this is fed with request data, and a uuid is no secret.
 		 *
-		 * @return [type] [description]
+		 * @param mixed $data ['email' => ..., 'password' => ...], usually straight from the POST
+		 * @return bool whether the user is logged in
 		 */
 		public static function crelishLogin($data)
 		{
-			
-			// Fetch the single wanted user only.
-			if (!empty($data['uuid'])) {
-				$user = User::findOne(['uuid' => $data['uuid']]);
-				if (!empty($user) && $user->state == 2) {
-					$user->initials = substr($user->nameFirst, 0, 1) . substr($user->nameLast, 0, 1);
-					return \Yii::$app->user->login(new static($user), 3600);
-				}
-			} else {
-				$user = User::findOne(['email' => $data['email']]);
-				if (!empty($user) && $user->state == 2) {
-					if (\Yii::$app->getSecurity()->validatePassword($data['password'], $user['password'])) {
-						$user->initials = substr($user->nameFirst, 0, 1) . substr($user->nameLast, 0, 1);
-						return \Yii::$app->user->login(new static($user), 3600);
-					}
-				}
+			$email = is_array($data) ? ($data['email'] ?? null) : null;
+			$password = is_array($data) ? ($data['password'] ?? null) : null;
+
+			if (!is_string($email) || $email === '' || !is_string($password) || $password === '') {
+				return false;
 			}
-			
-			return false;
+
+			$user = User::findOne(['email' => $email]);
+
+			if (empty($user) || $user->state != 2 || !is_string($user['password']) || $user['password'] === '') {
+				return false;
+			}
+
+			try {
+				if (!\Yii::$app->getSecurity()->validatePassword($password, $user['password'])) {
+					return false;
+				}
+			} catch (\yii\base\InvalidArgumentException $e) {
+				// stored value is no password hash
+				return false;
+			}
+
+			$user->initials = substr((string)$user->nameFirst, 0, 1) . substr((string)$user->nameLast, 0, 1);
+
+			return \Yii::$app->user->login(new static($user), 3600);
 		}
 		
 		public function getInitials()

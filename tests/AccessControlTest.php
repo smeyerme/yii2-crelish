@@ -289,6 +289,8 @@ check('docs: a symlink pointing outside is not served', null, $docs->docFile(bas
 echo "\nAPI module\n";
 const API_ADMIN = 'a0000000-0000-4000-8000-0000000000a9';
 const STRONG_SECRET = 'a-long-random-jwt-secret-for-the-tests-0123456789';
+const ADMIN_PASSWORD = 'correct horse battery staple';
+define('ADMIN_PASSWORD_HASH', password_hash(ADMIN_PASSWORD, PASSWORD_BCRYPT, ['cost' => 4]));
 
 /**
  * Fresh app with a user table, CrelishUser as identity class and the API module.
@@ -304,8 +306,11 @@ function apiApp(mixed $role = null, array $server = [], array $appParams = []): 
         'authKey' => 'varchar(255) NULL',
         'role' => 'integer NULL',
         'state' => 'integer NULL',
+        'password' => 'varchar(255) NULL',
+        'nameFirst' => 'varchar(255) NULL',
+        'nameLast' => 'varchar(255) NULL',
     ])->execute();
-    $app->db->createCommand()->insert('user', ['uuid' => API_ADMIN, 'email' => 'admin@example.test', 'authKey' => 'admin-auth-key-0123456789', 'role' => 9, 'state' => 2])->execute();
+    $app->db->createCommand()->insert('user', ['uuid' => API_ADMIN, 'email' => 'admin@example.test', 'authKey' => 'admin-auth-key-0123456789', 'role' => 9, 'state' => 2, 'password' => ADMIN_PASSWORD_HASH, 'nameFirst' => 'Ada', 'nameLast' => 'Admin'])->execute();
     $app->db->createCommand()->insert('user', ['uuid' => 'a0000000-0000-4000-8000-0000000000e0', 'email' => 'empty@example.test', 'authKey' => '', 'role' => 9, 'state' => 2])->execute();
 
     $module = new \giantbits\crelish\modules\api\Module('crelish-api', $app);
@@ -316,6 +321,9 @@ function apiApp(mixed $role = null, array $server = [], array $appParams = []): 
 
 class AccessTestUserRecord extends \yii\db\ActiveRecord
 {
+    /** set by CrelishUser::crelishLogin() */
+    public $initials;
+
     public static function tableName(): string
     {
         return 'user';
@@ -384,6 +392,34 @@ check('jwt with a strong secret is enabled', true, JwtSecret::isEnabled());
 check('jwt with a strong secret: valid token logs in', true, apiGuard(apiApp(null, ['HTTP_AUTHORIZATION' => 'Bearer ' . jwtFor(API_ADMIN, STRONG_SECRET)], ['jwtSecretKey' => STRONG_SECRET]), 'index', ['type' => 'page']));
 check('jwt with a strong secret: token signed with another key is unauthorized', $unauthorized, apiGuard(apiApp(null, ['HTTP_AUTHORIZATION' => 'Bearer ' . $forgedDefault], ['jwtSecretKey' => STRONG_SECRET]), 'index', ['type' => 'page']));
 check('jwt with a strong secret: unknown sub is unauthorized', $unauthorized, apiGuard(apiApp(null, ['HTTP_AUTHORIZATION' => 'Bearer ' . jwtFor('nobody', STRONG_SECRET)], ['jwtSecretKey' => STRONG_SECRET]), 'index', ['type' => 'page']));
+
+echo "\nAdmin login form\n";
+/**
+ * crelishLogin() with this data on a fresh app; returns whether a user is logged in afterwards and who.
+ */
+function loginWith(array $data): array
+{
+    apiApp();
+    $result = \giantbits\crelish\components\CrelishUser::crelishLogin($data);
+
+    return [(bool)$result, Yii::$app->user->isGuest ? null : Yii::$app->user->id];
+}
+
+check('login: uuid alone does not log in', [false, null], loginWith(['uuid' => API_ADMIN]));
+check('login: uuid with a wrong password does not log in', [false, null], loginWith(['uuid' => API_ADMIN, 'password' => 'wrong']));
+check('login: uuid with email and a wrong password does not log in', [false, null], loginWith(['uuid' => API_ADMIN, 'email' => 'admin@example.test', 'password' => 'wrong']));
+check('login: email with a wrong password does not log in', [false, null], loginWith(['email' => 'admin@example.test', 'password' => 'wrong']));
+check('login: email and password log in', [true, API_ADMIN], loginWith(['email' => 'admin@example.test', 'password' => ADMIN_PASSWORD]));
+check('login: a uuid of another user next to correct credentials is ignored', [true, API_ADMIN], loginWith(['uuid' => 'a0000000-0000-4000-8000-0000000000e0', 'email' => 'admin@example.test', 'password' => ADMIN_PASSWORD]));
+check('login: missing fields do not log in', [false, null], loginWith([]));
+check('login: array values do not log in', [false, null], loginWith(['email' => ['admin@example.test'], 'password' => [ADMIN_PASSWORD]]));
+apiApp();
+check('login: null data does not log in', false, (bool)\giantbits\crelish\components\CrelishUser::crelishLogin(null));
+check('login: then the admin passes the guard', true, (function (): bool {
+    apiApp();
+    \giantbits\crelish\components\CrelishUser::crelishLogin(['email' => 'admin@example.test', 'password' => ADMIN_PASSWORD]);
+    return CrelishAccess::isAdmin();
+})());
 
 echo "\nEvery admin controller is guarded\n";
 foreach (glob(dirname(__DIR__) . '/controllers/*Controller.php') as $file) {
