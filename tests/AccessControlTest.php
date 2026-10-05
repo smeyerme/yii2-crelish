@@ -265,6 +265,27 @@ accessApp(9);
 check('content-target: admin passes', true, $result);
 check('adminRule requires login', ['@'], CrelishAccess::adminRule()['roles']);
 
+echo "\nDocumentation pages stay inside the docs directory\n";
+accessApp(9);
+$docs = new \giantbits\crelish\controllers\DocumentationController('documentation', Yii::$app);
+$docsDir = dirname(__DIR__) . '/docs';
+check('docs: a page resolves to its file', realpath($docsDir . '/getting-started.md'), $docs->docFile('getting-started'));
+check('docs: a page in a subdirectory resolves', true, is_string($docs->docFile('superpowers/plans/2026-09-30-menus-followups')));
+foreach (['../CLAUDE', '../../../../etc/passwd', 'superpowers/../../CLAUDE', '/etc/passwd', '..', 'getting-started.md', "getting-started\0", 'missing-page', ''] as $page) {
+    check('docs: ' . json_encode($page) . ' is not served', null, $docs->docFile($page));
+}
+try {
+    $docs->actionRead('../CLAUDE');
+    $result = 'served';
+} catch (\Throwable $e) {
+    $result = get_class($e);
+}
+check('docs: read of a traversal page is a 404', \yii\web\NotFoundHttpException::class, $result);
+$link = $docsDir . '/access-test-link-' . getmypid() . '.md';
+@symlink(dirname(__DIR__) . '/CLAUDE.md', $link);
+check('docs: a symlink pointing outside is not served', null, $docs->docFile(basename($link, '.md')));
+@unlink($link);
+
 echo "\nEvery admin controller is guarded\n";
 foreach (glob(dirname(__DIR__) . '/controllers/*Controller.php') as $file) {
     $class = 'giantbits\\crelish\\controllers\\' . basename($file, '.php');

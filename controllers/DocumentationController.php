@@ -90,9 +90,9 @@ class DocumentationController extends CrelishBaseController
      */
     public function actionRead($page)
     {
-        $filePath = $this->docsDir . '/' . $page . '.md';
+        $filePath = $this->docFile($page);
         
-        if (!file_exists($filePath)) {
+        if ($filePath === null) {
             throw new NotFoundHttpException('The requested documentation page does not exist.');
         }
         
@@ -108,6 +108,30 @@ class DocumentationController extends CrelishBaseController
             'content' => $content,
             'currentPage' => $page
         ]);
+    }
+    
+    /**
+     * The markdown file of a documentation page, or null unless it is an existing
+     * file inside the docs directory (names: letters, digits, _ - /; no "..").
+     *
+     * @param mixed $page page name without .md, e.g. "getting-started"
+     * @return string|null resolved path
+     */
+    public function docFile($page): ?string
+    {
+        if (!is_string($page) || !preg_match('~^[A-Za-z0-9_\-/]+$~', $page) || str_contains($page, '..')) {
+            return null;
+        }
+
+        $docsDir = realpath($this->docsDir);
+        $filePath = realpath($this->docsDir . '/' . $page . '.md');
+
+        if ($docsDir === false || $filePath === false || !is_file($filePath)
+            || !str_starts_with($filePath, $docsDir . DIRECTORY_SEPARATOR)) {
+            return null;
+        }
+
+        return $filePath;
     }
     
     /**
