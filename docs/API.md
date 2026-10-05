@@ -45,7 +45,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 Tokens expire after 1 hour by default.
 
-JWT authentication needs `params['jwtSecretKey']`: a random string of at least 32 characters. Without it (or with a placeholder or shorter value) no JWT is issued (`jwt_token` is `null`) or accepted; the access token and the admin session still work. Every content endpoint requires authentication; writes and `user` records require the admin role.
+JWT authentication needs `params['jwtSecretKey']`: a random string of at least 32 characters. Without it (or with a placeholder or shorter value) no JWT is issued (`jwt_token` is `null`) or accepted; the access token and the admin session still work. Every content endpoint requires an authenticated admin (role 9) with an active account (state 2).
 
 ### Query Parameter Authentication
 

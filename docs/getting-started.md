@@ -152,12 +152,13 @@ After installation, you can access the admin panel at:
 https://your-domain.com/crelish
 ```
 
-The default login credentials are:
+Create the first admin on the server:
 
-- Username: `admin`
-- Password: `admin`
+```bash
+php yii crelish/admin/create-default-admin
+```
 
-**Important**: Change the default password immediately after your first login.
+Only in `YII_ENV_DEV` does the login page create a default admin (`admin@local.host`) when the user table is empty; change its password immediately.
 
 ### Creating Your First Content
 
@@ -232,7 +233,9 @@ In the page edit view, the frame next to the form shows an unpublished page thro
 
 - **Admin access** (everything under `/crelish/`) requires a logged-in user with role 9. Guests are sent to the login form, logged-in users without the admin role to the home page, and AJAX/JSON requests get a 403; the action does not run. The check is `CrelishAccess::guard()` in `CrelishBaseController::beforeAction()`; admin controllers on another base class use `CrelishAccess::adminRule()` in their AccessControl.
 - **Public exceptions** are listed in `CrelishAccess::PUBLIC_ROUTES`: `user/login`, `user/logout`, `asset/glide` and `asset/download` (images and downloads of the public site), `track/click` (frontend click tracking). The frontend, short link redirects and the API module are separate controllers.
-- **API** (`/crelish-api/content/...`) requires authentication for every action: the admin session, an access token, or a JWT. Writes and `user` records need the admin role.
+- **API** (`/crelish-api/content/...`) requires an admin (login + role 9) for every action: the admin session, an access token, or a JWT. There is no debug endpoint.
+- **Login** is by email and password only, and only for active accounts (state 2). Offline, draft/pending and archived users cannot log in, their sessions end and their tokens stop working.
+- **Session cookie**: Crelish sets `httponly`, `sameSite: Lax` and, on HTTPS requests, `secure` as defaults; anything in the project's own `session` config wins.
 - **`jwtSecretKey`** (`params['jwtSecretKey']`) must be a random string of at least 32 characters. If it is missing, shorter, or one of the shipped placeholders, JWT authentication is off (no tokens are issued or accepted, a warning is logged); session and access-token authentication still work.
 - **`previewSecret`** (`params['crelish']['previewSecret']`) must be at least 32 characters, otherwise the cookie validation key signs preview links.
 - **Translations** (admin, Translations) only write existing message files of the configured languages.
