@@ -1055,8 +1055,12 @@ class AssetController extends CrelishBaseController
     $fileStringEscaped = escapeshellarg($fileString);
     $fileStringDestEscaped = escapeshellarg($fileStringDest);
 
-    // Use ImageMagick with proper density setting
-    $command = "convert -density 150 {$fileStringEscaped}[0] -colorspace sRGB -alpha remove -strip -resize 800x -quality 85 {$fileStringDestEscaped}";
+    // Use ImageMagick with proper density setting.
+    // -colorspace sRGB has to come BEFORE the input: for a PDF that declares CMYK colours
+    // ImageMagick otherwise has Ghostscript render a CMYK raster and converts that to RGB
+    // itself without colour management, which turns e.g. an olive green into a neon one.
+    // Set up front, Ghostscript renders straight to RGB with its own colour management.
+    $command = "convert -density 150 -colorspace sRGB {$fileStringEscaped}[0] -colorspace sRGB -alpha remove -strip -resize 800x -quality 85 {$fileStringDestEscaped}";
 
     // Execute command with better error handling
     exec($command, $output, $returnVar);
