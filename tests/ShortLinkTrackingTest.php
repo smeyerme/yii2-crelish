@@ -54,6 +54,13 @@ Yii::$app->crelishAnalytics->trackEvent(LINK, 'shortlink', 'click');
 check('bot flag is upgraded', 1, (int)sessions()[0]['is_bot']);
 check('page count is preserved', 3, (int)sessions()[0]['total_pages']);
 
+echo "\nSuspected session, then a bot request\n";
+shortLinkApp([], ['HTTP_USER_AGENT' => 'curl/8.4.0']);
+$sessionId = Yii::$app->crelishAnalytics->getSessionId();
+Yii::$app->db->createCommand()->insert('analytics_sessions', ['session_id' => $sessionId, 'is_bot' => 2, 'total_pages' => 1])->execute();
+Yii::$app->crelishAnalytics->trackEvent(LINK, 'shortlink', 'click');
+check('a suspected session becomes a bot', 1, (int)sessions()[0]['is_bot']);
+
 echo "\nExclusions\n";
 shortLinkApp([], [], ['components' => ['crelishAnalytics' => ['excludeIps' => ['203.0.113.7']]]]);
 check('excluded IP is not tracked', false, Yii::$app->crelishAnalytics->trackEvent(LINK, 'shortlink', 'scan'));

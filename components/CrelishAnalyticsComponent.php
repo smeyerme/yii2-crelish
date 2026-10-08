@@ -184,7 +184,8 @@ class CrelishAnalyticsComponent extends Component
         'first_url' => mb_substr(Yii::$app->request->absoluteUrl, 0, 255),
         'total_pages' => 0,
       ])->execute();
-    } elseif ($isBot && !$session['is_bot']) {
+    } elseif ($isBot && (int)$session['is_bot'] !== 1) {
+      // Also upgrades a suspected session (2): a recorded bot request is certain
       $db->createCommand()->update('analytics_sessions', ['is_bot' => 1], ['session_id' => $this->_sessionId])->execute();
     }
 
@@ -217,8 +218,8 @@ class CrelishAnalyticsComponent extends Component
       // Update existing session
       $updateData = ['total_pages' => new Expression('total_pages + 1')];
 
-      // If existing session wasn't marked as bot but current request is bot, update it
-      if (!$session['is_bot'] && $data['is_bot']) {
+      // If existing session wasn't marked as bot (0, or suspected 2) but current request is bot, update it
+      if ((int)$session['is_bot'] !== 1 && $data['is_bot']) {
         $updateData['is_bot'] = 1;
       }
 

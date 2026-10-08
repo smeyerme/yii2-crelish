@@ -154,8 +154,9 @@ class BotDetectionController extends Controller
   {
     $this->stdout("Starting confidence-based bot detection process...\n", Console::FG_GREEN);
     $this->stdout(sprintf(
-      "Thresholds: HIGH >= %d (delete), MEDIUM >= %d (review), LOW < %d (keep)\n",
+      "Thresholds: HIGH >= %d (delete), SUSPECTED >= %d (excluded from statistics, kept), MEDIUM >= %d (review), LOW < %d (keep)\n",
       self::SCORE_HIGH_CONFIDENCE,
+      self::SCORE_SUSPECTED,
       self::SCORE_MEDIUM_CONFIDENCE,
       self::SCORE_MEDIUM_CONFIDENCE
     ), Console::FG_YELLOW);
@@ -2309,8 +2310,10 @@ class BotDetectionController extends Controller
         (SELECT COUNT(*) FROM analytics_sessions WHERE bot_score >= :high) as high_confidence,
         (SELECT COUNT(*) FROM analytics_sessions WHERE bot_score >= :medium AND bot_score < :high2) as medium_confidence,
         (SELECT COUNT(*) FROM analytics_sessions WHERE bot_score > 0 AND bot_score < :medium2) as low_confidence,
-        (SELECT COUNT(*) FROM analytics_sessions WHERE bot_score IS NULL OR bot_score = 0) as no_score
+        (SELECT COUNT(*) FROM analytics_sessions WHERE bot_score IS NULL OR bot_score = 0) as no_score,
+        (SELECT COUNT(*) FROM analytics_sessions WHERE is_bot = :suspected) as suspected
     ")
+      ->bindValue(':suspected', self::IS_BOT_SUSPECTED)
       ->bindValue(':high', self::SCORE_HIGH_CONFIDENCE)
       ->bindValue(':high2', self::SCORE_HIGH_CONFIDENCE)
       ->bindValue(':medium', self::SCORE_MEDIUM_CONFIDENCE)
@@ -2324,6 +2327,7 @@ class BotDetectionController extends Controller
     $this->stdout("\nConfidence breakdown:\n");
     $this->stdout(sprintf("  HIGH (deleted):      %s\n", number_format($stats['high_confidence'])), Console::FG_RED);
     $this->stdout(sprintf("  MEDIUM (for review): %s\n", number_format($stats['medium_confidence'])), Console::FG_YELLOW);
+    $this->stdout(sprintf("  of which SUSPECTED (is_bot = 2, excluded from statistics): %s\n", number_format($stats['suspected'])), Console::FG_YELLOW);
     $this->stdout(sprintf("  LOW (kept):          %s\n", number_format($stats['low_confidence'])), Console::FG_GREEN);
     $this->stdout(sprintf("  No score:            %s\n", number_format($stats['no_score'])));
 
@@ -2451,9 +2455,17 @@ class BotDetectionController extends Controller
 
     $db->createCommand()
       ->update('analytics_sessions', [
-        'is_bot' => 0,
+        'is_bot' => self::IS_BOT_NO,
         'bot_score' => 0,
       ], ['session_id' => $session['session_id']])
+      ->execute();
+
+    // Suspected page views are counted again; ones flagged at recording stay bots
+    $db->createCommand()
+      ->update('analytics_page_views', ['is_bot' => self::IS_BOT_NO], [
+        'session_id' => $session['session_id'],
+        'is_bot' => self::IS_BOT_SUSPECTED,
+      ])
       ->execute();
 
     $this->stdout("Session {$session['session_id']} marked as legitimate.\n", Console::FG_GREEN);
@@ -2477,15 +2489,18 @@ class BotDetectionController extends Controller
       SELECT
         COUNT(*) as total_records,
         SUM(CASE WHEN is_bot = 1 THEN 1 ELSE 0 END) as bot_records,
+        SUM(CASE WHEN is_bot = 2 THEN 1 ELSE 0 END) as suspected_records,
         SUM(CASE WHEN is_bot = 0 THEN 1 ELSE 0 END) as human_records
       FROM analytics_page_views
     ")->queryOne();
 
     $this->stdout(sprintf(
-      "  Total: %s | Bots: %s (%.2f%%) | Humans: %s (%.2f%%)\n",
+      "  Total: %s | Bots: %s (%.2f%%) | Suspected: %s (%.2f%%) | Humans: %s (%.2f%%)\n",
       number_format($pvStats['total_records']),
       number_format($pvStats['bot_records']),
       $pvStats['total_records'] > 0 ? ($pvStats['bot_records'] / $pvStats['total_records'] * 100) : 0,
+      number_format($pvStats['suspected_records'] ?? 0),
+      $pvStats['total_records'] > 0 ? (($pvStats['suspected_records'] ?? 0) / $pvStats['total_records'] * 100) : 0,
       number_format($pvStats['human_records']),
       $pvStats['total_records'] > 0 ? ($pvStats['human_records'] / $pvStats['total_records'] * 100) : 0
     ));
@@ -2496,15 +2511,18 @@ class BotDetectionController extends Controller
       SELECT
         COUNT(*) as total_records,
         SUM(CASE WHEN is_bot = 1 THEN 1 ELSE 0 END) as bot_records,
+        SUM(CASE WHEN is_bot = 2 THEN 1 ELSE 0 END) as suspected_records,
         SUM(CASE WHEN is_bot = 0 THEN 1 ELSE 0 END) as human_records
       FROM analytics_sessions
     ")->queryOne();
 
     $this->stdout(sprintf(
-      "  Total: %s | Bots: %s (%.2f%%) | Humans: %s (%.2f%%)\n",
+      "  Total: %s | Bots: %s (%.2f%%) | Suspected: %s (%.2f%%) | Humans: %s (%.2f%%)\n",
       number_format($sessionStats['total_records']),
       number_format($sessionStats['bot_records']),
       $sessionStats['total_records'] > 0 ? ($sessionStats['bot_records'] / $sessionStats['total_records'] * 100) : 0,
+      number_format($sessionStats['suspected_records'] ?? 0),
+      $sessionStats['total_records'] > 0 ? (($sessionStats['suspected_records'] ?? 0) / $sessionStats['total_records'] * 100) : 0,
       number_format($sessionStats['human_records']),
       $sessionStats['total_records'] > 0 ? ($sessionStats['human_records'] / $sessionStats['total_records'] * 100) : 0
     ));

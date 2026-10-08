@@ -56,6 +56,11 @@ class SuspectedController extends BotDetectionController
         $this->deleteHighConfidenceBots();
     }
 
+    public function summary(): void
+    {
+        $this->showDetectionSummary();
+    }
+
     public function stdout($string)
     {
         return 0;
@@ -172,6 +177,19 @@ check('with its page and element views', [[], 0], [pageViewBots('bot'), (int)sca
 check('the suspected session is kept', 2, sessionBot('sus'));
 check('with its page and element views', [[2], 1], [pageViewBots('sus'), (int)scalar("SELECT COUNT(*) FROM analytics_element_views WHERE session_id = 'sus'")]);
 check('the visitor is kept', [0, [0]], [sessionBot('human'), pageViewBots('human')]);
+
+echo "\nDemote, stats and summary\n";
+botSession('demoted', 2, $recent);
+pageView($day, '10:00:00', P1, '/a', 'demoted', 2);
+pageView($day, '10:05:00', P1, '/b', 'demoted', 1);
+check('demote exits 0', 0, controller()->runAction('demote', ['demoted']));
+check('a demoted suspected session is a visitor', 0, sessionBot('demoted'));
+check('its suspected page views are counted, recorded bots stay', [0, 1], pageViewBots('demoted'));
+Yii::$app->db->createCommand()->delete('analytics_page_views', ['session_id' => 'demoted'])->execute();
+Yii::$app->db->createCommand()->delete('analytics_sessions', ['session_id' => 'demoted'])->execute();
+check('stats exits 0', 0, controller()->runAction('stats'));
+controller()->summary();
+check('summary runs', true, true);
 
 echo "\nAggregation counts neither bots nor suspected\n";
 // rows still present from the previous block, plus a bot that was not yet deleted
