@@ -220,6 +220,11 @@ shows "Besuche noch nicht erfasst".
 
 ## 10. Follow-up: browser confirmation for server-side tracking (separate design)
 
+> 0.26.0 ships a first, measurement-only step: `confirmed_at` on page views and
+> sessions, set through a first-party endpoint, read by nothing. It is run in
+> parallel on one portal to measure what browser-only counting would lose before
+> deciding between that and the hybrid below. See `docs/analytics-aggregation.md`.
+
 Page and element views are recorded server-side while rendering
 (`CrelishFrontendController::trackPageView`, `chelper.trackElementView`). That
 is deliberate: tracking blockers and browsers that block trackers by default

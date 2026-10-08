@@ -11,6 +11,7 @@
 	use app\workspace\models\Page;
 	use Yii;
 	use yii\base\Controller;
+	use giantbits\crelish\components\Analytics\BrowserConfirmation;
 	use giantbits\crelish\components\ContentUrlResolver;
 	use giantbits\crelish\components\CrelishDataManager;
 	use giantbits\crelish\components\CrelishGlobals;
@@ -101,6 +102,12 @@
       // Track page view if analytics component is available
       if (isset(Yii::$app->crelishAnalytics) && $this->entryPoint['uuid']) {
         Yii::$app->crelishAnalytics->trackPageView($this->entryPoint);
+
+        // The page reports back that a browser showed it (off unless the site turns it on)
+        $confirmation = BrowserConfirmation::script(Yii::$app->crelishAnalytics->lastPageViewId);
+        if ($confirmation !== null) {
+          $this->view->registerJs($confirmation, \yii\web\View::POS_END, 'crelish-page-state');
+        }
       }
 
 			// Set layout.

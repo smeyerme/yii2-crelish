@@ -650,3 +650,47 @@ For issues or questions:
 - Check logs: `/path/to/app/runtime/logs/app.log`
 - Run diagnostics: `php yii crelish/analytics-aggregation/stats`
 - Test queries: Use `--verbose` flag for detailed output
+## Browser confirmation (0.26.0, measurement only)
+
+Page views are recorded while a page is rendered, so a client that never shows
+the page is counted too. With the browser confirmation on, a rendered page
+carries a short inline script that reports its page view back to the site; the
+page view and its session get a `confirmed_at` time. Clients that do not run
+the script (most bots) leave it empty. Nothing reads `confirmed_at` yet:
+statistics, aggregation and bot detection are unchanged.
+
+Off by default. A site turns it on in its params:
+
+```php
+'crelish' => [
+    'analytics' => [
+        'browserConfirmation' => ['enabled' => true, 'path' => 'page/state'],
+    ],
+],
+```
+
+- The endpoint is on the site itself (`POST /page/state` by default; `path`
+  renames it). Keep the name free of words tracking blockers match (`track`,
+  `collect`, `analytics`, ...).
+- A page view can only be confirmed from the session that made it, once. The
+  endpoint always answers 204 with an empty body.
+- It sets no cookie of its own; it relies on the session cookie the site
+  already sets.
+- Pages rendered without the layout's `endBody()` (partial responses) carry no
+  script and stay unconfirmed.
+- Migration `m261009_120000_add_confirmed_at_to_analytics` adds the two
+  nullable columns; it runs on every installation, switched on or not.
+
+Reading it out, for the days the confirmation was on:
+
+```sql
+-- Visitors the browser never confirmed (blockers, no JavaScript, early leavers)
+SELECT DATE(created_at) day, COUNT(*) visitors, SUM(confirmed_at IS NULL) unconfirmed
+FROM analytics_sessions WHERE is_bot = 0 GROUP BY day;
+
+-- Suspected sessions a browser did confirm (bots running a browser, or people wrongly suspected)
+SELECT DATE(created_at) day, COUNT(*) suspected, SUM(confirmed_at IS NOT NULL) confirmed
+FROM analytics_sessions WHERE is_bot = 2 GROUP BY day;
+```
+
+Sessions deleted as bots (score 70 and above) are gone and cannot be compared.
