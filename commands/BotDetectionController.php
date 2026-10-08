@@ -2,6 +2,7 @@
 
 namespace giantbits\crelish\commands;
 
+use giantbits\crelish\components\Analytics\BrowserVersions;
 use giantbits\crelish\components\DatacenterIpService;
 use giantbits\crelish\components\ReferrerSpamService;
 use DeviceDetector\DeviceDetector;
@@ -68,6 +69,12 @@ class BotDetectionController extends Controller
    * @var bool Whether to run in dry-run mode (no updates)
    */
   public $dryRun = false;
+
+  /**
+   * @var string|null Day (Y-m-d) the current browser versions are computed for;
+   * null means today. Lets tests pin the date.
+   */
+  public ?string $today = null;
 
   /**
    * @var array Session scores being calculated (session_id => ['score' => int, 'reasons' => []])
@@ -1691,24 +1698,17 @@ class BotDetectionController extends Controller
   }
 
   /**
-   * Get current browser versions (hardcoded, update periodically)
-   *
-   * As of early 2026: iOS 19, Android 16, Chrome ~145, Firefox ~145, Safari 19
+   * Day the current browser versions are computed for
    */
-  protected function getCurrentBrowserVersions(): array
+  protected function today(): \DateTimeImmutable
   {
-    return [
-      'ios' => 19,        // iOS 19 = 2025
-      'android' => 16,    // Android 16 = 2025
-      'chrome' => 145,    // Chrome ~145 in early 2026
-      'firefox' => 145,   // Firefox ~145 in early 2026
-      'safari' => 19,     // Safari 19 = 2025
-    ];
+    return new \DateTimeImmutable($this->today ?? 'today');
   }
 
   /**
    * Calculate browser age score (0-50 points based on how outdated)
-   * Returns higher scores for older browsers
+   * Returns higher scores for older browsers. Current versions are computed
+   * from the date (BrowserVersions), never hardcoded.
    *
    * @param string $userAgent Raw user agent string
    * @param DeviceDetector|null $dd Optional parsed DeviceDetector instance
@@ -1716,7 +1716,10 @@ class BotDetectionController extends Controller
    */
   protected function getBrowserAgeScore($userAgent, ?DeviceDetector $dd = null): int
   {
-    $currentVersions = $this->getCurrentBrowserVersions();
+    $userAgent = (string)$userAgent;
+    $today = $this->today();
+    // The reduced Chromium UA always says "Android 10; K": its OS version says nothing
+    $frozenAndroid = BrowserVersions::isFrozenAndroid($userAgent);
 
     // When DeviceDetector is available, use structured data
     if ($dd !== null) {
@@ -1724,100 +1727,104 @@ class BotDetectionController extends Controller
       $os = $dd->getOs();
 
       // Score OS version
-      $osScore = $this->scoreOsVersion(
-        $os['name'] ?? '',
-        $os['version'] ?? '',
-        $currentVersions
-      );
-      if ($osScore > 0) {
-        return $osScore;
+      $osName = $os['name'] ?? '';
+      if (!($frozenAndroid && strtolower($osName) === 'android')) {
+        $osScore = $this->scoreOsVersion($osName, $os['version'] ?? '', $today);
+        if ($osScore > 0) {
+          return $osScore;
+        }
       }
 
       // Score browser version
       $browserScore = $this->scoreBrowserVersion(
         $client['name'] ?? '',
         $client['version'] ?? '',
-        $currentVersions
+        $today
       );
       if ($browserScore > 0) {
         return $browserScore;
       }
     }
 
-    // Regex fallback when DeviceDetector is not available
+    // Regex fallback when DeviceDetector is not available (or found nothing),
+    // scored with the same rules as the DeviceDetector path
 
     // iOS version check
     if (preg_match('/(?:iPhone OS|CPU OS) (\d+)[_\.]/', $userAgent, $matches)) {
-      $version = intval($matches[1]);
-      $currentVersion = $currentVersions['ios'] ?? 18;
-      $yearsOld = $currentVersion - $version;
-
-      if ($yearsOld >= 6) return 50;
-      if ($yearsOld >= 4) return 40;
-      if ($yearsOld >= 2) return 30;
-      if ($yearsOld >= 1) return 20;
-      return 0;
+      return $this->scoreAppleAge(intval($matches[1]), $today);
     }
 
-    // Android version check
+    // Android version check (never for the frozen UA)
     if (preg_match('/Android (\d+)/', $userAgent, $matches)) {
-      $version = intval($matches[1]);
-      $currentVersion = $currentVersions['android'] ?? 15;
-      $yearsOld = $currentVersion - $version;
-
-      if ($yearsOld >= 6) return 50;
-      if ($yearsOld >= 4) return 40;
-      if ($yearsOld >= 2) return 30;
-      if ($yearsOld >= 1) return 20;
-      return 0;
+      return $frozenAndroid ? 0 : $this->scoreAndroidAge(intval($matches[1]), $today);
     }
 
     // Chrome version check (releases every 4 weeks, ~13/year)
     if (preg_match('/Chrome\/(\d+)\./', $userAgent, $matches)) {
-      $version = intval($matches[1]);
-      $currentVersion = $currentVersions['chrome'] ?? 131;
-      $versionsBehind = $currentVersion - $version;
-
-      if ($versionsBehind >= 52) return 50;
-      if ($versionsBehind >= 26) return 40;
-      if ($versionsBehind >= 13) return 30;
-      if ($versionsBehind >= 6) return 20;
-      return 0;
+      return $this->scoreVersionsBehind(BrowserVersions::chrome($today) - intval($matches[1]));
     }
 
     // Firefox version check (similar release cycle to Chrome)
     if (preg_match('/Firefox\/(\d+)\./', $userAgent, $matches)) {
-      $version = intval($matches[1]);
-      $currentVersion = $currentVersions['firefox'] ?? 133;
-      $versionsBehind = $currentVersion - $version;
-
-      if ($versionsBehind >= 52) return 50;
-      if ($versionsBehind >= 26) return 40;
-      if ($versionsBehind >= 13) return 30;
-      if ($versionsBehind >= 6) return 20;
-      return 0;
+      return $this->scoreVersionsBehind(BrowserVersions::firefox($today) - intval($matches[1]));
     }
 
     // Safari desktop version check (Version/X.Y...Safari)
     if (preg_match('/Version\/(\d+)\.\d+.*Safari/', $userAgent, $matches)) {
-      $version = intval($matches[1]);
-      $currentVersion = $currentVersions['safari'] ?? 18;
-      $yearsOld = $currentVersion - $version;
-
-      if ($yearsOld >= 5) return 50;
-      if ($yearsOld >= 3) return 40;
-      if ($yearsOld >= 2) return 30;
-      if ($yearsOld >= 1) return 20;
-      return 0;
+      return $this->scoreAppleAge(intval($matches[1]), $today);
     }
 
     return 0;
   }
 
   /**
+   * Score a Chrome/Firefox-style browser by how many major versions it is behind
+   */
+  protected function scoreVersionsBehind(int $behind): int
+  {
+    if ($behind >= 52) return 50;
+    if ($behind >= 26) return 40;
+    if ($behind >= 13) return 30;
+    if ($behind >= 6) return 20;
+    return 0;
+  }
+
+  /**
+   * Score an iOS / Safari major version by release years behind the newest.
+   * One year behind is normal for weeks after each September release.
+   */
+  protected function scoreAppleAge(int $major, \DateTimeImmutable $today): int
+  {
+    if ($major <= 0) {
+      return 0;
+    }
+
+    $years = BrowserVersions::currentAppleYear($today) - BrowserVersions::appleYear($major);
+    if ($years >= 5) return 50;
+    if ($years >= 3) return 40;
+    if ($years >= 2) return 30;
+    return 0;
+  }
+
+  /**
+   * Score an Android major version by release years behind the newest
+   */
+  protected function scoreAndroidAge(int $major, \DateTimeImmutable $today): int
+  {
+    if ($major <= 0) {
+      return 0;
+    }
+
+    $years = BrowserVersions::currentAndroidYear($today) - BrowserVersions::androidYear($major);
+    if ($years >= 6) return 50;
+    if ($years >= 4) return 30;
+    return 0;
+  }
+
+  /**
    * Score browser version using DeviceDetector structured data
    */
-  protected function scoreBrowserVersion(string $name, string $version, array $currentVersions): int
+  protected function scoreBrowserVersion(string $name, string $version, \DateTimeImmutable $today): int
   {
     if (empty($name) || empty($version)) {
       return 0;
@@ -1832,35 +1839,17 @@ class BotDetectionController extends Controller
 
     // Chrome / Chrome Mobile / Chromium
     if (str_contains($name, 'chrome') || str_contains($name, 'chromium')) {
-      $current = $currentVersions['chrome'] ?? 145;
-      $behind = $current - $majorVersion;
-      if ($behind >= 52) return 50;
-      if ($behind >= 26) return 40;
-      if ($behind >= 13) return 30;
-      if ($behind >= 6) return 20;
-      return 0;
+      return $this->scoreVersionsBehind(BrowserVersions::chrome($today) - $majorVersion);
     }
 
     // Firefox / Firefox Mobile
     if (str_contains($name, 'firefox')) {
-      $current = $currentVersions['firefox'] ?? 145;
-      $behind = $current - $majorVersion;
-      if ($behind >= 52) return 50;
-      if ($behind >= 26) return 40;
-      if ($behind >= 13) return 30;
-      if ($behind >= 6) return 20;
-      return 0;
+      return $this->scoreVersionsBehind(BrowserVersions::firefox($today) - $majorVersion);
     }
 
     // Safari / Mobile Safari
     if (str_contains($name, 'safari')) {
-      $current = $currentVersions['safari'] ?? 19;
-      $behind = $current - $majorVersion;
-      if ($behind >= 5) return 50;
-      if ($behind >= 3) return 40;
-      if ($behind >= 2) return 30;
-      if ($behind >= 1) return 20;
-      return 0;
+      return $this->scoreAppleAge($majorVersion, $today);
     }
 
     return 0;
@@ -1869,7 +1858,7 @@ class BotDetectionController extends Controller
   /**
    * Score OS version using DeviceDetector structured data
    */
-  protected function scoreOsVersion(string $name, string $version, array $currentVersions): int
+  protected function scoreOsVersion(string $name, string $version, \DateTimeImmutable $today): int
   {
     if (empty($name) || empty($version)) {
       return 0;
@@ -1882,26 +1871,12 @@ class BotDetectionController extends Controller
 
     $name = strtolower($name);
 
-    // iOS
     if ($name === 'ios') {
-      $current = $currentVersions['ios'] ?? 19;
-      $behind = $current - $majorVersion;
-      if ($behind >= 6) return 50;
-      if ($behind >= 4) return 40;
-      if ($behind >= 2) return 30;
-      if ($behind >= 1) return 20;
-      return 0;
+      return $this->scoreAppleAge($majorVersion, $today);
     }
 
-    // Android
     if ($name === 'android') {
-      $current = $currentVersions['android'] ?? 16;
-      $behind = $current - $majorVersion;
-      if ($behind >= 6) return 50;
-      if ($behind >= 4) return 40;
-      if ($behind >= 2) return 30;
-      if ($behind >= 1) return 20;
-      return 0;
+      return $this->scoreAndroidAge($majorVersion, $today);
     }
 
     return 0;
