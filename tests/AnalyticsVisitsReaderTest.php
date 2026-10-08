@@ -30,6 +30,9 @@ check('site page visits over a covered period', ['available' => true, 'since' =>
 check('only the any-event row counts for an owner', 7, $reader->summary('elements', C1, '2026-09-01', '2026-09-30')['visits']);
 check('a period before the first recorded day says from when', '2026-09-08', $reader->summary('pages', '', '2026-08-01', '2026-09-30')['since']);
 check('nothing in range gives zero, not null', 0, $reader->summary('pages', '', '2026-09-20', '2026-09-25')['visits']);
+check('a period entirely before the first recorded day has no figure', ['available' => true, 'since' => '2026-09-08', 'visits' => null, 'users' => null],
+    $reader->summary('pages', '', '2026-08-01', '2026-08-31'));
+check('a period ending on the first recorded day has one', 10, $reader->summary('pages', '', '2026-08-01', '2026-09-08')['visits']);
 
 echo "\nPer day and per month\n";
 check('by day', ['2026-09-08' => ['visits' => 10, 'users' => 1], '2026-09-09' => ['visits' => 20, 'users' => 2]],

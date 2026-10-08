@@ -351,7 +351,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     document.getElementById('kpi-sessions').textContent = '–';
                     sessionsNote.textContent = '{{ t("crelish", "Visits not recorded yet") }}';
                 } else {
-                    document.getElementById('kpi-sessions').textContent = formatNumber(data.pageStats.total_sessions || 0);
+                    document.getElementById('kpi-sessions').textContent = data.pageStats.total_sessions == null ? '–' : formatNumber(data.pageStats.total_sessions);
                     sessionsNote.textContent = data.visits.since
                         ? '{{ t("crelish", "Visits counted from {date}") }}'.replace('{date}', new Date(data.visits.since).toLocaleDateString('de-CH'))
                         : '';

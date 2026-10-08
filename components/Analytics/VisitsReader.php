@@ -28,7 +28,8 @@ final class VisitsReader
 
     /**
      * @return array{available: bool, since: ?string, visits: ?int, users: ?int}
-     *         since: first recorded day when the period starts before it, else null
+     *         since: first recorded day when the period starts before it, else null;
+     *         visits/users: null when the period ends before the first recorded day
      */
     public function summary(string $source, string $owner, string $start, string $end): array
     {
@@ -40,12 +41,15 @@ final class VisitsReader
             ->select(['visits' => 'SUM(unique_sessions)', 'users' => 'SUM(unique_users)'])
             ->one($this->db);
         $first = (new Query())->from(VisitsAggregator::TABLE)->min('date', $this->db);
+        $first = ($first === null || $first === false) ? null : (string)$first;
+        // A period that ends before the first recorded day has no figure, not zero
+        $recorded = $first === null || $first <= $end;
 
         return [
             'available' => true,
-            'since' => ($first !== null && $first !== false && (string)$first > $start) ? (string)$first : null,
-            'visits' => (int)($row['visits'] ?? 0),
-            'users' => (int)($row['users'] ?? 0),
+            'since' => ($first !== null && $first > $start) ? $first : null,
+            'visits' => $recorded ? (int)($row['visits'] ?? 0) : null,
+            'users' => $recorded ? (int)($row['users'] ?? 0) : null,
         ];
     }
 

@@ -492,7 +492,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     document.getElementById('kpi-sessions').textContent = '–';
                     sessionsNote.textContent = '{{ t("crelish", "Visits not recorded yet") }}';
                 } else {
-                    document.getElementById('kpi-sessions').textContent = formatNumber(data.unique_sessions || 0);
+                    document.getElementById('kpi-sessions').textContent = data.unique_sessions == null ? '–' : formatNumber(data.unique_sessions);
                     sessionsNote.textContent = data.visits.since
                         ? '{{ t("crelish", "Visits counted from {date}") }}'.replace('{date}', new Date(data.visits.since).toLocaleDateString('de-CH'))
                         : '';
