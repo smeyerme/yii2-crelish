@@ -3,8 +3,10 @@
 namespace giantbits\crelish\commands;
 
 use Yii;
+use giantbits\crelish\components\Analytics\AggregationParts;
 use yii\console\Controller;
 use yii\console\ExitCode;
+use yii\db\Connection;
 use yii\helpers\Console;
 
 /**
@@ -61,7 +63,7 @@ class AnalyticsAggregationController extends Controller
     public $skipAggregationCheck = false;
 
     /**
-     * @var bool daily/monthly/backfill: recompute only the page aggregates.
+     * @var bool Alias for --only=pages (0.24.2).
      *
      * For repairing page counts from the raw data that is still there. Element
      * aggregates are left alone: the cleanup also deletes orphaned element views of
@@ -69,6 +71,12 @@ class AnalyticsAggregationController extends Controller
      * would lower counts that were right.
      */
     public $pagesOnly = false;
+
+    /**
+     * @var string|null daily/monthly/backfill: comma list of the parts to aggregate
+     * (pages, elements, visits). Empty: all parts.
+     */
+    public $only;
 
     /**
      * @var bool Skip the interactive confirmation in cleanup.
@@ -93,6 +101,7 @@ class AnalyticsAggregationController extends Controller
             'optimize',
             'skipAggregationCheck',
             'pagesOnly',
+            'only',
         ]);
     }
 
@@ -119,132 +128,155 @@ class AnalyticsAggregationController extends Controller
     public function actionDaily($date = null)
     {
         $targetDate = $date ?: date('Y-m-d', strtotime('-1 day'));
+        $parts = $this->resolveParts();
+        if ($parts === null) {
+            return ExitCode::USAGE;
+        }
 
         $this->stdout("\n" . str_repeat('=', 60) . "\n", Console::FG_CYAN);
         $this->stdout("Daily Analytics Aggregation\n", Console::FG_CYAN);
         $this->stdout(str_repeat('=', 60) . "\n", Console::FG_CYAN);
-        $this->stdout("Target date: {$targetDate}\n\n");
+        $this->stdout("Target date: {$targetDate}\n");
+        $this->stdout("Parts: " . implode(', ', $parts) . "\n\n");
 
         if ($this->dryRun) {
-            $this->stdout("DRY RUN MODE - No changes will be made\n\n", Console::FG_YELLOW);
-        }
-
-        $db = Yii::$app->db;
-
-        // Half-open [start, end) range instead of DATE(created_at) = :date, which
-        // is not sargable and forces a full table scan on every query below.
-        $rangeStart = $targetDate . ' 00:00:00';
-        $rangeEnd = date('Y-m-d', strtotime($targetDate . ' +1 day')) . ' 00:00:00';
-
-        // Check if we have element view data for this date
-        // Note: analytics_element_views doesn't have is_bot, we join with sessions
-        // IMPORTANT: Use INNER JOIN to exclude orphaned element views without valid sessions
-        $elementViewCount = $this->pagesOnly ? 0 : $db->createCommand("
-            SELECT COUNT(*)
-            FROM {{%analytics_element_views}} ev
-            INNER JOIN {{%analytics_sessions}} s ON ev.session_id = s.session_id
-            WHERE ev.created_at >= :start AND ev.created_at < :end AND s.is_bot = 0
-        ")->bindValue(':start', $rangeStart)->bindValue(':end', $rangeEnd)->queryScalar();
-
-        // Check if we have page view data for this date
-        $pageViewCount = $db->createCommand("
-            SELECT COUNT(*)
-            FROM {{%analytics_page_views}}
-            WHERE created_at >= :start AND created_at < :end AND is_bot = 0
-        ")->bindValue(':start', $rangeStart)->bindValue(':end', $rangeEnd)->queryScalar();
-
-        if ($elementViewCount == 0 && $pageViewCount == 0) {
-            $this->stdout("No data found for {$targetDate}\n", Console::FG_YELLOW);
+            $this->stdout("DRY RUN MODE - No changes will be made\n", Console::FG_YELLOW);
             return ExitCode::OK;
         }
 
-        $this->stdout("Found {$elementViewCount} element view records and {$pageViewCount} page view records\n");
-
-        if ($this->dryRun) {
-            $this->stdout("Would aggregate this data (dry run)\n", Console::FG_YELLOW);
-            return ExitCode::OK;
-        }
-
-        // Aggregate element views by date, element, and event type
-        // IMPORTANT: Use INNER JOIN to exclude orphaned element views
-        if ($elementViewCount > 0) {
-            try {
-                $aggregated = $db->createCommand("
-                    INSERT INTO {{%analytics_element_daily}}
-                    (date, element_uuid, element_type, page_uuid, event_type, total_views, unique_sessions, unique_users)
-                    SELECT
-                        DATE(ev.created_at) as date,
-                        ev.element_uuid,
-                        ev.element_type,
-                        ev.page_uuid,
-                        ev.type as event_type,
-                        COUNT(*) as total_views,
-                        COUNT(DISTINCT ev.session_id) as unique_sessions,
-                        COUNT(DISTINCT CASE WHEN ev.user_id IS NOT NULL AND ev.user_id > 0 THEN ev.user_id END) as unique_users
-                    FROM {{%analytics_element_views}} ev
-                    INNER JOIN {{%analytics_sessions}} s ON ev.session_id = s.session_id
-                    WHERE ev.created_at >= :start AND ev.created_at < :end
-                        AND s.is_bot = 0
-                    GROUP BY DATE(ev.created_at), ev.element_uuid, ev.element_type, ev.page_uuid, ev.type
-                    ON DUPLICATE KEY UPDATE
-                        total_views = VALUES(total_views),
-                        unique_sessions = VALUES(unique_sessions),
-                        unique_users = VALUES(unique_users),
-                        updated_at = NOW()
-                ")->bindValue(':start', $rangeStart)->bindValue(':end', $rangeEnd)->execute();
-
-                $this->stdout("✓ Aggregated {$aggregated} element view records\n", Console::FG_GREEN);
-
-            } catch (\Exception $e) {
-                $this->stderr("✗ Error aggregating element data: " . $e->getMessage() . "\n", Console::FG_RED);
-                return ExitCode::UNSPECIFIED_ERROR;
-            }
-        } elseif ($this->pagesOnly) {
-            $this->stdout("Element aggregates left as they are (--pagesOnly)\n");
-        } else {
-            $this->stdout("No element view data for this date\n", Console::FG_YELLOW);
-        }
-
-        // Aggregate page views for the same date (independent of element aggregation).
-        // One row per page, as the unique key (date, page_uuid) has it, with one of its
-        // URLs as page_url. Grouping by url as well made one row per URL variant, and
-        // ON DUPLICATE KEY UPDATE let each overwrite the last: every job detail URL is a
-        // variant of the same page, so 2,511 views of a day were stored as 49.
-        if ($pageViewCount > 0) {
-            try {
-                $pageAggregated = $db->createCommand("
-                    INSERT INTO {{%analytics_page_daily}}
-                    (date, page_uuid, page_url, total_views, unique_sessions, unique_users)
-                    SELECT
-                        DATE(created_at) as date,
-                        page_uuid,
-                        MIN(url),
-                        COUNT(*) as total_views,
-                        COUNT(DISTINCT session_id) as unique_sessions,
-                        COUNT(DISTINCT CASE WHEN user_id IS NOT NULL AND user_id > 0 THEN user_id END) as unique_users
-                    FROM {{%analytics_page_views}}
-                    WHERE created_at >= :start AND created_at < :end AND is_bot = 0
-                    GROUP BY DATE(created_at), page_uuid
-                    ON DUPLICATE KEY UPDATE
-                        total_views = VALUES(total_views),
-                        unique_sessions = VALUES(unique_sessions),
-                        unique_users = VALUES(unique_users),
-                        updated_at = NOW()
-                ")->bindValue(':start', $rangeStart)->bindValue(':end', $rangeEnd)->execute();
-
-                $this->stdout("✓ Aggregated {$pageAggregated} page view records\n", Console::FG_GREEN);
-
-            } catch (\Exception $e) {
-                $this->stderr("✗ Error aggregating page data: " . $e->getMessage() . "\n", Console::FG_RED);
-                return ExitCode::UNSPECIFIED_ERROR;
-            }
-        } else {
-            $this->stdout("No page view data for this date\n", Console::FG_YELLOW);
+        if (!$this->aggregateDate($targetDate, $parts)) {
+            $this->stderr("\nDaily aggregation finished with errors\n", Console::FG_RED);
+            return ExitCode::UNSPECIFIED_ERROR;
         }
 
         $this->stdout("\nDaily aggregation completed successfully\n", Console::FG_GREEN);
 
         return ExitCode::OK;
+    }
+
+    /**
+     * Aggregate one day's raw data.
+     *
+     * Each part runs on its own: a failing part is reported and the others still
+     * run, so one broken table cannot silently leave the rest of the day empty.
+     *
+     * @param string $date Y-m-d
+     * @param string[] $parts AggregationParts values
+     * @param bool $repair Merge with GREATEST(stored, recomputed) instead of
+     *                     overwriting, and never delete rows: used by the cleanup
+     *                     to fill an undercount without lowering anything
+     * @return bool true when every requested part succeeded
+     */
+    public function aggregateDate(string $date, array $parts, bool $repair = false): bool
+    {
+        $db = Yii::$app->db;
+        $start = $date . ' 00:00:00';
+        $end = date('Y-m-d', strtotime($date . ' +1 day')) . ' 00:00:00';
+        $ok = true;
+
+        if (in_array(AggregationParts::ELEMENTS, $parts, true)) {
+            $ok = $this->runPart('element', fn() => $this->aggregateElements($db, $start, $end, $repair)) && $ok;
+        }
+
+        if (in_array(AggregationParts::PAGES, $parts, true)) {
+            $ok = $this->runPart('page', fn() => $this->aggregatePages($db, $start, $end, $repair)) && $ok;
+        }
+
+        return $ok;
+    }
+
+    /**
+     * @return string[]|null The parts from --only/--pagesOnly, or null after reporting a usage error
+     */
+    protected function resolveParts(): ?array
+    {
+        try {
+            return AggregationParts::resolve($this->only, (bool)$this->pagesOnly);
+        } catch (\InvalidArgumentException $e) {
+            $this->stderr($e->getMessage() . "\n", Console::FG_RED);
+            return null;
+        }
+    }
+
+    private function runPart(string $label, callable $aggregate): bool
+    {
+        try {
+            $rows = $aggregate();
+            $this->stdout("✓ Aggregated {$rows} {$label} records\n", Console::FG_GREEN);
+            return true;
+        } catch (\Throwable $e) {
+            $this->stderr("✗ Error aggregating {$label} data: " . $e->getMessage() . "\n", Console::FG_RED);
+            return false;
+        }
+    }
+
+    /**
+     * ON DUPLICATE KEY UPDATE clause for the count columns.
+     */
+    private static function mergeCounts(bool $repair): string
+    {
+        $set = [];
+        foreach (['total_views', 'unique_sessions', 'unique_users'] as $column) {
+            $set[] = $repair ? "{$column} = GREATEST({$column}, VALUES({$column}))" : "{$column} = VALUES({$column})";
+        }
+        $set[] = 'updated_at = NOW()';
+
+        return implode(', ', $set);
+    }
+
+    /**
+     * Element views by date, element, page and event type.
+     * INNER JOIN excludes orphaned views and bot sessions. A missing type is
+     * stored as '' (what non-strict MySQL did implicitly; strict mode would fail).
+     */
+    private function aggregateElements(Connection $db, string $start, string $end, bool $repair): int
+    {
+        return $db->createCommand("
+            INSERT INTO {{%analytics_element_daily}}
+            (date, element_uuid, element_type, page_uuid, event_type, total_views, unique_sessions, unique_users)
+            SELECT
+                DATE(ev.created_at) as date,
+                ev.element_uuid,
+                ev.element_type,
+                ev.page_uuid,
+                COALESCE(ev.type, '') as event_type,
+                COUNT(*) as total_views,
+                COUNT(DISTINCT ev.session_id) as unique_sessions,
+                COUNT(DISTINCT CASE WHEN ev.user_id IS NOT NULL AND ev.user_id > 0 THEN ev.user_id END) as unique_users
+            FROM {{%analytics_element_views}} ev
+            INNER JOIN {{%analytics_sessions}} s ON ev.session_id = s.session_id
+            WHERE ev.created_at >= :start AND ev.created_at < :end
+                AND s.is_bot = 0
+            GROUP BY DATE(ev.created_at), ev.element_uuid, ev.element_type, ev.page_uuid, COALESCE(ev.type, '')
+            ON DUPLICATE KEY UPDATE " . self::mergeCounts($repair) . "
+        ", [':start' => $start, ':end' => $end])->execute();
+    }
+
+    /**
+     * Page views by date and page.
+     *
+     * One row per page, as the unique key (date, page_uuid) has it, with one of its
+     * URLs as page_url. Grouping by url as well made one row per URL variant, and
+     * ON DUPLICATE KEY UPDATE let each overwrite the last: every job detail URL is a
+     * variant of the same page, so 2,511 views of a day were stored as 49.
+     */
+    private function aggregatePages(Connection $db, string $start, string $end, bool $repair): int
+    {
+        return $db->createCommand("
+            INSERT INTO {{%analytics_page_daily}}
+            (date, page_uuid, page_url, total_views, unique_sessions, unique_users)
+            SELECT
+                DATE(created_at) as date,
+                page_uuid,
+                MIN(url),
+                COUNT(*) as total_views,
+                COUNT(DISTINCT session_id) as unique_sessions,
+                COUNT(DISTINCT CASE WHEN user_id IS NOT NULL AND user_id > 0 THEN user_id END) as unique_users
+            FROM {{%analytics_page_views}}
+            WHERE created_at >= :start AND created_at < :end AND is_bot = 0
+            GROUP BY DATE(created_at), page_uuid
+            ON DUPLICATE KEY UPDATE " . self::mergeCounts($repair) . "
+        ", [':start' => $start, ':end' => $end])->execute();
     }
 
     /**
@@ -255,6 +287,10 @@ class AnalyticsAggregationController extends Controller
      */
     public function actionMonthly($yearMonth = null)
     {
+        $parts = $this->resolveParts();
+        if ($parts === null) {
+            return ExitCode::USAGE;
+        }
         if (!$yearMonth) {
             $yearMonth = date('Y-m', strtotime('first day of last month'));
         }
@@ -307,8 +343,8 @@ class AnalyticsAggregationController extends Controller
 
         // Aggregate element views from raw data to ensure accurate unique counts
         // Note: Cannot sum unique_sessions/unique_users from daily data as it would overcount
-        if ($this->pagesOnly) {
-            $this->stdout("Element monthly aggregates left as they are (--pagesOnly)\n");
+        if (!in_array(AggregationParts::ELEMENTS, $parts, true)) {
+            $this->stdout("Element monthly aggregates left as they are (--only)\n");
         } elseif ($elementDailyCount > 0) {
             try {
                 $aggregated = $db->createCommand("
@@ -352,7 +388,9 @@ class AnalyticsAggregationController extends Controller
         // Aggregate page views from raw data to ensure accurate unique counts
         // Note: Cannot sum unique_sessions/unique_users from daily data as it would overcount
         // One row per page, not per URL variant - see actionDaily()
-        if ($pageDailyCount > 0) {
+        if (!in_array(AggregationParts::PAGES, $parts, true)) {
+            $this->stdout("Page monthly aggregates left as they are (--only)\n");
+        } elseif ($pageDailyCount > 0) {
             try {
                 $pageAggregated = $db->createCommand("
                     INSERT INTO {{%analytics_page_monthly}}
@@ -947,16 +985,19 @@ class AnalyticsAggregationController extends Controller
         $this->stdout(str_repeat('=', 60) . "\n", Console::FG_CYAN);
         $this->stdout("Processing last {$days} days\n\n");
 
+        $parts = $this->resolveParts();
+        if ($parts === null) {
+            return ExitCode::USAGE;
+        }
+
         $successCount = 0;
         $errorCount = 0;
 
         for ($i = $days; $i >= 1; $i--) {
             $date = date('Y-m-d', strtotime("-{$i} days"));
-            $this->stdout("[{$date}] ", Console::FG_CYAN);
+            $this->stdout("[{$date}]\n", Console::FG_CYAN);
 
-            $exitCode = $this->actionDaily($date);
-
-            if ($exitCode === ExitCode::OK) {
+            if ($this->aggregateDate($date, $parts)) {
                 $successCount++;
             } else {
                 $errorCount++;
@@ -967,7 +1008,8 @@ class AnalyticsAggregationController extends Controller
         $this->stdout("Backfill completed\n", Console::FG_GREEN);
         $this->stdout("  Success: {$successCount} days\n");
         if ($errorCount > 0) {
-            $this->stdout("  Errors: {$errorCount} days\n", Console::FG_YELLOW);
+            $this->stderr("  Errors: {$errorCount} days\n", Console::FG_RED);
+            return ExitCode::UNSPECIFIED_ERROR;
         }
 
         return ExitCode::OK;
