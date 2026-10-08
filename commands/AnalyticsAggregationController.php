@@ -4,6 +4,7 @@ namespace giantbits\crelish\commands;
 
 use Yii;
 use giantbits\crelish\components\Analytics\AggregationParts;
+use giantbits\crelish\components\Analytics\VisitsAggregator;
 use yii\console\Controller;
 use yii\console\ExitCode;
 use yii\db\Connection;
@@ -180,6 +181,14 @@ class AnalyticsAggregationController extends Controller
 
         if (in_array(AggregationParts::PAGES, $parts, true)) {
             $ok = $this->runPart('page', fn() => $this->aggregatePages($db, $start, $end, $repair)) && $ok;
+        }
+
+        if (in_array(AggregationParts::VISITS, $parts, true)) {
+            if (VisitsAggregator::tableExists($db)) {
+                $ok = $this->runPart('visit', fn() => (new VisitsAggregator($db))->aggregate($date, $repair)) && $ok;
+            } else {
+                $this->stderr("! Visits skipped: table analytics_visits_daily missing (run yii crelish-migrate/up)\n", Console::FG_YELLOW);
+            }
         }
 
         return $ok;
