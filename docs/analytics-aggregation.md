@@ -99,6 +99,16 @@ Add these to your crontab:
 0 2 * * * /path/to/yii crelish/bot-detection/index
 ```
 
+### Bot states
+
+`is_bot` on `analytics_sessions` and `analytics_page_views` has three states, set by `bot-detection/index`:
+
+- `0` visitor: counted by every aggregate and visit figure.
+- `1` bot (score >= 70, or flagged at recording): not counted, deleted by the bot detection.
+- `2` suspected (score 50-69): not counted, raw data kept; released to `0` when a later run scores the session below 50 or not at all. The cleanup deletes suspected page views with the normal retention.
+
+Browser versions for the outdated-browser score are computed from the date, see `BOTDETECTION_README.md`.
+
 ### 4. Initial Backfill
 
 After setting up, backfill the raw data that is still there (never more days than the retention period, see [Backfill](#backfill)):
@@ -182,7 +192,7 @@ Before deleting, each day is checked against its raw data:
 - element views: `analytics_element_daily` total views vs. raw element views
 - site visits: the site rows of `analytics_visits_daily` (`pages`, `elements`) vs. distinct raw sessions
 
-Bots are excluded on both sides. A day passes when every stored value is at least the raw value (bots detected late make the raw value smaller, which is accepted). A day with no reportable traffic passes.
+Bots are excluded on both sides (only `is_bot = 0` counts, so suspected bots, `is_bot = 2`, are excluded too). A day passes when every stored value is at least the raw value (bots detected late make the raw value smaller, which is accepted). A day with no reportable traffic passes.
 
 In a dry run nothing is repaired: a short day is reported as "would repair" and counted as kept.
 

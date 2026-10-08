@@ -23,9 +23,16 @@ Every session is scored across multiple detection phases. Scores accumulate and 
 
 | Level | Score | Action |
 |-------|-------|--------|
-| **HIGH** | >= 70 | Marked as bot, deleted automatically |
-| **MEDIUM** | 30-69 | Flagged for manual review |
+| **HIGH** | >= 70 | `is_bot = 1`: marked as bot, deleted automatically |
+| **SUSPECTED** | 50-69 | `is_bot = 2`: excluded from every statistic, raw data kept |
+| **MEDIUM** | 30-69 | Listed by `review` for manual review |
 | **LOW** | < 30 | Kept as legitimate traffic |
+
+`is_bot` has three states: `0` visitor (counted), `1` bot (deleted by step 11), `2` suspected (not counted, not deleted). Suspected sessions are scored again on every run; when a session in the scoring window drops below 50 or gets no score at all, it and its page views go back to `0`. Page views follow their session, except that a page view flagged as a bot at recording stays `1`. The analytics cleanup deletes suspected page views with the normal retention.
+
+### Current browser versions
+
+Outdated-browser scores are measured against versions computed from the date (`components/Analytics/BrowserVersions.php`), never hardcoded: Chrome = 131 + one per 28 days since 2024-11-12, Firefox = 133 + one per 28 days since 2024-11-26; iOS/Safari and Android are compared by release year (iOS/Safari 26 = 2025, 18 = 2024; Android 16 = 2025). Chrome/Firefox: 6+ versions behind 20, 13+ 30, 26+ 40, 52+ 50. iOS/Safari: 2+ years 30, 3+ 40, 5+ 50. Android: 4+ years 30, 6+ 50; the reduced UA `Android 10; K` is never scored for its OS.
 
 ### Detection Phases (11 total)
 
@@ -175,7 +182,7 @@ php yii crelish/bot-detection/promote abc123def456
 
 ### `php yii crelish/bot-detection/demote <session_id>`
 
-Clears the bot score for a session, marking it as legitimate. Use when a session was incorrectly flagged.
+Clears the bot score for a session, marking it as legitimate (suspected page views are counted again). Use when a session was incorrectly flagged. The next run scores the session again.
 
 ```bash
 php yii crelish/bot-detection/demote abc123def456
@@ -207,7 +214,7 @@ The system expects these columns on `analytics_sessions`:
 
 | Column | Type | Notes |
 |--------|------|-------|
-| `is_bot` | tinyint | 0 or 1 |
+| `is_bot` | tinyint | 0 visitor, 1 bot, 2 suspected |
 | `bot_score` | int | 0-100 confidence score |
 | `bot_reason` | varchar(255) | Optional - comma-separated detection reasons |
 
