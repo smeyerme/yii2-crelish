@@ -700,7 +700,11 @@ class AnalyticsAggregatedController extends CrelishBaseController
   }
 
   /**
-   * Get day-of-week traffic patterns
+   * Get day-of-week traffic patterns: per weekday, the site's page views and
+   * visits per day, each averaged over the days that have data. Visits come
+   * from the site's daily visit rows (avg_sessions null when none were
+   * recorded); averaging unique_sessions over page rows counted a visitor
+   * once per page seen.
    */
   public function actionDayOfWeekPatterns()
   {
@@ -708,26 +712,47 @@ class AnalyticsAggregatedController extends CrelishBaseController
 
     [$startDate, $endDate, $period] = $this->resolvePeriod();
 
-    // Get page views by day of week
-    $patterns = (new Query())
-      ->select([
-        'day_of_week' => new Expression('DAYOFWEEK(date)'),
-        'day_name' => new Expression('DAYNAME(date)'),
-        'avg_views' => 'AVG(total_views)',
-        'avg_sessions' => 'AVG(unique_sessions)',
-        'total_days' => 'COUNT(DISTINCT date)'
-      ])
+    $views = (new Query())
+      ->select(['date', 'views' => 'SUM(total_views)'])
       ->from('{{%analytics_page_daily}}')
       ->where(['>=', 'date', $startDate])
       ->andWhere(['<=', 'date', $endDate])
-      ->groupBy(['day_of_week', 'day_name'])
-      ->orderBy(['day_of_week' => SORT_ASC])
+      ->groupBy(['date'])
       ->all();
+    $visits = (new VisitsReader())->byDay(VisitsAggregator::SOURCE_PAGES, '', $startDate, $endDate);
 
-    // Round averages
-    foreach ($patterns as &$pattern) {
-      $pattern['avg_views'] = round($pattern['avg_views'], 0);
-      $pattern['avg_sessions'] = round($pattern['avg_sessions'], 0);
+    $days = [];
+    foreach ($views as $row) {
+      $days[(string)$row['date']]['views'] = (int)$row['views'];
+    }
+    foreach ($visits as $date => $row) {
+      $days[$date]['visits'] = $row['visits'];
+    }
+
+    $weekdays = [];
+    foreach ($days as $date => $values) {
+      $time = strtotime($date);
+      $key = (int)date('w', $time) + 1; // as DAYOFWEEK(): 1 = Sunday
+      $weekdays[$key] ??= ['day_name' => date('l', $time), 'views' => [], 'visits' => [], 'days' => 0];
+      $weekdays[$key]['days']++;
+      foreach (['views', 'visits'] as $field) {
+        if (isset($values[$field])) {
+          $weekdays[$key][$field][] = $values[$field];
+        }
+      }
+    }
+    ksort($weekdays);
+
+    $average = static fn(array $values): ?int => $values === [] ? null : (int)round(array_sum($values) / count($values));
+    $patterns = [];
+    foreach ($weekdays as $key => $weekday) {
+      $patterns[] = [
+        'day_of_week' => $key,
+        'day_name' => $weekday['day_name'],
+        'avg_views' => $average($weekday['views']) ?? 0,
+        'avg_sessions' => $average($weekday['visits']),
+        'total_days' => $weekday['days'],
+      ];
     }
 
     return $patterns;
