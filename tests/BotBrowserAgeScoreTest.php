@@ -47,13 +47,20 @@ $controller->today = '2026-10-08';
 $chrome = static fn(int $v): string => "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/$v.0.0.0 Safari/537.36";
 $cases = [
     'Chrome 154 (outdated 2 days) scores 0' => [0, $chrome(154)],
-    'Chrome 149 (outdated 163 days) scores 0' => [0, $chrome(149)],
-    'Chrome 148 (outdated 191 days) scores 20' => [20, $chrome(148)],
-    'Chrome 142 (outdated 359 days) scores 20' => [20, $chrome(142)],
-    'Chrome 141 (outdated 387 days) scores 30' => [30, $chrome(141)],
-    'Chrome 128 (outdated 751 days) scores 40' => [40, $chrome(128)],
-    'Chrome 100 (outdated 1535 days) scores 50' => [50, $chrome(100)],
-    'Firefox 150 (outdated 177 days) scores 20' => [20, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:150.0) Gecko/20100101 Firefox/150.0'],
+    'Chrome 148 (outdated 142 days) scores 0' => [0, $chrome(148)],
+    'Chrome 146 (outdated 198 days) scores 20' => [20, $chrome(146)],
+    'Chrome 142 (outdated 310 days) scores 20' => [20, $chrome(142)],
+    'Chrome 140 (outdated 366 days) scores 30' => [30, $chrome(140)],
+    'Chrome 128 (outdated 702 days) scores 30' => [30, $chrome(128)],
+    'Chrome 127 (outdated 730 days) scores 40' => [40, $chrome(127)],
+    'Chrome 100 (outdated 1486 days) scores 50' => [50, $chrome(100)],
+    'Firefox 150 (outdated 149 days) scores 0' => [0, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:150.0) Gecko/20100101 Firefox/150.0'],
+    'Firefox 149 (outdated 177 days) scores 20' => [20, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:149.0) Gecko/20100101 Firefox/149.0'],
+    'crafted Chrome/99999999999 scores 0' => [0, $chrome(99999999999)],
+    'crafted Chrome/300000 scores 0' => [0, $chrome(300000)],
+    'Chrome 10 versions ahead scores 0' => [0, $chrome(165)],
+    'crafted Firefox/99999999999999999999 scores 0' => [0, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:150.0) Gecko/20100101 Firefox/99999999999999999999.0'],
+    'crafted CriOS/99999999999 scores 0' => [0, 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/99999999999.0.7339.122 Mobile/15E148 Safari/604.1'],
     'iOS 26 scores 0' => [0, 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1'],
     'iOS 18 (2 years) scores 30' => [30, 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1'],
     'iOS 26 Safari with the frozen OS 18_6 scores 0' => [0, 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1'],
@@ -81,7 +88,7 @@ foreach (['DeviceDetector' => true, 'regex fallback' => false] as $path => $with
 
 echo "Frozen Android OS is never scored\n";
 check('frozen Android with old Chrome scores the Chrome version only', 30, $controller->ageScore(
-    'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36', true
+    'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Mobile Safari/537.36', true
 ));
 
 echo "\nChrome and Firefox across the switch to the 2-week cadence\n";
@@ -89,7 +96,7 @@ $controller->today = '2027-03-16';
 check('2027-03-16: Chrome 166 is current, scores 0', 0, $controller->ageScore($chrome(166), true));
 check('2027-03-16: Chrome 155 (outdated 147 days) scores 0', 0, $controller->ageScore($chrome(155), true));
 check('2027-03-16: Chrome 153 (outdated 175 days) scores 20', 20, $controller->ageScore($chrome(153), true));
-check('2027-03-16: Chrome 145 (outdated 1 year+) scores 30', 30, $controller->ageScore($chrome(145), true));
+check('2027-03-16: Chrome 145 (outdated 385 days) scores 30', 30, $controller->ageScore($chrome(145), true));
 check('2027-03-16: Firefox 156 (outdated 168 days) scores 20', 20, $controller->ageScore('Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:156.0) Gecko/20100101 Firefox/156.0', false));
 $controller->today = '2026-10-08';
 

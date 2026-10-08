@@ -5,43 +5,44 @@ namespace giantbits\crelish\components\Analytics;
 /**
  * Current browser and OS versions, computed from the date so they never go stale.
  *
- * Chrome and Firefox follow a piecewise release schedule: 4-week steps from an
- * old anchor until they switched to a 2-week cadence, 2-week steps from the
- * switch on. iOS/Safari and Android are compared by release year, because
- * their version numbers do not map linearly to age (Apple jumped from 18 to
- * 26 in 2025).
+ * Chrome and Firefox switched to a 2-week release cadence: from the switch on,
+ * major N ships 14 days after N - 1. Releases before the switch are counted
+ * backwards from it in 4-week steps (counting forward from an older release
+ * drifted weeks ahead of the real dates, because of holiday and summer gaps).
+ * iOS/Safari and Android are compared by release year, because their version
+ * numbers do not map linearly to age (Apple jumped from 18 to 26 in 2025).
  *
  * Pure: every method is static and takes the day it is asked about.
  */
 final class BrowserVersions
 {
-    /**
-     * Per browser: [old anchor major, old anchor date, old step days,
-     * switch major, switch date, new step days]
-     */
+    /** Per browser: [switch major, switch date, step days before, step days from the switch] */
     private const SCHEDULES = [
-        // Chrome 131 stable 2024-11-12; Chrome 153 (2026-09-08) opened the 2-week cadence
-        'chrome' => [131, '2024-11-12', 28, 153, '2026-09-08', 14],
-        // Firefox 133 2024-11-26; Firefox 155 (2026-09-01) opened the 2-week cadence
-        'firefox' => [133, '2024-11-26', 28, 155, '2026-09-01', 14],
+        // Chrome 153 (2026-09-08) opened the 2-week cadence
+        'chrome' => [153, '2026-09-08', 28, 14],
+        // Firefox 155 (2026-09-01) opened the 2-week cadence
+        'firefox' => [155, '2026-09-01', 28, 14],
     ];
 
+    /** Majors above this are not versions but garbage (crafted user agents) */
+    public const MAX_MAJOR = 10000;
+
     /**
-     * Release day of a major version ('chrome' or 'firefox'). Before the switch
-     * this is the old anchor plus 28-day steps, from the switch on the switch
-     * anchor plus 14-day steps.
+     * Release day of a major version ('chrome' or 'firefox'): the switch
+     * anchor plus 14-day steps from the switch on, minus 28-day steps before it.
+     *
+     * @throws \InvalidArgumentException for an unknown browser or a major outside 1..MAX_MAJOR
      */
     public static function releaseDate(string $browser, int $major): \DateTimeImmutable
     {
-        [$oldMajor, $oldDate, $oldStep, $switchMajor, $switchDate, $newStep] = self::schedule($browser);
+        [$switchMajor, $switchDate, $stepBefore, $stepFrom] = self::schedule($browser);
+        if ($major < 1 || $major > self::MAX_MAJOR) {
+            throw new \InvalidArgumentException("No release date for {$browser} {$major}");
+        }
 
-        [$anchorMajor, $anchorDate, $step] = $major >= $switchMajor
-            ? [$switchMajor, $switchDate, $newStep]
-            : [$oldMajor, $oldDate, $oldStep];
+        $days = ($major - $switchMajor) * ($major >= $switchMajor ? $stepFrom : $stepBefore);
 
-        $days = ($major - $anchorMajor) * $step;
-
-        return (new \DateTimeImmutable($anchorDate, new \DateTimeZone('UTC')))
+        return (new \DateTimeImmutable($switchDate, new \DateTimeZone('UTC')))
             ->modify(sprintf('%+d days', $days));
     }
 
@@ -50,23 +51,29 @@ final class BrowserVersions
      */
     public static function current(string $browser, \DateTimeImmutable $today): int
     {
-        [$oldMajor, $oldDate, $oldStep, $switchMajor, $switchDate, $newStep] = self::schedule($browser);
+        [$switchMajor, $switchDate, $stepBefore, $stepFrom] = self::schedule($browser);
 
         $sinceSwitch = self::daysSince($switchDate, $today);
         if ($sinceSwitch >= 0) {
-            return $switchMajor + intdiv($sinceSwitch, $newStep);
+            return $switchMajor + intdiv($sinceSwitch, $stepFrom);
         }
 
-        // Before the switch: 4-week steps, never past the last version before it
-        return min($switchMajor - 1, $oldMajor + intdiv(self::daysSince($oldDate, $today), $oldStep));
+        // Before the switch: the newest major whose backwards-counted date has passed
+        return $switchMajor - intdiv(-$sinceSwitch + $stepBefore - 1, $stepBefore);
     }
 
     /**
      * How many days a major version has been outdated on $today: days since its
      * successor (major + 1) was released. Negative when there is no successor yet.
+     *
+     * @throws \InvalidArgumentException for a major outside 1..MAX_MAJOR
      */
     public static function outdatedDays(string $browser, int $major, \DateTimeImmutable $today): int
     {
+        if ($major < 1 || $major >= self::MAX_MAJOR) {
+            throw new \InvalidArgumentException("No release date for {$browser} {$major}");
+        }
+
         return self::daysSince(self::releaseDate($browser, $major + 1)->format('Y-m-d'), $today);
     }
 
@@ -139,7 +146,7 @@ final class BrowserVersions
         return (bool)preg_match('/(?:iPhone OS|CPU OS) 18_6(?!\d)/', $userAgent);
     }
 
-    /** @return array{int, string, int, int, string, int} */
+    /** @return array{int, string, int, int} */
     private static function schedule(string $browser): array
     {
         $browser = strtolower($browser);

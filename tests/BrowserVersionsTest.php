@@ -14,24 +14,28 @@ use giantbits\crelish\components\Analytics\BrowserVersions;
 
 $day = static fn(string $ymd): \DateTimeImmutable => new \DateTimeImmutable($ymd);
 
-echo "Chrome and Firefox: 4-week cadence, then 2-week cadence\n";
+echo "Chrome and Firefox: 2-week cadence from the switch, 4-week steps counted back from it\n";
 $release = static fn(string $browser, int $major): string => BrowserVersions::releaseDate($browser, $major)->format('Y-m-d');
-check('Chrome 131 anchor', '2024-11-12', $release('chrome', 131));
-check('Chrome 143 at the 4-week cadence', '2025-10-14', $release('chrome', 143));
 check('Chrome 153 opens the 2-week cadence', '2026-09-08', $release('chrome', 153));
 check('Chrome 154', '2026-09-22', $release('chrome', 154));
 check('Chrome 155', '2026-10-06', $release('chrome', 155));
 check('Chrome 156', '2026-10-20', $release('chrome', 156));
-check('Firefox 133 anchor', '2024-11-26', $release('firefox', 133));
+check('Chrome 152: 28 days before the switch', '2026-08-11', $release('chrome', 152));
+check('Chrome 143: 10 x 28 days before the switch', '2025-12-02', $release('chrome', 143));
+check('Chrome 131', '2024-12-31', $release('chrome', 131));
 check('Firefox 155 opens the 2-week cadence', '2026-09-01', $release('firefox', 155));
 check('Firefox 158', '2026-10-13', $release('firefox', 158));
+check('Firefox 154: 28 days before the switch', '2026-08-04', $release('firefox', 154));
+check('Firefox 133', '2024-12-24', $release('firefox', 133));
+checkThrows('an absurd major is refused', fn() => BrowserVersions::releaseDate('chrome', 99999999999), \InvalidArgumentException::class);
+checkThrows('a major below 1 is refused', fn() => BrowserVersions::releaseDate('chrome', 0), \InvalidArgumentException::class);
+checkThrows('outdatedDays of PHP_INT_MAX is refused', fn() => BrowserVersions::outdatedDays('firefox', PHP_INT_MAX, $day('2026-10-08')), \InvalidArgumentException::class);
 
-check('Chrome on its 131 release day', 131, BrowserVersions::current('chrome', $day('2024-11-12')));
-check('Chrome 27 days later is still 131', 131, BrowserVersions::current('chrome', $day('2024-12-09')));
-check('Chrome 28 days later is 132', 132, BrowserVersions::current('chrome', $day('2024-12-10')));
-check('Chrome on 2026-01-15 is 146', 146, BrowserVersions::current('chrome', $day('2026-01-15')));
-check('Chrome on 2026-07-01 is 152', 152, BrowserVersions::current('chrome', $day('2026-07-01')));
-check('Chrome the day before the switch stays 152', 152, BrowserVersions::current('chrome', $day('2026-09-07')));
+check('Chrome on 2026-01-15 is 144', 144, BrowserVersions::current('chrome', $day('2026-01-15')));
+check('Chrome on 2026-07-01 is 150', 150, BrowserVersions::current('chrome', $day('2026-07-01')));
+check('Chrome on 152\'s release day', 152, BrowserVersions::current('chrome', $day('2026-08-11')));
+check('Chrome the day before 152 is 151', 151, BrowserVersions::current('chrome', $day('2026-08-10')));
+check('Chrome the day before the switch is 152', 152, BrowserVersions::current('chrome', $day('2026-09-07')));
 check('Chrome on 2026-09-08 is 153', 153, BrowserVersions::current('chrome', $day('2026-09-08')));
 check('Chrome on 2026-09-21 is still 153', 153, BrowserVersions::current('chrome', $day('2026-09-21')));
 check('Chrome on 2026-09-22 is 154', 154, BrowserVersions::current('chrome', $day('2026-09-22')));
@@ -39,8 +43,7 @@ check('Chrome on 2026-10-08 is 155', 155, BrowserVersions::current('chrome', $da
 check('Chrome on 2026-10-20 is 156', 156, BrowserVersions::current('chrome', $day('2026-10-20')));
 check('Chrome on 2027-03-16 is 166 (14-day steps from 153)', 166, BrowserVersions::current('chrome', $day('2027-03-16')));
 check('chrome() is current(chrome)', 155, BrowserVersions::chrome($day('2026-10-08')));
-check('Firefox on its 133 release day', 133, BrowserVersions::current('firefox', $day('2024-11-26')));
-check('Firefox on 2026-01-15 is 147', 147, BrowserVersions::current('firefox', $day('2026-01-15')));
+check('Firefox on 2026-01-15 is 146', 146, BrowserVersions::current('firefox', $day('2026-01-15')));
 check('Firefox the day before the switch is 154', 154, BrowserVersions::current('firefox', $day('2026-08-31')));
 check('Firefox on 2026-09-01 is 155', 155, BrowserVersions::current('firefox', $day('2026-09-01')));
 check('Firefox on 2026-10-08 is 157', 157, BrowserVersions::current('firefox', $day('2026-10-08')));
@@ -48,7 +51,7 @@ check('Firefox on 2026-10-13 is 158', 158, BrowserVersions::current('firefox', $
 check('firefox() is current(firefox)', 157, BrowserVersions::firefox($day('2026-10-08')));
 
 echo "\nDays a version has been outdated (since its successor shipped)\n";
-check('Chrome 142 on 2026-10-08: 143 shipped 359 days ago', 359, BrowserVersions::outdatedDays('chrome', 142, $day('2026-10-08')));
+check('Chrome 142 on 2026-10-08: 143 shipped 310 days ago', 310, BrowserVersions::outdatedDays('chrome', 142, $day('2026-10-08')));
 check('Chrome 154 on 2026-10-08: 155 shipped 2 days ago', 2, BrowserVersions::outdatedDays('chrome', 154, $day('2026-10-08')));
 check('the current Chrome is not outdated', true, BrowserVersions::outdatedDays('chrome', 155, $day('2026-10-08')) < 0);
 checkThrows('an unknown browser is refused', fn() => BrowserVersions::current('opera', $day('2026-10-08')), \InvalidArgumentException::class);

@@ -483,8 +483,14 @@ class BotDetectionController extends Controller
           $this->addScore($record['session_id'], 50, 'dead_browser');
           $deadBrowsers++;
         } else {
-          // Calculate age-based score for outdated but not dead browsers
-          $ageScore = $this->getBrowserAgeScore($userAgent, $dd);
+          // Calculate age-based score for outdated but not dead browsers.
+          // One unparseable user agent must never abort the nightly run.
+          try {
+            $ageScore = $this->getBrowserAgeScore($userAgent, $dd);
+          } catch (\Throwable $e) {
+            Yii::warning("Browser age scoring failed for session {$record['session_id']}: " . $e->getMessage(), __METHOD__);
+            $ageScore = 0;
+          }
           if ($ageScore > 0) {
             $this->addScore($record['session_id'], $ageScore, 'outdated_browser:' . $ageScore);
             $outdatedBrowsers++;
@@ -1857,7 +1863,9 @@ class BotDetectionController extends Controller
    */
   protected function scoreOutdatedRelease(string $browser, int $major, \DateTimeImmutable $today): int
   {
-    if ($major <= 0) {
+    // Garbage versions from crafted user agents (Chrome/99999999999) are not
+    // scored: nothing above the current release plus a margin is a real version
+    if ($major <= 0 || $major > BrowserVersions::current($browser, $today) + 10) {
       return 0;
     }
 
