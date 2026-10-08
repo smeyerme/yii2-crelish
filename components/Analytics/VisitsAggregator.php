@@ -41,7 +41,9 @@ final class VisitsAggregator
     /**
      * Compute one day's visit rows.
      *
-     * Normal mode replaces the day's rows (DELETE + INSERT in one transaction).
+     * Normal mode replaces the day's rows (DELETE + INSERT in one transaction),
+     * but only while the day still has reportable raw data: a day whose raw data
+     * is gone (deleted by the cleanup) keeps its stored rows and nothing is written.
      * Repair mode keeps every existing row and merges with GREATEST().
      *
      * @return int Rows written
@@ -49,7 +51,8 @@ final class VisitsAggregator
     public function aggregate(string $date, bool $repair = false): int
     {
         [$start, $end] = AnalyticsRetention::dayRange($date);
-        $params = [':date' => $date, ':start' => $start, ':end' => $end];
+        // The day dayRange() normalised to, so an invalid date cannot be stored as written
+        $params = [':date' => substr($start, 0, 10), ':start' => $start, ':end' => $end];
         $merge = $repair
             ? ' ON DUPLICATE KEY UPDATE unique_sessions = GREATEST(unique_sessions, VALUES(unique_sessions)),'
                 . ' unique_users = GREATEST(unique_users, VALUES(unique_users)), updated_at = NOW()'
@@ -79,7 +82,11 @@ final class VisitsAggregator
         $transaction = $this->db->beginTransaction();
         try {
             if (!$repair) {
-                $this->db->createCommand()->delete(self::TABLE, ['date' => $date])->execute();
+                if (!$this->hasRawData($start, $end)) {
+                    $transaction->commit();
+                    return 0;
+                }
+                $this->db->createCommand()->delete(self::TABLE, ['date' => $params[':date']])->execute();
             }
 
             $written = 0;
@@ -96,6 +103,21 @@ final class VisitsAggregator
         }
 
         return $written;
+    }
+
+    /**
+     * Whether the day has anything the visits count: a non-bot page view or an
+     * element view of a non-bot session.
+     */
+    private function hasRawData(string $start, string $end): bool
+    {
+        $range = [':start' => $start, ':end' => $end];
+
+        return $this->db->createCommand("SELECT 1 FROM {{%analytics_page_views}}
+                WHERE created_at >= :start AND created_at < :end AND is_bot = 0 LIMIT 1", $range)->queryScalar() !== false
+            || $this->db->createCommand("SELECT 1 FROM {{%analytics_element_views}} ev
+                INNER JOIN {{%analytics_sessions}} s ON ev.session_id = s.session_id
+                WHERE ev.created_at >= :start AND ev.created_at < :end AND s.is_bot = 0 LIMIT 1", $range)->queryScalar() !== false;
     }
 
     /**

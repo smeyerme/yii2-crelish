@@ -98,6 +98,39 @@ check('repair deletes nothing', 5, visit($day, 'elements', 'dead', ''));
 echo "\nEmpty day\n";
 check('a day without traffic writes no rows', 0, (new VisitsAggregator(Yii::$app->db))->aggregate(daysAgo(20)));
 
+echo "\nA day whose raw data is gone keeps its rows\n";
+$gone = daysAgo(20);
+Yii::$app->db->createCommand()->insert('analytics_visits_daily', ['date' => $gone, 'source' => 'pages', 'owner_uuid' => '', 'event_type' => '', 'unique_sessions' => 42])->execute();
+check('a normal run writes nothing for it', 0, (new VisitsAggregator(Yii::$app->db))->aggregate($gone));
+check('the stored row survives a normal run', 42, visit($gone, 'pages', '', ''));
+session('botonly', 1);
+pageView($gone, '10:00:00', P1, '/a', 'botonly', 1);
+elementView($gone, '10:00:00', J1, 'list', C1, 'botonly');
+(new VisitsAggregator(Yii::$app->db))->aggregate($gone);
+check('bot traffic alone does not count as raw data', 42, visit($gone, 'pages', '', ''));
+
+echo "\nAn invalid date is stored as the day it was normalised to\n";
+pageView('2026-03-02', '10:00:00', P1, '/a', 's2');
+(new VisitsAggregator(Yii::$app->db))->aggregate('2026-02-30');
+check('2026-02-30 is stored as 2026-03-02, the day it counted', 1, visit('2026-03-02', 'pages', '', ''));
+check('no row for an impossible or zero date', 0, (int)scalar("SELECT COUNT(*) FROM analytics_visits_daily WHERE date < '2000-01-01'"));
+
+echo "\nOlder than the retention period: visits are only ever raised\n";
+$old = daysAgo(45);
+session('old1');
+session('old2');
+pageView($old, '10:00:00', P1, '/a', 'old1');
+pageView($old, '10:05:00', P1, '/a', 'old2');
+Yii::$app->db->createCommand()->insert('analytics_visits_daily', ['date' => $old, 'source' => 'pages', 'owner_uuid' => '', 'event_type' => '', 'unique_sessions' => 50])->execute();
+Yii::$app->db->createCommand()->insert('analytics_visits_daily', ['date' => $old, 'source' => 'elements', 'owner_uuid' => 'dead', 'event_type' => '', 'unique_sessions' => 5])->execute();
+$controller = new AnalyticsAggregationController('analytics-aggregation', Yii::$app);
+check('visits part succeeds for an old day', true, $controller->aggregateDate($old, [AggregationParts::VISITS]));
+check('a higher stored value is kept (only part of the raw data is left)', 50, visit($old, 'pages', '', ''));
+check('no row of the old day is deleted', 5, visit($old, 'elements', 'dead', ''));
+$controller->retentionDays = 60;
+$controller->aggregateDate($old, [AggregationParts::VISITS]);
+check('within a longer retention period the day is recomputed normally', 2, visit($old, 'pages', '', ''));
+
 echo "\nThrough aggregateDate\n";
 $controller = new AnalyticsAggregationController('analytics-aggregation', Yii::$app);
 Yii::$app->db->createCommand('DELETE FROM analytics_visits_daily')->execute();

@@ -172,7 +172,10 @@ class AnalyticsAggregationController extends Controller
      * @param string[] $parts AggregationParts values
      * @param bool $repair Merge with GREATEST(stored, recomputed) instead of
      *                     overwriting, and never delete rows: used by the cleanup
-     *                     to fill an undercount without lowering anything
+     *                     to fill an undercount without lowering anything. The
+     *                     visits part always runs in repair mode for a day before
+     *                     the retention period: its raw data may be partly gone,
+     *                     and visits cannot be recomputed from anything else.
      * @return bool true when every requested part succeeded
      */
     public function aggregateDate(string $date, array $parts, bool $repair = false): bool
@@ -191,7 +194,9 @@ class AnalyticsAggregationController extends Controller
 
         if (in_array(AggregationParts::VISITS, $parts, true)) {
             if (VisitsAggregator::tableExists($db)) {
-                $ok = $this->runPart('visit', fn() => (new VisitsAggregator($db))->aggregate($date, $repair)) && $ok;
+                $repairVisits = $repair
+                    || $date < AnalyticsRetention::firstKeptDay(date('Y-m-d'), (int)$this->retentionDays);
+                $ok = $this->runPart('visit', fn() => (new VisitsAggregator($db))->aggregate($date, $repairVisits)) && $ok;
             } else {
                 $this->stderr("! Visits skipped: table analytics_visits_daily missing (run yii crelish-migrate/up)\n", Console::FG_YELLOW);
             }
