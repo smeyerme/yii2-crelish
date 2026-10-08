@@ -61,6 +61,16 @@ class AnalyticsAggregationController extends Controller
     public $skipAggregationCheck = false;
 
     /**
+     * @var bool daily/monthly/backfill: recompute only the page aggregates.
+     *
+     * For repairing page counts from the raw data that is still there. Element
+     * aggregates are left alone: the cleanup also deletes orphaned element views of
+     * any age, so recomputing an older day's element aggregates from what remains
+     * would lower counts that were right.
+     */
+    public $pagesOnly = false;
+
+    /**
      * @var bool Skip the interactive confirmation in cleanup.
      *
      * Yii's confirm() returns its default (false) when stdin is empty, so an
@@ -82,6 +92,7 @@ class AnalyticsAggregationController extends Controller
             'force',
             'optimize',
             'skipAggregationCheck',
+            'pagesOnly',
         ]);
     }
 
@@ -128,7 +139,7 @@ class AnalyticsAggregationController extends Controller
         // Check if we have element view data for this date
         // Note: analytics_element_views doesn't have is_bot, we join with sessions
         // IMPORTANT: Use INNER JOIN to exclude orphaned element views without valid sessions
-        $elementViewCount = $db->createCommand("
+        $elementViewCount = $this->pagesOnly ? 0 : $db->createCommand("
             SELECT COUNT(*)
             FROM {{%analytics_element_views}} ev
             INNER JOIN {{%analytics_sessions}} s ON ev.session_id = s.session_id
@@ -188,11 +199,17 @@ class AnalyticsAggregationController extends Controller
                 $this->stderr("✗ Error aggregating element data: " . $e->getMessage() . "\n", Console::FG_RED);
                 return ExitCode::UNSPECIFIED_ERROR;
             }
+        } elseif ($this->pagesOnly) {
+            $this->stdout("Element aggregates left as they are (--pagesOnly)\n");
         } else {
             $this->stdout("No element view data for this date\n", Console::FG_YELLOW);
         }
 
-        // Aggregate page views for the same date (independent of element aggregation)
+        // Aggregate page views for the same date (independent of element aggregation).
+        // One row per page, as the unique key (date, page_uuid) has it, with one of its
+        // URLs as page_url. Grouping by url as well made one row per URL variant, and
+        // ON DUPLICATE KEY UPDATE let each overwrite the last: every job detail URL is a
+        // variant of the same page, so 2,511 views of a day were stored as 49.
         if ($pageViewCount > 0) {
             try {
                 $pageAggregated = $db->createCommand("
@@ -201,13 +218,13 @@ class AnalyticsAggregationController extends Controller
                     SELECT
                         DATE(created_at) as date,
                         page_uuid,
-                        url,
+                        MIN(url),
                         COUNT(*) as total_views,
                         COUNT(DISTINCT session_id) as unique_sessions,
                         COUNT(DISTINCT CASE WHEN user_id IS NOT NULL AND user_id > 0 THEN user_id END) as unique_users
                     FROM {{%analytics_page_views}}
                     WHERE created_at >= :start AND created_at < :end AND is_bot = 0
-                    GROUP BY DATE(created_at), page_uuid, url
+                    GROUP BY DATE(created_at), page_uuid
                     ON DUPLICATE KEY UPDATE
                         total_views = VALUES(total_views),
                         unique_sessions = VALUES(unique_sessions),
@@ -290,7 +307,9 @@ class AnalyticsAggregationController extends Controller
 
         // Aggregate element views from raw data to ensure accurate unique counts
         // Note: Cannot sum unique_sessions/unique_users from daily data as it would overcount
-        if ($elementDailyCount > 0) {
+        if ($this->pagesOnly) {
+            $this->stdout("Element monthly aggregates left as they are (--pagesOnly)\n");
+        } elseif ($elementDailyCount > 0) {
             try {
                 $aggregated = $db->createCommand("
                     INSERT INTO {{%analytics_element_monthly}}
@@ -332,6 +351,7 @@ class AnalyticsAggregationController extends Controller
 
         // Aggregate page views from raw data to ensure accurate unique counts
         // Note: Cannot sum unique_sessions/unique_users from daily data as it would overcount
+        // One row per page, not per URL variant - see actionDaily()
         if ($pageDailyCount > 0) {
             try {
                 $pageAggregated = $db->createCommand("
@@ -341,7 +361,7 @@ class AnalyticsAggregationController extends Controller
                         YEAR(created_at) as year,
                         MONTH(created_at) as month,
                         page_uuid,
-                        url,
+                        MIN(url),
                         COUNT(*) as total_views,
                         COUNT(DISTINCT session_id) as unique_sessions,
                         COUNT(DISTINCT CASE WHEN user_id IS NOT NULL AND user_id > 0 THEN user_id END) as unique_users
@@ -349,7 +369,7 @@ class AnalyticsAggregationController extends Controller
                     WHERE YEAR(created_at) = :year
                         AND MONTH(created_at) = :month
                         AND is_bot = 0
-                    GROUP BY YEAR(created_at), MONTH(created_at), page_uuid, url
+                    GROUP BY YEAR(created_at), MONTH(created_at), page_uuid
                     ON DUPLICATE KEY UPDATE
                         total_views = VALUES(total_views),
                         unique_sessions = VALUES(unique_sessions),
