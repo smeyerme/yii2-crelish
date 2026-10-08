@@ -1137,6 +1137,20 @@ class BotDetectionController extends Controller
         SELECT COUNT(*) FROM analytics_page_views WHERE is_bot = 1
       ")->queryScalar();
 
+      // A session flagged as a bot at recording keeps the page views recorded
+      // before that at 0; mark them so they are deleted with it instead of
+      // staying behind, counted and orphaned. Same window as the scoring.
+      $db->createCommand("
+        UPDATE analytics_page_views pv
+        INNER JOIN analytics_sessions s ON pv.session_id = s.session_id
+        SET pv.is_bot = :bot
+        WHERE s.is_bot = :bot2 AND pv.is_bot <> :bot3" . $this->sessionWindowSql('s') . "
+      ")
+        ->bindValue(':bot', self::IS_BOT_YES)
+        ->bindValue(':bot2', self::IS_BOT_YES)
+        ->bindValue(':bot3', self::IS_BOT_YES)
+        ->execute();
+
       // All three deletes run in batches. A single unbounded DELETE over a backlog
       // of millions of rows builds one enormous transaction and its undo log, and
       // typically ends in a lock wait timeout on shared hosting.

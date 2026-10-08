@@ -26,7 +26,7 @@ const J1 = 'b1000000-0000-4000-8000-000000000001';
 const C1 = 'c1000000-0000-4000-8000-000000000001';
 
 const UA_CURRENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36';
-const UA_CHROME_141 = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36';
+const UA_CHROME_140 = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36';
 
 class SuspectedController extends BotDetectionController
 {
@@ -76,9 +76,22 @@ class SuspectedController extends BotDetectionController
     }
 }
 
-function controller(): SuspectedController
+/** Age scoring of one user agent throws, as a crafted one once did */
+class ThrowingAgeController extends SuspectedController
 {
-    $controller = new SuspectedController('bot-detection', Yii::$app);
+    protected function getBrowserAgeScore($userAgent, ?\DeviceDetector\DeviceDetector $dd = null): int
+    {
+        if (str_contains((string)$userAgent, 'Boom')) {
+            throw new \RuntimeException('crafted user agent');
+        }
+
+        return parent::getBrowserAgeScore($userAgent, $dd);
+    }
+}
+
+function controller(string $class = SuspectedController::class): SuspectedController
+{
+    $controller = new $class('bot-detection', Yii::$app);
     $controller->interactive = false;
     $controller->color = false;
     $controller->today = '2026-10-08';
@@ -174,9 +187,9 @@ check('an unscored visitor is untouched', [0, [0, 0]], [sessionBot('clean'), pag
 
 echo "\nScoring keeps evaluating suspected sessions\n";
 analyticsMysqlApp();
-botSession('oldSingle', 2, $recent, UA_CHROME_141);
+botSession('oldSingle', 2, $recent, UA_CHROME_140);
 pageView($day, '10:00:00', P1, '/a', 'oldSingle', 2);
-botSession('oldSingleNew', 0, $recent, UA_CHROME_141);
+botSession('oldSingleNew', 0, $recent, UA_CHROME_140);
 pageView($day, '10:00:00', P1, '/a', 'oldSingleNew');
 botSession('currentSingle', 2, $recent);
 pageView($day, '10:00:00', P1, '/a', 'currentSingle', 2);
@@ -185,6 +198,23 @@ check('a suspected session is scored again (outdated + single page + combo)', 65
 check('and stays suspected', [2, [2]], [sessionBot('oldSingle'), pageViewBots('oldSingle')]);
 check('a visitor with the same signals becomes suspected', [2, [2]], [sessionBot('oldSingleNew'), pageViewBots('oldSingleNew')]);
 check('a suspected session whose signals weakened stays suspected', [20, 2, [2]], [$scores['currentSingle']['score'] ?? null, sessionBot('currentSingle'), pageViewBots('currentSingle')]);
+
+echo "\nOne user agent whose age scoring throws does not abort the run\n";
+analyticsMysqlApp();
+botSession('boom', 0, $recent, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Boom/1 Chrome/154.0.0.0 Safari/537.36');
+pageView($day, '10:00:00', P1, '/a', 'boom');
+botSession('oldSingleAfter', 0, $recent, UA_CHROME_140);
+pageView($day, '10:00:00', P1, '/a', 'oldSingleAfter');
+try {
+    $scores = controller(ThrowingAgeController::class)->rescore();
+    $thrown = null;
+} catch (\Throwable $e) {
+    $scores = [];
+    $thrown = get_class($e);
+}
+check('no exception escapes', null, $thrown);
+check('the throwing session is scored without an age score', 20, $scores['boom']['score'] ?? null);
+check('the next session is still scored and committed', [65, 2], [$scores['oldSingleAfter']['score'] ?? null, sessionBot('oldSingleAfter')]);
 
 echo "\nIP volume scores only sessions inside the window\n";
 analyticsMysqlApp();
@@ -204,11 +234,16 @@ analyticsMysqlApp();
 botSession('bot', 1, $recent);
 botSession('sus', 2, $recent);
 botSession('human', 0, $recent);
+botSession('flaggedLater', 1, $recent);
 foreach (['bot' => 1, 'sus' => 2, 'human' => 0] as $id => $flag) {
     pageView($day, '10:00:00', P1, '/a', $id, $flag);
     elementView($day, '10:00:00', J1, 'list', C1, $id);
 }
+// flagged 1 at recording after two page views were recorded as 0
+pageView($day, '10:00:00', P1, '/a', 'flaggedLater');
+pageView($day, '10:05:00', P1, '/b', 'flaggedLater');
 controller()->deleteBots();
+check('a session flagged at recording is deleted with its earlier page views', [null, []], [sessionBot('flaggedLater'), pageViewBots('flaggedLater')]);
 check('the bot session is deleted', null, sessionBot('bot'));
 check('with its page and element views', [[], 0], [pageViewBots('bot'), (int)scalar("SELECT COUNT(*) FROM analytics_element_views WHERE session_id = 'bot'")]);
 check('the suspected session is kept', 2, sessionBot('sus'));
