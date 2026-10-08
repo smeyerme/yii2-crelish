@@ -259,17 +259,22 @@ class AnalyticsAggregationController extends Controller
     /**
      * Run an aggregation INSERT for one day. Repair mode only merges. Normal
      * mode replaces the day's rows of $dailyTable in one transaction, and does
-     * nothing when $rawTable has no rows of the day at all (any is_bot value):
-     * then the raw data is gone and the stored rows are all that is left.
+     * nothing when $rawTable has no raw rows of the day: then the raw data is
+     * gone and the stored rows are all that is left. Raw rows are element views
+     * of any state and page views that are visitors or suspected (is_bot 0/2);
+     * bot page views (1) can be left behind by a cleanup and do not count
+     * (same rule as VisitsAggregator::hasRawData()).
+     *
+     * @param string $rawCondition Extra SQL condition on $rawTable
      */
-    private function replaceDay(Connection $db, string $dailyTable, string $rawTable, string $date, string $start, string $end, bool $repair, callable $insert): int
+    private function replaceDay(Connection $db, string $dailyTable, string $rawTable, string $rawCondition, string $date, string $start, string $end, bool $repair, callable $insert): int
     {
         if ($repair) {
             return $insert();
         }
 
         $hasRaw = $db->createCommand(
-            "SELECT 1 FROM {$rawTable} WHERE created_at >= :start AND created_at < :end LIMIT 1",
+            "SELECT 1 FROM {$rawTable} WHERE created_at >= :start AND created_at < :end{$rawCondition} LIMIT 1",
             [':start' => $start, ':end' => $end]
         )->queryScalar() !== false;
         if (!$hasRaw) {
@@ -295,7 +300,7 @@ class AnalyticsAggregationController extends Controller
      */
     private function aggregateElements(Connection $db, string $date, string $start, string $end, bool $repair): int
     {
-        return $this->replaceDay($db, '{{%analytics_element_daily}}', '{{%analytics_element_views}}', $date, $start, $end, $repair, fn() => $db->createCommand("
+        return $this->replaceDay($db, '{{%analytics_element_daily}}', '{{%analytics_element_views}}', '', $date, $start, $end, $repair, fn() => $db->createCommand("
             INSERT INTO {{%analytics_element_daily}}
             (date, element_uuid, element_type, page_uuid, event_type, total_views, unique_sessions, unique_users)
             SELECT
@@ -326,7 +331,7 @@ class AnalyticsAggregationController extends Controller
      */
     private function aggregatePages(Connection $db, string $date, string $start, string $end, bool $repair): int
     {
-        return $this->replaceDay($db, '{{%analytics_page_daily}}', '{{%analytics_page_views}}', $date, $start, $end, $repair, fn() => $db->createCommand("
+        return $this->replaceDay($db, '{{%analytics_page_daily}}', '{{%analytics_page_views}}', ' AND is_bot IN (0, 2)', $date, $start, $end, $repair, fn() => $db->createCommand("
             INSERT INTO {{%analytics_page_daily}}
             (date, page_uuid, page_url, total_views, unique_sessions, unique_users)
             SELECT

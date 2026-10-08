@@ -100,7 +100,21 @@ check('page rows are kept', [P1 => 2, P2 => 1], pageRows($gone));
 check('element rows are kept', [J1 . '/list' => 2, J2 . '/detail' => 1], elementRows($gone));
 check('visit rows are kept', [true, $goneVisits], [$goneVisits > 0, visitRows($gone)]);
 
-echo "\nRaw rows of any bot state count as raw data\n";
+echo "\nBot page views left behind by a cleanup are not raw data\n";
+$botLeftovers = daysAgo(5);
+traffic($botLeftovers, 's9', 's10');
+aggregate($botLeftovers);
+$leftoverVisits = visitRows($botLeftovers);
+session('bot9', 1);
+pageView($botLeftovers, '11:00:00', P1, '/a', 'bot9', 1);
+Yii::$app->db->createCommand('DELETE FROM analytics_page_views WHERE DATE(created_at) = :d AND is_bot <> 1', [':d' => $botLeftovers])->execute();
+Yii::$app->db->createCommand('DELETE FROM analytics_element_views WHERE DATE(created_at) = :d', [':d' => $botLeftovers])->execute();
+aggregate($botLeftovers);
+check('page rows are kept', [P1 => 2, P2 => 1], pageRows($botLeftovers));
+check('element rows are kept', [J1 . '/list' => 2, J2 . '/detail' => 1], elementRows($botLeftovers));
+check('visit rows are kept', [true, $leftoverVisits], [$leftoverVisits > 0, visitRows($botLeftovers)]);
+
+echo "\nSuspected rows count as raw data\n";
 $botsLeft = daysAgo(4);
 traffic($botsLeft, 's5', 's6');
 aggregate($botsLeft);
