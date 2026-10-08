@@ -28,11 +28,11 @@ Every session is scored across multiple detection phases. Scores accumulate and 
 | **MEDIUM** | 30-69 | Listed by `review` for manual review |
 | **LOW** | < 30 | Kept as legitimate traffic |
 
-`is_bot` has three states: `0` visitor (counted), `1` bot (deleted by step 11), `2` suspected (not counted, not deleted). Suspected sessions are scored again on every run; when a session in the scoring window drops below 50 or gets no score at all, it and its page views go back to `0`. Page views follow their session, except that a page view flagged as a bot at recording stays `1`. The analytics cleanup deletes suspected page views with the normal retention.
+`is_bot` has three states: `0` visitor (counted), `1` bot (deleted by step 11), `2` suspected (not counted, not deleted). Suspected is sticky: a later run that scores the session lower or not at all does not lower it (volume, timing and crawl signals only see the last hour or day, so their absence the next night is not evidence of a human). A suspected session is still scored on every run and becomes `1` when it reaches 70. Only a human confirmation (`demote`) sets it back to `0`. Page views follow their session, except that a page view flagged as a bot at recording stays `1`. The analytics cleanup deletes suspected page views with the normal retention.
 
 ### Current browser versions
 
-Outdated-browser scores are measured against versions computed from the date (`components/Analytics/BrowserVersions.php`), never hardcoded: Chrome = 131 + one per 28 days since 2024-11-12, Firefox = 133 + one per 28 days since 2024-11-26; iOS/Safari and Android are compared by release year (iOS/Safari 26 = 2025, 18 = 2024; Android 16 = 2025). Chrome/Firefox: 6+ versions behind 20, 13+ 30, 26+ 40, 52+ 50. iOS/Safari: 2+ years 30, 3+ 40, 5+ 50. Android: 4+ years 30, 6+ 50; the reduced UA `Android 10; K` is never scored for its OS.
+Outdated-browser scores are measured against versions computed from the date (`components/Analytics/BrowserVersions.php`), never hardcoded: Chrome = 131 + one per 28 days since 2024-11-12, Firefox = 133 + one per 28 days since 2024-11-26; iOS/Safari and Android are compared by release year (iOS/Safari 26 = 2025, 18 = 2024; Android 16 = 2025). Chrome/Firefox: 6+ versions behind 20, 13+ 30, 26+ 40, 52+ 50. iOS/Safari: 2+ years 30, 3+ 40, 5+ 50. Android: 4+ years 30, 6+ 50; the reduced UA `Android 10; K` is never scored for its OS. Likewise the frozen iOS UA `OS 18_6` (sent by iOS 26+ Safari and Chrome on iOS) is not scored for its OS; its browser is scored instead (Safari by `Version/NN`, Chrome on iOS by `CriOS/NNN`).
 
 ### Detection Phases (11 total)
 

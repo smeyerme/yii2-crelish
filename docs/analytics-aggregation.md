@@ -105,7 +105,7 @@ Add these to your crontab:
 
 - `0` visitor: counted by every aggregate and visit figure.
 - `1` bot (score >= 70, or flagged at recording): not counted, deleted by the bot detection.
-- `2` suspected (score 50-69): not counted, raw data kept; released to `0` when a later run scores the session below 50 or not at all. The cleanup deletes suspected page views with the normal retention.
+- `2` suspected (score 50-69): not counted, raw data kept. Sticky: a later lower or missing score does not lower it; it becomes `1` when its score reaches 70, and only a human confirmation (`bot-detection/demote`) sets it back to `0`. The cleanup deletes suspected page views with the normal retention.
 
 Browser versions for the outdated-browser score are computed from the date, see `BOTDETECTION_README.md`.
 
