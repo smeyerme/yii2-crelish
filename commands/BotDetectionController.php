@@ -16,7 +16,7 @@ class BotDetectionController extends Controller
   /**
    * Score thresholds for confidence levels
    * HIGH (70+): is_bot = 1, deleted by step 11 - clearly bot
-   * SUSPECTED (50-69): is_bot = 2, excluded from statistics, raw data kept
+   * SUSPECTED (50-69): is_bot = 2, excluded from statistics, raw data kept (sticky)
    * MEDIUM (30-69): shown by bot-detection/review
    * LOW (0-29): Keep - edge cases, possibly legitimate
    */
@@ -26,8 +26,10 @@ class BotDetectionController extends Controller
 
   /**
    * States of analytics_sessions.is_bot / analytics_page_views.is_bot.
-   * Statistics count only IS_BOT_NO. Suspected rows are recomputed by every
-   * run (and released when their score drops) and never deleted as bots.
+   * Statistics count only IS_BOT_NO. Suspected is sticky: a later lower or
+   * missing score never lowers it (time-window signals only see the last
+   * hour/day), a score >= 70 raises it to a bot, and only a human (demote)
+   * sets it back to a visitor. Suspected rows are never deleted as bots.
    */
   const IS_BOT_NO = 0;
   const IS_BOT_YES = 1;
@@ -324,7 +326,7 @@ class BotDetectionController extends Controller
 
   /**
    * SQL condition selecting scoring candidates: visitors and suspected rows.
-   * Suspected rows are scored again on every run so they can be released.
+   * Suspected rows are scored again on every run so they can become bots.
    *
    * @param string $column Qualified is_bot column, e.g. 's.is_bot'
    */
@@ -1007,9 +1009,9 @@ class BotDetectionController extends Controller
    * Commit all collected scores to the database
    *
    * is_bot follows the score: >= 70 bot (1), 50-69 suspected (2), below 50
-   * visitor (0). Page views follow their session, but a page view flagged as a
-   * bot at recording (1) is never lowered. Suspected sessions of the scoring
-   * window that got no score in this run are released afterwards.
+   * unchanged (a visitor stays 0, a suspected session stays 2: suspected is
+   * sticky). Page views follow their session, but a page view flagged as a
+   * bot at recording (1) is never lowered. Unscored sessions are not touched.
    */
   protected function commitScores(): void
   {
@@ -1047,10 +1049,11 @@ class BotDetectionController extends Controller
             $chunkMedium++;
           }
 
-          $updateData = [
-            'bot_score' => $score,
-            'is_bot' => $state,
-          ];
+          $updateData = ['bot_score' => $score];
+          // Below 50 is_bot is left alone: suspected (2) is sticky
+          if ($state !== self::IS_BOT_NO) {
+            $updateData['is_bot'] = $state;
+          }
 
           if ($hasReasonColumn) {
             $updateData['bot_reason'] = substr($reasons, 0, 255);
@@ -1075,14 +1078,6 @@ class BotDetectionController extends Controller
             ])
             ->execute();
         }
-        if (!empty($idsByState[self::IS_BOT_NO])) {
-          $db->createCommand()
-            ->update('analytics_page_views', ['is_bot' => self::IS_BOT_NO], [
-              'session_id' => $idsByState[self::IS_BOT_NO],
-              'is_bot' => self::IS_BOT_SUSPECTED,
-            ])
-            ->execute();
-        }
 
         $transaction->commit();
 
@@ -1098,74 +1093,9 @@ class BotDetectionController extends Controller
     }
 
     $this->stdout(sprintf(
-      "Committed scores: %d total (bot >= %d: %d, suspected >= %d: %d, visitor: %d; medium for review: %d)\n",
+      "Committed scores: %d total (bot >= %d: %d, suspected >= %d: %d, below: %d; medium for review: %d)\n",
       $committed, self::SCORE_HIGH_CONFIDENCE, $highCount, self::SCORE_SUSPECTED, $suspectedCount, $lowCount, $mediumCount
     ), Console::FG_YELLOW);
-
-    $released = $this->releaseUnscoredSuspects();
-    $this->stdout(sprintf("Released %d suspected sessions without a score\n", $released), Console::FG_YELLOW);
-  }
-
-  /**
-   * Set suspected sessions of the scoring window that got no score in this run
-   * back to visitors, with their suspected page views. Scores are recomputed
-   * from scratch every run, so a session whose signals disappeared must not
-   * stay excluded.
-   *
-   * @return int Number of sessions released
-   */
-  protected function releaseUnscoredSuspects(): int
-  {
-    $db = Yii::$app->db;
-    $released = 0;
-    $lastId = '';
-
-    do {
-      $suspects = $db->createCommand("
-        SELECT s.session_id
-        FROM analytics_sessions s
-        WHERE s.is_bot = :suspected
-          AND s.session_id > :lastId" . $this->sessionWindowSql('s') . "
-        ORDER BY s.session_id
-        LIMIT :limit
-      ")
-        ->bindValue(':suspected', self::IS_BOT_SUSPECTED)
-        ->bindValue(':lastId', $lastId)
-        ->bindValue(':limit', $this->batchSize)
-        ->queryColumn();
-
-      if (empty($suspects)) {
-        break;
-      }
-
-      $lastId = end($suspects);
-      $unscored = array_values(array_filter($suspects, fn($id) => !isset($this->sessionScores[$id])));
-
-      if (!empty($unscored)) {
-        $transaction = $db->beginTransaction();
-        try {
-          $db->createCommand()
-            ->update('analytics_sessions', ['is_bot' => self::IS_BOT_NO], [
-              'session_id' => $unscored,
-              'is_bot' => self::IS_BOT_SUSPECTED,
-            ])
-            ->execute();
-          $db->createCommand()
-            ->update('analytics_page_views', ['is_bot' => self::IS_BOT_NO], [
-              'session_id' => $unscored,
-              'is_bot' => self::IS_BOT_SUSPECTED,
-            ])
-            ->execute();
-          $transaction->commit();
-          $released += count($unscored);
-        } catch (\Exception $e) {
-          $transaction->rollBack();
-          $this->stderr("Error releasing suspected sessions: " . $e->getMessage() . "\n", Console::FG_RED);
-        }
-      }
-    } while (count($suspects) == $this->batchSize);
-
-    return $released;
   }
 
   /**

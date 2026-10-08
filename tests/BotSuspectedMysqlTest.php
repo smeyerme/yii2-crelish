@@ -2,8 +2,9 @@
 
 /**
  * Suspected bots (is_bot = 2): committed from scores 50-69, excluded from every
- * statistic, kept by the bot deletion, released when their score disappears,
- * deleted by the cleanup with normal retention.
+ * statistic, kept by the bot deletion, sticky (a lower or missing score never
+ * lowers them; only a score >= 70 raises them to bots), deleted by the cleanup
+ * with normal retention.
  *
  * The commit and deletion steps are called directly on a scratch database
  * (the full bot-detection/index also loads remote datacenter and spam lists).
@@ -113,6 +114,7 @@ botSession('lowWas2', 2, $recent);
 botSession('flagged', 0, $recent);
 botSession('stale', 2, $recent);
 botSession('staleOld', 2, date('Y-m-d H:i:s', strtotime('-40 days')));
+botSession('susToBot', 2, $recent);
 botSession('recorded', 1, $recent);
 botSession('clean', 0, $recent);
 foreach (['high', 'sus', 'low', 'clean'] as $id) {
@@ -125,9 +127,11 @@ pageView($day, '10:05:00', P1, '/b', 'flagged');
 pageView($day, '10:00:00', P1, '/a', 'stale', 2);
 pageView($day, '10:05:00', P1, '/b', 'stale', 2);
 pageView(daysAgo(40), '10:00:00', P1, '/a', 'staleOld', 2);
+pageView($day, '10:00:00', P1, '/a', 'susToBot', 2);
+pageView($day, '10:05:00', P1, '/b', 'susToBot', 1);
 pageView($day, '10:00:00', P1, '/a', 'recorded', 1);
 
-controller()->commitPrepared(['high' => 75, 'sus' => 60, 'low' => 40, 'lowWas2' => 40, 'flagged' => 60]);
+controller()->commitPrepared(['high' => 75, 'sus' => 60, 'low' => 40, 'lowWas2' => 40, 'flagged' => 60, 'susToBot' => 75]);
 
 check('score 75 is a bot', 1, sessionBot('high'));
 check('its page views are bots', [1, 1], pageViewBots('high'));
@@ -135,15 +139,17 @@ check('score 60 is suspected', 2, sessionBot('sus'));
 check('its page views are suspected', [2, 2], pageViewBots('sus'));
 check('score 40 is a visitor', 0, sessionBot('low'));
 check('its page views stay counted', [0, 0], pageViewBots('low'));
-check('a suspected session scoring 40 is a visitor again', 0, sessionBot('lowWas2'));
-check('its page views are counted again', [0], pageViewBots('lowWas2'));
+check('a suspected session scoring 40 stays suspected', 2, sessionBot('lowWas2'));
+check('its page views stay suspected', [2], pageViewBots('lowWas2'));
+check('a suspected session scoring 75 becomes a bot', 1, sessionBot('susToBot'));
+check('its page views become bots', [1, 1], pageViewBots('susToBot'));
 check('a suspected session keeps a page view flagged at recording', [1, 2], pageViewBots('flagged'));
 check('score and reason are stored', ['60', 'test:60'], array_map('strval', array_values(rows("SELECT bot_score, bot_reason FROM analytics_sessions WHERE session_id = 'sus'")[0])));
 
-echo "\nCommit: suspected sessions without a score are released\n";
-check('a suspected session with no score is a visitor again', 0, sessionBot('stale'));
-check('its page views are counted again', [0, 0], pageViewBots('stale'));
-check('outside the scoring window it stays suspected', 2, sessionBot('staleOld'));
+echo "\nCommit: suspected sessions without a score stay suspected\n";
+check('a suspected session with no score stays suspected', 2, sessionBot('stale'));
+check('its page views stay suspected', [2, 2], pageViewBots('stale'));
+check('an older suspected session stays suspected', 2, sessionBot('staleOld'));
 check('and so do its page views', [2], pageViewBots('staleOld'));
 check('a bot flagged at recording is untouched', 1, sessionBot('recorded'));
 check('an unscored visitor is untouched', [0, [0, 0]], [sessionBot('clean'), pageViewBots('clean')]);
@@ -160,7 +166,7 @@ $scores = controller()->rescore();
 check('a suspected session is scored again (outdated + single page + combo)', 65, $scores['oldSingle']['score'] ?? null);
 check('and stays suspected', [2, [2]], [sessionBot('oldSingle'), pageViewBots('oldSingle')]);
 check('a visitor with the same signals becomes suspected', [2, [2]], [sessionBot('oldSingleNew'), pageViewBots('oldSingleNew')]);
-check('a suspected session whose signals weakened is a visitor again', [20, 0, [0]], [$scores['currentSingle']['score'] ?? null, sessionBot('currentSingle'), pageViewBots('currentSingle')]);
+check('a suspected session whose signals weakened stays suspected', [20, 2, [2]], [$scores['currentSingle']['score'] ?? null, sessionBot('currentSingle'), pageViewBots('currentSingle')]);
 
 echo "\nBot deletion keeps suspected traffic\n";
 analyticsMysqlApp();
