@@ -680,7 +680,7 @@ class BotDetectionController extends Controller
       // Get all sessions from this IP
       $sessions = $db->createCommand("
         SELECT session_id FROM analytics_sessions
-        WHERE ip_address = :ip AND " . $this->candidateSql('is_bot') . "
+        WHERE ip_address = :ip AND " . $this->candidateSql('is_bot') . $this->sessionWindowSql('analytics_sessions') . "
       ")
         ->bindValue(':ip', $anomaly['ip_address'])
         ->queryColumn();
@@ -1059,8 +1059,11 @@ class BotDetectionController extends Controller
             $updateData['bot_reason'] = substr($reasons, 0, 255);
           }
 
+          // A session flagged as a bot during the run (recording) is never lowered
           $db->createCommand()
-            ->update('analytics_sessions', $updateData, ['session_id' => $sessionId])
+            ->update('analytics_sessions', $updateData, [
+              'and', ['session_id' => $sessionId], ['<>', 'is_bot', self::IS_BOT_YES],
+            ])
             ->execute();
         }
 
@@ -1070,10 +1073,18 @@ class BotDetectionController extends Controller
             ->update('analytics_page_views', ['is_bot' => self::IS_BOT_YES], ['session_id' => $idsByState[self::IS_BOT_YES]])
             ->execute();
         }
-        if (!empty($idsByState[self::IS_BOT_SUSPECTED])) {
+        // Every session of the chunk that is now suspected (newly, or already
+        // and kept by the sticky rule): its counted page views, including ones
+        // recorded since it became suspected, become suspected too
+        $suspectedIds = (new \yii\db\Query())
+          ->select('session_id')
+          ->from('analytics_sessions')
+          ->where(['session_id' => array_map('strval', array_keys($chunk)), 'is_bot' => self::IS_BOT_SUSPECTED])
+          ->column($db);
+        if (!empty($suspectedIds)) {
           $db->createCommand()
             ->update('analytics_page_views', ['is_bot' => self::IS_BOT_SUSPECTED], [
-              'session_id' => $idsByState[self::IS_BOT_SUSPECTED],
+              'session_id' => $suspectedIds,
               'is_bot' => self::IS_BOT_NO,
             ])
             ->execute();

@@ -52,6 +52,14 @@ class SuspectedController extends BotDetectionController
         return $this->sessionScores;
     }
 
+    public function volume(): array
+    {
+        $this->sessionScores = [];
+        $this->scoreVolumeAnomalies();
+
+        return $this->sessionScores;
+    }
+
     public function deleteBots(): void
     {
         $this->deleteHighConfidenceBots();
@@ -79,10 +87,10 @@ function controller(): SuspectedController
     return $controller;
 }
 
-function botSession(string $id, int $isBot, string $createdAt, string $userAgent = UA_CURRENT): void
+function botSession(string $id, int $isBot, string $createdAt, string $userAgent = UA_CURRENT, ?string $ip = null): void
 {
     Yii::$app->db->createCommand()->insert('analytics_sessions', [
-        'session_id' => $id, 'is_bot' => $isBot, 'user_agent' => $userAgent, 'created_at' => $createdAt,
+        'session_id' => $id, 'is_bot' => $isBot, 'user_agent' => $userAgent, 'created_at' => $createdAt, 'ip_address' => $ip,
     ])->execute();
 }
 
@@ -115,6 +123,9 @@ botSession('flagged', 0, $recent);
 botSession('stale', 2, $recent);
 botSession('staleOld', 2, date('Y-m-d H:i:s', strtotime('-40 days')));
 botSession('susToBot', 2, $recent);
+botSession('susLater', 2, $recent);
+botSession('becameBot', 1, $recent);
+botSession('becameBotSus', 1, $recent);
 botSession('recorded', 1, $recent);
 botSession('clean', 0, $recent);
 foreach (['high', 'sus', 'low', 'clean'] as $id) {
@@ -129,9 +140,13 @@ pageView($day, '10:05:00', P1, '/b', 'stale', 2);
 pageView(daysAgo(40), '10:00:00', P1, '/a', 'staleOld', 2);
 pageView($day, '10:00:00', P1, '/a', 'susToBot', 2);
 pageView($day, '10:05:00', P1, '/b', 'susToBot', 1);
+pageView($day, '10:00:00', P1, '/a', 'susLater', 2);
+pageView($day, '10:05:00', P1, '/b', 'susLater'); // recorded after it became suspected
+pageView($day, '10:00:00', P1, '/a', 'becameBot', 1);
+pageView($day, '10:00:00', P1, '/a', 'becameBotSus', 1);
 pageView($day, '10:00:00', P1, '/a', 'recorded', 1);
 
-controller()->commitPrepared(['high' => 75, 'sus' => 60, 'low' => 40, 'lowWas2' => 40, 'flagged' => 60, 'susToBot' => 75]);
+controller()->commitPrepared(['high' => 75, 'sus' => 60, 'low' => 40, 'lowWas2' => 40, 'flagged' => 60, 'susToBot' => 75, 'susLater' => 40, 'becameBot' => 40, 'becameBotSus' => 60]);
 
 check('score 75 is a bot', 1, sessionBot('high'));
 check('its page views are bots', [1, 1], pageViewBots('high'));
@@ -143,6 +158,9 @@ check('a suspected session scoring 40 stays suspected', 2, sessionBot('lowWas2')
 check('its page views stay suspected', [2], pageViewBots('lowWas2'));
 check('a suspected session scoring 75 becomes a bot', 1, sessionBot('susToBot'));
 check('its page views become bots', [1, 1], pageViewBots('susToBot'));
+check('a page view recorded after the session became suspected is synced to suspected', [2, 2], pageViewBots('susLater'));
+check('a session that became a bot during the run is not lowered by a score of 40', [1, [1]], [sessionBot('becameBot'), pageViewBots('becameBot')]);
+check('nor by a score of 60', [1, [1]], [sessionBot('becameBotSus'), pageViewBots('becameBotSus')]);
 check('a suspected session keeps a page view flagged at recording', [1, 2], pageViewBots('flagged'));
 check('score and reason are stored', ['60', 'test:60'], array_map('strval', array_values(rows("SELECT bot_score, bot_reason FROM analytics_sessions WHERE session_id = 'sus'")[0])));
 
@@ -167,6 +185,19 @@ check('a suspected session is scored again (outdated + single page + combo)', 65
 check('and stays suspected', [2, [2]], [sessionBot('oldSingle'), pageViewBots('oldSingle')]);
 check('a visitor with the same signals becomes suspected', [2, [2]], [sessionBot('oldSingleNew'), pageViewBots('oldSingleNew')]);
 check('a suspected session whose signals weakened stays suspected', [20, 2, [2]], [$scores['currentSingle']['score'] ?? null, sessionBot('currentSingle'), pageViewBots('currentSingle')]);
+
+echo "\nIP volume scores only sessions inside the window\n";
+analyticsMysqlApp();
+$hourAgo = strtotime('-1 hour');
+for ($i = 1; $i <= 11; $i++) {
+    botSession("busy$i", 0, date('Y-m-d H:i:s', $hourAgo), UA_CURRENT, '203.0.113.9');
+    pageView(date('Y-m-d', $hourAgo), date('H:i:s', $hourAgo), P1, '/a', "busy$i");
+}
+botSession('busyOld', 0, date('Y-m-d H:i:s', strtotime('-40 days')), UA_CURRENT, '203.0.113.9');
+pageView(daysAgo(40), '10:00:00', P1, '/a', 'busyOld');
+$scores = controller()->volume();
+check('sessions of a busy IP are scored', 30, $scores['busy1']['score'] ?? null);
+check('an old session of the same IP outside the window is not', false, isset($scores['busyOld']));
 
 echo "\nBot deletion keeps suspected traffic\n";
 analyticsMysqlApp();
