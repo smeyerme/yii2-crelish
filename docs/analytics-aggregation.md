@@ -82,7 +82,12 @@ Add to your application config for easier access:
 
 Add these to your crontab:
 
+Bot detection must run before the daily aggregation, so yesterday is aggregated without the bots and suspected bots found overnight (a later re-aggregation of a day inside the retention period replaces its page and element rows; days before it are only ever raised).
+
 ```bash
+# Bot detection daily at 0:30 AM, before the daily aggregation
+30 0 * * * /path/to/yii crelish/bot-detection/index
+
 # Daily aggregation at 1 AM (aggregate yesterday's data: pages, elements, visits)
 0 1 * * * /path/to/yii crelish/analytics-aggregation/daily
 
@@ -94,10 +99,9 @@ Add these to your crontab:
 
 # Cleanup old raw data weekly on Sunday at 4 AM (keeps 30 whole days, verifies each day first)
 0 4 * * 0 /path/to/yii crelish/analytics-aggregation/cleanup --retentionDays=30
-
-# Bot detection daily at 2 AM (existing)
-0 2 * * * /path/to/yii crelish/bot-detection/index
 ```
+
+Running both from one script in sequence (bot detection, then `daily`) avoids overlap when bot detection runs long.
 
 ### Bot states
 
@@ -105,7 +109,7 @@ Add these to your crontab:
 
 - `0` visitor: counted by every aggregate and visit figure.
 - `1` bot (score >= 70, or flagged at recording): not counted, deleted by the bot detection.
-- `2` suspected (score 50-69): not counted, raw data kept. Sticky: a later lower or missing score does not lower it; it becomes `1` when its score reaches 70, and only a human confirmation (`bot-detection/demote`) sets it back to `0`. The cleanup deletes suspected page views with the normal retention.
+- `2` suspected (score 50-69): not counted, raw data kept. Sticky: a later lower or missing score does not lower it; it becomes `1` when its score reaches 70. Only `bot-detection/demote` lowers it to `0`, and that is not durable: the next run scores the session again (inside the scoring window) and may set it to `2` again. A durable human-confirmation marker comes with the planned browser confirmation. Page views recorded for a suspected session are stored as `2`. The cleanup deletes suspected page views with the normal retention.
 
 Browser versions for the outdated-browser score are computed from the date, see `BOTDETECTION_README.md`.
 
