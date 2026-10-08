@@ -2,6 +2,8 @@
 
 namespace giantbits\crelish\controllers;
 
+use giantbits\crelish\components\Analytics\VisitsAggregator;
+use giantbits\crelish\components\Analytics\VisitsReader;
 use giantbits\crelish\components\CrelishBaseController;
 use giantbits\crelish\components\ElementTitleResolver;
 use giantbits\crelish\helpers\CrelishAnalyticsPeriod;
@@ -152,14 +154,18 @@ class AnalyticsAggregatedController extends CrelishBaseController
     $pageStats = (new Query())
       ->select([
         'total_views' => 'SUM(total_views)',
-        'total_sessions' => 'SUM(unique_sessions)',
-        'total_users' => 'SUM(unique_users)',
         'unique_pages' => 'COUNT(DISTINCT page_uuid)'
       ])
       ->from('{{%analytics_page_daily}}')
       ->where(['>=', 'date', $startDate])
       ->andWhere(['<=', 'date', $endDate])
       ->one();
+
+    // Visits per day for the whole site, summed over days; summing
+    // unique_sessions over pages counted a visitor once per page seen.
+    $visits = (new VisitsReader())->summary(VisitsAggregator::SOURCE_PAGES, '', $startDate, $endDate);
+    $pageStats['total_sessions'] = $visits['visits'];
+    $pageStats['total_users'] = $visits['users'];
 
     // Get element view stats from daily aggregates
     $elementStats = (new Query())
@@ -187,6 +193,7 @@ class AnalyticsAggregatedController extends CrelishBaseController
 
     return [
       'pageStats' => $pageStats,
+      'visits' => ['available' => $visits['available'], 'since' => $visits['since']],
       'elementStats' => $elementStats,
       'eventTypeStats' => $eventTypeStats
     ];
@@ -213,9 +220,7 @@ class AnalyticsAggregatedController extends CrelishBaseController
       $data = (new Query())
         ->select([
           'period' => new Expression("CONCAT(year, '-', LPAD(month, 2, '0'))"),
-          'total_views' => 'SUM(total_views)',
-          'unique_sessions' => 'SUM(unique_sessions)',
-          'unique_users' => 'SUM(unique_users)'
+          'total_views' => 'SUM(total_views)'
         ])
         ->from('{{%analytics_page_monthly}}')
         ->where(['>=', new Expression("CONCAT(year, '-', LPAD(month, 2, '0'), '-01')"), $startDate])
@@ -228,9 +233,7 @@ class AnalyticsAggregatedController extends CrelishBaseController
       $data = (new Query())
         ->select([
           'period' => 'date',
-          'total_views' => 'SUM(total_views)',
-          'unique_sessions' => 'SUM(unique_sessions)',
-          'unique_users' => 'SUM(unique_users)'
+          'total_views' => 'SUM(total_views)'
         ])
         ->from('{{%analytics_page_daily}}')
         ->where(['>=', 'date', $startDate])
@@ -239,6 +242,19 @@ class AnalyticsAggregatedController extends CrelishBaseController
         ->orderBy(['date' => SORT_ASC])
         ->all();
     }
+
+    $reader = new VisitsReader();
+    $visits = $useMonthly
+      ? $reader->byMonth(VisitsAggregator::SOURCE_PAGES, '', $startDate, $endDate)
+      : $reader->byDay(VisitsAggregator::SOURCE_PAGES, '', $startDate, $endDate);
+
+    // Days before visits were recorded have no figure (null: a gap in the
+    // chart) rather than the old sum over pages.
+    foreach ($data as &$row) {
+      $row['unique_sessions'] = $visits[$row['period']]['visits'] ?? null;
+      $row['unique_users'] = $visits[$row['period']]['users'] ?? null;
+    }
+    unset($row);
 
     return $data;
   }
@@ -559,7 +575,9 @@ class AnalyticsAggregatedController extends CrelishBaseController
       ],
       'changes' => [
         'page_views' => $this->calculatePercentageChange($stats2['page_views'], $stats1['page_views']),
-        'unique_sessions' => $this->calculatePercentageChange($stats2['unique_sessions'], $stats1['unique_sessions']),
+        'unique_sessions' => ($stats1['unique_sessions'] === null || $stats2['unique_sessions'] === null)
+          ? null
+          : $this->calculatePercentageChange($stats2['unique_sessions'], $stats1['unique_sessions']),
         'element_views' => $this->calculatePercentageChange($stats2['element_views'], $stats1['element_views'])
       ]
     ];
@@ -885,8 +903,7 @@ class AnalyticsAggregatedController extends CrelishBaseController
   {
     $pageStats = (new Query())
       ->select([
-        'page_views' => 'SUM(total_views)',
-        'unique_sessions' => 'SUM(unique_sessions)'
+        'page_views' => 'SUM(total_views)'
       ])
       ->from('{{%analytics_page_daily}}')
       ->where(['>=', 'date', $startDate])
@@ -902,9 +919,13 @@ class AnalyticsAggregatedController extends CrelishBaseController
       ->andWhere(['<=', 'date', $endDate])
       ->one();
 
+    $visits = (new VisitsReader())->summary(VisitsAggregator::SOURCE_PAGES, '', $startDate, $endDate);
+
     return [
       'page_views' => (int)($pageStats['page_views'] ?? 0),
-      'unique_sessions' => (int)($pageStats['unique_sessions'] ?? 0),
+      // null unless the whole period has visit data, so a comparison never
+      // sets recorded days against unrecorded ones
+      'unique_sessions' => ($visits['available'] && $visits['since'] === null) ? $visits['visits'] : null,
       'element_views' => (int)($elementStats['element_views'] ?? 0)
     ];
   }

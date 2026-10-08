@@ -171,4 +171,9 @@ return [
   'Preview – page is archived' => 'Vorschau – Seite ist archiviert',
   'Preview – page is outside its publication window' => 'Vorschau – Seite ist außerhalb des Veröffentlichungszeitraums',
   'No user account exists yet. Create an admin on the server with: {command}' => 'Es gibt noch kein Benutzerkonto. Legen Sie auf dem Server einen Admin an mit: {command}',
+  'Visits' => 'Besuche',
+  'Visits (detail view)' => 'Besuche (Detailansicht)',
+  'Logged-in users (detail view)' => 'Angemeldete Nutzer (Detailansicht)',
+  'Visits counted from {date}' => 'Besuche erfasst ab {date}',
+  'Visits not recorded yet' => 'Besuche noch nicht erfasst',
 ];
