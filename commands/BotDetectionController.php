@@ -1837,6 +1837,8 @@ class BotDetectionController extends Controller
     $today = $this->today();
     // The reduced Chromium UA always says "Android 10; K": its OS version says nothing
     $frozenAndroid = BrowserVersions::isFrozenAndroid($userAgent);
+    // Safari 26+ and Chrome on iOS always say "OS 18_6": score the browser instead
+    $frozenIos = BrowserVersions::isFrozenIos($userAgent);
 
     // When DeviceDetector is available, use structured data
     if ($dd !== null) {
@@ -1845,7 +1847,9 @@ class BotDetectionController extends Controller
 
       // Score OS version
       $osName = $os['name'] ?? '';
-      if (!($frozenAndroid && strtolower($osName) === 'android')) {
+      $osFrozen = ($frozenAndroid && strtolower($osName) === 'android')
+        || ($frozenIos && strtolower($osName) === 'ios');
+      if (!$osFrozen) {
         $osScore = $this->scoreOsVersion($osName, $os['version'] ?? '', $today);
         if ($osScore > 0) {
           return $osScore;
@@ -1866,7 +1870,16 @@ class BotDetectionController extends Controller
     // Regex fallback when DeviceDetector is not available (or found nothing),
     // scored with the same rules as the DeviceDetector path
 
-    // iOS version check
+    // iOS version check; for the frozen "OS 18_6" the browser version instead
+    if ($frozenIos) {
+      if (preg_match('/CriOS\/(\d+)\./', $userAgent, $matches)) {
+        return $this->scoreVersionsBehind(BrowserVersions::chrome($today) - intval($matches[1]));
+      }
+      if (preg_match('/Version\/(\d+)\.\d+.*Safari/', $userAgent, $matches)) {
+        return $this->scoreAppleAge(intval($matches[1]), $today);
+      }
+      return 0;
+    }
     if (preg_match('/(?:iPhone OS|CPU OS) (\d+)[_\.]/', $userAgent, $matches)) {
       return $this->scoreAppleAge(intval($matches[1]), $today);
     }

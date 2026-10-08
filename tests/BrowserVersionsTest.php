@@ -55,4 +55,18 @@ check('a desktop UA is not frozen Android', false, BrowserVersions::isFrozenAndr
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36'
 ));
 
+echo "\nFrozen iOS user agent\n";
+check('iOS 26 Safari (OS 18_6) is frozen', true, BrowserVersions::isFrozenIos(
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1'
+));
+check('iPad (CPU OS 18_6) is frozen', true, BrowserVersions::isFrozenIos(
+    'Mozilla/5.0 (iPad; CPU OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1'
+));
+check('iOS 18.5 is not frozen', false, BrowserVersions::isFrozenIos(
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1'
+));
+check('iOS 16.7 is not frozen', false, BrowserVersions::isFrozenIos(
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 16_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1'
+));
+
 analyticsDone();

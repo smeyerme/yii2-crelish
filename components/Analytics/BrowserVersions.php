@@ -84,6 +84,16 @@ final class BrowserVersions
         return (bool)preg_match('/Android 10; K[;)]/', $userAgent);
     }
 
+    /**
+     * Whether the user agent carries the frozen iOS version "OS 18_6", which
+     * Safari 26+ and Chrome on iOS send regardless of the real iOS version, so
+     * its OS version says nothing; the browser version has to be scored instead.
+     */
+    public static function isFrozenIos(string $userAgent): bool
+    {
+        return (bool)preg_match('/(?:iPhone OS|CPU OS) 18_6(?!\d)/', $userAgent);
+    }
+
     private static function daysSince(string $base, \DateTimeImmutable $today): int
     {
         $utc = new \DateTimeZone('UTC');
