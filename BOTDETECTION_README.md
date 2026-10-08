@@ -23,9 +23,20 @@ Every session is scored across multiple detection phases. Scores accumulate and 
 
 | Level | Score | Action |
 |-------|-------|--------|
-| **HIGH** | >= 70 | Marked as bot, deleted automatically |
-| **MEDIUM** | 30-69 | Flagged for manual review |
+| **HIGH** | >= 70 | `is_bot = 1`: marked as bot, deleted automatically |
+| **SUSPECTED** | 50-69 | `is_bot = 2`: excluded from every statistic, raw data kept |
+| **MEDIUM** | 30-69 | Listed by `review` for manual review |
 | **LOW** | < 30 | Kept as legitimate traffic |
+
+`is_bot` has three states: `0` visitor (counted), `1` bot (deleted by step 11), `2` suspected (not counted, not deleted). Suspected is sticky: a later run that scores the session lower or not at all does not lower it (volume, timing and crawl signals only see the last hour or day, so their absence the next night is not evidence of a human). A suspected session is still scored on every run and becomes `1` when it reaches 70. Only `demote` lowers it to `0`, and not durably: the next run scores it again (inside the scoring window) and may set it to `2` again; a durable human-confirmation marker comes with the planned browser confirmation. Page views follow their session (also ones recorded after it became suspected, which the tracking component stores as `2` right away), except that a page view flagged as a bot at recording stays `1`, and a session that became `1` during a run is never lowered by its commit. The analytics cleanup deletes suspected page views with the normal retention.
+
+### Current browser versions
+
+Outdated-browser scores are measured against versions computed from the date (`components/Analytics/BrowserVersions.php`), never hardcoded: Chrome and Firefox follow a release schedule anchored at their switch to a 2-week cadence (Chrome 153 = 2026-09-08, Firefox 155 = 2026-09-01): 14-day steps forward from the switch, 28-day steps counted backwards before it (Chrome m < 153: 2026-09-08 − (153 − m)·28 days; Firefox m < 155: 2026-09-01 − (155 − m)·28 days). Counting backwards keeps the pre-switch dates close to the real releases; counting forward from an older release ran weeks ahead because of holiday and summer gaps (`BrowserVersions::releaseDate()`, `current()`). A Chrome/Firefox version is scored by how long it has been outdated, i.e. days since its successor was released (`outdatedDays()`): 168+ days 20, 364+ 30, 728+ 40, 1456+ 50 (the former 6/13/26/52 versions at the 4-week cadence). A version more than 10 above the current release (crafted user agents such as `Chrome/99999999999`) scores 0, and an exception while scoring one user agent never aborts the run (that session gets no age score). iOS/Safari and Android are compared by release year (iOS/Safari 26 = 2025, 18 = 2024; Android 16 = 2025; the newest Apple year switches on October 1). iOS/Safari: 2+ years 30, 3+ 40, 5+ 50. Android: 4+ years 30, 6+ 50; the reduced UA `Android 10; K` is never scored for its OS. Likewise the frozen iOS UA `OS 18_6` (sent by iOS 26+ Safari and Chrome on iOS) is not scored for its OS; its browser is scored instead (Safari by `Version/NN`, Chrome on iOS by `CriOS/NNN`).
+
+iOS in-app browsers (WKWebView: iPhone/iPad + AppleWebKit + `Mobile/`, no `Safari` token, e.g. LinkedIn, Instagram, Facebook, XING) and anything DeviceDetector reports as a `mobile app` are exempt from the dead-browser rule "KHTML without Chrome/Safari".
+
+Run bot detection before the daily analytics aggregation (see `docs/analytics-aggregation.md`), so a day is aggregated without the bots and suspected bots found overnight.
 
 ### Detection Phases (11 total)
 
@@ -175,7 +186,7 @@ php yii crelish/bot-detection/promote abc123def456
 
 ### `php yii crelish/bot-detection/demote <session_id>`
 
-Clears the bot score for a session, marking it as legitimate. Use when a session was incorrectly flagged.
+Clears the bot score for a session, marking it as legitimate (suspected page views are counted again). Use when a session was incorrectly flagged. This is not durable: the next run scores the session again (inside the scoring window) and may mark it suspected again. A durable human-confirmation marker comes with the planned browser confirmation.
 
 ```bash
 php yii crelish/bot-detection/demote abc123def456
@@ -207,7 +218,7 @@ The system expects these columns on `analytics_sessions`:
 
 | Column | Type | Notes |
 |--------|------|-------|
-| `is_bot` | tinyint | 0 or 1 |
+| `is_bot` | tinyint | 0 visitor, 1 bot, 2 suspected |
 | `bot_score` | int | 0-100 confidence score |
 | `bot_reason` | varchar(255) | Optional - comma-separated detection reasons |
 
