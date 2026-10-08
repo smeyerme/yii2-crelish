@@ -103,5 +103,26 @@ check('--pagesOnly=1 exits 0', 0, controller()->runAction('daily', [$day, 'pages
 check('--pagesOnly=1 wrote pages', 2, pageTotal($day));
 check('--pagesOnly=1 left elements alone', 0, elementTotal($day));
 check('an unknown --only part is a usage error', 64, controller()->runAction('daily', [$day, 'only' => 'sessions']));
+check('an impossible date is a usage error', 64, controller()->runAction('daily', ['2026-02-30']));
+check('a date not written as Y-m-d is a usage error', 64, controller()->runAction('daily', ['yesterday']));
+
+echo "\nBackfill dry run writes nothing\n";
+analyticsMysqlApp();
+fixtures($day);
+controller()->aggregateDate($day, AggregationParts::ALL);
+$snapshot = static fn(): array => [
+    rows('SELECT * FROM analytics_page_daily ORDER BY id'),
+    rows('SELECT * FROM analytics_element_daily ORDER BY id'),
+    rows('SELECT * FROM analytics_visits_daily ORDER BY id'),
+];
+Yii::$app->db->createCommand('UPDATE analytics_page_daily SET total_views = 100')->execute();
+Yii::$app->db->createCommand('UPDATE analytics_element_daily SET total_views = 100')->execute();
+Yii::$app->db->createCommand('UPDATE analytics_visits_daily SET unique_sessions = 100')->execute();
+Yii::$app->db->createCommand()->insert('analytics_visits_daily', ['date' => $day, 'source' => 'elements', 'owner_uuid' => 'dead', 'event_type' => '', 'unique_sessions' => 5])->execute();
+$before = $snapshot();
+check('backfill --dryRun=1 exits 0', 0, controller()->runAction('backfill', ['5', 'dryRun' => '1']));
+check('backfill --dryRun=1 leaves page, element and visit rows unchanged', $before, $snapshot());
+check('a real backfill would have changed them', 0, controller()->runAction('backfill', ['5']));
+check('(so the dry run check is not vacuous)', false, $before === $snapshot());
 
 analyticsDone();

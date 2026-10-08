@@ -132,6 +132,10 @@ class AnalyticsAggregationController extends Controller
     public function actionDaily($date = null)
     {
         $targetDate = $date ?: date('Y-m-d', strtotime('-1 day'));
+        if (!self::isDate($targetDate)) {
+            $this->stderr("Invalid date '{$targetDate}': expected an existing day as Y-m-d\n", Console::FG_RED);
+            return ExitCode::USAGE;
+        }
         $parts = $this->resolveParts();
         if ($parts === null) {
             return ExitCode::USAGE;
@@ -194,6 +198,15 @@ class AnalyticsAggregationController extends Controller
         }
 
         return $ok;
+    }
+
+    /**
+     * Whether $value is an existing day written as Y-m-d.
+     */
+    private static function isDate(string $value): bool
+    {
+        return preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $value, $m) === 1
+            && checkdate((int)$m[2], (int)$m[3], (int)$m[1]);
     }
 
     /**
@@ -893,6 +906,15 @@ class AnalyticsAggregationController extends Controller
         $parts = $this->resolveParts();
         if ($parts === null) {
             return ExitCode::USAGE;
+        }
+
+        if ($this->dryRun) {
+            $this->stdout("DRY RUN MODE - No changes will be made\n", Console::FG_YELLOW);
+            $this->stdout("Parts: " . implode(', ', $parts) . "\n");
+            for ($i = $days; $i >= 1; $i--) {
+                $this->stdout("  would aggregate " . date('Y-m-d', strtotime("-{$i} days")) . "\n");
+            }
+            return ExitCode::OK;
         }
 
         $successCount = 0;
