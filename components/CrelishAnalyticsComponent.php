@@ -27,9 +27,19 @@ class CrelishAnalyticsComponent extends Component
   public $excludeIps = [];
 
   /**
+   * The PHP session key that holds the analytics session id
+   */
+  public const SESSION_KEY = 'analytics_session_id';
+
+  /**
+   * @var int|null Id of the page view this request recorded, for the browser confirmation
+   */
+  public $lastPageViewId = null;
+
+  /**
    * @var string Session key for analytics
    */
-  private $_sessionKey = 'analytics_session_id';
+  private $_sessionKey = self::SESSION_KEY;
 
   /**
    * @var string Current session ID
@@ -105,7 +115,7 @@ class CrelishAnalyticsComponent extends Component
     ]);
 
     // Track the page view
-    return Yii::$app->db->createCommand()->insert('analytics_page_views', [
+    $recorded = Yii::$app->db->createCommand()->insert('analytics_page_views', [
       'page_uuid' => $pageData['uuid'],
       'page_type' => $pageData['ctype'],
       'url' => $url,
@@ -118,6 +128,10 @@ class CrelishAnalyticsComponent extends Component
       'is_bot' => $isBot ? 1 : ($sessionState === 2 ? 2 : 0),
       'created_at' => new Expression('NOW()')
     ])->execute();
+
+    $this->lastPageViewId = $recorded ? (int)Yii::$app->db->getLastInsertID() : null;
+
+    return $recorded;
   }
 
   /**

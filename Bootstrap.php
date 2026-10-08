@@ -2,6 +2,7 @@
 
 namespace giantbits\crelish;
 
+use giantbits\crelish\components\Analytics\PageStateUrlRule;
 use giantbits\crelish\components\shortlinks\ShortLinkUrlRule;
 use giantbits\crelish\config\ComponentsConfig;
 use giantbits\crelish\config\UrlRulesConfig;
@@ -215,6 +216,7 @@ class Bootstrap implements BootstrapInterface
 
     // Prepended so it runs before CrelishBaseUrlRule and project rules
     ShortLinkUrlRule::register($app->getUrlManager());
+    PageStateUrlRule::register($app->getUrlManager());
   }
 
   /**
