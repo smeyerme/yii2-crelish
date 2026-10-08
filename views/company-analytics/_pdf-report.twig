@@ -61,8 +61,13 @@
                 <div class="kpi-label">{{ t('crelish', 'Total Views') }}</div>
             </td>
             <td>
-                <div class="kpi-value">{{ overviewStats.unique_sessions|default(0)|number_format(0, ',', '.') }}</div>
-                <div class="kpi-label">{{ t('crelish', 'Unique Sessions') }}</div>
+                <div class="kpi-value">{{ overviewStats.visits.available ? overviewStats.unique_sessions|default(0)|number_format(0, ',', '.') : '–' }}</div>
+                <div class="kpi-label">{{ t('crelish', 'Visits') }}</div>
+                {% if not overviewStats.visits.available %}
+                <div class="kpi-label">{{ t('crelish', 'Visits not recorded yet') }}</div>
+                {% elseif overviewStats.visits.since %}
+                <div class="kpi-label">{{ t('crelish', 'Visits counted from {date}')|replace({'{date}': overviewStats.visits.since|date('d.m.Y')}) }}</div>
+                {% endif %}
             </td>
             <td>
                 <div class="kpi-value">{{ overviewStats.content_count|default(0)|number_format(0, ',', '.') }}</div>
