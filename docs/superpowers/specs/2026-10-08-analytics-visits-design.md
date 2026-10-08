@@ -44,7 +44,7 @@ New table `analytics_visits_daily`:
 | `id` | PK | |
 | `date` | DATE NOT NULL | The day |
 | `source` | VARCHAR(16) NOT NULL | `pages` (from `analytics_page_views`) or `elements` (from `analytics_element_views`) |
-| `owner_uuid` | VARCHAR(36) NOT NULL DEFAULT '' | `''` = whole site; otherwise the `page_uuid` the element rows carry (for jobs: the owning company) |
+| `owner_uuid` | VARCHAR(36) NOT NULL DEFAULT '' | `''` = whole site; otherwise an owner: the `page_uuid` an element view carries, or the company owning the element (see below) |
 | `event_type` | VARCHAR(32) NOT NULL DEFAULT '' | `''` = any event; otherwise `list`, `detail`, `click`, `download`, … |
 | `unique_sessions` | INT NOT NULL DEFAULT 0 | Distinct sessions that day |
 | `unique_users` | INT NOT NULL DEFAULT 0 | Distinct logged-in users that day |
@@ -59,7 +59,20 @@ Rows written per day:
 |---|---|---|---|
 | pages | '' | '' | Admin page totals and page trend |
 | elements | '' | '' and each event type | Admin element totals and per-event-type totals |
-| elements | each page_uuid | '' and each event type | Company reports |
+| elements | each owner | '' and each event type | Company reports |
+
+**Owners** follow the rule the company report already uses for its view counts
+(`page_uuid` = company OR element owned by the company): a session counts for an
+owner when it saw an element whose `page_uuid` is the owner, or an element the
+owner owns. Ownership comes from the project's
+`@app/config/analytics-element-types.php`: every listed table with a `company`
+column maps its rows' `uuid` to `company`. A session that matches an owner both
+ways counts once. At forum-holzkarriere jobs carry their company in `page_uuid`
+and in `job.company`; at forum-holzbranche `page_uuid` is never the company (0
+of ~25,000 element views in 7 days), so without the ownership half every company
+there would show no visits. Comparisons between `uuid`/`company` and the raw
+columns convert both sides to `utf8mb4_unicode_ci`, because project tables mix
+`utf8mb3` and `utf8mb4` and general/unicode collations.
 
 Expected size at forum-holzkarriere: a few hundred rows per day.
 
@@ -112,9 +125,8 @@ The labels say what the figure is: "Besuche" / "Visits" (counted per day),
 replacing "Unique Sessions" where the figure changes.
 
 View counts (`total_views`) and the company filter for them (`page_uuid` =
-company OR element owned by the company) are unchanged. Visit rows exist only
-per `page_uuid`; at forum-holzkarriere that covers 97% of job views (the rest
-are views of jobs since deleted, whose old rows carry no company).
+company OR element owned by the company) are unchanged; the company's visit
+rows follow the same rule (§2).
 
 **Periods without visit data:** visit rows exist from the day they were first
 computed (at rollout: backfilled 30 days, i.e. from 2026-09-08 at
