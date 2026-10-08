@@ -4,7 +4,9 @@ namespace giantbits\crelish\commands;
 
 use Yii;
 use giantbits\crelish\components\Analytics\AggregationParts;
+use giantbits\crelish\components\Analytics\AnalyticsDayCheck;
 use giantbits\crelish\components\Analytics\AnalyticsRetention;
+use giantbits\crelish\components\Analytics\DayVerifier;
 use giantbits\crelish\components\Analytics\VisitsAggregator;
 use yii\console\Controller;
 use yii\console\ExitCode;
@@ -597,133 +599,67 @@ class AnalyticsAggregationController extends Controller
     }
 
     /**
-     * Cleanup old raw data after aggregation
+     * Delete raw analytics data older than the retention period, whole days only.
      *
-     * @return int
+     * Every day due for deletion is first checked: its stored aggregates must be
+     * at least its raw counts (page views, element views and, with the visits
+     * table, site visits). A day that falls short is re-aggregated in repair
+     * mode (only raising numbers) and checked again; a day still short keeps its
+     * raw data, is reported on stderr, and the command exits non-zero.
      */
     public function actionCleanup()
     {
         $this->stdout("\n" . str_repeat('=', 60) . "\n", Console::FG_CYAN);
         $this->stdout("Analytics Data Cleanup\n", Console::FG_CYAN);
         $this->stdout(str_repeat('=', 60) . "\n", Console::FG_CYAN);
-        $this->stdout("Retention period: {$this->retentionDays} days\n\n");
+        $this->stdout("Retention period: {$this->retentionDays} days\n");
 
         if ($this->dryRun) {
-            $this->stdout("DRY RUN MODE - No changes will be made\n\n", Console::FG_YELLOW);
+            $this->stdout("DRY RUN MODE - No changes will be made\n", Console::FG_YELLOW);
         }
 
         $db = Yii::$app->db;
-        $cutoffDate = date('Y-m-d H:i:s', strtotime("-{$this->retentionDays} days"));
+        $firstKeptDay = AnalyticsRetention::firstKeptDay(date('Y-m-d'), (int)$this->retentionDays);
+        $cutoff = $firstKeptDay . ' 00:00:00';
+        $this->stdout("Raw data of days before {$firstKeptDay} is due for deletion\n\n");
 
-        $this->stdout("Cutoff date: {$cutoffDate}\n\n");
+        $days = AnalyticsRetention::daysToDelete($this->oldestRawDay($cutoff), $firstKeptDay);
 
-        // Verify every day about to be deleted actually made it into the daily
-        // aggregates. The previous check only asked whether *any* aggregate row
-        // existed before the cutoff, which is true as soon as the site has any
-        // history at all - so a multi-month aggregation outage sailed straight
-        // past it and the raw rows were deleted unaggregated.
-        if (!$this->skipAggregationCheck) {
-            $unaggregated = $this->findUnaggregatedDays($cutoffDate);
-
-            if (!empty($unaggregated)) {
-                $shown = array_slice($unaggregated, 0, 10);
-
-                $this->stderr("\n✗ Refusing to delete: " . count($unaggregated)
-                    . " day(s) in the deletion range have raw traffic but no daily aggregate.\n", Console::FG_RED);
-                $this->stderr("  " . implode(', ', $shown)
-                    . (count($unaggregated) > count($shown) ? ', ...' : '') . "\n\n", Console::FG_RED);
-                $this->stderr("Deleting now would lose this traffic permanently. Run:\n", Console::FG_YELLOW);
-                $this->stderr("  yii crelish/analytics-aggregation/backfill <days>\n\n", Console::FG_YELLOW);
-                $this->stderr("Override with --skipAggregationCheck=1 only if the loss is intended.\n", Console::FG_YELLOW);
-
-                return ExitCode::UNSPECIFIED_ERROR;
-            }
-
-            $this->stdout("✓ Aggregate coverage verified for the deletion range\n\n", Console::FG_GREEN);
+        if ($this->skipAggregationCheck) {
+            $this->stdout("⚠ Verification skipped (--skipAggregationCheck)\n\n", Console::FG_YELLOW);
+            [$deletable, $kept] = [$days, []];
         } else {
-            $this->stdout("⚠ Aggregation coverage check skipped (--skipAggregationCheck)\n\n", Console::FG_YELLOW);
+            [$deletable, $kept] = $this->verifyDays($days);
         }
-
-        // Count records to be deleted (element_views doesn't have is_bot)
-        $elementViewsCount = $db->createCommand("
-            SELECT COUNT(*) FROM {{%analytics_element_views}}
-            WHERE created_at < :cutoff
-        ")->bindValue(':cutoff', $cutoffDate)->queryScalar();
-
-        $pageViewsCount = $db->createCommand("
-            SELECT COUNT(*) FROM {{%analytics_page_views}}
-            WHERE created_at < :cutoff AND is_bot = 0
-        ")->bindValue(':cutoff', $cutoffDate)->queryScalar();
-
-        // Only orphans newer than the cutoff are counted here: anything older is
-        // already covered by the age-based delete above, which runs first. This
-        // keeps the reported total from double-counting the same rows.
-        $orphanedElementViewsCount = $db->createCommand("
-            SELECT COUNT(*) FROM {{%analytics_element_views}} ev
-            LEFT JOIN {{%analytics_sessions}} s ON ev.session_id = s.session_id
-            WHERE s.session_id IS NULL AND ev.created_at >= :cutoff
-        ")->bindValue(':cutoff', $cutoffDate)->queryScalar();
-
-        $orphanedSessionsCount = $db->createCommand("
-            SELECT COUNT(*) FROM {{%analytics_sessions}} s
-            WHERE s.created_at < :cutoff
-              AND NOT EXISTS (
-                SELECT 1 FROM {{%analytics_page_views}} pv WHERE pv.session_id = s.session_id
-              )
-        ")->bindValue(':cutoff', $cutoffDate)->queryScalar();
-
-        $this->stdout("Records to delete:\n");
-        $this->stdout("  Element views (older than cutoff): " . number_format($elementViewsCount) . "\n");
-        $this->stdout("  Element views (orphaned, any age): " . number_format($orphanedElementViewsCount) . "\n");
-        $this->stdout("  Page views: " . number_format($pageViewsCount) . "\n");
-        $this->stdout("  Sessions (orphaned, older than cutoff): " . number_format($orphanedSessionsCount) . "\n\n");
 
         if ($this->dryRun) {
-            $this->stdout("Would delete these records (dry run)\n", Console::FG_YELLOW);
+            $this->stdout("Would delete the raw data of " . count($deletable) . " day(s) (dry run)\n", Console::FG_YELLOW);
             return ExitCode::OK;
         }
 
-        $totalToDelete = $elementViewsCount + $pageViewsCount
-            + $orphanedElementViewsCount + $orphanedSessionsCount;
-
-        if ($totalToDelete == 0) {
-            $this->stdout("No records to delete\n", Console::FG_GREEN);
-            return ExitCode::OK;
-        }
-
-        if (!$this->confirmDestructive("Delete " . number_format($totalToDelete) . " records?")) {
+        if (!$this->confirmDestructive("Delete the raw data of " . count($deletable) . " day(s) and orphaned rows?")) {
             $this->stdout("Aborted\n");
             return ExitCode::OK;
         }
 
-        // Delete old element views (no is_bot column)
-        try {
-            $deleted = $this->deleteInBatches(
-                "DELETE FROM {{%analytics_element_views}} WHERE created_at < :cutoff LIMIT :limit",
-                [':cutoff' => $cutoffDate]
+        $elementViews = 0;
+        $pageViews = 0;
+        foreach (AnalyticsRetention::ranges($deletable) as [$start, $end]) {
+            $range = [':start' => $start, ':end' => $end];
+            $elementViews += $this->deleteInBatches(
+                "DELETE FROM {{%analytics_element_views}} WHERE created_at >= :start AND created_at < :end LIMIT :limit",
+                $range
             );
-
-            $this->stdout("✓ Deleted " . number_format($deleted) . " element view records\n", Console::FG_GREEN);
-        } catch (\Exception $e) {
-            $this->stderr("✗ Error deleting element views: " . $e->getMessage() . "\n", Console::FG_RED);
-        }
-
-        // Delete old page views
-        try {
-            $deleted = $this->deleteInBatches(
-                "DELETE FROM {{%analytics_page_views}} WHERE created_at < :cutoff AND is_bot = 0 LIMIT :limit",
-                [':cutoff' => $cutoffDate]
+            $pageViews += $this->deleteInBatches(
+                "DELETE FROM {{%analytics_page_views}} WHERE created_at >= :start AND created_at < :end AND is_bot = 0 LIMIT :limit",
+                $range
             );
-
-            $this->stdout("✓ Deleted " . number_format($deleted) . " page view records\n", Console::FG_GREEN);
-        } catch (\Exception $e) {
-            $this->stderr("✗ Error deleting page views: " . $e->getMessage() . "\n", Console::FG_RED);
         }
+        $this->stdout("✓ Deleted " . number_format($elementViews) . " element view records\n", Console::FG_GREEN);
+        $this->stdout("✓ Deleted " . number_format($pageViews) . " page view records\n", Console::FG_GREEN);
 
-        // Delete element views whose session no longer exists. These are invisible
-        // to every report (all aggregation INNER JOINs analytics_sessions), so they
-        // are pure dead weight. Previously this was only possible by hand, via
-        // commands/CLEANUP_ORPHANED_ELEMENT_VIEWS.sql.
+        // Orphaned element views are counted by no aggregate (all element
+        // aggregation joins sessions), so removing them never affects a check.
         try {
             $deleted = $this->deleteOrphanedElementViews();
             $this->stdout("✓ Deleted " . number_format($deleted) . " orphaned element view records\n", Console::FG_GREEN);
@@ -731,9 +667,6 @@ class AnalyticsAggregationController extends Controller
             $this->stderr("✗ Error deleting orphaned element views: " . $e->getMessage() . "\n", Console::FG_RED);
         }
 
-        // Delete sessions that no longer have any page views referencing them.
-        // Without this analytics_sessions grows without bound - it was never
-        // covered by cleanup, and its rows outlive the page views they describe.
         try {
             $deleted = $this->deleteInBatches(
                 "DELETE FROM {{%analytics_sessions}}
@@ -743,17 +676,13 @@ class AnalyticsAggregationController extends Controller
                      WHERE pv.session_id = {{%analytics_sessions}}.session_id
                    )
                  LIMIT :limit",
-                [':cutoff' => $cutoffDate]
+                [':cutoff' => $cutoff]
             );
-
             $this->stdout("✓ Deleted " . number_format($deleted) . " orphaned session records\n", Console::FG_GREEN);
         } catch (\Exception $e) {
             $this->stderr("✗ Error deleting sessions: " . $e->getMessage() . "\n", Console::FG_RED);
         }
 
-        // Optimize tables. On InnoDB this rebuilds the table to return freed pages
-        // to the filesystem; it needs roughly the table's size in free disk space
-        // and locks the table for the duration, so it is opt-in.
         if ($this->optimize) {
             $this->stdout("\nOptimizing tables...\n");
             foreach (['analytics_element_views', 'analytics_page_views', 'analytics_sessions'] as $table) {
@@ -768,117 +697,80 @@ class AnalyticsAggregationController extends Controller
             $this->stdout("\nSkipping OPTIMIZE TABLE (pass --optimize=1 to reclaim disk space)\n", Console::FG_YELLOW);
         }
 
+        if ($kept !== []) {
+            $this->stderr("\n✗ Raw data kept for " . count($kept) . " day(s) whose aggregates could not be completed: "
+                . implode(', ', $kept) . "\n", Console::FG_RED);
+            return ExitCode::UNSPECIFIED_ERROR;
+        }
+
         $this->stdout("\nCleanup completed successfully\n", Console::FG_GREEN);
 
         return ExitCode::OK;
     }
 
     /**
-     * Find days in the deletion range that hold reportable raw traffic but have
-     * no corresponding row in the daily aggregates.
+     * Check every day, repairing the ones that fall short (not in dry run).
      *
-     * @param string $cutoffDate Rows older than this are the ones to be deleted
-     * @return string[] Y-m-d dates, ascending
+     * @param string[] $days
+     * @return array{0: string[], 1: string[]} [days whose raw data may be deleted, days kept]
      */
-    protected function findUnaggregatedDays(string $cutoffDate): array
+    protected function verifyDays(array $days): array
     {
-        // Both streams are checked independently: actionDaily() aggregates element
-        // views and page views in separate statements, so one can succeed while the
-        // other throws, leaving a day half-covered.
-        $days = array_merge(
-            $this->findGapDays(
-                $cutoffDate,
-                '{{%analytics_element_daily}}',
-                "SELECT EXISTS (
-                    SELECT 1
-                    FROM {{%analytics_element_views}} ev
-                    INNER JOIN {{%analytics_sessions}} s ON ev.session_id = s.session_id
-                    WHERE ev.created_at >= :start AND ev.created_at < :end
-                      AND s.is_bot = 0
-                 )",
-                "SELECT MIN(created_at) FROM {{%analytics_element_views}} WHERE created_at < :cutoff"
-            ),
-            $this->findGapDays(
-                $cutoffDate,
-                '{{%analytics_page_daily}}',
-                "SELECT EXISTS (
-                    SELECT 1
-                    FROM {{%analytics_page_views}}
-                    WHERE created_at >= :start AND created_at < :end
-                      AND is_bot = 0
-                 )",
-                "SELECT MIN(created_at) FROM {{%analytics_page_views}} WHERE created_at < :cutoff AND is_bot = 0"
-            )
-        );
-
-        $days = array_values(array_unique($days));
-        sort($days);
-
-        return $days;
-    }
-
-    /**
-     * Days holding reportable raw traffic with no row in the given aggregate table.
-     *
-     * @param string $cutoffDate Rows older than this are the ones to be deleted
-     * @param string $aggregateTable Aggregate table to test coverage against
-     * @param string $probeSql EXISTS query taking :start and :end
-     * @param string $firstRawSql MIN(created_at) query taking :cutoff
-     * @return string[] Y-m-d dates
-     */
-    protected function findGapDays(
-        string $cutoffDate,
-        string $aggregateTable,
-        string $probeSql,
-        string $firstRawSql
-    ): array {
         $db = Yii::$app->db;
-        $cutoffDay = substr($cutoffDate, 0, 10);
+        $verifier = new DayVerifier($db, VisitsAggregator::tableExists($db));
+        $shortfalls = static function (string $day) use ($verifier): array {
+            $counts = $verifier->counts($day);
+            return AnalyticsDayCheck::shortfalls($counts['stored'], $counts['raw']);
+        };
+        $deletable = [];
+        $kept = [];
+        $repaired = 0;
 
-        $firstRaw = $db->createCommand($firstRawSql)
-            ->bindValue(':cutoff', $cutoffDate)
-            ->queryScalar();
+        foreach ($days as $day) {
+            try {
+                $short = $shortfalls($day);
+                if ($short !== [] && !$this->dryRun) {
+                    $this->stdout("  {$day}: aggregates below raw data (" . implode(', ', $short) . "), repairing\n", Console::FG_YELLOW);
+                    $this->aggregateDate($day, AggregationParts::ALL, true);
+                    $short = $shortfalls($day);
+                    if ($short === []) {
+                        $repaired++;
+                    }
+                }
+            } catch (\Throwable $e) {
+                $short = ['verification failed: ' . $e->getMessage()];
+            }
 
-        if ($firstRaw === null) {
-            return [];
-        }
-
-        // Day list comes from the small aggregate table, so the expensive per-day
-        // probe below only runs for days already missing a row - normally none.
-        $covered = array_flip($db->createCommand("
-            SELECT DISTINCT date FROM {$aggregateTable}
-            WHERE date >= :from AND date < :to
-        ")
-            ->bindValue(':from', substr($firstRaw, 0, 10))
-            ->bindValue(':to', $cutoffDay)
-            ->queryColumn());
-
-        $gaps = [];
-        $day = new \DateTimeImmutable(substr($firstRaw, 0, 10));
-        $end = new \DateTimeImmutable($cutoffDay);
-        $oneDay = new \DateInterval('P1D');
-
-        for (; $day < $end; $day = $day->add($oneDay)) {
-            $date = $day->format('Y-m-d');
-
-            if (isset($covered[$date])) {
+            if ($short === []) {
+                $deletable[] = $day;
                 continue;
             }
 
-            // A day whose only raw rows are bot or orphaned traffic is not a gap:
-            // aggregation legitimately produces nothing for it, and reporting it
-            // would block cleanup permanently.
-            $hasReportable = $db->createCommand($probeSql)
-                ->bindValue(':start', $date . ' 00:00:00')
-                ->bindValue(':end', $day->add($oneDay)->format('Y-m-d') . ' 00:00:00')
-                ->queryScalar();
-
-            if ($hasReportable) {
-                $gaps[] = $date;
-            }
+            $kept[] = $day;
+            $this->stderr("  {$day}: " . ($this->dryRun ? 'would repair' : 'kept, still below raw data')
+                . ' (' . implode(', ', $short) . ")\n", Console::FG_RED);
         }
 
-        return $gaps;
+        $this->stdout(sprintf(
+            "Checked %d day(s): %d may be deleted (%d after repair), %d kept\n\n",
+            count($days), count($deletable), $repaired, count($kept)
+        ));
+
+        return [$deletable, $kept];
+    }
+
+    /**
+     * Oldest raw timestamp before the cutoff, or null when there is none.
+     */
+    private function oldestRawDay(string $cutoff): ?string
+    {
+        $db = Yii::$app->db;
+        $candidates = array_filter([
+            $db->createCommand("SELECT MIN(created_at) FROM {{%analytics_page_views}} WHERE created_at < :cutoff", [':cutoff' => $cutoff])->queryScalar(),
+            $db->createCommand("SELECT MIN(created_at) FROM {{%analytics_element_views}} WHERE created_at < :cutoff", [':cutoff' => $cutoff])->queryScalar(),
+        ]);
+
+        return $candidates === [] ? null : min($candidates);
     }
 
     /**
