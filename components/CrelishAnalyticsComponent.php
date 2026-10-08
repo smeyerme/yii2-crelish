@@ -94,7 +94,7 @@ class CrelishAnalyticsComponent extends Component
     $url = Yii::$app->request->absoluteUrl;
 
     // Update session data
-    $this->updateSession([
+    $sessionState = $this->updateSession([
       'session_id' => $this->_sessionId,
       'user_id' => $userId,
       'ip_address' => $ip,
@@ -114,7 +114,8 @@ class CrelishAnalyticsComponent extends Component
       'user_id' => $userId,
       'user_agent' => $userAgent,
       'ip_address' => $ip,
-      'is_bot' => $isBot,
+      // A page view of a suspected session (2) is suspected too
+      'is_bot' => $isBot ? 1 : ($sessionState === 2 ? 2 : 0),
       'created_at' => new Expression('NOW()')
     ])->execute();
   }
@@ -204,7 +205,7 @@ class CrelishAnalyticsComponent extends Component
   /**
    * Update session data
    * @param array $data
-   * @return bool
+   * @return int The session's is_bot after the update (0 visitor, 1 bot, 2 suspected)
    */
   private function updateSession($data)
   {
@@ -223,13 +224,17 @@ class CrelishAnalyticsComponent extends Component
         $updateData['is_bot'] = 1;
       }
 
-      return Yii::$app->db->createCommand()->update('analytics_sessions',
+      Yii::$app->db->createCommand()->update('analytics_sessions',
         $updateData,
         ['session_id' => $this->_sessionId]
       )->execute();
+
+      return (int)($updateData['is_bot'] ?? $session['is_bot']);
     } else {
       // Create new session
-      return Yii::$app->db->createCommand()->insert('analytics_sessions', $data)->execute();
+      Yii::$app->db->createCommand()->insert('analytics_sessions', $data)->execute();
+
+      return $data['is_bot'] ? 1 : 0;
     }
   }
 
