@@ -107,7 +107,7 @@ session('botonly', 1);
 pageView($gone, '10:00:00', P1, '/a', 'botonly', 1);
 elementView($gone, '10:00:00', J1, 'list', C1, 'botonly');
 (new VisitsAggregator(Yii::$app->db))->aggregate($gone);
-check('bot traffic alone does not count as raw data', 42, visit($gone, 'pages', '', ''));
+check('bot traffic alone is raw data: the day has no visits, the stale row is replaced', null, visit($gone, 'pages', '', ''));
 
 echo "\nAn invalid date is stored as the day it was normalised to\n";
 pageView('2026-03-02', '10:00:00', P1, '/a', 's2');

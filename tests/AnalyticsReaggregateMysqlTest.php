@@ -52,6 +52,11 @@ function elementRows(string $day): array
     return $out;
 }
 
+function visitRows(string $day): int
+{
+    return (int)scalar('SELECT COUNT(*) FROM analytics_visits_daily WHERE date = :d', [':d' => $day]);
+}
+
 function suspect(string $sessionId): void
 {
     Yii::$app->db->createCommand()->update('analytics_sessions', ['is_bot' => 2], ['session_id' => $sessionId])->execute();
@@ -87,21 +92,25 @@ echo "\nA day whose raw data is gone keeps its rows\n";
 $gone = daysAgo(3);
 traffic($gone, 's3', 's4');
 aggregate($gone);
+$goneVisits = visitRows($gone);
 Yii::$app->db->createCommand('DELETE FROM analytics_page_views WHERE DATE(created_at) = :d', [':d' => $gone])->execute();
 Yii::$app->db->createCommand('DELETE FROM analytics_element_views WHERE DATE(created_at) = :d', [':d' => $gone])->execute();
 aggregate($gone);
 check('page rows are kept', [P1 => 2, P2 => 1], pageRows($gone));
 check('element rows are kept', [J1 . '/list' => 2, J2 . '/detail' => 1], elementRows($gone));
+check('visit rows are kept', [true, $goneVisits], [$goneVisits > 0, visitRows($gone)]);
 
 echo "\nRaw rows of any bot state count as raw data\n";
 $botsLeft = daysAgo(4);
 traffic($botsLeft, 's5', 's6');
 aggregate($botsLeft);
+check('visit rows exist after the first aggregation (control)', true, visitRows($botsLeft) > 0);
 suspect('s5');
 suspect('s6');
 aggregate($botsLeft);
 check('a day whose views are all suspected has no page rows', [], pageRows($botsLeft));
 check('and no element rows', [], elementRows($botsLeft));
+check('and no visit rows', 0, visitRows($botsLeft));
 
 echo "\nA day before the retention period is never lowered\n";
 $old = daysAgo(40);
