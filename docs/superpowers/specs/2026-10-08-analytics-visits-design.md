@@ -193,3 +193,21 @@ shows "Besuche noch nicht erfasst".
 - Cookieless visitors get a new session per request, so a visit is closer to a
   page request than to a browsing session for them; bot detection keeps ~64% of
   sessions as "medium" confidence and counts them.
+
+## 10. Follow-up: client-side tracking (separate design)
+
+Page and element views are recorded server-side while rendering
+(`CrelishFrontendController::trackPageView`, `chelper.trackElementView`). That
+counts every request that renders a page, including bots that never run
+JavaScript, and misses every human view served from the LiteSpeed page cache
+(no PHP runs). Plausible, Umami and Google Analytics count only browsers that
+execute their script, which removes most bots before any detection runs, and
+recognise a visitor for one day by a daily-salted hash of IP, user agent and
+site instead of a cookie.
+
+A later release should: record page views from a small script via
+`sendBeacon` (as click tracking already does); count list impressions when an
+element is actually visible (`IntersectionObserver`); use a daily-salted hash
+as session id; and run alongside the server-side tracking for a few weeks to
+compare before switching. The visits table and the verifying cleanup of this
+release stay as they are; only their input improves.
