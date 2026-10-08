@@ -15,12 +15,23 @@ class BotDetectionController extends Controller
 {
   /**
    * Score thresholds for confidence levels
-   * HIGH (70+): Delete immediately - clearly bot
-   * MEDIUM (30-69): Flag for review - suspicious but uncertain
+   * HIGH (70+): is_bot = 1, deleted by step 11 - clearly bot
+   * SUSPECTED (50-69): is_bot = 2, excluded from statistics, raw data kept
+   * MEDIUM (30-69): shown by bot-detection/review
    * LOW (0-29): Keep - edge cases, possibly legitimate
    */
   const SCORE_HIGH_CONFIDENCE = 70;
+  const SCORE_SUSPECTED = 50;
   const SCORE_MEDIUM_CONFIDENCE = 30;
+
+  /**
+   * States of analytics_sessions.is_bot / analytics_page_views.is_bot.
+   * Statistics count only IS_BOT_NO. Suspected rows are recomputed by every
+   * run (and released when their score drops) and never deleted as bots.
+   */
+  const IS_BOT_NO = 0;
+  const IS_BOT_YES = 1;
+  const IS_BOT_SUSPECTED = 2;
 
   /**
    * Score contributions for different detection methods
@@ -254,7 +265,7 @@ class BotDetectionController extends Controller
       $orphanSessions = $db->createCommand("
         SELECT s.session_id
         FROM analytics_sessions s
-        WHERE s.is_bot = 0
+        WHERE " . $this->candidateSql('s.is_bot') . "
           AND s.session_id > :lastId" . $this->sessionWindowSql('s') . "
           AND (
             SELECT COUNT(*) FROM analytics_page_views pv WHERE pv.session_id = s.session_id
@@ -311,6 +322,29 @@ class BotDetectionController extends Controller
   }
 
   /**
+   * SQL condition selecting scoring candidates: visitors and suspected rows.
+   * Suspected rows are scored again on every run so they can be released.
+   *
+   * @param string $column Qualified is_bot column, e.g. 's.is_bot'
+   */
+  protected function candidateSql(string $column): string
+  {
+    return sprintf('%s IN (%d, %d)', $column, self::IS_BOT_NO, self::IS_BOT_SUSPECTED);
+  }
+
+  /**
+   * is_bot state a committed score leads to
+   */
+  protected function botStateForScore(int $score): int
+  {
+    if ($score >= self::SCORE_HIGH_CONFIDENCE) {
+      return self::IS_BOT_YES;
+    }
+
+    return $score >= self::SCORE_SUSPECTED ? self::IS_BOT_SUSPECTED : self::IS_BOT_NO;
+  }
+
+  /**
    * SQL fragment restricting a sessions query to the configured time window.
    *
    * @param string $alias Table alias used for analytics_sessions in the query
@@ -349,7 +383,7 @@ class BotDetectionController extends Controller
         SELECT pv.id, s.session_id, pv.referer
         FROM analytics_sessions s
         INNER JOIN analytics_page_views pv ON s.session_id = pv.session_id
-        WHERE s.is_bot = 0
+        WHERE " . $this->candidateSql('s.is_bot') . "
           AND pv.id > :lastId
           AND pv.referer IS NOT NULL AND pv.referer != ''" . $this->sessionWindowSql('s') . "
         ORDER BY pv.id
@@ -413,7 +447,7 @@ class BotDetectionController extends Controller
       $records = $db->createCommand("
         SELECT session_id, user_agent
         FROM analytics_sessions s
-        WHERE is_bot = 0 AND (bot_score IS NULL OR bot_score < :threshold)
+        WHERE " . $this->candidateSql('is_bot') . " AND (bot_score IS NULL OR bot_score < :threshold)
           AND session_id > :lastId" . $this->sessionWindowSql('s') . "
         ORDER BY session_id
         LIMIT :limit
@@ -570,7 +604,7 @@ class BotDetectionController extends Controller
       SELECT s.session_id, COUNT(*) as request_count
       FROM analytics_sessions s
       JOIN analytics_page_views pv ON s.session_id = pv.session_id
-      WHERE s.is_bot = 0
+      WHERE " . $this->candidateSql('s.is_bot') . "
         AND pv.created_at >= DATE_SUB(NOW(), INTERVAL 1 HOUR)
       GROUP BY s.session_id
       HAVING request_count > :threshold
@@ -589,7 +623,7 @@ class BotDetectionController extends Controller
       SELECT s.session_id, COUNT(*) as request_count
       FROM analytics_sessions s
       JOIN analytics_page_views pv ON s.session_id = pv.session_id
-      WHERE s.is_bot = 0
+      WHERE " . $this->candidateSql('s.is_bot') . "
         AND pv.created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)
       GROUP BY s.session_id
       HAVING request_count > :threshold
@@ -609,7 +643,7 @@ class BotDetectionController extends Controller
         COUNT(DISTINCT pv.url) / COUNT(*) as url_diversity
       FROM analytics_sessions s
       JOIN analytics_page_views pv ON s.session_id = pv.session_id
-      WHERE s.is_bot = 0
+      WHERE " . $this->candidateSql('s.is_bot') . "
         AND pv.created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)
       GROUP BY s.session_id
       HAVING total_requests > :min_requests
@@ -630,7 +664,7 @@ class BotDetectionController extends Controller
       SELECT s.ip_address, COUNT(DISTINCT s.session_id) as session_count
       FROM analytics_sessions s
       JOIN analytics_page_views pv ON s.session_id = pv.session_id
-      WHERE s.is_bot = 0
+      WHERE " . $this->candidateSql('s.is_bot') . "
         AND s.ip_address IS NOT NULL AND s.ip_address != ''
         AND pv.created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)
       GROUP BY s.ip_address
@@ -643,7 +677,7 @@ class BotDetectionController extends Controller
       // Get all sessions from this IP
       $sessions = $db->createCommand("
         SELECT session_id FROM analytics_sessions
-        WHERE ip_address = :ip AND is_bot = 0
+        WHERE ip_address = :ip AND " . $this->candidateSql('is_bot') . "
       ")
         ->bindValue(':ip', $anomaly['ip_address'])
         ->queryColumn();
@@ -677,7 +711,7 @@ class BotDetectionController extends Controller
         FROM analytics_page_views pv
         INNER JOIN analytics_sessions s ON pv.session_id = s.session_id
         WHERE pv.created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)
-          AND s.is_bot = 0
+          AND " . $this->candidateSql('s.is_bot') . "
       ) as intervals
       WHERE time_diff IS NOT NULL AND time_diff < 300
       GROUP BY session_id
@@ -716,7 +750,7 @@ class BotDetectionController extends Controller
         GROUP_CONCAT(DISTINCT pv.url ORDER BY pv.created_at) as url_sequence
       FROM analytics_page_views pv
       INNER JOIN analytics_sessions s ON pv.session_id = s.session_id
-      WHERE s.is_bot = 0
+      WHERE " . $this->candidateSql('s.is_bot') . "
         AND pv.created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)
         AND (pv.url LIKE '%page=%' OR pv.url LIKE '%/page/%' OR pv.url LIKE '%&p=%')
       GROUP BY pv.session_id
@@ -756,7 +790,7 @@ class BotDetectionController extends Controller
       $singlePageSessions = $db->createCommand("
         SELECT s.session_id
         FROM analytics_sessions s
-        WHERE s.is_bot = 0
+        WHERE " . $this->candidateSql('s.is_bot') . "
           AND s.session_id > :lastId" . $this->sessionWindowSql('s') . "
           AND (
             SELECT COUNT(*) FROM analytics_page_views pv WHERE pv.session_id = s.session_id
@@ -807,7 +841,7 @@ class BotDetectionController extends Controller
       $sessions = $db->createCommand("
         SELECT s.session_id, s.ip_address
         FROM analytics_sessions s
-        WHERE s.is_bot = 0
+        WHERE " . $this->candidateSql('s.is_bot') . "
           AND s.session_id > :lastId
           AND s.ip_address IS NOT NULL AND s.ip_address != ''" . $this->sessionWindowSql('s') . "
         ORDER BY s.session_id
@@ -970,6 +1004,11 @@ class BotDetectionController extends Controller
 
   /**
    * Commit all collected scores to the database
+   *
+   * is_bot follows the score: >= 70 bot (1), 50-69 suspected (2), below 50
+   * visitor (0). Page views follow their session, but a page view flagged as a
+   * bot at recording (1) is never lowered. Suspected sessions of the scoring
+   * window that got no score in this run are released afterwards.
    */
   protected function commitScores(): void
   {
@@ -981,6 +1020,7 @@ class BotDetectionController extends Controller
     $db = Yii::$app->db;
     $committed = 0;
     $highCount = 0;
+    $suspectedCount = 0;
     $mediumCount = 0;
     $lowCount = 0;
 
@@ -990,31 +1030,25 @@ class BotDetectionController extends Controller
     // separate round-trips (one UPDATE per session, plus one per bot session
     // against analytics_page_views), which made this step take tens of minutes.
     foreach (array_chunk($this->sessionScores, $this->batchSize, true) as $chunk) {
-      $highConfidenceIds = [];
-      $chunkHigh = 0;
+      $idsByState = [self::IS_BOT_YES => [], self::IS_BOT_SUSPECTED => [], self::IS_BOT_NO => []];
       $chunkMedium = 0;
-      $chunkLow = 0;
       $transaction = $db->beginTransaction();
 
       try {
         foreach ($chunk as $sessionId => $data) {
           $score = min(100, $data['score']); // Cap at 100
           $reasons = implode(',', array_unique($data['reasons']));
-          $confidence = $this->getConfidenceLevel($score);
+          $state = $this->botStateForScore($score);
+          $idsByState[$state][] = $sessionId;
 
-          // Count by confidence level (applied only once the chunk commits)
-          if ($confidence === 'high') {
-            $chunkHigh++;
-            $highConfidenceIds[] = $sessionId;
-          } elseif ($confidence === 'medium') {
+          // MEDIUM overlaps SUSPECTED (30-69); counted for the review hint
+          if ($this->getConfidenceLevel($score) === 'medium') {
             $chunkMedium++;
-          } else {
-            $chunkLow++;
           }
 
           $updateData = [
             'bot_score' => $score,
-            'is_bot' => ($confidence === 'high') ? 1 : 0,
+            'is_bot' => $state,
           ];
 
           if ($hasReasonColumn) {
@@ -1026,19 +1060,36 @@ class BotDetectionController extends Controller
             ->execute();
         }
 
-        // Mark page views for all high-confidence sessions in this chunk at once
-        if (!empty($highConfidenceIds)) {
+        // Page views follow their sessions, one statement per state and chunk
+        if (!empty($idsByState[self::IS_BOT_YES])) {
           $db->createCommand()
-            ->update('analytics_page_views', ['is_bot' => 1], ['session_id' => $highConfidenceIds])
+            ->update('analytics_page_views', ['is_bot' => self::IS_BOT_YES], ['session_id' => $idsByState[self::IS_BOT_YES]])
+            ->execute();
+        }
+        if (!empty($idsByState[self::IS_BOT_SUSPECTED])) {
+          $db->createCommand()
+            ->update('analytics_page_views', ['is_bot' => self::IS_BOT_SUSPECTED], [
+              'session_id' => $idsByState[self::IS_BOT_SUSPECTED],
+              'is_bot' => self::IS_BOT_NO,
+            ])
+            ->execute();
+        }
+        if (!empty($idsByState[self::IS_BOT_NO])) {
+          $db->createCommand()
+            ->update('analytics_page_views', ['is_bot' => self::IS_BOT_NO], [
+              'session_id' => $idsByState[self::IS_BOT_NO],
+              'is_bot' => self::IS_BOT_SUSPECTED,
+            ])
             ->execute();
         }
 
         $transaction->commit();
 
         $committed += count($chunk);
-        $highCount += $chunkHigh;
+        $highCount += count($idsByState[self::IS_BOT_YES]);
+        $suspectedCount += count($idsByState[self::IS_BOT_SUSPECTED]);
         $mediumCount += $chunkMedium;
-        $lowCount += $chunkLow;
+        $lowCount += count($idsByState[self::IS_BOT_NO]);
       } catch (\Exception $e) {
         $transaction->rollBack();
         $this->stderr("Error committing score chunk: " . $e->getMessage() . "\n", Console::FG_RED);
@@ -1046,9 +1097,74 @@ class BotDetectionController extends Controller
     }
 
     $this->stdout(sprintf(
-      "Committed scores: %d total (HIGH: %d, MEDIUM: %d, LOW: %d)\n",
-      $committed, $highCount, $mediumCount, $lowCount
+      "Committed scores: %d total (bot >= %d: %d, suspected >= %d: %d, visitor: %d; medium for review: %d)\n",
+      $committed, self::SCORE_HIGH_CONFIDENCE, $highCount, self::SCORE_SUSPECTED, $suspectedCount, $lowCount, $mediumCount
     ), Console::FG_YELLOW);
+
+    $released = $this->releaseUnscoredSuspects();
+    $this->stdout(sprintf("Released %d suspected sessions without a score\n", $released), Console::FG_YELLOW);
+  }
+
+  /**
+   * Set suspected sessions of the scoring window that got no score in this run
+   * back to visitors, with their suspected page views. Scores are recomputed
+   * from scratch every run, so a session whose signals disappeared must not
+   * stay excluded.
+   *
+   * @return int Number of sessions released
+   */
+  protected function releaseUnscoredSuspects(): int
+  {
+    $db = Yii::$app->db;
+    $released = 0;
+    $lastId = '';
+
+    do {
+      $suspects = $db->createCommand("
+        SELECT s.session_id
+        FROM analytics_sessions s
+        WHERE s.is_bot = :suspected
+          AND s.session_id > :lastId" . $this->sessionWindowSql('s') . "
+        ORDER BY s.session_id
+        LIMIT :limit
+      ")
+        ->bindValue(':suspected', self::IS_BOT_SUSPECTED)
+        ->bindValue(':lastId', $lastId)
+        ->bindValue(':limit', $this->batchSize)
+        ->queryColumn();
+
+      if (empty($suspects)) {
+        break;
+      }
+
+      $lastId = end($suspects);
+      $unscored = array_values(array_filter($suspects, fn($id) => !isset($this->sessionScores[$id])));
+
+      if (!empty($unscored)) {
+        $transaction = $db->beginTransaction();
+        try {
+          $db->createCommand()
+            ->update('analytics_sessions', ['is_bot' => self::IS_BOT_NO], [
+              'session_id' => $unscored,
+              'is_bot' => self::IS_BOT_SUSPECTED,
+            ])
+            ->execute();
+          $db->createCommand()
+            ->update('analytics_page_views', ['is_bot' => self::IS_BOT_NO], [
+              'session_id' => $unscored,
+              'is_bot' => self::IS_BOT_SUSPECTED,
+            ])
+            ->execute();
+          $transaction->commit();
+          $released += count($unscored);
+        } catch (\Exception $e) {
+          $transaction->rollBack();
+          $this->stderr("Error releasing suspected sessions: " . $e->getMessage() . "\n", Console::FG_RED);
+        }
+      }
+    } while (count($suspects) == $this->batchSize);
+
+    return $released;
   }
 
   /**

@@ -668,8 +668,9 @@ class AnalyticsAggregationController extends Controller
                 "DELETE FROM {{%analytics_element_views}} WHERE created_at >= :start AND created_at < :end LIMIT :limit",
                 $range
             );
+            // Visitors (0) and suspected bots (2); bots (1) are deleted by bot-detection
             $pageViews += $this->deleteInBatches(
-                "DELETE FROM {{%analytics_page_views}} WHERE created_at >= :start AND created_at < :end AND is_bot = 0 LIMIT :limit",
+                "DELETE FROM {{%analytics_page_views}} WHERE created_at >= :start AND created_at < :end AND is_bot IN (0, 2) LIMIT :limit",
                 $range
             );
         }
@@ -788,7 +789,7 @@ class AnalyticsAggregationController extends Controller
     {
         $db = Yii::$app->db;
         $candidates = array_filter([
-            $db->createCommand("SELECT MIN(created_at) FROM {{%analytics_page_views}} WHERE created_at < :cutoff AND is_bot = 0", [':cutoff' => $cutoff])->queryScalar(),
+            $db->createCommand("SELECT MIN(created_at) FROM {{%analytics_page_views}} WHERE created_at < :cutoff AND is_bot IN (0, 2)", [':cutoff' => $cutoff])->queryScalar(),
             $db->createCommand("SELECT MIN(created_at) FROM {{%analytics_element_views}} WHERE created_at < :cutoff", [':cutoff' => $cutoff])->queryScalar(),
         ]);
 
