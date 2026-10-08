@@ -1798,7 +1798,7 @@ class BotDetectionController extends Controller
     $today = $this->today();
     // The reduced Chromium UA always says "Android 10; K": its OS version says nothing
     $frozenAndroid = BrowserVersions::isFrozenAndroid($userAgent);
-    // Safari 26+ and Chrome on iOS always say "OS 18_6": score the browser instead
+    // Safari 26+ and Chrome on iOS say a frozen "OS 18_6" / "OS 18_7": score the browser instead
     $frozenIos = BrowserVersions::isFrozenIos($userAgent);
 
     // When DeviceDetector is available, use structured data
@@ -1831,7 +1831,7 @@ class BotDetectionController extends Controller
     // Regex fallback when DeviceDetector is not available (or found nothing),
     // scored with the same rules as the DeviceDetector path
 
-    // iOS version check; for the frozen "OS 18_6" the browser version instead
+    // iOS version check; for a frozen OS version the browser version instead
     if ($frozenIos) {
       if (preg_match('/CriOS\/(\d+)\./', $userAgent, $matches)) {
         return $this->scoreOutdatedRelease('chrome', intval($matches[1]), $today);
