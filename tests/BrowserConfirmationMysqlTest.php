@@ -14,6 +14,7 @@ require __DIR__ . '/analytics/mysql.php';
 
 use giantbits\crelish\components\Analytics\BrowserConfirmation;
 use giantbits\crelish\migrations\m261009_120000_add_confirmed_at_to_analytics as ConfirmedAtMigration;
+use giantbits\crelish\migrations\m261009_130000_add_confirmation_signals_to_analytics as SignalsMigration;
 
 analyticsMysqlApp();
 $db = Yii::$app->db;
@@ -83,15 +84,92 @@ pageView('2026-10-09', '12:00:00', 'page-1', '/de', 'crawler', 1);
 check('is confirmed like anyone', true, BrowserConfirmation::confirm($db, $viewId('crawler'), 'crawler'));
 check('and stays a bot', '1', (string)scalar("SELECT is_bot FROM analytics_sessions WHERE session_id = 'crawler'"));
 
+echo "\nTables from before the signals\n";
+$signals = static function () use ($db): void {
+    ob_start();
+    try {
+        (new SignalsMigration(['db' => $db]))->safeUp();
+    } finally {
+        ob_end_clean();
+    }
+};
+$has = static fn(string $table, string $name): bool => isset($db->getTableSchema($table, true)->columns[$name]);
+session('dora');
+pageView('2026-10-09', '13:00:00', 'page-1', '/de', 'dora');
+$dora = $viewId('dora');
+check('a report with signals still confirms', true, BrowserConfirmation::confirm($db, $dora, 'dora', BrowserConfirmation::FLAG_WEBDRIVER));
+check('an interaction is not recorded and does not fail', false, BrowserConfirmation::engage($db, $dora, 'dora'));
+
+$signals();
+check('page views get confirmed_flags', 'tinyint(3) unsigned', $db->getTableSchema('analytics_page_views', true)->columns['confirmed_flags']->dbType ?? null);
+check('and engaged_at', true, $has('analytics_page_views', 'engaged_at'));
+check('sessions get both', true, $has('analytics_sessions', 'confirmed_flags') && $has('analytics_sessions', 'engaged_at'));
+check('earlier confirmations carry no signals', null, scalar("SELECT confirmed_flags FROM analytics_page_views WHERE id = $annaFirst"));
+check('and keep their time', '2026-10-09 10:00:02', scalar("SELECT confirmed_at FROM analytics_page_views WHERE id = $annaFirst"));
+$signals();
+check('running it again changes nothing', true, $has('analytics_sessions', 'engaged_at'));
+
+echo "\nWhat the browser says about itself\n";
+$flags = static fn(string $table, string $where) => scalar("SELECT confirmed_flags FROM $table WHERE $where");
+session('emil');
+pageView('2026-10-09', '14:00:00', 'page-1', '/de', 'emil');
+$emil = $viewId('emil');
+check('an ordinary browser is confirmed', true, BrowserConfirmation::confirm($db, $emil, 'emil', 0));
+check('with nothing odd about it', '0', (string)$flags('analytics_page_views', "id = $emil"));
+check('nor about its session', '0', (string)$flags('analytics_sessions', "session_id = 'emil'"));
+
+session('robot');
+pageView('2026-10-09', '14:10:00', 'page-1', '/de', 'robot');
+$robot = $viewId('robot');
+$automated = BrowserConfirmation::FLAG_WEBDRIVER | BrowserConfirmation::FLAG_NO_LANGUAGES;
+check('a driven browser is confirmed too', true, BrowserConfirmation::confirm($db, $robot, 'robot', $automated));
+check('and its signals are kept', (string)$automated, (string)$flags('analytics_page_views', "id = $robot"));
+check('on its session as well', (string)$automated, (string)$flags('analytics_sessions', "session_id = 'robot'"));
+check('it stays a visitor; nothing acts on signals', '0', (string)scalar("SELECT is_bot FROM analytics_sessions WHERE session_id = 'robot'"));
+
+pageView('2026-10-09', '14:11:00', 'page-2', '/de/jobs', 'robot');
+BrowserConfirmation::confirm($db, $viewId('robot'), 'robot', BrowserConfirmation::FLAG_HIDDEN);
+check('a session collects the signals of its pages', (string)($automated | BrowserConfirmation::FLAG_HIDDEN), (string)$flags('analytics_sessions', "session_id = 'robot'"));
+check('each page keeps its own', (string)BrowserConfirmation::FLAG_HIDDEN, (string)$flags('analytics_page_views', 'id = ' . $viewId('robot')));
+
+session('fake');
+pageView('2026-10-09', '14:20:00', 'page-1', '/de', 'fake');
+BrowserConfirmation::confirm($db, $viewId('fake'), 'fake', 4095);
+check('signals we do not know are dropped', (string)BrowserConfirmation::KNOWN_FLAGS, (string)$flags('analytics_page_views', "session_id = 'fake'"));
+session('minus');
+pageView('2026-10-09', '14:21:00', 'page-1', '/de', 'minus');
+BrowserConfirmation::confirm($db, $viewId('minus'), 'minus', -5);
+check('a negative value counts as none', '0', (string)$flags('analytics_page_views', "session_id = 'minus'"));
+
+echo "\nThe visitor touches the page\n";
+$engaged = static fn(string $table, string $where) => scalar("SELECT engaged_at FROM $table WHERE $where");
+check('before that nothing is recorded', null, $engaged('analytics_page_views', "id = $emil"));
+check('the interaction is recorded', true, BrowserConfirmation::engage($db, $emil, 'emil'));
+check('on the page view', true, $engaged('analytics_page_views', "id = $emil") !== null);
+check('and the session', true, $engaged('analytics_sessions', "session_id = 'emil'") !== null);
+$db->createCommand("UPDATE analytics_page_views SET engaged_at = '2026-10-09 14:00:07' WHERE id = $emil")->execute();
+$db->createCommand("UPDATE analytics_sessions SET engaged_at = '2026-10-09 14:00:07' WHERE session_id = 'emil'")->execute();
+check('a second one is not', false, BrowserConfirmation::engage($db, $emil, 'emil'));
+check('and leaves the first time', '2026-10-09 14:00:07', $engaged('analytics_page_views', "id = $emil"));
+pageView('2026-10-09', '14:02:00', 'page-2', '/de/jobs', 'emil');
+check('a later page records its own', true, BrowserConfirmation::engage($db, $viewId('emil'), 'emil'));
+check('the session keeps its first', '2026-10-09 14:00:07', $engaged('analytics_sessions', "session_id = 'emil'"));
+check('a page touched before its report arrived counts as confirmed', true, $stamp('analytics_page_views', 'id = ' . $viewId('emil')) !== null);
+check("someone else's page view cannot be touched", false, BrowserConfirmation::engage($db, $robot, 'emil'));
+check('and stays untouched', null, $engaged('analytics_page_views', "id = $robot"));
+check('nor one without a session', false, BrowserConfirmation::engage($db, $robot, ''));
+check('the robot never touched anything', null, $engaged('analytics_sessions', "session_id = 'robot'"));
+
 echo "\nA database without the analytics tables\n";
 $db->createCommand('DROP TABLE analytics_sessions')->execute();
 $db->createCommand('DROP TABLE analytics_page_views')->execute();
 $threw = false;
 try {
     $migrate();
+    $signals();
 } catch (\Throwable $e) {
     $threw = true;
 }
-check('is skipped by the migration', false, $threw);
+check('is skipped by the migrations', false, $threw);
 
 analyticsDone();

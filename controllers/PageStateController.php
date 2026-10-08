@@ -46,8 +46,17 @@ class PageStateController extends Controller
     $sessionId = $session->get(CrelishAnalyticsComponent::SESSION_KEY);
     $pageViewId = $request->post('v');
 
-    if (is_string($sessionId) && is_string($pageViewId) && ctype_digit($pageViewId) && strlen($pageViewId) <= 10) {
-      BrowserConfirmation::confirm(Yii::$app->db, (int)$pageViewId, $sessionId);
+    if (!is_string($sessionId) || !is_string($pageViewId) || !ctype_digit($pageViewId) || strlen($pageViewId) > 10) {
+      return $response;
+    }
+
+    if ($request->post('e') !== null) {
+      // The visitor's first interaction with the page
+      BrowserConfirmation::engage(Yii::$app->db, (int)$pageViewId, $sessionId);
+    } else {
+      $flags = $request->post('f');
+      $flags = is_string($flags) && ctype_digit($flags) && strlen($flags) <= 3 ? (int)$flags : 0;
+      BrowserConfirmation::confirm(Yii::$app->db, (int)$pageViewId, $sessionId, $flags);
     }
 
     return $response;
