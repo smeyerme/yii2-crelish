@@ -137,13 +137,24 @@ final class BrowserVersions
     }
 
     /**
-     * Whether the user agent carries the frozen iOS version "OS 18_6", which
-     * Safari 26+ and Chrome on iOS send regardless of the real iOS version, so
-     * its OS version says nothing; the browser version has to be scored instead.
+     * Whether the user agent carries a frozen iOS version, which Safari 26+,
+     * Chrome on iOS and in-app browsers send regardless of the real iOS
+     * version, so its OS version says nothing; the browser version has to be
+     * scored instead. The frozen value is "OS 18_6" or, from later iOS 26
+     * releases, "OS 18_7" (seen with Version/26.6.1); a Safari version above
+     * the OS version shows the same for any value still to come.
      */
     public static function isFrozenIos(string $userAgent): bool
     {
-        return (bool)preg_match('/(?:iPhone OS|CPU OS) 18_6(?!\d)/', $userAgent);
+        if (!preg_match('/(?:iPhone OS|CPU OS) (\d+)_(\d+)/', $userAgent, $os)) {
+            return false;
+        }
+        if ((int)$os[1] === 18 && in_array((int)$os[2], [6, 7], true)) {
+            return true;
+        }
+
+        return preg_match('/Version\/(\d+)\.\d+.*Safari/', $userAgent, $safari)
+            && (int)$safari[1] > (int)$os[1];
     }
 
     /** @return array{int, string, int, int} */
