@@ -82,8 +82,32 @@ echo "\nRepeatable\n";
 check('a rerun gives the same owner rows', [2, 3, 1], [visit($day, X, ''), visit($day, PAGE_A, ''), visit($day, C1, '')]);
 (new VisitsAggregator($db, OWNED))->aggregate($day, true);
 check('repair keeps them', 2, visit($day, X, ''));
-$db->createCommand('CREATE TEMPORARY TABLE tmp_visit_owners (x int)')->execute();
-$db->createCommand('DROP TEMPORARY TABLE tmp_visit_owners')->execute();
-check('the temporary table is dropped after each run', true, true);
+
+echo "\nTemporary tables\n";
+$leftover = [];
+foreach (['tmp_visit_owners', 'tmp_visit_element_views'] as $name) {
+    try {
+        // No IF NOT EXISTS: fails when the run left the table behind
+        $db->createCommand("CREATE TEMPORARY TABLE {$name} (x int)")->execute();
+        $db->createCommand("DROP TEMPORARY TABLE {$name}")->execute();
+    } catch (\Throwable $e) {
+        $leftover[] = $name;
+    }
+}
+check('both temporary tables are dropped after a run', [], $leftover);
+
+echo "\nElement views outside the day\n";
+$before = rows('SELECT owner_uuid, event_type, unique_sessions, unique_users FROM analytics_visits_daily WHERE date = :d ORDER BY owner_uuid, event_type', [':d' => $day]);
+$previous = date('Y-m-d', strtotime("$day -1 day"));
+$next = date('Y-m-d', strtotime("$day +1 day"));
+session('s8');
+session('s9');
+elementView($previous, '23:59:59', P1, 'detail', PAGE_A, 's8', 8, 'product');
+elementView($next, '00:00:00', J1, 'detail', C1, 's9', 9, 'job');
+elementView($next, '00:00:00', P1, 'list', PAGE_A, 's9', 9, 'product');
+(new VisitsAggregator($db, OWNED))->aggregate($day);
+check('views of the day before and after change no row of the day', $before, rows('SELECT owner_uuid, event_type, unique_sessions, unique_users FROM analytics_visits_daily WHERE date = :d ORDER BY owner_uuid, event_type', [':d' => $day]));
+(new VisitsAggregator($db, OWNED))->aggregate($next);
+check('the next day counts its own views by ownership', [1, 1], [visit($next, X, ''), visit($next, C1, '')]);
 
 analyticsDone();

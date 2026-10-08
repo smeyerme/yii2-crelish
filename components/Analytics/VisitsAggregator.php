@@ -122,42 +122,59 @@ final class VisitsAggregator
 
     /**
      * Owner rows: a session counts for an owner when it saw an element whose
-     * page_uuid is the owner, or an element the owner owns ($ownedTables). The
-     * candidates are collected in a temporary table, so a session matching an
-     * owner both ways counts once and each statement binds only its own
-     * placeholders. Both sides of the ownership join are converted to
-     * utf8mb4_unicode_ci: project tables mix utf8mb3/utf8mb4 and
-     * general/unicode collations.
+     * page_uuid is the owner, or an element the owner owns ($ownedTables).
+     *
+     * The day's non-bot element views are first copied into a temporary table
+     * by their created_at range (an index range scan), so the ownership join,
+     * which no index can serve, runs against that copy instead of scanning
+     * analytics_element_views and holding locks that block live tracking.
+     * The candidates are then collected in a second temporary table, so a
+     * session matching an owner both ways counts once and each statement binds
+     * only its own placeholders. Both temporary tables are utf8mb4_unicode_ci and
+     * the owned tables' uuid is converted to it: project tables mix
+     * utf8mb3/utf8mb4 and general/unicode collations.
      */
     private function aggregateOwners(array $params, string $insert, string $merge): int
     {
+        $views = 'tmp_visit_element_views';
         $tmp = 'tmp_visit_owners';
         $range = [':start' => $params[':start'], ':end' => $params[':end']];
-        $views = "FROM {{%analytics_element_views}} ev
-            INNER JOIN {{%analytics_sessions}} s ON ev.session_id = s.session_id";
-        $where = "WHERE ev.created_at >= :start AND ev.created_at < :end AND s.is_bot = 0";
-        $utf8 = static fn(string $column): string => "CONVERT({$column} USING utf8mb4) COLLATE utf8mb4_unicode_ci";
 
-        $this->db->createCommand("DROP TEMPORARY TABLE IF EXISTS {$tmp}")->execute();
-        $this->db->createCommand("CREATE TEMPORARY TABLE {$tmp} (
-                session_id varchar(100) NOT NULL,
-                user_id int NULL,
-                type varchar(255) NULL,
-                owner varchar(36) NOT NULL
-            ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")->execute();
+        $this->dropTemporary($views, $tmp);
 
         try {
+            $this->db->createCommand("CREATE TEMPORARY TABLE {$views} (
+                    session_id varchar(100) NOT NULL,
+                    user_id int NULL,
+                    type varchar(255) NULL,
+                    page_uuid varchar(36) NULL,
+                    element_type varchar(50) NULL,
+                    element_uuid varchar(36) NULL
+                ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")->execute();
+            $this->db->createCommand("CREATE TEMPORARY TABLE {$tmp} (
+                    session_id varchar(100) NOT NULL,
+                    user_id int NULL,
+                    type varchar(255) NULL,
+                    owner varchar(36) NOT NULL
+                ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")->execute();
+
+            $this->db->createCommand("INSERT INTO {$views} (session_id, user_id, type, page_uuid, element_type, element_uuid)
+                SELECT ev.session_id, ev.user_id, ev.type, ev.page_uuid, ev.element_type, ev.element_uuid
+                FROM {{%analytics_element_views}} ev
+                INNER JOIN {{%analytics_sessions}} s ON ev.session_id = s.session_id
+                WHERE ev.created_at >= :start AND ev.created_at < :end AND s.is_bot = 0", $range)->execute();
+
             $this->db->createCommand("INSERT INTO {$tmp} (session_id, user_id, type, owner)
-                SELECT ev.session_id, ev.user_id, ev.type, ev.page_uuid {$views}
-                {$where} AND ev.page_uuid <> ''", $range)->execute();
+                SELECT session_id, user_id, type, page_uuid FROM {$views} WHERE page_uuid <> ''")->execute();
 
             foreach ($this->ownedTables as $type => $table) {
                 $this->db->createCommand("INSERT INTO {$tmp} (session_id, user_id, type, owner)
-                    SELECT ev.session_id, ev.user_id, ev.type, x.company {$views}
+                    SELECT t.session_id, t.user_id, t.type, x.company
+                    FROM {$views} t
                     INNER JOIN " . $this->db->quoteTableName($table) . " x
-                        ON " . $utf8('x.uuid') . " = " . $utf8('ev.element_uuid') . "
-                    {$where} AND ev.element_type = :type AND x.company IS NOT NULL AND x.company <> ''",
-                    $range + [':type' => $type])->execute();
+                        ON CONVERT(x.uuid USING utf8mb4) COLLATE utf8mb4_unicode_ci = t.element_uuid
+                    WHERE t.element_type = :type AND x.company IS NOT NULL AND x.company <> ''",
+                    [':type' => $type])->execute();
             }
 
             $users = 'COUNT(DISTINCT CASE WHEN user_id IS NOT NULL AND user_id > 0 THEN user_id END)';
@@ -171,7 +188,14 @@ final class VisitsAggregator
 
             return $written;
         } finally {
-            $this->db->createCommand("DROP TEMPORARY TABLE IF EXISTS {$tmp}")->execute();
+            $this->dropTemporary($views, $tmp);
+        }
+    }
+
+    private function dropTemporary(string ...$tables): void
+    {
+        foreach ($tables as $table) {
+            $this->db->createCommand("DROP TEMPORARY TABLE IF EXISTS {$table}")->execute();
         }
     }
 }
