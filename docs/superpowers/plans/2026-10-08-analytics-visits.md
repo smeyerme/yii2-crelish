@@ -2510,7 +2510,7 @@ git commit -m "feat(analytics): company reports show visits, counted once per vi
 
 1. In `### Tables`, add a row/paragraph for `analytics_visits_daily`: one row per day, source (`pages`/`elements`), owner (`''` = site, else the element views' `page_uuid`, for jobs the company) and event type (`''` = any); holds distinct sessions/users; reports sum it over days, never across owners or event types.
 2. In `### 1. Run Migration`, add `php yii crelish-migrate/up` for `m261008_120000_create_analytics_visits_daily` and note that `dep deploy` runs only `yii migrate`, so crelish migrations run by hand.
-3. In `### 4. Initial Backfill` and `### Backfill`, document `--only` (`pages,elements,visits`), `--pagesOnly=1` as alias, and the rollout command `php yii crelish/analytics-aggregation/backfill 30 --only=visits`; warn: never recompute `elements` for days older than a few days (the cleanup thins orphaned element views; recomputing lowers correct counts).
+3. In `### 4. Initial Backfill` and `### Backfill`, document `--only` (`pages,elements,visits`), `--pagesOnly=1` as alias, and the rollout command `php yii crelish/analytics-aggregation/backfill 29 --only=visits`; warn: never recompute `elements` for days older than a few days (the cleanup thins orphaned element views; recomputing lowers correct counts).
 4. Replace `### Cleanup Old Data` with: whole days only; each day checked (stored ≥ raw for page views, element views, site visits); short days repaired with `GREATEST`, kept and reported (exit code 1) when still short; `--dryRun` shows the per-day result; `--skipAggregationCheck=1` deletes without checking.
 5. Add `## Visits` after `## Period Options`: definition (a visitor counts once per day, summed over the period), why `unique_sessions` must not be summed across pages/elements/event types, coverage note ("Besuche erfasst ab …") for periods starting before the first recorded day.
 
@@ -2537,7 +2537,7 @@ Expected: no `FAIL` line.
 - [ ] **Step 2: Real-data check on the local forum-holzkarriere copy**
 
 The local project uses this checkout through a symlink. On the local database (raw data back to 2025-04):
-1. `php yii crelish-migrate/up` (local), then `php yii crelish/analytics-aggregation/backfill 30 --only=visits`.
+1. `php yii crelish-migrate/up` (local), then `php yii crelish/analytics-aggregation/backfill 29 --only=visits`.
 2. For 5 sample days and 3 companies with the most job views, compare `analytics_visits_daily` against `COUNT(DISTINCT session_id)` computed directly from raw data with the same filters. Expected: equal.
 3. Record checksums (`COUNT(*)`, `SUM(CRC32(CONCAT_WS('|', …)))`) of `analytics_page_daily` and `analytics_element_daily`; run `php yii crelish/analytics-aggregation/cleanup --dryRun=1` and read the per-day results; run it for real with `--retentionDays=400` (deletes only the oldest weeks); rerun; compare: no aggregate row's counts may be lower than before (`SELECT … WHERE new < old` returns nothing), and the second run reports nothing to repair.
 4. Run the full nightly sequence once (`bot-detection/index`, `daily`, `cleanup`) and compare page/element totals for the last 30 days before and after: unchanged except for the newest day.
@@ -2563,7 +2563,7 @@ Then from the production host, wait until Packagist serves 0.25.0:
 
 1. `./vendor/bin/dep deploy` in the project; confirm `current/composer.lock` has crelish 0.25.0 and the deploy printed `opcache reset … "reset":true`.
 2. On production: `php yii crelish-migrate/new` must list exactly `m261008_120000_create_analytics_visits_daily`; then `php yii crelish-migrate/up --interactive=0`.
-3. `php yii crelish/analytics-aggregation/backfill 30 --only=visits --interactive=0`; exit code 0.
+3. `php yii crelish/analytics-aggregation/backfill 29 --only=visits --interactive=0`; exit code 0. (29, not 30: the last 0.24 cleanup cut the 30th day in two; the first recorded day may still be partial.)
 4. Verify every day against raw data as in Step 2.2 (site rows and the 3 largest companies).
 5. `php yii crelish/analytics-aggregation/cleanup --dryRun=1`: every day passes or is repaired, none kept.
 6. A person checks one company report in the admin (web and PDF).
