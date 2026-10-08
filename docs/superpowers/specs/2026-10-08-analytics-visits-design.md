@@ -45,7 +45,7 @@ New table `analytics_visits_daily`:
 | `date` | DATE NOT NULL | The day |
 | `source` | VARCHAR(16) NOT NULL | `pages` (from `analytics_page_views`) or `elements` (from `analytics_element_views`) |
 | `owner_uuid` | VARCHAR(36) NOT NULL DEFAULT '' | `''` = whole site; otherwise an owner: the `page_uuid` an element view carries, or the company owning the element (see below) |
-| `event_type` | VARCHAR(32) NOT NULL DEFAULT '' | `''` = any event; otherwise `list`, `detail`, `click`, `download`, … |
+| `event_type` | VARCHAR(50) NOT NULL DEFAULT '' | `''` = any event; otherwise `list`, `detail`, `click`, `download`, … |
 | `unique_sessions` | INT NOT NULL DEFAULT 0 | Distinct sessions that day |
 | `unique_users` | INT NOT NULL DEFAULT 0 | Distinct logged-in users that day |
 | `created_at`, `updated_at` | TIMESTAMP | As in the other aggregate tables |
