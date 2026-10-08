@@ -98,11 +98,15 @@ element aggregates.
 |---|---|---|
 | Company report: visits KPI (web, PDF) | SUM of per-element, per-event-type `unique_sessions` | SUM over the days of the period of the company's row (`elements`, owner = company, event `''`) |
 | Company report: trend chart | Same overcount per day | That row per day |
-| Company report: event-type stats | SUM over elements | The company's row for that event type, summed over days |
-| Admin: page performance KPI and trend | SUM over all pages | Site row `pages` |
-| Admin: element performance KPI and per-event-type totals | SUM over all elements | Site rows `elements` |
-| Admin: overview trend chart | SUM over all pages | Site row `pages` |
-| Admin: top pages table (per page) | Per page, summed over days | Unchanged; per page and day this already counts visits |
+| Admin overview: sessions KPI and its % change against the previous period | SUM of `analytics_page_daily.unique_sessions` over all pages | Site row `pages`, summed over days |
+| Admin overview: trend chart, daily | SUM over all pages per day | Site row `pages` per day |
+| Admin overview: trend chart, monthly | SUM of `analytics_page_monthly.unique_sessions` over all pages | Site row `pages`, summed per month |
+| Admin element detail: sessions and users KPIs | SUM across event types and pages of one element | The element's `detail` rows only, labelled "Besuche (Detailansicht)"; there are no per-element visit rows to combine event types |
+| Admin page detail, top pages table | Per page, summed over days | Unchanged; per page and day this already counts visits |
+
+Element-type and event-type distributions (admin) and event-type and content
+stats (company) compute summed uniques but never display them; they are left
+as they are.
 
 The labels say what the figure is: "Besuche" / "Visits" (counted per day),
 replacing "Unique Sessions" where the figure changes.
