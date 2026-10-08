@@ -222,7 +222,7 @@ The system expects these columns on `analytics_sessions`:
 | `bot_score` | int | 0-100 confidence score |
 | `bot_reason` | varchar(255) | Optional - comma-separated detection reasons |
 
-If `bot_score` or `bot_reason` columns don't exist, the system gracefully degrades (scores still work, reasons just aren't stored).
+The migration `m261008_140000_add_bot_score_to_analytics_sessions` adds `bot_score` and `bot_reason` (run `yii crelish-migrate`). Without `bot_score` the nightly run fails on its first scoring query: nothing is scored and no bot session is deleted. Only `bot_reason` is optional.
 
 ## Recommended Cron Schedule
 
