@@ -137,4 +137,27 @@ fixtures();
 check('cleanup still exits 0', 0, cleanup());
 check('pages are still verified and repaired', 3, storedPages($short));
 
+echo "\nSessions of a kept day survive, repeatedly\n";
+analyticsMysqlApp();
+$scanDay = daysAgo(35);
+session('qr', 0, null, "$scanDay 09:00:00");
+elementView($scanDay, '09:00:00', J1, 'scan', C1, 'qr', null, 'scan');
+check('first run exits non-zero', 1, cleanup([], NoRepairController::class, $scanDay));
+check('the scan element view is kept', 1, (int)scalar('SELECT COUNT(*) FROM analytics_element_views WHERE session_id = :s', [':s' => 'qr']));
+check('the scan session is kept', 1, (int)scalar('SELECT COUNT(*) FROM analytics_sessions WHERE session_id = :s', [':s' => 'qr']));
+check('second run exits non-zero too', 1, cleanup([], NoRepairController::class, $scanDay));
+check('the scan element view is still kept', 1, (int)scalar('SELECT COUNT(*) FROM analytics_element_views WHERE session_id = :s', [':s' => 'qr']));
+check('the scan session is still kept', 1, (int)scalar('SELECT COUNT(*) FROM analytics_sessions WHERE session_id = :s', [':s' => 'qr']));
+
+echo "\nAn ancient bot page view is harmless\n";
+analyticsMysqlApp();
+session('bot', 1);
+pageView(daysAgo(200), '10:00:00', P1, '/a', 'bot', 1);
+session('s1');
+pageView(daysAgo(40), '10:00:00', P1, '/a', 's1');
+aggregate(daysAgo(40));
+check('cleanup exits 0', 0, cleanup());
+check('the bot row remains', 1, rawPages(daysAgo(200)));
+check('the normal day is deleted', 0, rawPages(daysAgo(40)));
+
 analyticsDone();

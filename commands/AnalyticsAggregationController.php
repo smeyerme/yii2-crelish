@@ -667,6 +667,10 @@ class AnalyticsAggregationController extends Controller
             $this->stderr("✗ Error deleting orphaned element views: " . $e->getMessage() . "\n", Console::FG_RED);
         }
 
+        // Sessions without page views (e.g. QR scans) own element views. Deleting
+        // them would orphan the element views of a kept day, and the next run would
+        // no longer count them and let the day pass. So never go past the oldest kept day.
+        $sessionCutoff = $kept === [] ? $cutoff : min($kept) . ' 00:00:00';
         try {
             $deleted = $this->deleteInBatches(
                 "DELETE FROM {{%analytics_sessions}}
@@ -676,7 +680,7 @@ class AnalyticsAggregationController extends Controller
                      WHERE pv.session_id = {{%analytics_sessions}}.session_id
                    )
                  LIMIT :limit",
-                [':cutoff' => $cutoff]
+                [':cutoff' => $sessionCutoff]
             );
             $this->stdout("✓ Deleted " . number_format($deleted) . " orphaned session records\n", Console::FG_GREEN);
         } catch (\Exception $e) {
@@ -766,7 +770,7 @@ class AnalyticsAggregationController extends Controller
     {
         $db = Yii::$app->db;
         $candidates = array_filter([
-            $db->createCommand("SELECT MIN(created_at) FROM {{%analytics_page_views}} WHERE created_at < :cutoff", [':cutoff' => $cutoff])->queryScalar(),
+            $db->createCommand("SELECT MIN(created_at) FROM {{%analytics_page_views}} WHERE created_at < :cutoff AND is_bot = 0", [':cutoff' => $cutoff])->queryScalar(),
             $db->createCommand("SELECT MIN(created_at) FROM {{%analytics_element_views}} WHERE created_at < :cutoff", [':cutoff' => $cutoff])->queryScalar(),
         ]);
 
