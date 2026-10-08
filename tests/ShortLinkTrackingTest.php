@@ -54,6 +54,51 @@ Yii::$app->crelishAnalytics->trackEvent(LINK, 'shortlink', 'click');
 check('bot flag is upgraded', 1, (int)sessions()[0]['is_bot']);
 check('page count is preserved', 3, (int)sessions()[0]['total_pages']);
 
+echo "\nSuspected session, then a bot request\n";
+shortLinkApp([], ['HTTP_USER_AGENT' => 'curl/8.4.0']);
+$sessionId = Yii::$app->crelishAnalytics->getSessionId();
+Yii::$app->db->createCommand()->insert('analytics_sessions', ['session_id' => $sessionId, 'is_bot' => 2, 'total_pages' => 1])->execute();
+Yii::$app->crelishAnalytics->trackEvent(LINK, 'shortlink', 'click');
+check('a suspected session becomes a bot', 1, (int)sessions()[0]['is_bot']);
+
+echo "\nPage views of a suspected session\n";
+function pageViewTable(): void
+{
+    Yii::$app->db->createCommand()->createTable('analytics_page_views', [
+        'id' => 'integer PRIMARY KEY AUTOINCREMENT',
+        'page_uuid' => 'varchar(36) NOT NULL',
+        'page_type' => 'varchar(50) NULL',
+        'url' => 'varchar(255) NULL',
+        'referer' => 'varchar(255) NULL',
+        'session_id' => 'varchar(100) NULL',
+        'user_id' => 'integer NULL',
+        'user_agent' => 'varchar(255) NULL',
+        'ip_address' => 'varchar(45) NULL',
+        'is_bot' => 'smallint DEFAULT 0',
+        'created_at' => 'datetime NULL',
+    ])->execute();
+}
+
+function pageViewBots(): array
+{
+    return array_map('intval', (new Query())->select('is_bot')->from('analytics_page_views')->orderBy('id')->column());
+}
+
+foreach (['visitor' => [0, 0], 'suspected' => [2, 2]] as $label => [$sessionState, $expected]) {
+    shortLinkApp();
+    pageViewTable();
+    Yii::$app->db->createCommand()->insert('analytics_sessions', ['session_id' => Yii::$app->crelishAnalytics->getSessionId(), 'is_bot' => $sessionState, 'total_pages' => 1])->execute();
+    Yii::$app->crelishAnalytics->trackPageView(['uuid' => LINK, 'ctype' => 'page']);
+    check("a page view of a $label session is recorded as $expected", [$expected], pageViewBots());
+    check("the $label session keeps its state", $sessionState, (int)sessions()[0]['is_bot']);
+}
+shortLinkApp([], ['HTTP_USER_AGENT' => 'curl/8.4.0']);
+pageViewTable();
+Yii::$app->db->createCommand()->insert('analytics_sessions', ['session_id' => Yii::$app->crelishAnalytics->getSessionId(), 'is_bot' => 2, 'total_pages' => 1])->execute();
+Yii::$app->crelishAnalytics->trackPageView(['uuid' => LINK, 'ctype' => 'page']);
+check('a bot request on a suspected session records a bot page view', [1], pageViewBots());
+check('and makes the session a bot', 1, (int)sessions()[0]['is_bot']);
+
 echo "\nExclusions\n";
 shortLinkApp([], [], ['components' => ['crelishAnalytics' => ['excludeIps' => ['203.0.113.7']]]]);
 check('excluded IP is not tracked', false, Yii::$app->crelishAnalytics->trackEvent(LINK, 'shortlink', 'scan'));

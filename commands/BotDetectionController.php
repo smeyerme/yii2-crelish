@@ -2,6 +2,7 @@
 
 namespace giantbits\crelish\commands;
 
+use giantbits\crelish\components\Analytics\BrowserVersions;
 use giantbits\crelish\components\DatacenterIpService;
 use giantbits\crelish\components\ReferrerSpamService;
 use DeviceDetector\DeviceDetector;
@@ -14,12 +15,25 @@ class BotDetectionController extends Controller
 {
   /**
    * Score thresholds for confidence levels
-   * HIGH (70+): Delete immediately - clearly bot
-   * MEDIUM (30-69): Flag for review - suspicious but uncertain
+   * HIGH (70+): is_bot = 1, deleted by step 11 - clearly bot
+   * SUSPECTED (50-69): is_bot = 2, excluded from statistics, raw data kept (sticky)
+   * MEDIUM (30-69): shown by bot-detection/review
    * LOW (0-29): Keep - edge cases, possibly legitimate
    */
   const SCORE_HIGH_CONFIDENCE = 70;
+  const SCORE_SUSPECTED = 50;
   const SCORE_MEDIUM_CONFIDENCE = 30;
+
+  /**
+   * States of analytics_sessions.is_bot / analytics_page_views.is_bot.
+   * Statistics count only IS_BOT_NO. Suspected is sticky: a later lower or
+   * missing score never lowers it (time-window signals only see the last
+   * hour/day), a score >= 70 raises it to a bot, and only a human (demote)
+   * sets it back to a visitor. Suspected rows are never deleted as bots.
+   */
+  const IS_BOT_NO = 0;
+  const IS_BOT_YES = 1;
+  const IS_BOT_SUSPECTED = 2;
 
   /**
    * Score contributions for different detection methods
@@ -68,6 +82,12 @@ class BotDetectionController extends Controller
    * @var bool Whether to run in dry-run mode (no updates)
    */
   public $dryRun = false;
+
+  /**
+   * @var string|null Day (Y-m-d) the current browser versions are computed for;
+   * null means today. Lets tests pin the date.
+   */
+  public ?string $today = null;
 
   /**
    * @var array Session scores being calculated (session_id => ['score' => int, 'reasons' => []])
@@ -136,8 +156,9 @@ class BotDetectionController extends Controller
   {
     $this->stdout("Starting confidence-based bot detection process...\n", Console::FG_GREEN);
     $this->stdout(sprintf(
-      "Thresholds: HIGH >= %d (delete), MEDIUM >= %d (review), LOW < %d (keep)\n",
+      "Thresholds: HIGH >= %d (delete), SUSPECTED >= %d (excluded from statistics, kept), MEDIUM >= %d (review), LOW < %d (keep)\n",
       self::SCORE_HIGH_CONFIDENCE,
+      self::SCORE_SUSPECTED,
       self::SCORE_MEDIUM_CONFIDENCE,
       self::SCORE_MEDIUM_CONFIDENCE
     ), Console::FG_YELLOW);
@@ -247,7 +268,7 @@ class BotDetectionController extends Controller
       $orphanSessions = $db->createCommand("
         SELECT s.session_id
         FROM analytics_sessions s
-        WHERE s.is_bot = 0
+        WHERE " . $this->candidateSql('s.is_bot') . "
           AND s.session_id > :lastId" . $this->sessionWindowSql('s') . "
           AND (
             SELECT COUNT(*) FROM analytics_page_views pv WHERE pv.session_id = s.session_id
@@ -304,6 +325,29 @@ class BotDetectionController extends Controller
   }
 
   /**
+   * SQL condition selecting scoring candidates: visitors and suspected rows.
+   * Suspected rows are scored again on every run so they can become bots.
+   *
+   * @param string $column Qualified is_bot column, e.g. 's.is_bot'
+   */
+  protected function candidateSql(string $column): string
+  {
+    return sprintf('%s IN (%d, %d)', $column, self::IS_BOT_NO, self::IS_BOT_SUSPECTED);
+  }
+
+  /**
+   * is_bot state a committed score leads to
+   */
+  protected function botStateForScore(int $score): int
+  {
+    if ($score >= self::SCORE_HIGH_CONFIDENCE) {
+      return self::IS_BOT_YES;
+    }
+
+    return $score >= self::SCORE_SUSPECTED ? self::IS_BOT_SUSPECTED : self::IS_BOT_NO;
+  }
+
+  /**
    * SQL fragment restricting a sessions query to the configured time window.
    *
    * @param string $alias Table alias used for analytics_sessions in the query
@@ -342,7 +386,7 @@ class BotDetectionController extends Controller
         SELECT pv.id, s.session_id, pv.referer
         FROM analytics_sessions s
         INNER JOIN analytics_page_views pv ON s.session_id = pv.session_id
-        WHERE s.is_bot = 0
+        WHERE " . $this->candidateSql('s.is_bot') . "
           AND pv.id > :lastId
           AND pv.referer IS NOT NULL AND pv.referer != ''" . $this->sessionWindowSql('s') . "
         ORDER BY pv.id
@@ -406,7 +450,7 @@ class BotDetectionController extends Controller
       $records = $db->createCommand("
         SELECT session_id, user_agent
         FROM analytics_sessions s
-        WHERE is_bot = 0 AND (bot_score IS NULL OR bot_score < :threshold)
+        WHERE " . $this->candidateSql('is_bot') . " AND (bot_score IS NULL OR bot_score < :threshold)
           AND session_id > :lastId" . $this->sessionWindowSql('s') . "
         ORDER BY session_id
         LIMIT :limit
@@ -439,8 +483,14 @@ class BotDetectionController extends Controller
           $this->addScore($record['session_id'], 50, 'dead_browser');
           $deadBrowsers++;
         } else {
-          // Calculate age-based score for outdated but not dead browsers
-          $ageScore = $this->getBrowserAgeScore($userAgent, $dd);
+          // Calculate age-based score for outdated but not dead browsers.
+          // One unparseable user agent must never abort the nightly run.
+          try {
+            $ageScore = $this->getBrowserAgeScore($userAgent, $dd);
+          } catch (\Throwable $e) {
+            Yii::warning("Browser age scoring failed for session {$record['session_id']}: " . $e->getMessage(), __METHOD__);
+            $ageScore = 0;
+          }
           if ($ageScore > 0) {
             $this->addScore($record['session_id'], $ageScore, 'outdated_browser:' . $ageScore);
             $outdatedBrowsers++;
@@ -563,7 +613,7 @@ class BotDetectionController extends Controller
       SELECT s.session_id, COUNT(*) as request_count
       FROM analytics_sessions s
       JOIN analytics_page_views pv ON s.session_id = pv.session_id
-      WHERE s.is_bot = 0
+      WHERE " . $this->candidateSql('s.is_bot') . "
         AND pv.created_at >= DATE_SUB(NOW(), INTERVAL 1 HOUR)
       GROUP BY s.session_id
       HAVING request_count > :threshold
@@ -582,7 +632,7 @@ class BotDetectionController extends Controller
       SELECT s.session_id, COUNT(*) as request_count
       FROM analytics_sessions s
       JOIN analytics_page_views pv ON s.session_id = pv.session_id
-      WHERE s.is_bot = 0
+      WHERE " . $this->candidateSql('s.is_bot') . "
         AND pv.created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)
       GROUP BY s.session_id
       HAVING request_count > :threshold
@@ -602,7 +652,7 @@ class BotDetectionController extends Controller
         COUNT(DISTINCT pv.url) / COUNT(*) as url_diversity
       FROM analytics_sessions s
       JOIN analytics_page_views pv ON s.session_id = pv.session_id
-      WHERE s.is_bot = 0
+      WHERE " . $this->candidateSql('s.is_bot') . "
         AND pv.created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)
       GROUP BY s.session_id
       HAVING total_requests > :min_requests
@@ -623,7 +673,7 @@ class BotDetectionController extends Controller
       SELECT s.ip_address, COUNT(DISTINCT s.session_id) as session_count
       FROM analytics_sessions s
       JOIN analytics_page_views pv ON s.session_id = pv.session_id
-      WHERE s.is_bot = 0
+      WHERE " . $this->candidateSql('s.is_bot') . "
         AND s.ip_address IS NOT NULL AND s.ip_address != ''
         AND pv.created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)
       GROUP BY s.ip_address
@@ -636,7 +686,7 @@ class BotDetectionController extends Controller
       // Get all sessions from this IP
       $sessions = $db->createCommand("
         SELECT session_id FROM analytics_sessions
-        WHERE ip_address = :ip AND is_bot = 0
+        WHERE ip_address = :ip AND " . $this->candidateSql('is_bot') . $this->sessionWindowSql('analytics_sessions') . "
       ")
         ->bindValue(':ip', $anomaly['ip_address'])
         ->queryColumn();
@@ -670,7 +720,7 @@ class BotDetectionController extends Controller
         FROM analytics_page_views pv
         INNER JOIN analytics_sessions s ON pv.session_id = s.session_id
         WHERE pv.created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)
-          AND s.is_bot = 0
+          AND " . $this->candidateSql('s.is_bot') . "
       ) as intervals
       WHERE time_diff IS NOT NULL AND time_diff < 300
       GROUP BY session_id
@@ -709,7 +759,7 @@ class BotDetectionController extends Controller
         GROUP_CONCAT(DISTINCT pv.url ORDER BY pv.created_at) as url_sequence
       FROM analytics_page_views pv
       INNER JOIN analytics_sessions s ON pv.session_id = s.session_id
-      WHERE s.is_bot = 0
+      WHERE " . $this->candidateSql('s.is_bot') . "
         AND pv.created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)
         AND (pv.url LIKE '%page=%' OR pv.url LIKE '%/page/%' OR pv.url LIKE '%&p=%')
       GROUP BY pv.session_id
@@ -749,7 +799,7 @@ class BotDetectionController extends Controller
       $singlePageSessions = $db->createCommand("
         SELECT s.session_id
         FROM analytics_sessions s
-        WHERE s.is_bot = 0
+        WHERE " . $this->candidateSql('s.is_bot') . "
           AND s.session_id > :lastId" . $this->sessionWindowSql('s') . "
           AND (
             SELECT COUNT(*) FROM analytics_page_views pv WHERE pv.session_id = s.session_id
@@ -800,7 +850,7 @@ class BotDetectionController extends Controller
       $sessions = $db->createCommand("
         SELECT s.session_id, s.ip_address
         FROM analytics_sessions s
-        WHERE s.is_bot = 0
+        WHERE " . $this->candidateSql('s.is_bot') . "
           AND s.session_id > :lastId
           AND s.ip_address IS NOT NULL AND s.ip_address != ''" . $this->sessionWindowSql('s') . "
         ORDER BY s.session_id
@@ -963,6 +1013,11 @@ class BotDetectionController extends Controller
 
   /**
    * Commit all collected scores to the database
+   *
+   * is_bot follows the score: >= 70 bot (1), 50-69 suspected (2), below 50
+   * unchanged (a visitor stays 0, a suspected session stays 2: suspected is
+   * sticky). Page views follow their session, but a page view flagged as a
+   * bot at recording (1) is never lowered. Unscored sessions are not touched.
    */
   protected function commitScores(): void
   {
@@ -974,6 +1029,7 @@ class BotDetectionController extends Controller
     $db = Yii::$app->db;
     $committed = 0;
     $highCount = 0;
+    $suspectedCount = 0;
     $mediumCount = 0;
     $lowCount = 0;
 
@@ -983,55 +1039,70 @@ class BotDetectionController extends Controller
     // separate round-trips (one UPDATE per session, plus one per bot session
     // against analytics_page_views), which made this step take tens of minutes.
     foreach (array_chunk($this->sessionScores, $this->batchSize, true) as $chunk) {
-      $highConfidenceIds = [];
-      $chunkHigh = 0;
+      $idsByState = [self::IS_BOT_YES => [], self::IS_BOT_SUSPECTED => [], self::IS_BOT_NO => []];
       $chunkMedium = 0;
-      $chunkLow = 0;
       $transaction = $db->beginTransaction();
 
       try {
         foreach ($chunk as $sessionId => $data) {
           $score = min(100, $data['score']); // Cap at 100
           $reasons = implode(',', array_unique($data['reasons']));
-          $confidence = $this->getConfidenceLevel($score);
+          $state = $this->botStateForScore($score);
+          $idsByState[$state][] = $sessionId;
 
-          // Count by confidence level (applied only once the chunk commits)
-          if ($confidence === 'high') {
-            $chunkHigh++;
-            $highConfidenceIds[] = $sessionId;
-          } elseif ($confidence === 'medium') {
+          // MEDIUM overlaps SUSPECTED (30-69); counted for the review hint
+          if ($this->getConfidenceLevel($score) === 'medium') {
             $chunkMedium++;
-          } else {
-            $chunkLow++;
           }
 
-          $updateData = [
-            'bot_score' => $score,
-            'is_bot' => ($confidence === 'high') ? 1 : 0,
-          ];
+          $updateData = ['bot_score' => $score];
+          // Below 50 is_bot is left alone: suspected (2) is sticky
+          if ($state !== self::IS_BOT_NO) {
+            $updateData['is_bot'] = $state;
+          }
 
           if ($hasReasonColumn) {
             $updateData['bot_reason'] = substr($reasons, 0, 255);
           }
 
+          // A session flagged as a bot during the run (recording) is never lowered
           $db->createCommand()
-            ->update('analytics_sessions', $updateData, ['session_id' => $sessionId])
+            ->update('analytics_sessions', $updateData, [
+              'and', ['session_id' => $sessionId], ['<>', 'is_bot', self::IS_BOT_YES],
+            ])
             ->execute();
         }
 
-        // Mark page views for all high-confidence sessions in this chunk at once
-        if (!empty($highConfidenceIds)) {
+        // Page views follow their sessions, one statement per state and chunk
+        if (!empty($idsByState[self::IS_BOT_YES])) {
           $db->createCommand()
-            ->update('analytics_page_views', ['is_bot' => 1], ['session_id' => $highConfidenceIds])
+            ->update('analytics_page_views', ['is_bot' => self::IS_BOT_YES], ['session_id' => $idsByState[self::IS_BOT_YES]])
+            ->execute();
+        }
+        // Every session of the chunk that is now suspected (newly, or already
+        // and kept by the sticky rule): its counted page views, including ones
+        // recorded since it became suspected, become suspected too
+        $suspectedIds = (new \yii\db\Query())
+          ->select('session_id')
+          ->from('analytics_sessions')
+          ->where(['session_id' => array_map('strval', array_keys($chunk)), 'is_bot' => self::IS_BOT_SUSPECTED])
+          ->column($db);
+        if (!empty($suspectedIds)) {
+          $db->createCommand()
+            ->update('analytics_page_views', ['is_bot' => self::IS_BOT_SUSPECTED], [
+              'session_id' => $suspectedIds,
+              'is_bot' => self::IS_BOT_NO,
+            ])
             ->execute();
         }
 
         $transaction->commit();
 
         $committed += count($chunk);
-        $highCount += $chunkHigh;
+        $highCount += count($idsByState[self::IS_BOT_YES]);
+        $suspectedCount += count($idsByState[self::IS_BOT_SUSPECTED]);
         $mediumCount += $chunkMedium;
-        $lowCount += $chunkLow;
+        $lowCount += count($idsByState[self::IS_BOT_NO]);
       } catch (\Exception $e) {
         $transaction->rollBack();
         $this->stderr("Error committing score chunk: " . $e->getMessage() . "\n", Console::FG_RED);
@@ -1039,8 +1110,8 @@ class BotDetectionController extends Controller
     }
 
     $this->stdout(sprintf(
-      "Committed scores: %d total (HIGH: %d, MEDIUM: %d, LOW: %d)\n",
-      $committed, $highCount, $mediumCount, $lowCount
+      "Committed scores: %d total (bot >= %d: %d, suspected >= %d: %d, below: %d; medium for review: %d)\n",
+      $committed, self::SCORE_HIGH_CONFIDENCE, $highCount, self::SCORE_SUSPECTED, $suspectedCount, $lowCount, $mediumCount
     ), Console::FG_YELLOW);
   }
 
@@ -1065,6 +1136,20 @@ class BotDetectionController extends Controller
       $botPageViewsCount = $db->createCommand("
         SELECT COUNT(*) FROM analytics_page_views WHERE is_bot = 1
       ")->queryScalar();
+
+      // A session flagged as a bot at recording keeps the page views recorded
+      // before that at 0; mark them so they are deleted with it instead of
+      // staying behind, counted and orphaned. Same window as the scoring.
+      $db->createCommand("
+        UPDATE analytics_page_views pv
+        INNER JOIN analytics_sessions s ON pv.session_id = s.session_id
+        SET pv.is_bot = :bot
+        WHERE s.is_bot = :bot2 AND pv.is_bot <> :bot3" . $this->sessionWindowSql('s') . "
+      ")
+        ->bindValue(':bot', self::IS_BOT_YES)
+        ->bindValue(':bot2', self::IS_BOT_YES)
+        ->bindValue(':bot3', self::IS_BOT_YES)
+        ->execute();
 
       // All three deletes run in batches. A single unbounded DELETE over a backlog
       // of millions of rows builds one enormous transaction and its undo log, and
@@ -1691,24 +1776,17 @@ class BotDetectionController extends Controller
   }
 
   /**
-   * Get current browser versions (hardcoded, update periodically)
-   *
-   * As of early 2026: iOS 19, Android 16, Chrome ~145, Firefox ~145, Safari 19
+   * Day the current browser versions are computed for
    */
-  protected function getCurrentBrowserVersions(): array
+  protected function today(): \DateTimeImmutable
   {
-    return [
-      'ios' => 19,        // iOS 19 = 2025
-      'android' => 16,    // Android 16 = 2025
-      'chrome' => 145,    // Chrome ~145 in early 2026
-      'firefox' => 145,   // Firefox ~145 in early 2026
-      'safari' => 19,     // Safari 19 = 2025
-    ];
+    return new \DateTimeImmutable($this->today ?? 'today');
   }
 
   /**
    * Calculate browser age score (0-50 points based on how outdated)
-   * Returns higher scores for older browsers
+   * Returns higher scores for older browsers. Current versions are computed
+   * from the date (BrowserVersions), never hardcoded.
    *
    * @param string $userAgent Raw user agent string
    * @param DeviceDetector|null $dd Optional parsed DeviceDetector instance
@@ -1716,7 +1794,12 @@ class BotDetectionController extends Controller
    */
   protected function getBrowserAgeScore($userAgent, ?DeviceDetector $dd = null): int
   {
-    $currentVersions = $this->getCurrentBrowserVersions();
+    $userAgent = (string)$userAgent;
+    $today = $this->today();
+    // The reduced Chromium UA always says "Android 10; K": its OS version says nothing
+    $frozenAndroid = BrowserVersions::isFrozenAndroid($userAgent);
+    // Safari 26+ and Chrome on iOS always say "OS 18_6": score the browser instead
+    $frozenIos = BrowserVersions::isFrozenIos($userAgent);
 
     // When DeviceDetector is available, use structured data
     if ($dd !== null) {
@@ -1724,100 +1807,126 @@ class BotDetectionController extends Controller
       $os = $dd->getOs();
 
       // Score OS version
-      $osScore = $this->scoreOsVersion(
-        $os['name'] ?? '',
-        $os['version'] ?? '',
-        $currentVersions
-      );
-      if ($osScore > 0) {
-        return $osScore;
+      $osName = $os['name'] ?? '';
+      $osFrozen = ($frozenAndroid && strtolower($osName) === 'android')
+        || ($frozenIos && strtolower($osName) === 'ios');
+      if (!$osFrozen) {
+        $osScore = $this->scoreOsVersion($osName, $os['version'] ?? '', $today);
+        if ($osScore > 0) {
+          return $osScore;
+        }
       }
 
       // Score browser version
       $browserScore = $this->scoreBrowserVersion(
         $client['name'] ?? '',
         $client['version'] ?? '',
-        $currentVersions
+        $today
       );
       if ($browserScore > 0) {
         return $browserScore;
       }
     }
 
-    // Regex fallback when DeviceDetector is not available
+    // Regex fallback when DeviceDetector is not available (or found nothing),
+    // scored with the same rules as the DeviceDetector path
 
-    // iOS version check
-    if (preg_match('/(?:iPhone OS|CPU OS) (\d+)[_\.]/', $userAgent, $matches)) {
-      $version = intval($matches[1]);
-      $currentVersion = $currentVersions['ios'] ?? 18;
-      $yearsOld = $currentVersion - $version;
-
-      if ($yearsOld >= 6) return 50;
-      if ($yearsOld >= 4) return 40;
-      if ($yearsOld >= 2) return 30;
-      if ($yearsOld >= 1) return 20;
+    // iOS version check; for the frozen "OS 18_6" the browser version instead
+    if ($frozenIos) {
+      if (preg_match('/CriOS\/(\d+)\./', $userAgent, $matches)) {
+        return $this->scoreOutdatedRelease('chrome', intval($matches[1]), $today);
+      }
+      if (preg_match('/Version\/(\d+)\.\d+.*Safari/', $userAgent, $matches)) {
+        return $this->scoreAppleAge(intval($matches[1]), $today);
+      }
       return 0;
     }
+    if (preg_match('/(?:iPhone OS|CPU OS) (\d+)[_\.]/', $userAgent, $matches)) {
+      return $this->scoreAppleAge(intval($matches[1]), $today);
+    }
 
-    // Android version check
+    // Android version check (never for the frozen UA)
     if (preg_match('/Android (\d+)/', $userAgent, $matches)) {
-      $version = intval($matches[1]);
-      $currentVersion = $currentVersions['android'] ?? 15;
-      $yearsOld = $currentVersion - $version;
-
-      if ($yearsOld >= 6) return 50;
-      if ($yearsOld >= 4) return 40;
-      if ($yearsOld >= 2) return 30;
-      if ($yearsOld >= 1) return 20;
-      return 0;
+      return $frozenAndroid ? 0 : $this->scoreAndroidAge(intval($matches[1]), $today);
     }
 
     // Chrome version check (releases every 4 weeks, ~13/year)
     if (preg_match('/Chrome\/(\d+)\./', $userAgent, $matches)) {
-      $version = intval($matches[1]);
-      $currentVersion = $currentVersions['chrome'] ?? 131;
-      $versionsBehind = $currentVersion - $version;
-
-      if ($versionsBehind >= 52) return 50;
-      if ($versionsBehind >= 26) return 40;
-      if ($versionsBehind >= 13) return 30;
-      if ($versionsBehind >= 6) return 20;
-      return 0;
+      return $this->scoreOutdatedRelease('chrome', intval($matches[1]), $today);
     }
 
     // Firefox version check (similar release cycle to Chrome)
     if (preg_match('/Firefox\/(\d+)\./', $userAgent, $matches)) {
-      $version = intval($matches[1]);
-      $currentVersion = $currentVersions['firefox'] ?? 133;
-      $versionsBehind = $currentVersion - $version;
-
-      if ($versionsBehind >= 52) return 50;
-      if ($versionsBehind >= 26) return 40;
-      if ($versionsBehind >= 13) return 30;
-      if ($versionsBehind >= 6) return 20;
-      return 0;
+      return $this->scoreOutdatedRelease('firefox', intval($matches[1]), $today);
     }
 
     // Safari desktop version check (Version/X.Y...Safari)
     if (preg_match('/Version\/(\d+)\.\d+.*Safari/', $userAgent, $matches)) {
-      $version = intval($matches[1]);
-      $currentVersion = $currentVersions['safari'] ?? 18;
-      $yearsOld = $currentVersion - $version;
-
-      if ($yearsOld >= 5) return 50;
-      if ($yearsOld >= 3) return 40;
-      if ($yearsOld >= 2) return 30;
-      if ($yearsOld >= 1) return 20;
-      return 0;
+      return $this->scoreAppleAge(intval($matches[1]), $today);
     }
 
     return 0;
   }
 
   /**
+   * Score a Chrome/Firefox major version by how long it has been outdated:
+   * days since its successor was released (BrowserVersions::outdatedDays).
+   * Measuring age in days keeps the tiers meaningful across the switch from a
+   * 4-week to a 2-week release cadence; the thresholds equal the former
+   * 52/26/13/6 versions behind at the 4-week cadence.
+   */
+  protected function scoreOutdatedRelease(string $browser, int $major, \DateTimeImmutable $today): int
+  {
+    // Garbage versions from crafted user agents (Chrome/99999999999) are not
+    // scored: nothing above the current release plus a margin is a real version
+    if ($major <= 0 || $major > BrowserVersions::current($browser, $today) + 10) {
+      return 0;
+    }
+
+    $days = BrowserVersions::outdatedDays($browser, $major, $today);
+    if ($days >= 1456) return 50;
+    if ($days >= 728) return 40;
+    if ($days >= 364) return 30;
+    if ($days >= 168) return 20;
+    return 0;
+  }
+
+  /**
+   * Score an iOS / Safari major version by release years behind the newest.
+   * One year behind is normal for weeks after each September release.
+   */
+  protected function scoreAppleAge(int $major, \DateTimeImmutable $today): int
+  {
+    if ($major <= 0) {
+      return 0;
+    }
+
+    $years = BrowserVersions::currentAppleYear($today) - BrowserVersions::appleYear($major);
+    if ($years >= 5) return 50;
+    if ($years >= 3) return 40;
+    if ($years >= 2) return 30;
+    return 0;
+  }
+
+  /**
+   * Score an Android major version by release years behind the newest
+   */
+  protected function scoreAndroidAge(int $major, \DateTimeImmutable $today): int
+  {
+    if ($major <= 0) {
+      return 0;
+    }
+
+    $years = BrowserVersions::currentAndroidYear($today) - BrowserVersions::androidYear($major);
+    if ($years >= 6) return 50;
+    if ($years >= 4) return 30;
+    return 0;
+  }
+
+  /**
    * Score browser version using DeviceDetector structured data
    */
-  protected function scoreBrowserVersion(string $name, string $version, array $currentVersions): int
+  protected function scoreBrowserVersion(string $name, string $version, \DateTimeImmutable $today): int
   {
     if (empty($name) || empty($version)) {
       return 0;
@@ -1832,35 +1941,17 @@ class BotDetectionController extends Controller
 
     // Chrome / Chrome Mobile / Chromium
     if (str_contains($name, 'chrome') || str_contains($name, 'chromium')) {
-      $current = $currentVersions['chrome'] ?? 145;
-      $behind = $current - $majorVersion;
-      if ($behind >= 52) return 50;
-      if ($behind >= 26) return 40;
-      if ($behind >= 13) return 30;
-      if ($behind >= 6) return 20;
-      return 0;
+      return $this->scoreOutdatedRelease('chrome', $majorVersion, $today);
     }
 
     // Firefox / Firefox Mobile
     if (str_contains($name, 'firefox')) {
-      $current = $currentVersions['firefox'] ?? 145;
-      $behind = $current - $majorVersion;
-      if ($behind >= 52) return 50;
-      if ($behind >= 26) return 40;
-      if ($behind >= 13) return 30;
-      if ($behind >= 6) return 20;
-      return 0;
+      return $this->scoreOutdatedRelease('firefox', $majorVersion, $today);
     }
 
     // Safari / Mobile Safari
     if (str_contains($name, 'safari')) {
-      $current = $currentVersions['safari'] ?? 19;
-      $behind = $current - $majorVersion;
-      if ($behind >= 5) return 50;
-      if ($behind >= 3) return 40;
-      if ($behind >= 2) return 30;
-      if ($behind >= 1) return 20;
-      return 0;
+      return $this->scoreAppleAge($majorVersion, $today);
     }
 
     return 0;
@@ -1869,7 +1960,7 @@ class BotDetectionController extends Controller
   /**
    * Score OS version using DeviceDetector structured data
    */
-  protected function scoreOsVersion(string $name, string $version, array $currentVersions): int
+  protected function scoreOsVersion(string $name, string $version, \DateTimeImmutable $today): int
   {
     if (empty($name) || empty($version)) {
       return 0;
@@ -1882,29 +1973,26 @@ class BotDetectionController extends Controller
 
     $name = strtolower($name);
 
-    // iOS
     if ($name === 'ios') {
-      $current = $currentVersions['ios'] ?? 19;
-      $behind = $current - $majorVersion;
-      if ($behind >= 6) return 50;
-      if ($behind >= 4) return 40;
-      if ($behind >= 2) return 30;
-      if ($behind >= 1) return 20;
-      return 0;
+      return $this->scoreAppleAge($majorVersion, $today);
     }
 
-    // Android
     if ($name === 'android') {
-      $current = $currentVersions['android'] ?? 16;
-      $behind = $current - $majorVersion;
-      if ($behind >= 6) return 50;
-      if ($behind >= 4) return 40;
-      if ($behind >= 2) return 30;
-      if ($behind >= 1) return 20;
-      return 0;
+      return $this->scoreAndroidAge($majorVersion, $today);
     }
 
     return 0;
+  }
+
+  /**
+   * iOS in-app browser (WKWebView): iPhone/iPad, AppleWebKit and "Mobile/",
+   * but no "Safari" token
+   */
+  protected function isIosWebView(string $userAgent): bool
+  {
+    return (bool)preg_match('/\((?:iPhone|iPad)[;)]/', $userAgent)
+      && str_contains($userAgent, 'AppleWebKit')
+      && (bool)preg_match('/\bMobile\//', $userAgent);
   }
 
   /**
@@ -1995,10 +2083,14 @@ class BotDetectionController extends Controller
       return true;
     }
 
-    // KHTML without Chrome/Safari (Konqueror derivatives)
+    // KHTML without Chrome/Safari (Konqueror derivatives). Not for iOS in-app
+    // browsers (WKWebView: LinkedIn, Instagram, Facebook, XING...), which send
+    // no Safari token, nor for anything DeviceDetector identifies as a mobile app.
     if (str_contains($userAgent, 'KHTML') &&
       !str_contains($userAgent, 'Chrome') &&
-      !str_contains($userAgent, 'Safari')) {
+      !str_contains($userAgent, 'Safari') &&
+      !$this->isIosWebView($userAgent) &&
+      !($dd !== null && $dd->getClient('type') === 'mobile app')) {
       return true;
     }
 
@@ -2218,8 +2310,10 @@ class BotDetectionController extends Controller
         (SELECT COUNT(*) FROM analytics_sessions WHERE bot_score >= :high) as high_confidence,
         (SELECT COUNT(*) FROM analytics_sessions WHERE bot_score >= :medium AND bot_score < :high2) as medium_confidence,
         (SELECT COUNT(*) FROM analytics_sessions WHERE bot_score > 0 AND bot_score < :medium2) as low_confidence,
-        (SELECT COUNT(*) FROM analytics_sessions WHERE bot_score IS NULL OR bot_score = 0) as no_score
+        (SELECT COUNT(*) FROM analytics_sessions WHERE bot_score IS NULL OR bot_score = 0) as no_score,
+        (SELECT COUNT(*) FROM analytics_sessions WHERE is_bot = :suspected) as suspected
     ")
+      ->bindValue(':suspected', self::IS_BOT_SUSPECTED)
       ->bindValue(':high', self::SCORE_HIGH_CONFIDENCE)
       ->bindValue(':high2', self::SCORE_HIGH_CONFIDENCE)
       ->bindValue(':medium', self::SCORE_MEDIUM_CONFIDENCE)
@@ -2233,6 +2327,7 @@ class BotDetectionController extends Controller
     $this->stdout("\nConfidence breakdown:\n");
     $this->stdout(sprintf("  HIGH (deleted):      %s\n", number_format($stats['high_confidence'])), Console::FG_RED);
     $this->stdout(sprintf("  MEDIUM (for review): %s\n", number_format($stats['medium_confidence'])), Console::FG_YELLOW);
+    $this->stdout(sprintf("  of which SUSPECTED (is_bot = 2, excluded from statistics): %s\n", number_format($stats['suspected'])), Console::FG_YELLOW);
     $this->stdout(sprintf("  LOW (kept):          %s\n", number_format($stats['low_confidence'])), Console::FG_GREEN);
     $this->stdout(sprintf("  No score:            %s\n", number_format($stats['no_score'])));
 
@@ -2360,9 +2455,17 @@ class BotDetectionController extends Controller
 
     $db->createCommand()
       ->update('analytics_sessions', [
-        'is_bot' => 0,
+        'is_bot' => self::IS_BOT_NO,
         'bot_score' => 0,
       ], ['session_id' => $session['session_id']])
+      ->execute();
+
+    // Suspected page views are counted again; ones flagged at recording stay bots
+    $db->createCommand()
+      ->update('analytics_page_views', ['is_bot' => self::IS_BOT_NO], [
+        'session_id' => $session['session_id'],
+        'is_bot' => self::IS_BOT_SUSPECTED,
+      ])
       ->execute();
 
     $this->stdout("Session {$session['session_id']} marked as legitimate.\n", Console::FG_GREEN);
@@ -2386,15 +2489,18 @@ class BotDetectionController extends Controller
       SELECT
         COUNT(*) as total_records,
         SUM(CASE WHEN is_bot = 1 THEN 1 ELSE 0 END) as bot_records,
+        SUM(CASE WHEN is_bot = 2 THEN 1 ELSE 0 END) as suspected_records,
         SUM(CASE WHEN is_bot = 0 THEN 1 ELSE 0 END) as human_records
       FROM analytics_page_views
     ")->queryOne();
 
     $this->stdout(sprintf(
-      "  Total: %s | Bots: %s (%.2f%%) | Humans: %s (%.2f%%)\n",
+      "  Total: %s | Bots: %s (%.2f%%) | Suspected: %s (%.2f%%) | Humans: %s (%.2f%%)\n",
       number_format($pvStats['total_records']),
       number_format($pvStats['bot_records']),
       $pvStats['total_records'] > 0 ? ($pvStats['bot_records'] / $pvStats['total_records'] * 100) : 0,
+      number_format($pvStats['suspected_records'] ?? 0),
+      $pvStats['total_records'] > 0 ? (($pvStats['suspected_records'] ?? 0) / $pvStats['total_records'] * 100) : 0,
       number_format($pvStats['human_records']),
       $pvStats['total_records'] > 0 ? ($pvStats['human_records'] / $pvStats['total_records'] * 100) : 0
     ));
@@ -2405,15 +2511,18 @@ class BotDetectionController extends Controller
       SELECT
         COUNT(*) as total_records,
         SUM(CASE WHEN is_bot = 1 THEN 1 ELSE 0 END) as bot_records,
+        SUM(CASE WHEN is_bot = 2 THEN 1 ELSE 0 END) as suspected_records,
         SUM(CASE WHEN is_bot = 0 THEN 1 ELSE 0 END) as human_records
       FROM analytics_sessions
     ")->queryOne();
 
     $this->stdout(sprintf(
-      "  Total: %s | Bots: %s (%.2f%%) | Humans: %s (%.2f%%)\n",
+      "  Total: %s | Bots: %s (%.2f%%) | Suspected: %s (%.2f%%) | Humans: %s (%.2f%%)\n",
       number_format($sessionStats['total_records']),
       number_format($sessionStats['bot_records']),
       $sessionStats['total_records'] > 0 ? ($sessionStats['bot_records'] / $sessionStats['total_records'] * 100) : 0,
+      number_format($sessionStats['suspected_records'] ?? 0),
+      $sessionStats['total_records'] > 0 ? (($sessionStats['suspected_records'] ?? 0) / $sessionStats['total_records'] * 100) : 0,
       number_format($sessionStats['human_records']),
       $sessionStats['total_records'] > 0 ? ($sessionStats['human_records'] / $sessionStats['total_records'] * 100) : 0
     ));

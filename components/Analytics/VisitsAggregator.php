@@ -106,18 +106,21 @@ final class VisitsAggregator
     }
 
     /**
-     * Whether the day has anything the visits count: a non-bot page view or an
-     * element view of a non-bot session.
+     * Whether the day still has raw rows: a page view of a visitor or suspected
+     * bot (is_bot 0/2), or an element view whatever its session. Bot page views
+     * (1) can be left behind by a cleanup and do not count. Without raw rows the
+     * raw data is gone and the stored rows are all that is left, so a normal
+     * run keeps them. With suspected rows only, the day's visits really are zero
+     * and the stale rows are replaced (as the page and element aggregates do).
      */
     private function hasRawData(string $start, string $end): bool
     {
         $range = [':start' => $start, ':end' => $end];
 
         return $this->db->createCommand("SELECT 1 FROM {{%analytics_page_views}}
-                WHERE created_at >= :start AND created_at < :end AND is_bot = 0 LIMIT 1", $range)->queryScalar() !== false
-            || $this->db->createCommand("SELECT 1 FROM {{%analytics_element_views}} ev
-                INNER JOIN {{%analytics_sessions}} s ON ev.session_id = s.session_id
-                WHERE ev.created_at >= :start AND ev.created_at < :end AND s.is_bot = 0 LIMIT 1", $range)->queryScalar() !== false;
+                WHERE created_at >= :start AND created_at < :end AND is_bot IN (0, 2) LIMIT 1", $range)->queryScalar() !== false
+            || $this->db->createCommand("SELECT 1 FROM {{%analytics_element_views}}
+                WHERE created_at >= :start AND created_at < :end LIMIT 1", $range)->queryScalar() !== false;
     }
 
     /**

@@ -172,10 +172,14 @@ class AnalyticsAggregationController extends Controller
      * @param string[] $parts AggregationParts values
      * @param bool $repair Merge with GREATEST(stored, recomputed) instead of
      *                     overwriting, and never delete rows: used by the cleanup
-     *                     to fill an undercount without lowering anything. The
-     *                     visits part always runs in repair mode for a day before
-     *                     the retention period: its raw data may be partly gone,
-     *                     and visits cannot be recomputed from anything else.
+     *                     to fill an undercount without lowering anything. Every
+     *                     part always runs in repair mode for a day before the
+     *                     retention period: its raw data may be partly gone, and
+     *                     the aggregates cannot be recomputed from anything else.
+     *                     In normal mode the page and element parts replace the
+     *                     day's rows (so a group whose views all became bots or
+     *                     suspected bots disappears), but only while the day
+     *                     still has raw rows in their table.
      * @return bool true when every requested part succeeded
      */
     public function aggregateDate(string $date, array $parts, bool $repair = false): bool
@@ -183,20 +187,19 @@ class AnalyticsAggregationController extends Controller
         $db = Yii::$app->db;
         [$start, $end] = AnalyticsRetention::dayRange($date);
         $ok = true;
+        $repair = $repair || $date < AnalyticsRetention::firstKeptDay(date('Y-m-d'), (int)$this->retentionDays);
 
         if (in_array(AggregationParts::ELEMENTS, $parts, true)) {
-            $ok = $this->runPart('element', fn() => $this->aggregateElements($db, $start, $end, $repair)) && $ok;
+            $ok = $this->runPart('element', fn() => $this->aggregateElements($db, $date, $start, $end, $repair)) && $ok;
         }
 
         if (in_array(AggregationParts::PAGES, $parts, true)) {
-            $ok = $this->runPart('page', fn() => $this->aggregatePages($db, $start, $end, $repair)) && $ok;
+            $ok = $this->runPart('page', fn() => $this->aggregatePages($db, $date, $start, $end, $repair)) && $ok;
         }
 
         if (in_array(AggregationParts::VISITS, $parts, true)) {
             if (VisitsAggregator::tableExists($db)) {
-                $repairVisits = $repair
-                    || $date < AnalyticsRetention::firstKeptDay(date('Y-m-d'), (int)$this->retentionDays);
-                $ok = $this->runPart('visit', fn() => (new VisitsAggregator($db))->aggregate($date, $repairVisits)) && $ok;
+                $ok = $this->runPart('visit', fn() => (new VisitsAggregator($db))->aggregate($date, $repair)) && $ok;
             } else {
                 $this->stderr("! Visits skipped: table analytics_visits_daily missing (run yii crelish-migrate/up)\n", Console::FG_YELLOW);
             }
@@ -254,13 +257,50 @@ class AnalyticsAggregationController extends Controller
     }
 
     /**
+     * Run an aggregation INSERT for one day. Repair mode only merges. Normal
+     * mode replaces the day's rows of $dailyTable in one transaction, and does
+     * nothing when $rawTable has no raw rows of the day: then the raw data is
+     * gone and the stored rows are all that is left. Raw rows are element views
+     * of any state and page views that are visitors or suspected (is_bot 0/2);
+     * bot page views (1) can be left behind by a cleanup and do not count
+     * (same rule as VisitsAggregator::hasRawData()).
+     *
+     * @param string $rawCondition Extra SQL condition on $rawTable
+     */
+    private function replaceDay(Connection $db, string $dailyTable, string $rawTable, string $rawCondition, string $date, string $start, string $end, bool $repair, callable $insert): int
+    {
+        if ($repair) {
+            return $insert();
+        }
+
+        $hasRaw = $db->createCommand(
+            "SELECT 1 FROM {$rawTable} WHERE created_at >= :start AND created_at < :end{$rawCondition} LIMIT 1",
+            [':start' => $start, ':end' => $end]
+        )->queryScalar() !== false;
+        if (!$hasRaw) {
+            return 0;
+        }
+
+        $transaction = $db->beginTransaction();
+        try {
+            $db->createCommand("DELETE FROM {$dailyTable} WHERE date = :date", [':date' => $date])->execute();
+            $rows = $insert();
+            $transaction->commit();
+            return $rows;
+        } catch (\Throwable $e) {
+            $transaction->rollBack();
+            throw $e;
+        }
+    }
+
+    /**
      * Element views by date, element, page and event type.
      * INNER JOIN excludes orphaned views and bot sessions. A missing type is
      * stored as '' (what non-strict MySQL did implicitly; strict mode would fail).
      */
-    private function aggregateElements(Connection $db, string $start, string $end, bool $repair): int
+    private function aggregateElements(Connection $db, string $date, string $start, string $end, bool $repair): int
     {
-        return $db->createCommand("
+        return $this->replaceDay($db, '{{%analytics_element_daily}}', '{{%analytics_element_views}}', '', $date, $start, $end, $repair, fn() => $db->createCommand("
             INSERT INTO {{%analytics_element_daily}}
             (date, element_uuid, element_type, page_uuid, event_type, total_views, unique_sessions, unique_users)
             SELECT
@@ -278,7 +318,7 @@ class AnalyticsAggregationController extends Controller
                 AND s.is_bot = 0
             GROUP BY DATE(ev.created_at), ev.element_uuid, ev.element_type, ev.page_uuid, COALESCE(ev.type, '')
             ON DUPLICATE KEY UPDATE " . self::mergeCounts($repair) . "
-        ", [':start' => $start, ':end' => $end])->execute();
+        ", [':start' => $start, ':end' => $end])->execute());
     }
 
     /**
@@ -289,9 +329,9 @@ class AnalyticsAggregationController extends Controller
      * ON DUPLICATE KEY UPDATE let each overwrite the last: every job detail URL is a
      * variant of the same page, so 2,511 views of a day were stored as 49.
      */
-    private function aggregatePages(Connection $db, string $start, string $end, bool $repair): int
+    private function aggregatePages(Connection $db, string $date, string $start, string $end, bool $repair): int
     {
-        return $db->createCommand("
+        return $this->replaceDay($db, '{{%analytics_page_daily}}', '{{%analytics_page_views}}', ' AND is_bot IN (0, 2)', $date, $start, $end, $repair, fn() => $db->createCommand("
             INSERT INTO {{%analytics_page_daily}}
             (date, page_uuid, page_url, total_views, unique_sessions, unique_users)
             SELECT
@@ -305,7 +345,7 @@ class AnalyticsAggregationController extends Controller
             WHERE created_at >= :start AND created_at < :end AND is_bot = 0
             GROUP BY DATE(created_at), page_uuid
             ON DUPLICATE KEY UPDATE " . self::mergeCounts($repair) . "
-        ", [':start' => $start, ':end' => $end])->execute();
+        ", [':start' => $start, ':end' => $end])->execute());
     }
 
     /**
@@ -668,8 +708,9 @@ class AnalyticsAggregationController extends Controller
                 "DELETE FROM {{%analytics_element_views}} WHERE created_at >= :start AND created_at < :end LIMIT :limit",
                 $range
             );
+            // Visitors (0) and suspected bots (2); bots (1) are deleted by bot-detection
             $pageViews += $this->deleteInBatches(
-                "DELETE FROM {{%analytics_page_views}} WHERE created_at >= :start AND created_at < :end AND is_bot = 0 LIMIT :limit",
+                "DELETE FROM {{%analytics_page_views}} WHERE created_at >= :start AND created_at < :end AND is_bot IN (0, 2) LIMIT :limit",
                 $range
             );
         }
@@ -788,7 +829,7 @@ class AnalyticsAggregationController extends Controller
     {
         $db = Yii::$app->db;
         $candidates = array_filter([
-            $db->createCommand("SELECT MIN(created_at) FROM {{%analytics_page_views}} WHERE created_at < :cutoff AND is_bot = 0", [':cutoff' => $cutoff])->queryScalar(),
+            $db->createCommand("SELECT MIN(created_at) FROM {{%analytics_page_views}} WHERE created_at < :cutoff AND is_bot IN (0, 2)", [':cutoff' => $cutoff])->queryScalar(),
             $db->createCommand("SELECT MIN(created_at) FROM {{%analytics_element_views}} WHERE created_at < :cutoff", [':cutoff' => $cutoff])->queryScalar(),
         ]);
 
