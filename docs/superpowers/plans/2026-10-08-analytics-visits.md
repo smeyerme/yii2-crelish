@@ -1134,6 +1134,269 @@ git commit -m "feat(analytics): daily visit counts per site and owner in analyti
 
 ---
 
+### Task 3b: Company visits follow element ownership
+
+(Added during execution by controller ruling: at forum-holzbranche `page_uuid` is never the owning company, so owner rows keyed by `page_uuid` alone would show 0 visits per company. Spec §2 "Owners" was updated accordingly in commit cb865a4.)
+
+**Files:**
+- Create: `components/Analytics/ElementOwnership.php`
+- Modify: `components/Analytics/VisitsAggregator.php`
+- Test: `tests/AnalyticsVisitsOwnershipMysqlTest.php`
+
+**Interfaces:**
+- Consumes: `VisitsAggregator` as committed in Task 3 (2851d55); harness `analyticsMysqlApp`, `session`, `elementView`, `daysAgo`, `scalar`, `check`, `analyticsDone`.
+- Produces: `ElementOwnership::companyOwnedTables(Connection $db, ?array $config = null): array` (element type => table name, only tables that exist and have a `company` column; `$config === null` reads `@app/config/analytics-element-types.php`, missing file = `[]`); `VisitsAggregator::__construct(Connection $db, ?array $ownedTables = null)` (null = `ElementOwnership::companyOwnedTables($db)`). `aggregate()`'s signature and the `$params` array (`:date`, `:start`, `:end`) stay as they are — Task 4 edits that array.
+
+**Rule:** a session counts for an owner when it saw an element whose `page_uuid` is the owner, OR an element of a type in `$ownedTables` whose table row (`uuid` = element_uuid) has that owner in `company`. A session matching an owner both ways counts once. Bot filtering as for every element visit row (join sessions, `is_bot = 0`). Ownership joins convert both sides with `CONVERT(col USING utf8mb4) COLLATE utf8mb4_unicode_ci` (project tables mix utf8mb3/utf8mb4 and general/unicode collations). Each statement binds only the placeholders it uses.
+
+- [ ] **Step 1: Write the failing test**
+
+`tests/AnalyticsVisitsOwnershipMysqlTest.php`:
+
+```php
+<?php
+
+/**
+ * Owner rows by page_uuid OR by element ownership (tables with a company
+ * column), across utf8mb3/utf8mb4 tables, each session once per owner.
+ *
+ * Run with:  CRELISH_TEST_MYSQL_DSN=... php tests/AnalyticsVisitsOwnershipMysqlTest.php
+ */
+
+declare(strict_types=1);
+
+require __DIR__ . '/analytics/mysql.php';
+
+use giantbits\crelish\components\Analytics\ElementOwnership;
+use giantbits\crelish\components\Analytics\VisitsAggregator;
+
+const PAGE_A = 'a1000000-0000-4000-8000-00000000000a';
+const X = 'c9000000-0000-4000-8000-000000000009';   // owns product P1 (forum-holzbranche style)
+const C1 = 'c1000000-0000-4000-8000-000000000001';  // owns job J1 and is its page_uuid (forum-holzkarriere style)
+const P1 = 'd1000000-0000-4000-8000-000000000001';
+const P2 = 'd2000000-0000-4000-8000-000000000002';  // product without owner
+const J1 = 'b1000000-0000-4000-8000-000000000001';
+const OWNED = ['product' => 'product', 'job' => 'job'];
+
+function visit(string $day, string $owner, string $event): ?int
+{
+    $value = scalar(
+        "SELECT unique_sessions FROM analytics_visits_daily WHERE date = :d AND source = 'elements' AND owner_uuid = :o AND event_type = :e",
+        [':d' => $day, ':o' => $owner, ':e' => $event]
+    );
+
+    return $value === false ? null : (int)$value;
+}
+
+$day = daysAgo(2);
+analyticsMysqlApp();
+$db = Yii::$app->db;
+
+// Project tables as found in production: utf8mb3 general_ci next to utf8mb4 unicode_ci
+$db->createCommand("CREATE TABLE product (uuid varchar(36) NOT NULL PRIMARY KEY, company varchar(36) NULL) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci")->execute();
+$db->createCommand("CREATE TABLE job (uuid varchar(36) NOT NULL PRIMARY KEY, company varchar(36) NULL) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")->execute();
+$db->createCommand("CREATE TABLE news (uuid varchar(36) NOT NULL PRIMARY KEY, title varchar(100) NULL)")->execute();
+$db->createCommand()->insert('product', ['uuid' => P1, 'company' => X])->execute();
+$db->createCommand()->insert('product', ['uuid' => P2, 'company' => ''])->execute();
+$db->createCommand()->insert('job', ['uuid' => J1, 'company' => C1])->execute();
+
+foreach (['s1', 's2', 's3', 's4'] as $id) {
+    session($id);
+}
+session('bot', 1);
+elementView($day, '09:00:00', P1, 'list', PAGE_A, 's1', null, 'product');
+elementView($day, '09:01:00', P1, 'detail', PAGE_A, 's1', null, 'product');
+elementView($day, '09:02:00', P1, 'detail', PAGE_A, 's2', null, 'product');
+elementView($day, '09:03:00', J1, 'detail', C1, 's3', null, 'job');
+elementView($day, '09:04:00', P2, 'list', PAGE_A, 's4', null, 'product');
+elementView($day, '09:05:00', P1, 'detail', PAGE_A, 'bot', null, 'product');
+
+echo "Ownership tables\n";
+check('only listed, existing tables with a company column', OWNED, ElementOwnership::companyOwnedTables($db, [
+    'product' => ['table' => 'product'],
+    'job' => ['table' => 'job'],
+    'news' => ['table' => 'news'],
+    'gone' => ['table' => 'missing_table'],
+    'broken' => 'not-an-array',
+]));
+check('no project config means no ownership', [], ElementOwnership::companyOwnedTables($db));
+
+echo "\nOwner rows\n";
+(new VisitsAggregator($db, OWNED))->aggregate($day);
+check('the owning company counts the visitors of its product', 2, visit($day, X, ''));
+check('per event type for the owner, bots excluded', [1, 2], [visit($day, X, 'list'), visit($day, X, 'detail')]);
+check('the page an element was shown on is still an owner', 3, visit($day, PAGE_A, ''));
+check('page_uuid and ownership pointing at the same company count once', 1, visit($day, C1, ''));
+check('no other owners (an element without owner adds none)', 0, (int)scalar(
+    "SELECT COUNT(*) FROM analytics_visits_daily WHERE date = :d AND owner_uuid NOT IN ('', :x, :p, :c)",
+    [':d' => $day, ':x' => X, ':p' => PAGE_A, ':c' => C1]
+));
+check('site rows unchanged by ownership', 4, visit($day, '', ''));
+
+echo "\nRepeatable\n";
+(new VisitsAggregator($db, OWNED))->aggregate($day);
+check('a rerun gives the same owner rows', [2, 3, 1], [visit($day, X, ''), visit($day, PAGE_A, ''), visit($day, C1, '')]);
+(new VisitsAggregator($db, OWNED))->aggregate($day, true);
+check('repair keeps them', 2, visit($day, X, ''));
+$db->createCommand('CREATE TEMPORARY TABLE tmp_visit_owners (x int)')->execute();
+$db->createCommand('DROP TEMPORARY TABLE tmp_visit_owners')->execute();
+check('the temporary table is dropped after each run', true, true);
+
+analyticsDone();
+```
+
+- [ ] **Step 2: Run it to verify it fails**
+
+Run (with the `CRELISH_TEST_MYSQL_*` exports): `php tests/AnalyticsVisitsOwnershipMysqlTest.php`
+Expected: `Class "giantbits\crelish\components\Analytics\ElementOwnership" not found`.
+
+- [ ] **Step 3: Write `ElementOwnership`**
+
+`components/Analytics/ElementOwnership.php`:
+
+```php
+<?php
+
+namespace giantbits\crelish\components\Analytics;
+
+use Yii;
+use yii\db\Connection;
+
+/**
+ * Which element tables say who owns a row: the element types listed in the
+ * project's config/analytics-element-types.php whose table has a `company`
+ * column. The company statistics use the same tables to find a company's content.
+ */
+final class ElementOwnership
+{
+    /**
+     * @param array|null $config The element types config; null reads @app/config/analytics-element-types.php
+     * @return array<string, string> element type => table name
+     */
+    public static function companyOwnedTables(Connection $db, ?array $config = null): array
+    {
+        if ($config === null) {
+            $file = Yii::getAlias('@app/config/analytics-element-types.php', false);
+            $config = ($file && is_file($file)) ? (array)(include $file) : [];
+        }
+
+        $tables = [];
+        foreach ($config as $type => $definition) {
+            $table = is_array($definition) ? ($definition['table'] ?? null) : null;
+            if (!is_string($table) || $table === '') {
+                continue;
+            }
+
+            $schema = $db->getTableSchema($table, true);
+            if ($schema !== null && isset($schema->columns['company'])) {
+                $tables[(string)$type] = $table;
+            }
+        }
+
+        return $tables;
+    }
+}
+```
+
+- [ ] **Step 4: Route owner rows through ownership in `VisitsAggregator`**
+
+1. Replace the constructor with:
+
+```php
+    /** @var array<string, string> element type => table whose `company` column owns its rows */
+    private array $ownedTables;
+
+    /**
+     * @param array<string, string>|null $ownedTables Element type => table with a `company` column;
+     *        null reads them from the project config via ElementOwnership
+     */
+    public function __construct(private Connection $db, ?array $ownedTables = null)
+    {
+        $this->ownedTables = $ownedTables ?? ElementOwnership::companyOwnedTables($db);
+    }
+```
+
+2. In `aggregate()`, delete the `$owned` variable and the two `// Owner: …` entries from `$statements` (the three site statements stay). Inside the `try`, directly after the `foreach ($statements …)` loop, add:
+
+```php
+            $written += $this->aggregateOwners($params, $insert, $merge);
+```
+
+3. Update the class docblock's second paragraph: owners are the element views' `page_uuid` or the company owning the element (via `ElementOwnership`), a session counting once per owner.
+
+4. Add the method:
+
+```php
+    /**
+     * Owner rows: a session counts for an owner when it saw an element whose
+     * page_uuid is the owner, or an element the owner owns ($ownedTables). The
+     * candidates are collected in a temporary table, so a session matching an
+     * owner both ways counts once and each statement binds only its own
+     * placeholders. Both sides of the ownership join are converted to
+     * utf8mb4_unicode_ci: project tables mix utf8mb3/utf8mb4 and
+     * general/unicode collations.
+     */
+    private function aggregateOwners(array $params, string $insert, string $merge): int
+    {
+        $tmp = 'tmp_visit_owners';
+        $range = [':start' => $params[':start'], ':end' => $params[':end']];
+        $views = "FROM {{%analytics_element_views}} ev
+            INNER JOIN {{%analytics_sessions}} s ON ev.session_id = s.session_id";
+        $where = "WHERE ev.created_at >= :start AND ev.created_at < :end AND s.is_bot = 0";
+        $utf8 = static fn(string $column): string => "CONVERT({$column} USING utf8mb4) COLLATE utf8mb4_unicode_ci";
+
+        $this->db->createCommand("DROP TEMPORARY TABLE IF EXISTS {$tmp}")->execute();
+        $this->db->createCommand("CREATE TEMPORARY TABLE {$tmp} (
+                session_id varchar(100) NOT NULL,
+                user_id int NULL,
+                type varchar(255) NULL,
+                owner varchar(36) NOT NULL
+            ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")->execute();
+
+        try {
+            $this->db->createCommand("INSERT INTO {$tmp} (session_id, user_id, type, owner)
+                SELECT ev.session_id, ev.user_id, ev.type, ev.page_uuid {$views}
+                {$where} AND ev.page_uuid <> ''", $range)->execute();
+
+            foreach ($this->ownedTables as $type => $table) {
+                $this->db->createCommand("INSERT INTO {$tmp} (session_id, user_id, type, owner)
+                    SELECT ev.session_id, ev.user_id, ev.type, x.company {$views}
+                    INNER JOIN " . $this->db->quoteTableName($table) . " x
+                        ON " . $utf8('x.uuid') . " = " . $utf8('ev.element_uuid') . "
+                    {$where} AND ev.element_type = :type AND x.company IS NOT NULL AND x.company <> ''",
+                    $range + [':type' => $type])->execute();
+            }
+
+            $users = 'COUNT(DISTINCT CASE WHEN user_id IS NOT NULL AND user_id > 0 THEN user_id END)';
+            $date = [':date' => $params[':date']];
+            $written = $this->db->createCommand($insert
+                . "SELECT :date, 'elements', owner, '', COUNT(DISTINCT session_id), {$users}
+                   FROM {$tmp} GROUP BY owner" . $merge, $date)->execute();
+            $written += $this->db->createCommand($insert
+                . "SELECT :date, 'elements', owner, type, COUNT(DISTINCT session_id), {$users}
+                   FROM {$tmp} WHERE type IS NOT NULL AND type <> '' GROUP BY owner, type" . $merge, $date)->execute();
+
+            return $written;
+        } finally {
+            $this->db->createCommand("DROP TEMPORARY TABLE IF EXISTS {$tmp}")->execute();
+        }
+    }
+```
+
+- [ ] **Step 5: Run the tests**
+
+Run: `php tests/AnalyticsVisitsOwnershipMysqlTest.php && php tests/AnalyticsVisitsMysqlTest.php && php tests/AnalyticsDailyMysqlTest.php` (with the exports).
+Expected: all `0 failed`. `AnalyticsVisitsMysqlTest` must pass unchanged: without a project config the owner rows come from `page_uuid` alone, and the temporary table groups upper/lower-case UUID spellings like the old `GROUP BY ev.page_uuid` did.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add components/Analytics/ElementOwnership.php components/Analytics/VisitsAggregator.php tests/AnalyticsVisitsOwnershipMysqlTest.php
+git commit -m "feat(analytics): company visits count the elements a company owns, not only its page_uuid"
+```
+
+---
+
 ### Task 4: Retention days and the per-day decision
 
 **Files:**
@@ -2247,7 +2510,7 @@ git commit -m "feat(analytics): company reports show visits, counted once per vi
 
 1. In `### Tables`, add a row/paragraph for `analytics_visits_daily`: one row per day, source (`pages`/`elements`), owner (`''` = site, else the element views' `page_uuid`, for jobs the company) and event type (`''` = any); holds distinct sessions/users; reports sum it over days, never across owners or event types.
 2. In `### 1. Run Migration`, add `php yii crelish-migrate/up` for `m261008_120000_create_analytics_visits_daily` and note that `dep deploy` runs only `yii migrate`, so crelish migrations run by hand.
-3. In `### 4. Initial Backfill` and `### Backfill`, document `--only` (`pages,elements,visits`), `--pagesOnly=1` as alias, and the rollout command `php yii crelish/analytics-aggregation/backfill 30 --only=visits`; warn: never recompute `elements` for days older than a few days (the cleanup thins orphaned element views; recomputing lowers correct counts).
+3. In `### 4. Initial Backfill` and `### Backfill`, document `--only` (`pages,elements,visits`), `--pagesOnly=1` as alias, and the rollout command `php yii crelish/analytics-aggregation/backfill 29 --only=visits`; warn: never recompute `elements` for days older than a few days (the cleanup thins orphaned element views; recomputing lowers correct counts).
 4. Replace `### Cleanup Old Data` with: whole days only; each day checked (stored ≥ raw for page views, element views, site visits); short days repaired with `GREATEST`, kept and reported (exit code 1) when still short; `--dryRun` shows the per-day result; `--skipAggregationCheck=1` deletes without checking.
 5. Add `## Visits` after `## Period Options`: definition (a visitor counts once per day, summed over the period), why `unique_sessions` must not be summed across pages/elements/event types, coverage note ("Besuche erfasst ab …") for periods starting before the first recorded day.
 
@@ -2274,7 +2537,7 @@ Expected: no `FAIL` line.
 - [ ] **Step 2: Real-data check on the local forum-holzkarriere copy**
 
 The local project uses this checkout through a symlink. On the local database (raw data back to 2025-04):
-1. `php yii crelish-migrate/up` (local), then `php yii crelish/analytics-aggregation/backfill 30 --only=visits`.
+1. `php yii crelish-migrate/up` (local), then `php yii crelish/analytics-aggregation/backfill 29 --only=visits`.
 2. For 5 sample days and 3 companies with the most job views, compare `analytics_visits_daily` against `COUNT(DISTINCT session_id)` computed directly from raw data with the same filters. Expected: equal.
 3. Record checksums (`COUNT(*)`, `SUM(CRC32(CONCAT_WS('|', …)))`) of `analytics_page_daily` and `analytics_element_daily`; run `php yii crelish/analytics-aggregation/cleanup --dryRun=1` and read the per-day results; run it for real with `--retentionDays=400` (deletes only the oldest weeks); rerun; compare: no aggregate row's counts may be lower than before (`SELECT … WHERE new < old` returns nothing), and the second run reports nothing to repair.
 4. Run the full nightly sequence once (`bot-detection/index`, `daily`, `cleanup`) and compare page/element totals for the last 30 days before and after: unchanged except for the newest day.
@@ -2300,7 +2563,7 @@ Then from the production host, wait until Packagist serves 0.25.0:
 
 1. `./vendor/bin/dep deploy` in the project; confirm `current/composer.lock` has crelish 0.25.0 and the deploy printed `opcache reset … "reset":true`.
 2. On production: `php yii crelish-migrate/new` must list exactly `m261008_120000_create_analytics_visits_daily`; then `php yii crelish-migrate/up --interactive=0`.
-3. `php yii crelish/analytics-aggregation/backfill 30 --only=visits --interactive=0`; exit code 0.
+3. `php yii crelish/analytics-aggregation/backfill 29 --only=visits --interactive=0`; exit code 0. (29, not 30: the last 0.24 cleanup cut the 30th day in two; the first recorded day may still be partial.)
 4. Verify every day against raw data as in Step 2.2 (site rows and the 3 largest companies).
 5. `php yii crelish/analytics-aggregation/cleanup --dryRun=1`: every day passes or is repaired, none kept.
 6. A person checks one company report in the admin (web and PDF).

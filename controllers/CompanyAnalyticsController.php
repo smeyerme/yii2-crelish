@@ -2,6 +2,8 @@
 
 namespace giantbits\crelish\controllers;
 
+use giantbits\crelish\components\Analytics\VisitsAggregator;
+use giantbits\crelish\components\Analytics\VisitsReader;
 use giantbits\crelish\components\CrelishBaseController;
 use giantbits\crelish\components\CrelishModelResolver;
 use giantbits\crelish\components\ElementTitleResolver;
@@ -161,7 +163,6 @@ class CompanyAnalyticsController extends CrelishBaseController
         $contentQuery = (new Query())
             ->select([
                 'total_views' => 'SUM(total_views)',
-                'unique_sessions' => 'SUM(unique_sessions)',
                 'list_views' => "SUM(CASE WHEN event_type = 'list' THEN total_views ELSE 0 END)",
                 'detail_views' => "SUM(CASE WHEN event_type = 'detail' THEN total_views ELSE 0 END)",
                 'clicks' => "SUM(CASE WHEN event_type = 'click' THEN total_views ELSE 0 END)",
@@ -172,6 +173,10 @@ class CompanyAnalyticsController extends CrelishBaseController
             ->andWhere(['>=', 'date', $startDate])
             ->andWhere(['<=', 'date', $endDate]);
         $stats = $this->applyCompanyFilter($contentQuery, $companyUuid)->one();
+
+        $visits = $this->companyVisits($companyUuid, $startDate, $endDate);
+        $stats['unique_sessions'] = $visits['visits'];
+        $stats['visits'] = ['available' => $visits['available'], 'since' => $visits['since']];
 
         // Add company profile stats
         $stats['profile_list_views'] = (int)($profileStats['profile_list_views'] ?? 0);
@@ -235,7 +240,6 @@ class CompanyAnalyticsController extends CrelishBaseController
             ->select([
                 'date',
                 'total_views' => 'SUM(total_views)',
-                'unique_sessions' => 'SUM(unique_sessions)',
                 'list_views' => "SUM(CASE WHEN event_type = 'list' THEN total_views ELSE 0 END)",
                 'detail_views' => "SUM(CASE WHEN event_type = 'detail' THEN total_views ELSE 0 END)",
                 'clicks' => "SUM(CASE WHEN event_type = 'click' THEN total_views ELSE 0 END)",
@@ -247,7 +251,15 @@ class CompanyAnalyticsController extends CrelishBaseController
             ->groupBy(['date'])
             ->orderBy(['date' => SORT_ASC]);
 
-        return $this->applyCompanyFilter($query, $companyUuid)->all();
+        $rows = $this->applyCompanyFilter($query, $companyUuid)->all();
+        $visits = (new VisitsReader())->byDay(VisitsAggregator::SOURCE_ELEMENTS, $companyUuid, $startDate, $endDate);
+
+        foreach ($rows as &$row) {
+            $row['unique_sessions'] = $visits[$row['date']]['visits'] ?? null;
+        }
+        unset($row);
+
+        return $rows;
     }
 
     /**
@@ -451,6 +463,17 @@ class CompanyAnalyticsController extends CrelishBaseController
     }
 
     /**
+     * The company's visits: sessions that saw any of its content, per day,
+     * summed over days. Read from the owner rows (page_uuid = company).
+     *
+     * @return array{available: bool, since: ?string, visits: ?int, users: ?int}
+     */
+    private function companyVisits(string $companyUuid, string $startDate, string $endDate): array
+    {
+        return (new VisitsReader())->summary(VisitsAggregator::SOURCE_ELEMENTS, $companyUuid, $startDate, $endDate);
+    }
+
+    /**
      * Get overview stats data (used for both JSON endpoint and PDF)
      */
     private function getOverviewStatsData(string $companyUuid, string $startDate, string $endDate): array
@@ -458,7 +481,6 @@ class CompanyAnalyticsController extends CrelishBaseController
         $query = (new Query())
             ->select([
                 'total_views' => 'SUM(total_views)',
-                'unique_sessions' => 'SUM(unique_sessions)',
                 'list_views' => "SUM(CASE WHEN event_type = 'list' THEN total_views ELSE 0 END)",
                 'detail_views' => "SUM(CASE WHEN event_type = 'detail' THEN total_views ELSE 0 END)",
                 'clicks' => "SUM(CASE WHEN event_type = 'click' THEN total_views ELSE 0 END)",
@@ -469,7 +491,13 @@ class CompanyAnalyticsController extends CrelishBaseController
             ->andWhere(['>=', 'date', $startDate])
             ->andWhere(['<=', 'date', $endDate]);
 
-        return $this->applyCompanyFilter($query, $companyUuid)->one();
+        $stats = $this->applyCompanyFilter($query, $companyUuid)->one();
+
+        $visits = $this->companyVisits($companyUuid, $startDate, $endDate);
+        $stats['unique_sessions'] = $visits['visits'];
+        $stats['visits'] = ['available' => $visits['available'], 'since' => $visits['since']];
+
+        return $stats;
     }
 
     /**

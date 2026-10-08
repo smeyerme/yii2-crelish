@@ -44,8 +44,8 @@ New table `analytics_visits_daily`:
 | `id` | PK | |
 | `date` | DATE NOT NULL | The day |
 | `source` | VARCHAR(16) NOT NULL | `pages` (from `analytics_page_views`) or `elements` (from `analytics_element_views`) |
-| `owner_uuid` | VARCHAR(36) NOT NULL DEFAULT '' | `''` = whole site; otherwise the `page_uuid` the element rows carry (for jobs: the owning company) |
-| `event_type` | VARCHAR(32) NOT NULL DEFAULT '' | `''` = any event; otherwise `list`, `detail`, `click`, `download`, … |
+| `owner_uuid` | VARCHAR(36) NOT NULL DEFAULT '' | `''` = whole site; otherwise an owner: the `page_uuid` an element view carries, or the company owning the element (see below) |
+| `event_type` | VARCHAR(50) NOT NULL DEFAULT '' | `''` = any event; otherwise `list`, `detail`, `click`, `download`, … |
 | `unique_sessions` | INT NOT NULL DEFAULT 0 | Distinct sessions that day |
 | `unique_users` | INT NOT NULL DEFAULT 0 | Distinct logged-in users that day |
 | `created_at`, `updated_at` | TIMESTAMP | As in the other aggregate tables |
@@ -59,7 +59,20 @@ Rows written per day:
 |---|---|---|---|
 | pages | '' | '' | Admin page totals and page trend |
 | elements | '' | '' and each event type | Admin element totals and per-event-type totals |
-| elements | each page_uuid | '' and each event type | Company reports |
+| elements | each owner | '' and each event type | Company reports |
+
+**Owners** follow the rule the company report already uses for its view counts
+(`page_uuid` = company OR element owned by the company): a session counts for an
+owner when it saw an element whose `page_uuid` is the owner, or an element the
+owner owns. Ownership comes from the project's
+`@app/config/analytics-element-types.php`: every listed table with a `company`
+column maps its rows' `uuid` to `company`. A session that matches an owner both
+ways counts once. At forum-holzkarriere jobs carry their company in `page_uuid`
+and in `job.company`; at forum-holzbranche `page_uuid` is never the company (0
+of ~25,000 element views in 7 days), so without the ownership half every company
+there would show no visits. Comparisons between `uuid`/`company` and the raw
+columns convert both sides to `utf8mb4_unicode_ci`, because project tables mix
+`utf8mb3` and `utf8mb4` and general/unicode collations.
 
 Expected size at forum-holzkarriere: a few hundred rows per day.
 
@@ -80,7 +93,11 @@ element aggregates.
 - **Write semantics, normal mode** (the nightly run for yesterday, and
   `backfill` started explicitly): for the day's visit rows of a source, DELETE
   then INSERT, in one transaction. No stale rows survive; a rerun gives the same
-  result.
+  result. Only while the day still has reportable raw data (a non-bot page view
+  or an element view of a non-bot session); otherwise nothing is written and the
+  stored rows stay. For a day before the retention period the visits part always
+  runs in repair mode, so `backfill N` beyond the retention period or
+  `daily <old date>` can never lower or erase stored visits.
 - **Write semantics, repair mode** (used by the cleanup, §5): no DELETE; every
   aggregate row, in the three tables `daily` writes (`analytics_page_daily`,
   `analytics_element_daily`, `analytics_visits_daily`), is upserted with
@@ -112,14 +129,15 @@ The labels say what the figure is: "Besuche" / "Visits" (counted per day),
 replacing "Unique Sessions" where the figure changes.
 
 View counts (`total_views`) and the company filter for them (`page_uuid` =
-company OR element owned by the company) are unchanged. Visit rows exist only
-per `page_uuid`; at forum-holzkarriere that covers 97% of job views (the rest
-are views of jobs since deleted, whose old rows carry no company).
+company OR element owned by the company) are unchanged; the company's visit
+rows follow the same rule (§2).
 
 **Periods without visit data:** visit rows exist from the day they were first
-computed (at rollout: backfilled 30 days, i.e. from 2026-09-08 at
-forum-holzkarriere). If a period starts earlier, the visits figure covers only
-the days with data and the UI says so ("Besuche erfasst ab 08.09.2026"). The old
+computed (at rollout: backfilled 29 days, i.e. from 2026-09-09 at
+forum-holzkarriere; that first day may be partial, as the last 0.24 cleanup cut
+it by timestamp). If a period starts earlier, the visits figure covers only
+the days with data and the UI says so ("Besuche erfasst ab 09.09.2026"); a
+period ending before that day has no figure. The old
 summed value is never shown as a fallback. If the table does not exist, the UI
 shows "Besuche noch nicht erfasst".
 
@@ -181,10 +199,12 @@ shows "Besuche noch nicht erfasst".
 1. Release crelish 0.25.0; check from the production host that Packagist serves
    it before deploying.
 2. forum-holzkarriere: deploy; `yii crelish-migrate/up`;
-   `yii crelish/analytics-aggregation/backfill 30 --only=visits`; verify visit
+   `yii crelish/analytics-aggregation/backfill 29 --only=visits` (29: the 30th
+   day was cut in two by the last 0.24 cleanup; the first recorded day may still
+   be partial); verify visit
    rows against raw for every day; a person checks one company report in the
    admin.
-3. Other portals on their next deploy: migration, `backfill 30 --only=visits`,
+3. Other portals on their next deploy: migration, `backfill 29 --only=visits`,
    and the 0.24 `/crelish-api` frontend check.
 
 ## 9. Known limitations (not in this release)

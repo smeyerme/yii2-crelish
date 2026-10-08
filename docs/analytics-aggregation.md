@@ -39,6 +39,14 @@ Raw Data (30 days) → Daily Aggregates (12 months) → Monthly Aggregates (fore
    - Pre-calculated stats for common queries
    - Refreshed daily
 
+5. **analytics_visits_daily** (visits)
+   - One row per day, source, owner and event type
+   - `source`: `pages` (from `analytics_page_views`) or `elements` (from `analytics_element_views`)
+   - `owner_uuid`: `''` is the whole site; otherwise the owner of the element views. A session counts for an owner when it saw an element whose `page_uuid` is the owner or an element the owner owns (for jobs: the company). Ownership comes from the project's `config/analytics-element-types.php` (listed tables with a `company` column); a session matching both ways counts once
+   - `event_type`: `''` is any event; otherwise `list`, `detail`, `click`, `download`, ...
+   - Holds distinct sessions (`unique_sessions`) and distinct logged-in users (`unique_users`) of that day
+   - Reports sum it over the days of a period, never across owners or event types (see [Visits](#visits))
+
 ## Setup
 
 ### 1. Run Migration
@@ -49,6 +57,14 @@ php yii migrate --migrationPath=@vendor/giantbits/yii2-crelish/migrations
 ```
 
 Look for: `m250102_120000_create_analytics_aggregation_tables`
+
+Since crelish 0.25.0 there is also `m261008_120000_create_analytics_visits_daily`. Run the crelish migrations with:
+
+```bash
+php yii crelish-migrate/up
+```
+
+`dep deploy` runs only `yii migrate` (the application's migrations), so crelish migrations have to be run by hand after a deploy that updates crelish. Until the table exists, `daily` skips the visits part with a warning and the reports show "Besuche noch nicht erfasst".
 
 ### 2. Configure Component (Optional)
 
@@ -67,7 +83,7 @@ Add to your application config for easier access:
 Add these to your crontab:
 
 ```bash
-# Daily aggregation at 1 AM (aggregate yesterday's data)
+# Daily aggregation at 1 AM (aggregate yesterday's data: pages, elements, visits)
 0 1 * * * /path/to/yii crelish/analytics-aggregation/daily
 
 # Monthly aggregation on 1st at 2 AM (aggregate last month)
@@ -76,7 +92,7 @@ Add these to your crontab:
 # Partner stats cache refresh at 3 AM (for fast dashboard queries)
 0 3 * * * /path/to/yii crelish/analytics-aggregation/partner-stats
 
-# Cleanup old raw data weekly on Sunday at 4 AM (keeps 30 days)
+# Cleanup old raw data weekly on Sunday at 4 AM (keeps 30 whole days, verifies each day first)
 0 4 * * 0 /path/to/yii crelish/analytics-aggregation/cleanup --retentionDays=30
 
 # Bot detection daily at 2 AM (existing)
@@ -85,11 +101,15 @@ Add these to your crontab:
 
 ### 4. Initial Backfill
 
-After setting up, backfill existing data:
+After setting up, backfill the raw data that is still there (never more days than the retention period, see [Backfill](#backfill)):
 
 ```bash
-# Backfill last 90 days
-php yii crelish/analytics-aggregation/backfill 90
+# Backfill the last 30 days
+php yii crelish/analytics-aggregation/backfill 30
+
+# Rollout of 0.25.0: fill only the new visit rows, for the 29 whole days the
+# 0.24 cleanup left (it cut the 30th day in two)
+php yii crelish/analytics-aggregation/backfill 29 --only=visits
 
 # Then create monthly aggregates
 php yii crelish/analytics-aggregation/monthly 2024-12
@@ -147,9 +167,28 @@ php yii crelish/analytics-aggregation/cleanup
 # Custom retention period
 php yii crelish/analytics-aggregation/cleanup --retentionDays=60
 
-# Dry run to see what would be deleted
+# Show per day whether it passes or would be repaired, without changing anything
 php yii crelish/analytics-aggregation/cleanup --dryRun
+
+# Delete without checking the aggregates (explicit override)
+php yii crelish/analytics-aggregation/cleanup --skipAggregationCheck=1
 ```
+
+The cleanup works on whole days only: raw rows of a day are deleted only when the whole day is older than `retentionDays` (cutoff at midnight).
+
+Before deleting, each day is checked against its raw data:
+
+- page views: `analytics_page_daily` total views vs. raw page views
+- element views: `analytics_element_daily` total views vs. raw element views
+- site visits: the site rows of `analytics_visits_daily` (`pages`, `elements`) vs. distinct raw sessions
+
+Bots are excluded on both sides. A day passes when every stored value is at least the raw value (bots detected late make the raw value smaller, which is accepted). A day with no reportable traffic passes.
+
+In a dry run nothing is repaired: a short day is reported as "would repair" and counted as kept.
+
+A day that is short is repaired: it is recomputed with `GREATEST(stored, recomputed)` for every count, so repair only raises numbers, and checked again. Days that pass, initially or after repair, are deleted. Days that are still short are kept with their raw data, listed on stderr, and the command exits with code 1. Each day is decided independently.
+
+Orphaned element views and sessions (no aggregate counts them) are deleted as before. If a day is kept, orphaned sessions are only deleted if they were created before the start of the oldest kept day, so the QR-scan sessions of a kept day survive.
 
 ### Backfill
 
@@ -157,9 +196,24 @@ php yii crelish/analytics-aggregation/cleanup --dryRun
 # Backfill last 30 days
 php yii crelish/analytics-aggregation/backfill 30
 
-# Backfill last 90 days
-php yii crelish/analytics-aggregation/backfill 90
+# Show the days and parts without writing anything
+php yii crelish/analytics-aggregation/backfill 30 --dryRun=1
+
+# Only some parts: pages, elements, visits (comma list, default: all)
+php yii crelish/analytics-aggregation/backfill 30 --only=visits
+php yii crelish/analytics-aggregation/backfill 30 --only=pages,visits
+
+# Alias for --only=pages (since 0.24.2)
+php yii crelish/analytics-aggregation/backfill 30 --pagesOnly=1
 ```
+
+`--only` works for `daily`, `monthly` and `backfill`. `monthly` ignores `visits` (monthly visits are the sum of the daily rows).
+
+Do not backfill beyond the retention period. For a day whose raw data the cleanup has deleted, a normal run of `pages` or `elements` overwrites the stored aggregates with what is left, i.e. with lower numbers or nothing. Visits are protected: for every day before the retention period the visits part only raises numbers and never deletes a row, and a day without raw data is left untouched, so the visits of older days are kept as they are.
+
+Do not recompute `elements` for days older than a few days either, and that includes runs without `--only`, whose default includes `elements` (and `pages`, which overwrite as well). The cleanup thins out orphaned element views, so recomputing them from raw data gives lower numbers than the correct ones stored. Use `--only=visits` for older days within the retention period.
+
+`daily` takes an existing day written as `Y-m-d`; anything else (`2026-02-30`, `yesterday`) is a usage error (exit code 64).
 
 ### Statistics
 
@@ -380,6 +434,18 @@ Available period strings:
 - `'year'` - Current year to date
 - `'all'` - All time (uses aggregated data)
 
+## Visits
+
+A visit is a visitor counted once per day, however many pages or elements they saw that day. The figure for a period is the sum of the daily visits. Distinct people across days are not measurable: most visitors carry no cookie and raw data is kept for 30 days only.
+
+`unique_sessions` and `unique_users` of the page, element and monthly aggregates are distinct per row (one page, or one element with event type and page, on one day). Summing them across pages, elements or event types counts a visitor who saw ten of a company's jobs ten times. Reports therefore read `analytics_visits_daily` instead: the site row (`pages`, owner `''`) for the admin overview, the owner's row (`elements`, event type `''`) for company reports, and the `detail` rows for one element. Rows are only summed over days, never across owners or event types.
+
+Visit rows exist from the first day they were computed (at rollout: the 29-day backfill). That first recorded day may be partial: the 0.24 cleanup deleted by timestamp, so its last run may have cut that day's early hours. If a period starts before the first recorded day, the figure covers only the days with data and the UI says so ("Besuche erfasst ab ..."); a period that ends before it has no figure ("–"). The old summed value is not shown as a fallback.
+
+Company ownership (which company owns an element) is resolved when a day is aggregated and frozen in its visit rows; a later change of an element's company does not move past visits. The view-based figures (page and element aggregates) resolve ownership when they are read.
+
+Known limitations: partner statistics (`PartnerAnalyticsService`) and short-link statistics still use the summed figures. Cookieless visitors get a new session per request, so for them a visit is closer to a page request than to a browsing session. For a day the cleanup kept, a QR-scan session created before that day's midnight can still be deleted.
+
 ## Controller/Action Usage
 
 ### Display Partner Dashboard
@@ -504,8 +570,8 @@ tail -f /path/to/app/runtime/logs/app.log
 # Verify aggregates exist
 mysql> SELECT COUNT(*), MIN(date), MAX(date) FROM analytics_element_daily;
 
-# Backfill if needed
-php yii crelish/analytics-aggregation/backfill 30
+# Backfill if needed (only days within the retention period, see Backfill)
+php yii crelish/analytics-aggregation/backfill 7
 ```
 
 ### Slow Queries

@@ -40,7 +40,7 @@
         <div class="col-md-3">
             <div class="card kpi-card">
                 <div class="card-body">
-                    <div class="kpi-label">{{ t('crelish', 'Unique Sessions') }}</div>
+                    <div class="kpi-label">{{ t('crelish', 'Visits (detail view)') }}</div>
                     <div class="kpi-value" id="kpi-unique-sessions">-</div>
                 </div>
             </div>
@@ -48,7 +48,7 @@
         <div class="col-md-3">
             <div class="card kpi-card">
                 <div class="card-body">
-                    <div class="kpi-label">{{ t('crelish', 'Unique Users') }}</div>
+                    <div class="kpi-label">{{ t('crelish', 'Logged-in users (detail view)') }}</div>
                     <div class="kpi-value" id="kpi-unique-users">-</div>
                 </div>
             </div>
@@ -158,8 +158,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Calculate totals by event type
                 const eventTypeTotals = {};
                 let totalViews = 0;
-                let totalSessions = 0;
-                let totalUsers = 0;
 
                 data.trend.forEach(item => {
                     const eventType = item.event_type;
@@ -176,14 +174,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     eventTypeTotals[eventType].users += parseInt(item.unique_users) || 0;
 
                     totalViews += parseInt(item.total_views) || 0;
-                    totalSessions += parseInt(item.unique_sessions) || 0;
-                    totalUsers += parseInt(item.unique_users) || 0;
                 });
 
                 // Update KPIs
                 document.getElementById('kpi-total-views').textContent = formatNumber(totalViews);
-                document.getElementById('kpi-unique-sessions').textContent = formatNumber(totalSessions);
-                document.getElementById('kpi-unique-users').textContent = formatNumber(totalUsers);
+                // Visits cannot be added up across event types (one visitor in the
+                // list and in the detail view would count twice), so show the detail view's
+                const detailTotals = eventTypeTotals['detail'] || {sessions: 0, users: 0};
+                document.getElementById('kpi-unique-sessions').textContent = formatNumber(detailTotals.sessions);
+                document.getElementById('kpi-unique-users').textContent = formatNumber(detailTotals.users);
                 document.getElementById('kpi-page-count').textContent = formatNumber(data.pages.length);
 
                 // Render charts
