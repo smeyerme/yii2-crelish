@@ -5,36 +5,79 @@ namespace giantbits\crelish\components\Analytics;
 /**
  * Current browser and OS versions, computed from the date so they never go stale.
  *
- * Chrome and Firefox ship a new major every 4 weeks; their current version is
- * counted from a known stable release. iOS/Safari and Android are compared by
- * release year, because their version numbers do not map linearly to age
- * (Apple jumped from 18 to 26 in 2025).
+ * Chrome and Firefox follow a piecewise release schedule: 4-week steps from an
+ * old anchor until they switched to a 2-week cadence, 2-week steps from the
+ * switch on. iOS/Safari and Android are compared by release year, because
+ * their version numbers do not map linearly to age (Apple jumped from 18 to
+ * 26 in 2025).
  *
  * Pure: every method is static and takes the day it is asked about.
  */
 final class BrowserVersions
 {
-    /** Chrome 131 reached stable on this day */
-    private const CHROME_BASE_VERSION = 131;
-    private const CHROME_BASE_DATE = '2024-11-12';
+    /**
+     * Per browser: [old anchor major, old anchor date, old step days,
+     * switch major, switch date, new step days]
+     */
+    private const SCHEDULES = [
+        // Chrome 131 stable 2024-11-12; Chrome 153 (2026-09-08) opened the 2-week cadence
+        'chrome' => [131, '2024-11-12', 28, 153, '2026-09-08', 14],
+        // Firefox 133 2024-11-26; Firefox 155 (2026-09-01) opened the 2-week cadence
+        'firefox' => [133, '2024-11-26', 28, 155, '2026-09-01', 14],
+    ];
 
-    /** Firefox 133 was released on this day */
-    private const FIREFOX_BASE_VERSION = 133;
-    private const FIREFOX_BASE_DATE = '2024-11-26';
+    /**
+     * Release day of a major version ('chrome' or 'firefox'). Before the switch
+     * this is the old anchor plus 28-day steps, from the switch on the switch
+     * anchor plus 14-day steps.
+     */
+    public static function releaseDate(string $browser, int $major): \DateTimeImmutable
+    {
+        [$oldMajor, $oldDate, $oldStep, $switchMajor, $switchDate, $newStep] = self::schedule($browser);
 
-    /** Days between two major releases */
-    private const RELEASE_CADENCE_DAYS = 28;
+        [$anchorMajor, $anchorDate, $step] = $major >= $switchMajor
+            ? [$switchMajor, $switchDate, $newStep]
+            : [$oldMajor, $oldDate, $oldStep];
+
+        $days = ($major - $anchorMajor) * $step;
+
+        return (new \DateTimeImmutable($anchorDate, new \DateTimeZone('UTC')))
+            ->modify(sprintf('%+d days', $days));
+    }
+
+    /**
+     * Newest major version released on or before $today ('chrome' or 'firefox').
+     */
+    public static function current(string $browser, \DateTimeImmutable $today): int
+    {
+        [$oldMajor, $oldDate, $oldStep, $switchMajor, $switchDate, $newStep] = self::schedule($browser);
+
+        $sinceSwitch = self::daysSince($switchDate, $today);
+        if ($sinceSwitch >= 0) {
+            return $switchMajor + intdiv($sinceSwitch, $newStep);
+        }
+
+        // Before the switch: 4-week steps, never past the last version before it
+        return min($switchMajor - 1, $oldMajor + intdiv(self::daysSince($oldDate, $today), $oldStep));
+    }
+
+    /**
+     * How many days a major version has been outdated on $today: days since its
+     * successor (major + 1) was released. Negative when there is no successor yet.
+     */
+    public static function outdatedDays(string $browser, int $major, \DateTimeImmutable $today): int
+    {
+        return self::daysSince(self::releaseDate($browser, $major + 1)->format('Y-m-d'), $today);
+    }
 
     public static function chrome(\DateTimeImmutable $today): int
     {
-        return self::CHROME_BASE_VERSION
-            + intdiv(self::daysSince(self::CHROME_BASE_DATE, $today), self::RELEASE_CADENCE_DAYS);
+        return self::current('chrome', $today);
     }
 
     public static function firefox(\DateTimeImmutable $today): int
     {
-        return self::FIREFOX_BASE_VERSION
-            + intdiv(self::daysSince(self::FIREFOX_BASE_DATE, $today), self::RELEASE_CADENCE_DAYS);
+        return self::current('firefox', $today);
     }
 
     /**
@@ -47,13 +90,15 @@ final class BrowserVersions
     }
 
     /**
-     * Year of the newest iOS / Safari release (Apple ships each September).
+     * Year of the newest iOS / Safari release. Apple ships in September; the
+     * year switches on October 1 so the first weeks after a release (while
+     * most devices still run last year's version) are not counted as behind.
      */
     public static function currentAppleYear(\DateTimeImmutable $today): int
     {
         $year = (int)$today->format('Y');
 
-        return (int)$today->format('n') >= 9 ? $year : $year - 1;
+        return (int)$today->format('n') >= 10 ? $year : $year - 1;
     }
 
     /**
@@ -92,6 +137,17 @@ final class BrowserVersions
     public static function isFrozenIos(string $userAgent): bool
     {
         return (bool)preg_match('/(?:iPhone OS|CPU OS) 18_6(?!\d)/', $userAgent);
+    }
+
+    /** @return array{int, string, int, int, string, int} */
+    private static function schedule(string $browser): array
+    {
+        $browser = strtolower($browser);
+        if (!isset(self::SCHEDULES[$browser])) {
+            throw new \InvalidArgumentException("No release schedule for '{$browser}'");
+        }
+
+        return self::SCHEDULES[$browser];
     }
 
     private static function daysSince(string $base, \DateTimeImmutable $today): int

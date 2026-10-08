@@ -26,7 +26,7 @@ const J1 = 'b1000000-0000-4000-8000-000000000001';
 const C1 = 'c1000000-0000-4000-8000-000000000001';
 
 const UA_CURRENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36';
-const UA_CHROME_142 = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36';
+const UA_CHROME_141 = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36';
 
 class SuspectedController extends BotDetectionController
 {
@@ -156,9 +156,9 @@ check('an unscored visitor is untouched', [0, [0, 0]], [sessionBot('clean'), pag
 
 echo "\nScoring keeps evaluating suspected sessions\n";
 analyticsMysqlApp();
-botSession('oldSingle', 2, $recent, UA_CHROME_142);
+botSession('oldSingle', 2, $recent, UA_CHROME_141);
 pageView($day, '10:00:00', P1, '/a', 'oldSingle', 2);
-botSession('oldSingleNew', 0, $recent, UA_CHROME_142);
+botSession('oldSingleNew', 0, $recent, UA_CHROME_141);
 pageView($day, '10:00:00', P1, '/a', 'oldSingleNew');
 botSession('currentSingle', 2, $recent);
 pageView($day, '10:00:00', P1, '/a', 'currentSingle', 2);

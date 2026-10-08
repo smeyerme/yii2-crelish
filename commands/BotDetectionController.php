@@ -1803,7 +1803,7 @@ class BotDetectionController extends Controller
     // iOS version check; for the frozen "OS 18_6" the browser version instead
     if ($frozenIos) {
       if (preg_match('/CriOS\/(\d+)\./', $userAgent, $matches)) {
-        return $this->scoreVersionsBehind(BrowserVersions::chrome($today) - intval($matches[1]));
+        return $this->scoreOutdatedRelease('chrome', intval($matches[1]), $today);
       }
       if (preg_match('/Version\/(\d+)\.\d+.*Safari/', $userAgent, $matches)) {
         return $this->scoreAppleAge(intval($matches[1]), $today);
@@ -1821,12 +1821,12 @@ class BotDetectionController extends Controller
 
     // Chrome version check (releases every 4 weeks, ~13/year)
     if (preg_match('/Chrome\/(\d+)\./', $userAgent, $matches)) {
-      return $this->scoreVersionsBehind(BrowserVersions::chrome($today) - intval($matches[1]));
+      return $this->scoreOutdatedRelease('chrome', intval($matches[1]), $today);
     }
 
     // Firefox version check (similar release cycle to Chrome)
     if (preg_match('/Firefox\/(\d+)\./', $userAgent, $matches)) {
-      return $this->scoreVersionsBehind(BrowserVersions::firefox($today) - intval($matches[1]));
+      return $this->scoreOutdatedRelease('firefox', intval($matches[1]), $today);
     }
 
     // Safari desktop version check (Version/X.Y...Safari)
@@ -1838,14 +1838,23 @@ class BotDetectionController extends Controller
   }
 
   /**
-   * Score a Chrome/Firefox-style browser by how many major versions it is behind
+   * Score a Chrome/Firefox major version by how long it has been outdated:
+   * days since its successor was released (BrowserVersions::outdatedDays).
+   * Measuring age in days keeps the tiers meaningful across the switch from a
+   * 4-week to a 2-week release cadence; the thresholds equal the former
+   * 52/26/13/6 versions behind at the 4-week cadence.
    */
-  protected function scoreVersionsBehind(int $behind): int
+  protected function scoreOutdatedRelease(string $browser, int $major, \DateTimeImmutable $today): int
   {
-    if ($behind >= 52) return 50;
-    if ($behind >= 26) return 40;
-    if ($behind >= 13) return 30;
-    if ($behind >= 6) return 20;
+    if ($major <= 0) {
+      return 0;
+    }
+
+    $days = BrowserVersions::outdatedDays($browser, $major, $today);
+    if ($days >= 1456) return 50;
+    if ($days >= 728) return 40;
+    if ($days >= 364) return 30;
+    if ($days >= 168) return 20;
     return 0;
   }
 
@@ -1899,12 +1908,12 @@ class BotDetectionController extends Controller
 
     // Chrome / Chrome Mobile / Chromium
     if (str_contains($name, 'chrome') || str_contains($name, 'chromium')) {
-      return $this->scoreVersionsBehind(BrowserVersions::chrome($today) - $majorVersion);
+      return $this->scoreOutdatedRelease('chrome', $majorVersion, $today);
     }
 
     // Firefox / Firefox Mobile
     if (str_contains($name, 'firefox')) {
-      return $this->scoreVersionsBehind(BrowserVersions::firefox($today) - $majorVersion);
+      return $this->scoreOutdatedRelease('firefox', $majorVersion, $today);
     }
 
     // Safari / Mobile Safari
@@ -1940,6 +1949,17 @@ class BotDetectionController extends Controller
     }
 
     return 0;
+  }
+
+  /**
+   * iOS in-app browser (WKWebView): iPhone/iPad, AppleWebKit and "Mobile/",
+   * but no "Safari" token
+   */
+  protected function isIosWebView(string $userAgent): bool
+  {
+    return (bool)preg_match('/\((?:iPhone|iPad)[;)]/', $userAgent)
+      && str_contains($userAgent, 'AppleWebKit')
+      && (bool)preg_match('/\bMobile\//', $userAgent);
   }
 
   /**
@@ -2030,10 +2050,14 @@ class BotDetectionController extends Controller
       return true;
     }
 
-    // KHTML without Chrome/Safari (Konqueror derivatives)
+    // KHTML without Chrome/Safari (Konqueror derivatives). Not for iOS in-app
+    // browsers (WKWebView: LinkedIn, Instagram, Facebook, XING...), which send
+    // no Safari token, nor for anything DeviceDetector identifies as a mobile app.
     if (str_contains($userAgent, 'KHTML') &&
       !str_contains($userAgent, 'Chrome') &&
-      !str_contains($userAgent, 'Safari')) {
+      !str_contains($userAgent, 'Safari') &&
+      !$this->isIosWebView($userAgent) &&
+      !($dd !== null && $dd->getClient('type') === 'mobile app')) {
       return true;
     }
 
