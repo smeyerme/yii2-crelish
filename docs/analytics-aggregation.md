@@ -650,7 +650,7 @@ For issues or questions:
 - Check logs: `/path/to/app/runtime/logs/app.log`
 - Run diagnostics: `php yii crelish/analytics-aggregation/stats`
 - Test queries: Use `--verbose` flag for detailed output
-## Browser confirmation (0.26.0, measurement only)
+## Browser confirmation (0.26, measurement only)
 
 Page views are recorded while a page is rendered, so a client that never shows
 the page is counted too. With the browser confirmation on, a rendered page
@@ -694,3 +694,42 @@ FROM analytics_sessions WHERE is_bot = 2 GROUP BY day;
 ```
 
 Sessions deleted as bots (score 70 and above) are gone and cannot be compared.
+
+### Signals (0.26.1)
+
+With its report the browser says what is odd about it, and the first real
+interaction with the page is reported once more. Both are recorded, on the page
+view and on the session; neither decides anything yet.
+
+`confirmed_flags` is a bitmask (`BrowserConfirmation::FLAG_*`); a session
+collects the flags of all its page views. 0 means a report without anything odd,
+NULL a confirmation from before 0.26.1.
+
+| Bit | Meaning |
+|----:|---------|
+| 1 | `navigator.webdriver`: Selenium, Puppeteer, Playwright unless they hide it |
+| 2 | Globals left by PhantomJS, Nightmare or Cypress |
+| 4 | A screen or viewport without a size |
+| 8 | No preferred languages |
+| 16 | A Chrome user agent without `window.chrome` |
+| 32 | The page was not visible when it reported (background tab, prerender) |
+
+`engaged_at` is the time of the first trusted pointer press, pointer movement,
+key press, touch or wheel turn. A scroll alone does not count (browsers scroll
+by themselves), nor does a pointer event without movement. An interaction also
+confirms a page view whose own report never arrived.
+
+```sql
+-- Which signal separates people from bots: per state, how many confirmed
+-- sessions carry an automation flag, were only ever hidden, or were touched
+SELECT is_bot, COUNT(*) confirmed,
+       SUM(confirmed_flags & 3 > 0) automated,
+       SUM(confirmed_flags & 28 > 0) odd_browser,
+       SUM(confirmed_flags & 32 > 0) hidden,
+       SUM(engaged_at IS NOT NULL) touched
+FROM analytics_sessions
+WHERE confirmed_at IS NOT NULL AND confirmed_flags IS NOT NULL
+GROUP BY is_bot;
+```
+
+Migration `m261009_130000_add_confirmation_signals_to_analytics` adds the columns.
