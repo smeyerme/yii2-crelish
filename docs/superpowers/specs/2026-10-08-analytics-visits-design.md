@@ -198,20 +198,33 @@ shows "Besuche noch nicht erfasst".
   page request than to a browsing session for them; bot detection keeps ~64% of
   sessions as "medium" confidence and counts them.
 
-## 10. Follow-up: client-side tracking (separate design)
+## 10. Follow-up: browser confirmation for server-side tracking (separate design)
 
 Page and element views are recorded server-side while rendering
 (`CrelishFrontendController::trackPageView`, `chelper.trackElementView`). That
-counts every request that renders a page, including bots that never run
-JavaScript, and misses every human view served from the LiteSpeed page cache
-(no PHP runs). Plausible, Umami and Google Analytics count only browsers that
-execute their script, which removes most bots before any detection runs, and
-recognise a visitor for one day by a daily-salted hash of IP, user agent and
-site instead of a cookie.
+is deliberate: tracking blockers and browsers that block trackers by default
+cannot suppress it, and it needs no cookies. Its weaknesses: every request that
+renders a page is counted, including bots that never run JavaScript, and human
+views served from the LiteSpeed page cache (no PHP runs) are missed.
 
-A later release should: record page views from a small script via
-`sendBeacon` (as click tracking already does); count list impressions when an
-element is actually visible (`IntersectionObserver`); use a daily-salted hash
-as session id; and run alongside the server-side tracking for a few weeks to
-compare before switching. The visits table and the verifying cleanup of this
-release stay as they are; only their input improves.
+Switching to browser-only tracking (as Plausible, Umami and Google Analytics
+do) would lose blocker users again: EasyPrivacy and similar lists block known
+tracker domains and also known script names and paths on first-party domains
+(`/collect`, `/analytics/`, `/track`, ...). So the follow-up keeps server-side
+recording and adds the browser only as a confirmation:
+
+- The server keeps recording every view, as now; blocker and no-JS visitors stay counted.
+- A small first-party script under a neutral name and path confirms the view it
+  belongs to (one-time id, `sendBeacon`, no cookie). A confirmed view is a
+  strong human signal for bot detection and should shrink the "medium" band;
+  bots that do not run JavaScript never confirm.
+- An unconfirmed view is not treated as a bot by itself (it may be a blocker
+  user); the existing heuristics decide, as today.
+- A confirmation for a page served from cache, which the server never
+  recorded, creates the view, closing the cache gap.
+- Visitor identity becomes a daily-salted hash of IP, user agent and site
+  instead of a new session per cookieless request (same privacy model: first
+  party, no cookies).
+
+The visits table and the verifying cleanup of this release stay as they are;
+only their input improves.
