@@ -48,11 +48,8 @@ final class VisitsAggregator
      */
     public function aggregate(string $date, bool $repair = false): int
     {
-        $params = [
-            ':date' => $date,
-            ':start' => $date . ' 00:00:00',
-            ':end' => date('Y-m-d', strtotime($date . ' +1 day')) . ' 00:00:00',
-        ];
+        [$start, $end] = AnalyticsRetention::dayRange($date);
+        $params = [':date' => $date, ':start' => $start, ':end' => $end];
         $merge = $repair
             ? ' ON DUPLICATE KEY UPDATE unique_sessions = GREATEST(unique_sessions, VALUES(unique_sessions)),'
                 . ' unique_users = GREATEST(unique_users, VALUES(unique_users)), updated_at = NOW()'

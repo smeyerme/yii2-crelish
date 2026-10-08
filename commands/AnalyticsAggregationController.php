@@ -4,6 +4,7 @@ namespace giantbits\crelish\commands;
 
 use Yii;
 use giantbits\crelish\components\Analytics\AggregationParts;
+use giantbits\crelish\components\Analytics\AnalyticsRetention;
 use giantbits\crelish\components\Analytics\VisitsAggregator;
 use yii\console\Controller;
 use yii\console\ExitCode;
@@ -171,8 +172,7 @@ class AnalyticsAggregationController extends Controller
     public function aggregateDate(string $date, array $parts, bool $repair = false): bool
     {
         $db = Yii::$app->db;
-        $start = $date . ' 00:00:00';
-        $end = date('Y-m-d', strtotime($date . ' +1 day')) . ' 00:00:00';
+        [$start, $end] = AnalyticsRetention::dayRange($date);
         $ok = true;
 
         if (in_array(AggregationParts::ELEMENTS, $parts, true)) {
