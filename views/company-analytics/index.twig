@@ -121,10 +121,11 @@
             <div class="col-md-2">
                 <div class="card kpi-card">
                     <div class="card-body">
-                        <div class="kpi-label">{{ t('crelish', 'Unique Sessions') }}</div>
+                        <div class="kpi-label">{{ t('crelish', 'Visits') }}</div>
                         <div class="kpi-value" id="kpi-sessions">
                             <div class="spinner-border spinner-border-sm" role="status"></div>
                         </div>
+                        <div class="kpi-note text-muted small" id="kpi-sessions-note"></div>
                     </div>
                 </div>
             </div>
@@ -486,7 +487,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 // Content Stats
                 document.getElementById('kpi-total-views').textContent = formatNumber(data.total_views || 0);
-                document.getElementById('kpi-sessions').textContent = formatNumber(data.unique_sessions || 0);
+                const sessionsNote = document.getElementById('kpi-sessions-note');
+                if (!data.visits.available) {
+                    document.getElementById('kpi-sessions').textContent = '–';
+                    sessionsNote.textContent = '{{ t("crelish", "Visits not recorded yet") }}';
+                } else {
+                    document.getElementById('kpi-sessions').textContent = data.unique_sessions == null ? '–' : formatNumber(data.unique_sessions);
+                    sessionsNote.textContent = data.visits.since
+                        ? '{{ t("crelish", "Visits counted from {date}") }}'.replace('{date}', new Date(data.visits.since).toLocaleDateString('de-CH'))
+                        : '';
+                }
                 document.getElementById('kpi-list-views').textContent = formatNumber(data.list_views || 0);
                 document.getElementById('kpi-detail-views').textContent = formatNumber(data.detail_views || 0);
                 document.getElementById('kpi-clicks').textContent = formatNumber(data.clicks || 0);
@@ -588,7 +598,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     fill: true,
                     tension: 0.1
                 }, {
-                    label: '{{ t("crelish", "Unique Sessions") }}',
+                    label: '{{ t("crelish", "Visits") }}',
                     data: data.map(d => d.unique_sessions),
                     borderColor: 'rgb(255, 99, 132)',
                     backgroundColor: 'rgba(255, 99, 132, 0.1)',
