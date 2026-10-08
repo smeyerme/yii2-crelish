@@ -29,6 +29,19 @@ class NoRepairController extends AnalyticsAggregationController
     }
 }
 
+/** Throws while repairing one day, to exercise a verification exception */
+class ThrowingRepairController extends NoRepairController
+{
+    public function aggregateDate(string $date, array $parts, bool $repair = false): bool
+    {
+        if ($repair && $date === $this->broken) {
+            throw new \RuntimeException('simulated failure');
+        }
+
+        return parent::aggregateDate($date, $parts, $repair);
+    }
+}
+
 function cleanup(array $options = [], string $class = AnalyticsAggregationController::class, string $broken = ''): int
 {
     $controller = new $class('analytics-aggregation', Yii::$app);
@@ -117,6 +130,22 @@ fixtures();
 check('cleanup exits non-zero', 1, cleanup([], NoRepairController::class, $broken));
 check('the broken day keeps its raw data', 2, rawPages($broken));
 check('other days are still deleted', 0, rawPages($correct));
+
+echo "\nA verification exception keeps the day\n";
+analyticsMysqlApp();
+fixtures();
+check('cleanup exits non-zero when verifying a day throws', 1, cleanup([], ThrowingRepairController::class, $broken));
+check('the day whose verification threw keeps its raw data', 2, rawPages($broken));
+check('its element views are kept too', 1, (int)scalar('SELECT COUNT(*) FROM analytics_element_views WHERE created_at >= :s AND created_at < :e', [':s' => "$broken 00:00:00", ':e' => date('Y-m-d', strtotime("$broken +1 day")) . ' 00:00:00']));
+check('other days are still verified and deleted', [0, 3], [rawPages($correct), storedPages($short)]);
+
+echo "\nCounts that cannot be read keep every day\n";
+analyticsMysqlApp();
+fixtures();
+Yii::$app->db->createCommand('RENAME TABLE analytics_element_daily TO analytics_element_daily_gone')->execute();
+check('cleanup exits non-zero when the counts cannot be read', 1, cleanup());
+check('no raw data is deleted', [2, 3, 2], [rawPages($correct), rawPages($short), rawPages($broken)]);
+Yii::$app->db->createCommand('RENAME TABLE analytics_element_daily_gone TO analytics_element_daily')->execute();
 
 echo "\nDry run\n";
 analyticsMysqlApp();
