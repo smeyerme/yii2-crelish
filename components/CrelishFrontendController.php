@@ -164,6 +164,17 @@
 			
 			$this->requestUrl = \Yii::$app->request->getPathInfo();
 
+			// One address per page: the one ending in a slash leads to the one without
+			// (only where the project has switched this on, see SubPaths)
+			$request = \Yii::$app->request;
+			if (SubPaths::configured(\Yii::$app->params['crelish']['subPaths'] ?? null) !== null && ($request->isGet || $request->isHead)) {
+				$target = SubPaths::withoutClosingSlash($this->requestUrl, (string)$request->queryString);
+				if ($target !== null) {
+					\Yii::$app->response->redirect($target, 301);
+					\Yii::$app->end();
+				}
+			}
+
 			// Track if we need to show 404 due to unsupported language
 			$unsupportedLanguage = false;
 			$requestedLanguage = null;
@@ -219,6 +230,13 @@
 				} else {
 					$entryModel = null;
 				}
+			}
+
+			// A page that has no pages below it does not exist under a longer address either
+			// (only where the project has named the pages that do, see SubPaths)
+			$subPaths = SubPaths::configured(Yii::$app->params['crelish']['subPaths'] ?? null);
+			if ($entryModel !== null && !SubPaths::allowed($subPaths, (string)$slug, SubPaths::segments($params[0] ?? null))) {
+				$entryModel = null;
 			}
 
 			// 404 Not found fallback (also handles unsupported language)
