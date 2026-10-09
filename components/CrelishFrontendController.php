@@ -246,6 +246,12 @@
 				Yii::$app->response->statusCode = 404;
 			}
 			
+			// No page, and no not-found page to show in its place (none configured, or the
+			// configured one does not exist): still "not found", not a server error
+			if ($entryModel == null) {
+				throw new \yii\web\NotFoundHttpException('Page not found.');
+			}
+
 			$this->entryPoint = ['ctype' => $ctype, 'slug' => $slug, 'path' => $path, 'uuid' => $entryModel['uuid'], 'template' => $entryModel['template']];
 		}
 		
