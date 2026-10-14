@@ -219,9 +219,12 @@ class CrelishSentryComponent extends Component
       return null;
     }
 
+    // The SDK returns an EventId object; this method promises its string form.
+    // Catch \Throwable: a failing capture must never break the caller.
     try {
-      return Sentry\captureException($exception);
-    } catch (\Exception $e) {
+      $eventId = Sentry\captureException($exception);
+      return $eventId !== null ? (string)$eventId : null;
+    } catch (\Throwable $e) {
       Yii::error('Failed to capture exception in Sentry: ' . $e->getMessage(), 'crelish.sentry');
       return null;
     }
@@ -241,9 +244,11 @@ class CrelishSentryComponent extends Component
       return null;
     }
 
+    // The SDK wants a Severity object, not the level name.
     try {
-      return Sentry\captureMessage($message, $this->mapLogLevel($level));
-    } catch (\Exception $e) {
+      $eventId = Sentry\captureMessage($message, new Sentry\Severity($this->mapLogLevel($level)));
+      return $eventId !== null ? (string)$eventId : null;
+    } catch (\Throwable $e) {
       Yii::error('Failed to capture message in Sentry: ' . $e->getMessage(), 'crelish.sentry');
       return null;
     }
