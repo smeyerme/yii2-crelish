@@ -58,7 +58,7 @@ final class VisitsAggregator
                 . ' unique_users = GREATEST(unique_users, VALUES(unique_users)), updated_at = NOW()'
             : '';
         $insert = 'INSERT INTO ' . self::TABLE . ' (date, source, owner_uuid, event_type, unique_sessions, unique_users) ';
-        $users = 'COUNT(DISTINCT CASE WHEN %1$s IS NOT NULL AND %1$s > 0 THEN %1$s END)';
+        $users = 'COUNT(DISTINCT CASE WHEN %1$s IS NOT NULL AND %1$s <> \'\' THEN %1$s END)';
         $elementUsers = sprintf($users, 'ev.user_id');
         $elements = "FROM {{%analytics_element_views}} ev
             INNER JOIN {{%analytics_sessions}} s ON ev.session_id = s.session_id
@@ -180,7 +180,7 @@ final class VisitsAggregator
                     [':type' => $type])->execute();
             }
 
-            $users = 'COUNT(DISTINCT CASE WHEN user_id IS NOT NULL AND user_id > 0 THEN user_id END)';
+            $users = 'COUNT(DISTINCT CASE WHEN user_id IS NOT NULL AND user_id <> \'\' THEN user_id END)';
             $date = [':date' => $params[':date']];
             $written = $this->db->createCommand($insert
                 . "SELECT :date, 'elements', owner, '', COUNT(DISTINCT session_id), {$users}
