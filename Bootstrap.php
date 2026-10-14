@@ -3,6 +3,7 @@
 namespace giantbits\crelish;
 
 use giantbits\crelish\components\Analytics\PageStateUrlRule;
+use giantbits\crelish\components\SentryActivation;
 use giantbits\crelish\components\shortlinks\ShortLinkUrlRule;
 use giantbits\crelish\config\ComponentsConfig;
 use giantbits\crelish\config\UrlRulesConfig;
@@ -202,7 +203,15 @@ class Bootstrap implements BootstrapInterface
       );
     }
 
+    // The error handler and the logger are already running at this point: redefining
+    // them would change nothing, so Sentry is switched on in the live application.
+    $sentryErrorHandler = $components['errorHandler'] ?? null;
+    $sentryLogTarget = $components['log']['targets']['sentry'] ?? null;
+    unset($components['errorHandler'], $components['log']);
+
     $app->setComponents($components);
+
+    SentryActivation::apply($app, $sentryErrorHandler, $sentryLogTarget);
   }
 
   /**
