@@ -92,4 +92,4 @@ foreach (TABLES as $table) {
 $migrate();
 check('is left alone', null, $db->getTableSchema('analytics_sessions', true));
 
-shortLinkDone();
+analyticsDone();

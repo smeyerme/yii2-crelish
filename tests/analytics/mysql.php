@@ -144,14 +144,14 @@ function analyticsMysqlSchema(Connection $db, bool $withVisitsTable): void
     }
 }
 
-function session(string $id, int $isBot = 0, ?int $userId = null, string $createdAt = '2025-01-01 00:00:00'): void
+function session(string $id, int $isBot = 0, int|string|null $userId = null, string $createdAt = '2025-01-01 00:00:00'): void
 {
     Yii::$app->db->createCommand()->insert('analytics_sessions', [
         'session_id' => $id, 'is_bot' => $isBot, 'user_id' => $userId, 'created_at' => $createdAt,
     ])->execute();
 }
 
-function pageView(string $date, string $time, string $pageUuid, string $url, ?string $sessionId, int $isBot = 0, ?int $userId = null): void
+function pageView(string $date, string $time, string $pageUuid, string $url, ?string $sessionId, int $isBot = 0, int|string|null $userId = null): void
 {
     Yii::$app->db->createCommand()->insert('analytics_page_views', [
         'page_uuid' => $pageUuid, 'page_type' => 'page', 'url' => $url, 'session_id' => $sessionId,
@@ -159,7 +159,7 @@ function pageView(string $date, string $time, string $pageUuid, string $url, ?st
     ])->execute();
 }
 
-function elementView(string $date, string $time, string $elementUuid, ?string $type, string $pageUuid, string $sessionId, ?int $userId = null, string $elementType = 'job'): void
+function elementView(string $date, string $time, string $elementUuid, ?string $type, string $pageUuid, string $sessionId, int|string|null $userId = null, string $elementType = 'job'): void
 {
     Yii::$app->db->createCommand()->insert('analytics_element_views', [
         'element_uuid' => $elementUuid, 'element_type' => $elementType, 'page_uuid' => $pageUuid,

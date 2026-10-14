@@ -311,7 +311,7 @@ class AnalyticsAggregationController extends Controller
                 COALESCE(ev.type, '') as event_type,
                 COUNT(*) as total_views,
                 COUNT(DISTINCT ev.session_id) as unique_sessions,
-                COUNT(DISTINCT CASE WHEN ev.user_id IS NOT NULL AND ev.user_id > 0 THEN ev.user_id END) as unique_users
+                COUNT(DISTINCT CASE WHEN ev.user_id IS NOT NULL AND ev.user_id <> '' THEN ev.user_id END) as unique_users
             FROM {{%analytics_element_views}} ev
             INNER JOIN {{%analytics_sessions}} s ON ev.session_id = s.session_id
             WHERE ev.created_at >= :start AND ev.created_at < :end
@@ -340,7 +340,7 @@ class AnalyticsAggregationController extends Controller
                 MIN(url),
                 COUNT(*) as total_views,
                 COUNT(DISTINCT session_id) as unique_sessions,
-                COUNT(DISTINCT CASE WHEN user_id IS NOT NULL AND user_id > 0 THEN user_id END) as unique_users
+                COUNT(DISTINCT CASE WHEN user_id IS NOT NULL AND user_id <> '' THEN user_id END) as unique_users
             FROM {{%analytics_page_views}}
             WHERE created_at >= :start AND created_at < :end AND is_bot = 0
             GROUP BY DATE(created_at), page_uuid
@@ -427,7 +427,7 @@ class AnalyticsAggregationController extends Controller
                         ev.type as event_type,
                         COUNT(*) as total_views,
                         COUNT(DISTINCT ev.session_id) as unique_sessions,
-                        COUNT(DISTINCT CASE WHEN ev.user_id IS NOT NULL AND ev.user_id > 0 THEN ev.user_id END) as unique_users
+                        COUNT(DISTINCT CASE WHEN ev.user_id IS NOT NULL AND ev.user_id <> '' THEN ev.user_id END) as unique_users
                     FROM {{%analytics_element_views}} ev
                     INNER JOIN {{%analytics_sessions}} s ON ev.session_id = s.session_id
                     WHERE YEAR(ev.created_at) = :year
@@ -471,7 +471,7 @@ class AnalyticsAggregationController extends Controller
                         MIN(url),
                         COUNT(*) as total_views,
                         COUNT(DISTINCT session_id) as unique_sessions,
-                        COUNT(DISTINCT CASE WHEN user_id IS NOT NULL AND user_id > 0 THEN user_id END) as unique_users
+                        COUNT(DISTINCT CASE WHEN user_id IS NOT NULL AND user_id <> '' THEN user_id END) as unique_users
                     FROM {{%analytics_page_views}}
                     WHERE YEAR(created_at) = :year
                         AND MONTH(created_at) = :month
@@ -624,7 +624,7 @@ class AnalyticsAggregationController extends Controller
                     SELECT
                         COUNT(*) as total_views,
                         COUNT(DISTINCT ev.session_id) as unique_sessions,
-                        COUNT(DISTINCT CASE WHEN ev.user_id IS NOT NULL AND ev.user_id > 0 THEN ev.user_id END) as unique_users
+                        COUNT(DISTINCT CASE WHEN ev.user_id IS NOT NULL AND ev.user_id <> '' THEN ev.user_id END) as unique_users
                     FROM {{%analytics_element_views}} ev
                     INNER JOIN {{%analytics_sessions}} s ON ev.session_id = s.session_id
                     WHERE ev.element_uuid = :uuid
