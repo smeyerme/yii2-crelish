@@ -52,7 +52,7 @@ class CrelishBaseUrlRule implements UrlRuleInterface
       }
       
       // Set the language for the application if language code is available
-      if (!empty($langCode)) {
+      if (!empty($langCode) && self::isOffered($langCode)) {
         \Yii::$app->language = $langCode;
       }
       
@@ -84,11 +84,22 @@ class CrelishBaseUrlRule implements UrlRuleInterface
       $additional
     ]);
     
-    if (!empty($langCode)){
+    if (!empty($langCode) && self::isOffered($langCode)){
       \Yii::$app->language = $langCode;
     }
 
     return ['crelish/frontend/run', $params];
+  }
+
+  /**
+   * Whether the project offers this language. Any other two-letter segment (scanners
+   * ask for /wp) stays in the request for the frontend to answer with 404, but must not
+   * become the app language: the 404 page would be translated into it.
+   */
+  private static function isOffered(string $langCode): bool
+  {
+    $languages = \Yii::$app->params['crelish']['languages'] ?? \Yii::$app->params['languages'] ?? [];
+    return empty($languages) || in_array($langCode, $languages, true);
   }
 
   public function createUrl($manager, $route, $params): bool|string

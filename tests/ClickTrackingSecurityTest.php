@@ -307,6 +307,17 @@ $jsToken = CrelishBaseHelper::generateClickToken(UUID, 'javascript:alert(1)');
 check('javascript: scheme is rejected even when signed (status)', 400, $status);
 check('javascript: scheme is rejected even when signed (no location)', null, $location);
 
+// Editors enter addresses without a scheme ("www.example.com/de"); those go to https.
+makeApp();
+$bareUrl = 'www.fermaell.com/de-de';
+[$status, $location] = callAction([
+    'uuid' => UUID,
+    'token' => CrelishBaseHelper::generateClickToken(UUID, $bareUrl),
+    'redirect' => $bareUrl,
+]);
+check('address without scheme redirects (status)', 302, $status);
+check('address without scheme redirects to https', 'https://www.fermaell.com/de-de', $location);
+
 // Embedded credentials are rejected even when signed.
 makeApp();
 $credUrl = 'https://www.forum-holzbranche.com@phishing.example.net/';
