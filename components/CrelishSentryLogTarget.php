@@ -301,11 +301,14 @@ class CrelishSentryLogTarget extends Target
   /**
    * Map Yii log level to Sentry level
    *
-   * @param string $level
+   * @param int|string $level Logger::LEVEL_* as Yii passes it, or its name
    * @return string
    */
-  protected function mapLogLevel(string $level): string
+  protected function mapLogLevel(int|string $level): string
   {
+    if (is_int($level)) {
+      $level = \yii\log\Logger::getLevelName($level);
+    }
     return $this->levelMap[$level] ?? 'info';
   }
 
