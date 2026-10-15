@@ -17,8 +17,25 @@ require __DIR__ . '/shortlink/bootstrap.php';
 use giantbits\crelish\components\CrelishSentryErrorHandler;
 use yii\web\NotFoundHttpException;
 
+/**
+ * Keeps what would be sent instead of sending it (the test has already written output)
+ */
+class SentryErrorViewTestResponse extends \yii\web\Response
+{
+    public int $sentStatus = 0;
+    public ?string $sentContent = null;
+
+    public function send()
+    {
+        $this->sentStatus = $this->getStatusCode();
+        $this->sentContent = (string)$this->data;
+        $this->isSent = true;
+    }
+}
+
 shortLinkApp([], [], [
     'components' => [
+        'response' => ['class' => SentryErrorViewTestResponse::class],
         'view' => [
             'renderers' => [
                 'twig' => ['class' => 'yii\twig\ViewRenderer', 'cachePath' => false],
@@ -49,5 +66,14 @@ $html = $render->invoke($handler, [
 ]);
 check('renders the error view, not the bare fallback', true, str_contains($html, 'Page Not Found'));
 check('shows the error id', true, str_contains($html, 'ERR-TEST1234'));
+
+echo "\nThe user-friendly page goes out with the status of the exception\n";
+$friendly = new ReflectionMethod($handler, 'renderUserFriendlyException');
+ob_start();
+$friendly->invoke($handler, new NotFoundHttpException());
+$echoed = ob_get_clean();
+check('sent as 404, not the 500 Yii set when handling began', 404, Yii::$app->response->sentStatus);
+check('sent as the response content', true, str_contains((string)Yii::$app->response->sentContent, 'Page Not Found'));
+check('not echoed around the response', '', $echoed);
 
 shortLinkDone();
