@@ -59,6 +59,13 @@ class CrelishSentryComponent extends Component
   public $ignoreHttpCodes = [404];
 
   /**
+   * @var bool Whether HTTP client errors (4xx) stay out of Sentry. A missing page, a
+   * GET on a POST-only endpoint or a forbidden page is the visitor's request, answered
+   * correctly, not a problem with the site. Server errors (5xx) always count.
+   */
+  public $ignoreClientErrors = true;
+
+  /**
    * @var bool Whether Sentry has been initialized
    */
   private $initialized = false;
@@ -357,7 +364,8 @@ class CrelishSentryComponent extends Component
   {
     // Ignore HTTP exceptions with certain status codes
     if ($exception instanceof HttpException) {
-      return in_array($exception->statusCode, $this->ignoreHttpCodes);
+      return ($this->ignoreClientErrors && $exception->statusCode >= 400 && $exception->statusCode < 500)
+        || in_array($exception->statusCode, $this->ignoreHttpCodes);
     }
 
     return false;
