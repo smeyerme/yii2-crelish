@@ -59,7 +59,8 @@ class CrelishSentryErrorHandler extends ErrorHandler
   ];
 
   /**
-   * @var array Error levels to capture (when captureErrors is true)
+   * @var array Error levels to capture (when captureErrors is true). Deprecation notices
+   * (E_DEPRECATED, E_USER_DEPRECATED) are upgrade hints for developers and stay out.
    */
   public $captureErrorLevels = [
     E_ERROR,
@@ -74,8 +75,6 @@ class CrelishSentryErrorHandler extends ErrorHandler
     E_USER_WARNING,
     E_USER_NOTICE,
     E_RECOVERABLE_ERROR,
-    E_DEPRECATED,
-    E_USER_DEPRECATED,
   ];
 
   /**
