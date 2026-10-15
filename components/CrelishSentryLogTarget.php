@@ -109,9 +109,10 @@ class CrelishSentryLogTarget extends Target
         $this->addMessageContext($sentry, $message);
       }
 
-      // Handle exceptions specially
-      if ($this->captureExceptions && isset($message[4]['exception'])) {
-        $exception = $message[4]['exception'];
+      // Handle exceptions specially. Yii::error($exception) logs the exception itself;
+      // sent as an exception, the component recognises one the error handler already sent.
+      if ($this->captureExceptions) {
+        $exception = $text instanceof \Throwable ? $text : ($message[4]['exception'] ?? null);
         if ($exception instanceof \Throwable) {
           $sentry->captureException($exception);
           return;
