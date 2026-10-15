@@ -36,7 +36,7 @@ class CrelishSentryErrorHandler extends ErrorHandler
   /**
    * @var string Path to custom error view file
    */
-  public $errorView = '@giantbits/crelish/views/error/error';
+  public $errorView = '@giantbits/crelish/views/error/error.twig';
 
   /**
    * @var string Default error message for production

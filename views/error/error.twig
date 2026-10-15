@@ -1,98 +1,107 @@
-{% extends "@giantbits/crelish/views/layouts/simple.twig" %}
+{#
+  Rendered by CrelishSentryErrorHandler, outside of any layout: the page stands on its own
+  so it renders even when the error came from the layout or its assets.
+  Yii's own error rendering (debug on) passes only the exception.
+#}
+{% set statusCode = statusCode ?? exception.statusCode ?? 500 %}
+{% set userMessage = userMessage ?? exception.message ?? '' %}
+{% set errorId = errorId ?? null %}
+{% if statusCode == 404 %}
+    {% set title = 'Page Not Found' %}
+{% elseif statusCode == 403 %}
+    {% set title = 'Access Forbidden' %}
+{% elseif statusCode == 500 %}
+    {% set title = 'Server Error' %}
+{% else %}
+    {% set title = 'Error ' ~ statusCode %}
+{% endif %}
+<!DOCTYPE html>
+<html lang="{{ app.language }}">
+<head>
+    <meta charset="{{ app.charset }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex">
+    <title>{{ statusCode }} {{ title }}</title>
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            padding: 1rem;
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            background: #f4f5f7;
+            color: #1f2933;
+        }
+        .error {
+            max-width: 32rem;
+            width: 100%;
+            padding: 2.5rem 2rem;
+            text-align: center;
+            background: #fff;
+            border-radius: 1rem;
+            box-shadow: 0 0.5rem 2rem rgba(0, 0, 0, 0.08);
+        }
+        h1 {
+            margin: 0 0 0.5rem;
+            font-size: 3.5rem;
+            color: #c53030;
+        }
+        h2 {
+            margin: 0 0 1.5rem;
+            font-size: 1.25rem;
+            font-weight: 500;
+            color: #52606d;
+        }
+        .error-id {
+            margin: 0 0 1.5rem;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            background: rgba(13, 110, 253, 0.1);
+            color: #0d6efd;
+            font-size: 0.9rem;
+        }
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            justify-content: center;
+        }
+        .actions a {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            border: 1px solid #0d6efd;
+            color: #0d6efd;
+            font-weight: 500;
+            text-decoration: none;
+        }
+        .actions a:first-child {
+            background: #0d6efd;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+<main class="error">
+    <h1>{{ statusCode }}</h1>
+    <h2>{{ title }}</h2>
 
-{% block content %}
-<div class="container-fluid">
-    <div class="row justify-content-center">
-        <div class="col-lg-6 col-md-8">
-            <div class="card border-0 shadow-lg">
-                <div class="card-body p-5 text-center">
-                    <div class="error-icon mb-4">
-                        <i class="fas fa-exclamation-triangle fa-5x text-danger"></i>
-                    </div>
-                    
-                    <h1 class="display-4 fw-bold text-danger mb-3">{{ statusCode }}</h1>
-                    
-                    <h2 class="h4 mb-4 text-muted">
-                        {% if statusCode == 404 %}
-                            Page Not Found
-                        {% elseif statusCode == 403 %}
-                            Access Forbidden
-                        {% elseif statusCode == 500 %}
-                            Server Error
-                        {% else %}
-                            Error {{ statusCode }}
-                        {% endif %}
-                    </h2>
-                    
-                    <p class="lead mb-4">{{ userMessage }}</p>
-                    
-                    {% if errorId %}
-                    <div class="alert alert-info border-0 mb-4" role="alert">
-                        <div class="d-flex align-items-center">
-                            <i class="fas fa-info-circle me-2"></i>
-                            <div>
-                                <strong>Error ID:</strong> {{ errorId }}<br>
-                                <small class="text-muted">Please include this ID when contacting support</small>
-                            </div>
-                        </div>
-                    </div>
-                    {% endif %}
-                    
-                    <div class="d-grid gap-2 d-md-flex justify-content-md-center">
-                        <button onclick="history.back()" class="btn btn-primary me-md-2">
-                            <i class="fas fa-arrow-left me-1"></i>
-                            Go Back
-                        </button>
-                        <a href="{{ url(['site/index']) }}" class="btn btn-outline-secondary">
-                            <i class="fas fa-home me-1"></i>
-                            Home Page
-                        </a>
-                    </div>
-                    
-                    <div class="mt-4 pt-4 border-top">
-                        <p class="text-muted small mb-0">
-                            If the problem persists, please contact our support team.
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>
+    {% if userMessage %}
+    <p>{{ userMessage }}</p>
+    {% endif %}
+
+    {% if errorId %}
+    <p class="error-id">
+        <strong>Error ID:</strong> {{ errorId }}<br>
+        <small>Please include this ID when contacting support</small>
+    </p>
+    {% endif %}
+
+    <div class="actions">
+        <a href="javascript:history.back()">Go Back</a>
+        <a href="{{ app.homeUrl }}">Home Page</a>
     </div>
-</div>
-
-<style>
-.error-icon {
-    opacity: 0.8;
-}
-
-.card {
-    border-radius: 1rem;
-}
-
-.btn {
-    border-radius: 0.5rem;
-    padding: 0.75rem 1.5rem;
-    font-weight: 500;
-}
-
-.alert {
-    border-radius: 0.75rem;
-    background: rgba(13, 110, 253, 0.1);
-    color: #0d6efd;
-}
-
-@media (max-width: 576px) {
-    .card-body {
-        padding: 2rem !important;
-    }
-    
-    .display-4 {
-        font-size: 3rem;
-    }
-    
-    .error-icon i {
-        font-size: 3rem !important;
-    }
-}
-</style>
-{% endblock %}
+</main>
+</body>
+</html>
