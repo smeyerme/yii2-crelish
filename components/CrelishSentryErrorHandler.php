@@ -8,6 +8,7 @@ use yii\console\ErrorHandler as ConsoleErrorHandler;
 use yii\base\Exception;
 use yii\base\ErrorException;
 use yii\web\HttpException;
+use yii\web\Response;
 
 /**
  * Crelish Sentry Error Handler
@@ -357,11 +358,6 @@ class CrelishSentryErrorHandler extends ErrorHandler
       // Determine HTTP status code
       $statusCode = $exception instanceof HttpException ? $exception->statusCode : 500;
 
-      // Set response status
-      if (isset(Yii::$app->response)) {
-        Yii::$app->response->setStatusCode($statusCode);
-      }
-
       // Generate error ID for user reference
       $errorId = $this->generateErrorId();
 
@@ -377,7 +373,7 @@ class CrelishSentryErrorHandler extends ErrorHandler
         'showDetails' => false, // Never show details in production
       ]);
 
-      echo $content;
+      $this->sendErrorPage($statusCode, $content);
     } catch (\Exception $e) {
       // Fallback to basic HTML if view rendering fails
       $this->renderBasicErrorPage($exception);
@@ -487,11 +483,39 @@ class CrelishSentryErrorHandler extends ErrorHandler
     $errorId = $this->generateErrorId();
     $userMessage = $this->getUserFriendlyMessage($exception, $statusCode);
 
-    echo $this->renderBasicErrorHtml([
+    $this->sendErrorPage($statusCode, $this->renderBasicErrorHtml([
       'statusCode' => $statusCode,
       'userMessage' => $userMessage,
       'errorId' => $errorId,
-    ]);
+    ]));
+  }
+
+  /**
+   * Send an error page with its status code. Yii answers 500 once it starts handling
+   * an exception; only a sent response replaces that, a status set on it does not.
+   *
+   * @param int $statusCode
+   * @param string $html
+   */
+  protected function sendErrorPage(int $statusCode, string $html): void
+  {
+    if (!Yii::$app->has('response')) {
+      if (!headers_sent()) {
+        http_response_code($statusCode);
+      }
+      echo $html;
+      return;
+    }
+
+    // Start from a clean response, as Yii's own error rendering does
+    $response = Yii::$app->getResponse();
+    $response->isSent = false;
+    $response->stream = null;
+    $response->content = null;
+    $response->format = Response::FORMAT_HTML;
+    $response->setStatusCode($statusCode);
+    $response->data = $html;
+    $response->send();
   }
 
   /**
