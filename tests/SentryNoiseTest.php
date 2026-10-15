@@ -40,6 +40,14 @@ class SentryNoiseTestTransport implements TransportInterface
     }
 }
 
+// The error page cannot be sent from the CLI; only what reaches Sentry matters here.
+class SentryNoiseTestHandler extends CrelishSentryErrorHandler
+{
+    protected function renderException($exception)
+    {
+    }
+}
+
 $transport = new SentryNoiseTestTransport();
 
 $app = new \yii\web\Application([
@@ -61,7 +69,7 @@ $app = new \yii\web\Application([
 
 SentryActivation::apply(
     $app,
-    ['class' => CrelishSentryErrorHandler::class, 'sentryComponent' => 'crelishSentry'],
+    ['class' => SentryNoiseTestHandler::class, 'sentryComponent' => 'crelishSentry'],
     ['class' => CrelishSentryLogTarget::class, 'sentryComponent' => 'crelishSentry', 'levels' => ['error', 'warning'], 'exportInterval' => 1, 'logVars' => []]
 );
 $handler = $app->getErrorHandler();
@@ -104,6 +112,24 @@ try {
 } catch (\yii\base\ErrorException $e) {
 }
 check('E_WARNING reaches Sentry', 1, count($transport->events));
+
+echo "\nclient errors (4xx) stay out, server errors count\n";
+// Uncaught, the way PHP hands them over; Yii's error handler also logs them, so flush.
+// Handling an exception unregisters the handler, so it is registered again each time.
+function noiseTestUncaught(SentryNoiseTestTransport $transport, $handler, \Throwable $exception): int
+{
+    $transport->events = [];
+    $handler->handleException($exception);
+    $handler->register();
+    Yii::getLogger()->flush(true);
+    return count($transport->events);
+}
+check('404 Not Found', 0, noiseTestUncaught($transport, $handler, new \yii\web\NotFoundHttpException('Asset not found.')));
+check('400 Bad Request', 0, noiseTestUncaught($transport, $handler, new \yii\web\BadRequestHttpException()));
+check('403 Forbidden', 0, noiseTestUncaught($transport, $handler, new \yii\web\ForbiddenHttpException()));
+check('405 Method Not Allowed', 0, noiseTestUncaught($transport, $handler, new \yii\web\MethodNotAllowedHttpException()));
+check('500 reaches Sentry', 1, noiseTestUncaught($transport, $handler, new \yii\web\ServerErrorHttpException()));
+check('503 reaches Sentry', 1, noiseTestUncaught($transport, $handler, new \yii\web\HttpException(503)));
 
 $handler->unregister();
 shortLinkDone();
