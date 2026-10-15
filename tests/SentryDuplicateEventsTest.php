@@ -101,6 +101,19 @@ Yii::getLogger()->flush(true);
 check('reaches Sentry once', 1, count($transport->events));
 echo '       ', duplicateTestDescribe($transport->events), "\n";
 
+echo "\na warning nobody catches\n";
+$transport->events = [];
+try {
+    filemtime($missing);
+} catch (\yii\base\ErrorException $e) {
+    // What PHP does with an exception no code catches; handling it unregisters the handler
+    duplicateTestCurrentExceptionHandler()($e);
+    $handler->register();
+}
+Yii::getLogger()->flush(true);
+check('reaches Sentry once', 1, count($transport->events));
+echo '       ', duplicateTestDescribe($transport->events), "\n";
+
 echo "\nan uncaught exception\n";
 $transport->events = [];
 duplicateTestCurrentExceptionHandler()(new \RuntimeException('uncaught boom'));

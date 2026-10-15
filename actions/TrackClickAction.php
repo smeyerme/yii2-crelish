@@ -208,6 +208,12 @@ class TrackClickAction extends Action
             return $this->rejectRequest(true);
         }
 
+        // Editors enter external addresses without a scheme ("www.example.com/de").
+        // A browser would take that as a path on this site; send it to https instead.
+        if (!preg_match('~^[a-z][a-z0-9+.-]*:|^/~i', $url)) {
+            $url = 'https://' . $url;
+        }
+
         $parts = parse_url($url);
 
         // Note: FILTER_VALIDATE_URL is deliberately not used here. It rejects
