@@ -11,6 +11,7 @@
 	use app\workspace\models\Page;
 	use Yii;
 	use yii\base\Controller;
+	use yii\web\NotFoundHttpException;
 	use giantbits\crelish\components\Analytics\BrowserConfirmation;
 	use giantbits\crelish\components\ContentUrlResolver;
 	use giantbits\crelish\components\CrelishDataManager;
@@ -83,6 +84,11 @@
 		 */
 		public function actionRun()
 		{
+			// Internal route: pages reach it through CrelishBaseUrlRule, never by its own address
+			if (FrontendRequestGuard::isDirectRunRequest(Yii::$app->request->getPathInfo())) {
+				throw new NotFoundHttpException();
+			}
+
 			$ds = DIRECTORY_SEPARATOR;
 			// 1. Determine entry point.
 			// 2. Load entry point content.
@@ -91,9 +97,14 @@
 			// Add content aka. do the magic.
 			//$this->data = new CrelishDynamicModel( ['ctype' => $this->entryPoint['ctype'], 'uuid' => $this->entryPoint['uuid']]);
 			
-			// Make sure the language is set correctly before loading the model
-			if (isset(\Yii::$app->request->getQueryParams()['language']) && !empty(\Yii::$app->request->getQueryParams()['language'])) {
-				\Yii::$app->language = \Yii::$app->request->getQueryParams()['language'];
+			// Make sure the language is set correctly before loading the model. Only a
+			// well-formed, supported code; resolvePathRequested() already handles the rest.
+			$queryLanguage = FrontendRequestGuard::queryLanguage(
+				Yii::$app->request->getQueryParams()['language'] ?? null,
+				fn(string $language): bool => $this->isLanguageSupported($language)
+			);
+			if ($queryLanguage !== null) {
+				Yii::$app->language = $queryLanguage;
 			}
 			
 			$modelClass = CrelishModelResolver::getModelClass($this->entryPoint['ctype']);
