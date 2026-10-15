@@ -98,7 +98,9 @@ class TrackClickAction extends Action
 
         // Verify token to prevent unauthorized tracking and redirect abuse
         if (!$this->verifyClickToken($uuid, $isRedirectMode ? $redirectUrl : null, $token)) {
-            Yii::warning('Click tracking: Invalid token for UUID ' . $uuid . ' (token: ' . substr($token, 0, 10) . '..., redirect: ' . ($redirectUrl ?: '-') . ')', 'analytics');
+            // Info, not warning: crawlers revisit tracking links long after their token
+            // expired, which is expected and answered with 400 anyway.
+            Yii::info('Click tracking: Invalid token for UUID ' . $uuid . ' (token: ' . substr($token, 0, 10) . '..., redirect: ' . ($redirectUrl ?: '-') . ')', 'analytics');
             return $this->rejectRequest($isRedirectMode);
         }
 
