@@ -128,12 +128,24 @@ class CrelishSentryErrorHandler extends ErrorHandler
     // Capture to Sentry if enabled and level matches. Errors silenced with @ (or by
     // error_reporting) stay out, as they do for PHP and Yii: FileCache, for one, reads
     // with @filemtime() and expects a cache file to vanish now and then.
-    if ($this->captureErrors && (error_reporting() & $code) && in_array($code, $this->captureErrorLevels)) {
-      $this->captureError($code, $message, $file, $line);
+    $capture = $this->captureErrors && (error_reporting() & $code) && in_array($code, $this->captureErrorLevels);
+
+    // Yii turns the error into an ErrorException and throws it. Capture that very
+    // exception: when no code catches it, handleException() sees the same object again
+    // and the component recognises it as sent, so the warning reaches Sentry once.
+    try {
+      $result = parent::handleError($code, $message, $file, $line);
+    } catch (ErrorException $exception) {
+      if ($capture) {
+        $this->captureError($code, $message, $file, $line, $exception);
+      }
+      throw $exception;
     }
 
-    // Continue with standard Yii error handling
-    return parent::handleError($code, $message, $file, $line);
+    if ($capture) {
+      $this->captureError($code, $message, $file, $line);
+    }
+    return $result;
   }
 
   /**
@@ -199,8 +211,9 @@ class CrelishSentryErrorHandler extends ErrorHandler
    * @param string $message Error message
    * @param string $file Error file
    * @param int $line Error line
+   * @param ErrorException|null $exception The exception Yii throws for this error, if any
    */
-  protected function captureError(int $code, string $message, string $file, int $line): void
+  protected function captureError(int $code, string $message, string $file, int $line, ?ErrorException $exception = null): void
   {
     $sentry = $this->getSentryComponent();
     if ($sentry === null) {
@@ -209,7 +222,7 @@ class CrelishSentryErrorHandler extends ErrorHandler
 
     try {
       // Create an ErrorException for better context
-      $exception = new ErrorException($message, 0, $code, $file, $line);
+      $exception ??= new ErrorException($message, 0, $code, $file, $line);
 
       // Add error-specific context
       $sentry->setTag('error_handler', 'crelish_sentry');
