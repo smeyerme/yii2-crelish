@@ -126,8 +126,10 @@ class CrelishSentryErrorHandler extends ErrorHandler
    */
   public function handleError($code, $message, $file, $line)
   {
-    // Capture to Sentry if enabled and level matches
-    if ($this->captureErrors && in_array($code, $this->captureErrorLevels)) {
+    // Capture to Sentry if enabled and level matches. Errors silenced with @ (or by
+    // error_reporting) stay out, as they do for PHP and Yii: FileCache, for one, reads
+    // with @filemtime() and expects a cache file to vanish now and then.
+    if ($this->captureErrors && (error_reporting() & $code) && in_array($code, $this->captureErrorLevels)) {
       $this->captureError($code, $message, $file, $line);
     }
 
