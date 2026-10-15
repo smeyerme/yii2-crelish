@@ -110,7 +110,24 @@
 			$modelClass = CrelishModelResolver::getModelClass($this->entryPoint['ctype']);
 			$this->data = $modelClass::find()->where(['uuid' => $this->entryPoint['uuid']])->one();
 
-      // Track page view if analytics component is available
+			// Set layout.
+			$this->setLayout();
+			
+			// Set view template.
+			$this->setViewTemplate();
+			
+			// Process data and render.
+			Yii::$app->params['content'] = $this->data;
+			try {
+				$data = CrelishBaseContentProcessor::processContent($this->entryPoint['ctype'], $this->data);
+			} catch (NotFoundHttpException $notFound) {
+				// A widget on the page found nothing at this address (e.g. a detail view of
+				// content that is gone): show the not-found page, as for an unknown address
+				$data = $this->processNotFoundPage($notFound);
+			}
+
+      // Track page view if analytics component is available (after processing, so a
+      // not-found page counts as itself, not as the page that gave way to it)
       if (isset(Yii::$app->crelishAnalytics) && $this->entryPoint['uuid']) {
         Yii::$app->crelishAnalytics->trackPageView($this->entryPoint);
 
@@ -120,16 +137,6 @@
           $this->view->registerJs($confirmation, \yii\web\View::POS_END, 'crelish-page-state');
         }
       }
-
-			// Set layout.
-			$this->setLayout();
-			
-			// Set view template.
-			$this->setViewTemplate();
-			
-			// Process data and render.
-			Yii::$app->params['content'] = $this->data;
-			$data = CrelishBaseContentProcessor::processContent($this->entryPoint['ctype'], $this->data);
 			
 			// Check if any widget returned a Response object (e.g., redirect)
 			if (Yii::$app->has('widgetResponse')) {
@@ -251,9 +258,9 @@
 			}
 
 			// 404 Not found fallback (also handles unsupported language)
-			if ($entryModel == null && isset(Yii::$app->params['crelish']['404slug'])) {
-				$slug = Yii::$app->params['crelish']['404slug'];
-				$entryModel = Page::find()->where(['=', 'slug', $slug])->one();
+			if ($entryModel == null && ($notFoundPage = self::notFoundPage()) !== null) {
+				$slug = $notFoundPage['slug'];
+				$entryModel = $notFoundPage;
 				Yii::$app->response->statusCode = 404;
 			}
 			
@@ -266,6 +273,42 @@
 			$this->entryPoint = ['ctype' => $ctype, 'slug' => $slug, 'path' => $path, 'uuid' => $entryModel['uuid'], 'template' => $entryModel['template']];
 		}
 		
+		/**
+		 * The page configured as 404slug, or null when none is configured or it does not exist
+		 */
+		private static function notFoundPage(): ?Page
+		{
+			$slug = Yii::$app->params['crelish']['404slug'] ?? null;
+			if (empty($slug)) {
+				return null;
+			}
+
+			return Page::find()->where(['=', 'slug', $slug])->one();
+		}
+
+		/**
+		 * Switch to the not-found page, answered with 404, and process its content.
+		 * Without one (or when it is the page that failed) the exception stands.
+		 *
+		 * @throws NotFoundHttpException
+		 */
+		private function processNotFoundPage(NotFoundHttpException $notFound): array
+		{
+			$page = self::notFoundPage();
+			if ($page === null || $page['uuid'] === $this->entryPoint['uuid']) {
+				throw $notFound;
+			}
+
+			Yii::$app->response->statusCode = 404;
+			$this->entryPoint = ['ctype' => 'page', 'slug' => $page['slug'], 'path' => '/', 'uuid' => $page['uuid'], 'template' => $page['template']];
+			$this->data = $page;
+			$this->setLayout();
+			$this->setViewTemplate();
+			Yii::$app->params['content'] = $this->data;
+
+			return CrelishBaseContentProcessor::processContent($this->entryPoint['ctype'], $this->data);
+		}
+
 		/**
 		 * [setLayout description]
 		 */
