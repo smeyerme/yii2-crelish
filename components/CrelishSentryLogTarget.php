@@ -119,9 +119,15 @@ class CrelishSentryLogTarget extends Target
         }
       }
 
-      // Capture as message
+      // Capture as message. Log messages carry no stack trace of their own, so Sentry
+      // would group them by the frame where the SDK attached one and merge unrelated
+      // messages into one issue. Group by category and level instead: the text itself
+      // varies with IDs and URLs.
       $sentryLevel = $this->mapLogLevel($level);
-      $sentry->captureMessage($formattedMessage, $sentryLevel);
+      \Sentry\withScope(static function (\Sentry\State\Scope $scope) use ($sentry, $formattedMessage, $sentryLevel, $category): void {
+        $scope->setFingerprint(['crelish-log', (string)$category, $sentryLevel]);
+        $sentry->captureMessage($formattedMessage, $sentryLevel);
+      });
     } catch (\Exception $e) {
       // Don't let Sentry errors break logging
       throw new LogRuntimeException('Unable to send log to Sentry: ' . $e->getMessage(), 0, $e);
