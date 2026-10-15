@@ -64,6 +64,12 @@ class CrelishSentryComponent extends Component
   private $initialized = false;
 
   /**
+   * @var \WeakMap|null Exceptions already sent, so the error handler and the log target
+   * (Yii logs every uncaught exception) do not report the same one twice
+   */
+  private ?\WeakMap $captured = null;
+
+  /**
    * @inheritdoc
    */
   public function init(): void
@@ -107,6 +113,18 @@ class CrelishSentryComponent extends Component
         'context_lines' => 5,
         'before_send' => [$this, 'beforeSend'],
       ], $this->options);
+
+      // CrelishSentryErrorHandler already reports warnings, uncaught exceptions and
+      // fatal errors. The SDK's own listeners would wrap it and report each one again.
+      if (!array_key_exists('integrations', $this->options) && Yii::$app !== null
+        && Yii::$app->getErrorHandler() instanceof CrelishSentryErrorHandler) {
+        $config['integrations'] = static fn(array $integrations): array => array_values(array_filter(
+          $integrations,
+          static fn($integration): bool => !$integration instanceof Sentry\Integration\ErrorListenerIntegration
+            && !$integration instanceof Sentry\Integration\ExceptionListenerIntegration
+            && !$integration instanceof Sentry\Integration\FatalErrorListenerIntegration
+        ));
+      }
 
       Sentry\init($config);
       $this->initialized = true;
@@ -218,6 +236,12 @@ class CrelishSentryComponent extends Component
     if ($this->shouldIgnoreException($exception)) {
       return null;
     }
+
+    $this->captured ??= new \WeakMap();
+    if (isset($this->captured[$exception])) {
+      return null;
+    }
+    $this->captured[$exception] = true;
 
     // The SDK returns an EventId object; this method promises its string form.
     // Catch \Throwable: a failing capture must never break the caller.
