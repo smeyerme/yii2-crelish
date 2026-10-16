@@ -211,6 +211,11 @@ class Bootstrap implements BootstrapInterface
       );
     }
 
+    // Message categories registered by extensions while the application booted stay
+    if ($app->has('i18n', true) && isset($components['i18n'])) {
+      $components['i18n'] = ComponentsConfig::keepTranslations($components['i18n'], $app->getI18n()->translations);
+    }
+
     // The error handler and the logger are already running at this point: redefining
     // them would change nothing, so Sentry is switched on in the live application.
     $sentryErrorHandler = $components['errorHandler'] ?? null;

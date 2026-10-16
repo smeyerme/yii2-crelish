@@ -92,7 +92,8 @@ class TrackClickAction extends Action
 
         // Validate required parameters
         if (empty($uuid) || empty($token)) {
-            Yii::warning('Click tracking: Missing required parameters (uuid or token)', 'analytics');
+            // Info, not warning: scanners call the endpoint without parameters; answered with 400.
+            Yii::info('Click tracking: Missing required parameters (uuid or token)', 'analytics');
             return $this->rejectRequest($isRedirectMode);
         }
 
