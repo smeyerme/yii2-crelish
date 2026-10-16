@@ -4,6 +4,7 @@ namespace giantbits\crelish;
 
 use giantbits\crelish\components\Analytics\PageStateUrlRule;
 use giantbits\crelish\components\SentryActivation;
+use giantbits\crelish\components\SentryConsoleLogs;
 use giantbits\crelish\components\SentryCronMonitor;
 use giantbits\crelish\components\SentryTracing;
 use giantbits\crelish\components\shortlinks\ShortLinkUrlRule;
@@ -95,6 +96,9 @@ class Bootstrap implements BootstrapInterface
 
     // Cron commands listed in params['crelish']['sentry_cron_monitors'] report to Sentry Crons
     SentryCronMonitor::attach($app);
+
+    // With params['crelish']['sentry_logs'] every command run is recorded in Sentry Logs
+    SentryConsoleLogs::attach($app);
 
     // Queue jobs listed in params['crelish']['sentry_traces'] are traced
     SentryTracing::attach($app);
