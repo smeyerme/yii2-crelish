@@ -180,6 +180,15 @@ check('ping token cannot be upgraded to a redirect (no location)', null, $locati
 check('missing token does not redirect (status)', 400, $status);
 check('missing token does not redirect (no location)', null, $location);
 
+// Scanners call the endpoint without parameters: logged as info, so it does not reach Sentry.
+$levels = [];
+foreach (Yii::getLogger()->messages as [$text, $level]) {
+    if (is_string($text) && str_contains($text, 'Missing required parameters')) {
+        $levels[] = $level;
+    }
+}
+check('missing parameters are logged as info, not warning', [\yii\log\Logger::LEVEL_INFO], array_values(array_unique($levels)));
+
 // Full round trip through the real URL builder. The token is signed over the
 // raw target, but travels through URL encoding, so encoding has to be
 // symmetric or every legitimate link breaks.

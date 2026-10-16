@@ -99,6 +99,25 @@ class ComponentsConfig
   }
 
   /**
+   * Crelish's i18n definition plus the message categories that were registered on the
+   * running i18n component before Crelish redefines it. Extensions add theirs while the
+   * application boots (yii2-bootstrap5 registers yii/bootstrap5); without carrying them
+   * over those categories end up in Crelish's '*' source and its missing file warning.
+   * They go first, so the catch-all '*' stays last. 'yii' and 'app' are left out: I18N
+   * adds those itself.
+   *
+   * @param array $i18nConfig Crelish's i18n definition
+   * @param array $existing translations of the running i18n component
+   */
+  public static function keepTranslations(array $i18nConfig, array $existing): array
+  {
+    unset($existing['yii'], $existing['app']);
+    $own = $i18nConfig['translations'] ?? [];
+    $i18nConfig['translations'] = array_diff_key($existing, $own) + $own;
+    return $i18nConfig;
+  }
+
+  /**
    * Session component definition with Crelish's cookie defaults: HttpOnly,
    * SameSite=Lax (admin endpoints that run without CSRF validation rely on it)
    * and Secure when the request is HTTPS (plain-http dev keeps working).
