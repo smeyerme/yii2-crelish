@@ -209,6 +209,19 @@ class TrackClickAction extends Action
             return $this->rejectRequest(true);
         }
 
+        // Editors also enter the application e-mail address as the link; open the mail program
+        if (filter_var($url, FILTER_VALIDATE_EMAIL)) {
+            $url = 'mailto:' . $url;
+        }
+        if (strncasecmp($url, 'mailto:', 7) === 0) {
+            $address = strtok(substr($url, 7), '?');
+            if (!filter_var($address, FILTER_VALIDATE_EMAIL)) {
+                Yii::warning('Click tracking: Invalid mailto address: ' . $url, 'analytics');
+                return $this->rejectRequest(true);
+            }
+            return Yii::$app->response->redirect($this->encodeForHeader($url), 302);
+        }
+
         // Editors enter external addresses without a scheme ("www.example.com/de").
         // A browser would take that as a path on this site; send it to https instead.
         if (!preg_match('~^[a-z][a-z0-9+.-]*:|^/~i', $url)) {
