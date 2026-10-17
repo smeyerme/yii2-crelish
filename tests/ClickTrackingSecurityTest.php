@@ -327,6 +327,33 @@ $bareUrl = 'www.fermaell.com/de-de';
 check('address without scheme redirects (status)', 302, $status);
 check('address without scheme redirects to https', 'https://www.fermaell.com/de-de', $location);
 
+// Editors also enter the application e-mail address as the link; that opens the mail program.
+foreach ([
+    'bare e-mail address' => ['karriere@sohm-holzbau.at', 'mailto:karriere@sohm-holzbau.at'],
+    'mailto link' => ['mailto:jobs@example-company.ch', 'mailto:jobs@example-company.ch'],
+    'mailto link with subject' => ['mailto:jobs@example-company.ch?subject=Bewerbung Schreiner', 'mailto:jobs@example-company.ch?subject=Bewerbung%20Schreiner'],
+] as $label => [$target, $expectedLocation]) {
+    makeApp();
+    [$status, $location] = callAction([
+        'uuid' => UUID,
+        'token' => CrelishBaseHelper::generateClickToken(UUID, $target),
+        'redirect' => $target,
+    ]);
+    check("$label redirects (status)", 302, $status);
+    check("$label redirects to mailto", $expectedLocation, $location);
+}
+
+// A mailto link must carry a real address.
+makeApp();
+$badMail = 'mailto:javascript:alert(1)';
+[$status, $location] = callAction([
+    'uuid' => UUID,
+    'token' => CrelishBaseHelper::generateClickToken(UUID, $badMail),
+    'redirect' => $badMail,
+]);
+check('mailto without a valid address is rejected (status)', 400, $status);
+check('mailto without a valid address is rejected (no location)', null, $location);
+
 // Embedded credentials are rejected even when signed.
 makeApp();
 $credUrl = 'https://www.forum-holzbranche.com@phishing.example.net/';
