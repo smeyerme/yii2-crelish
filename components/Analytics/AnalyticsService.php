@@ -120,10 +120,12 @@ class AnalyticsService extends Component
         // Direct processing
         $this->sendToGA($payload);
       //}
-
-      $this->eventQueue = [];
     } catch (\Exception $e) {
       Yii::error("Analytics batch send error: " . $e->getMessage());
+    } finally {
+      // Not kept for the shutdown flush: by then the response is out and the session
+      // (for the client id) can no longer be started
+      $this->eventQueue = [];
     }
   }
 
@@ -143,7 +145,9 @@ class AnalyticsService extends Component
         'measurement_id' => $this->measurementId,
         'api_secret' => $this->apiSecret,
       ],
-      'json' => $payload
+      // Request data is not always valid UTF-8 (bots send Latin-1 user agents)
+      'headers' => ['Content-Type' => 'application/json'],
+      'body' => json_encode($payload, JSON_INVALID_UTF8_SUBSTITUTE | JSON_THROW_ON_ERROR),
     ]);
   }
 
