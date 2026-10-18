@@ -136,5 +136,15 @@ check('the failed send is logged once', 1, count(errorsLogged()));
 check('the shutdown flush does not send again', 1, $client->calls);
 check('the shutdown flush does not read the session', $getsAfterSend, Yii::$app->session->gets);
 
+// The switch comes from .env as a string; 'false' must not turn server-side GA on
+foreach ([
+    ['false', false], ['0', false], ['', false], ['off', false], [null, false], [false, false],
+    ['true', true], ['1', true], [true, true],
+] as [$value, $expected]) {
+    Yii::$app->params['crelish']['ga_sst_enabled'] = $value;
+    check('ga_sst_enabled ' . var_export($value, true) . ($expected ? ' turns GA on' : ' leaves GA off'),
+        $expected, \giantbits\crelish\config\ComponentsConfig::getAnalyticsConfig() !== null);
+}
+
 echo "$passed passed, $failures failed\n";
 exit($failures > 0 ? 1 : 0);
