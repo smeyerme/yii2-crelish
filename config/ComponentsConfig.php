@@ -89,7 +89,8 @@ class ComponentsConfig
    */
   public static function getAnalyticsConfig(): ?array
   {
-    if (Yii::$app->params['crelish']['ga_sst_enabled'] ?? false) {
+    // The switch usually comes from .env as a string, where 'false' would count as true
+    if (filter_var(Yii::$app->params['crelish']['ga_sst_enabled'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
       return [
         'class' => 'giantbits\crelish\components\Analytics\AnalyticsService',
         'debug' => YII_DEBUG,
