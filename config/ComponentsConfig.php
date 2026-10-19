@@ -392,8 +392,7 @@ class ComponentsConfig
     }
 
     // Set environment
-    $environment = Yii::$app->params['crelish']['sentry_environment'] ?? (defined('YII_ENV') ? YII_ENV : 'production');
-    $config['environment'] = $environment;
+    $config['environment'] = \giantbits\crelish\components\CrelishSentryComponent::defaultEnvironment();
 
     // Set sample rates
     $tracesSampleRate = Yii::$app->params['crelish']['sentry_traces_sample_rate'] ?? 0.1;
