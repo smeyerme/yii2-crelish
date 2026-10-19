@@ -13,12 +13,13 @@ use yii\web\HttpException;
  * This component integrates Sentry.io error tracking into Crelish CMS.
  * It can be activated via environment variables:
  * - SENTRY_DSN: The Sentry project DSN
+ * - SENTRY_ENVIRONMENT: Environment name (set dev in local .env files)
  * - CRELISH_USE_SENTRY: Optional boolean to enable/disable (defaults to checking for DSN)
  *
  * Configuration in params.php:
  * - crelish.sentry_enabled: Boolean to enable/disable Sentry
  * - crelish.sentry_dsn: The Sentry DSN (can also come from env)
- * - crelish.sentry_environment: Environment name (defaults to YII_ENV)
+ * - crelish.sentry_environment: Environment name (SENTRY_ENVIRONMENT in .env wins; defaults to YII_ENV)
  * - crelish.sentry_sample_rate: Sample rate for performance monitoring (0.0-1.0)
  */
 class CrelishSentryComponent extends Component
@@ -98,10 +99,30 @@ class CrelishSentryComponent extends Component
 
     // Set default environment
     if (empty($this->environment)) {
-      $this->environment = YII_ENV;
+      $this->environment = self::defaultEnvironment();
     }
 
     $this->initializeSentry();
+  }
+
+  /**
+   * The environment events carry when none is configured: SENTRY_ENVIRONMENT from .env,
+   * then params crelish.sentry_environment, then YII_ENV. The .env value comes first so
+   * a local installation reports as dev even with debug off, where YII_ENV is prod.
+   */
+  public static function defaultEnvironment(): string
+  {
+    $env = $_ENV['SENTRY_ENVIRONMENT'] ?? getenv('SENTRY_ENVIRONMENT');
+    if (is_string($env) && $env !== '') {
+      return $env;
+    }
+
+    $params = Yii::$app->params['crelish']['sentry_environment'] ?? null;
+    if (is_string($params) && $params !== '') {
+      return $params;
+    }
+
+    return defined('YII_ENV') ? YII_ENV : 'production';
   }
 
   /**
