@@ -4,6 +4,7 @@ namespace giantbits\crelish\components;
 
 use Yii;
 use yii\base\Component;
+use yii\data\ArrayDataProvider;
 use yii\data\DataProviderInterface;
 
 /**
@@ -237,6 +238,24 @@ class CrelishDataManager extends Component
     }
     
     return $dataProvider;
+  }
+
+  /**
+   * All records in an ArrayDataProvider, for list widgets (ListView)
+   *
+   * Restores raw() of the old CrelishDataProvider, which templates still call.
+   *
+   * @return ArrayDataProvider
+   */
+  public function raw(): ArrayDataProvider
+  {
+    return new ArrayDataProvider([
+      'key' => 'uuid',
+      'allModels' => $this->rawAll(),
+      // rawAll() already applies the sort settings
+      'sort' => false,
+      'pagination' => ['pageSize' => $this->settings['pageSize'] ?? 30],
+    ]);
   }
 
   /**
