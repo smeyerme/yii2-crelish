@@ -90,8 +90,10 @@ class Module extends \yii\base\Module
         
         // No default key: a known key would let anyone forge tokens. Without a usable
         // params['jwtSecretKey'] JWT authentication is off (session and access tokens still work).
+        // Info, not warning: this runs on every API request. JwtHttpBearerAuth warns when a
+        // token actually arrives while JWT is off.
         if (!JwtSecret::isEnabled()) {
-            Yii::warning('JWT authentication is disabled: set params[jwtSecretKey] to a random secret of at least ' . JwtSecret::MIN_LENGTH . ' characters to enable it.', __METHOD__);
+            Yii::info('JWT authentication is disabled: set params[jwtSecretKey] to a random secret of at least ' . JwtSecret::MIN_LENGTH . ' characters to enable it.', __METHOD__);
         }
     }
 } 
