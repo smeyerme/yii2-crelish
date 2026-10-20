@@ -169,6 +169,16 @@
 		}
 		
 		/**
+		 * All records in an ArrayDataProvider, for list widgets (ListView)
+		 *
+		 * @return \yii\data\ArrayDataProvider
+		 */
+		public function raw()
+		{
+			return $this->dataManager->raw();
+		}
+		
+		/**
 		 * Get all records as raw data
 		 * 
 		 * @return array Records
