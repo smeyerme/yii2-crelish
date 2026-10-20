@@ -61,7 +61,13 @@ class JwtHttpBearerAuth extends AuthMethod
         }
         
         $token = $matches[1];
-        
+
+        if (!JwtSecret::isEnabled()) {
+            // Someone sends a JWT although JWT authentication is off
+            Yii::warning('JWT received but JWT authentication is disabled: set params[jwtSecretKey] to enable it.', __METHOD__);
+            return null;
+        }
+
         if ($this->enableDebug) {
             Yii::info("Attempting to decode JWT token", __METHOD__);
         }

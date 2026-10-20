@@ -50,6 +50,9 @@ class CrelishDataManager extends Component
   public function __construct(string $ctype, array $settings = [], ?string $uuid = null, bool $autoSetRelations = false)
   {
     $this->ctype = $ctype;
+    if (isset($settings['sort']) && is_array($settings['sort'])) {
+      $settings['sort'] = self::normalizeSort($settings['sort']);
+    }
     $this->settings = $settings;
     $this->uuid = $uuid;
     $this->storage = CrelishStorageFactory::getStorage($ctype);
@@ -61,6 +64,56 @@ class CrelishDataManager extends Component
     if ($autoSetRelations) {
       $this->initRelations();
     }
+  }
+
+  /**
+   * Convert the legacy sort format of the JSON storage era into column => direction
+   *
+   * Older code still passes ['by' => ['systitle', 'asc']], ['by' => ['systitle' => SORT_ASC]]
+   * or ['by' => 'created', 'dir' => 'desc']. Passed on unchanged, the database storage
+   * would order by a column named "by". Any other format is returned as it is.
+   *
+   * @param array $sort Sort settings
+   * @return array
+   */
+  public static function normalizeSort(array $sort): array
+  {
+    if (isset($sort['defaultOrder']) && is_array($sort['defaultOrder'])) {
+      $sort['defaultOrder'] = self::normalizeSort($sort['defaultOrder']);
+      return $sort;
+    }
+
+    if (!array_key_exists('by', $sort)) {
+      return $sort;
+    }
+
+    $by = $sort['by'];
+    $direction = $sort['dir'] ?? SORT_ASC;
+    if (is_array($by) && array_is_list($by)) {
+      // ['systitle', 'asc']
+      [$field, $direction] = $by + [null, $direction];
+      $by = [$field => $direction];
+    } elseif (is_string($by)) {
+      // 'created' with a separate 'dir'
+      $by = [$by => $direction];
+    }
+
+    if (!is_array($by)) {
+      return [];
+    }
+
+    $result = [];
+    foreach ($by as $field => $dir) {
+      if (!is_string($field) || $field === '') {
+        continue;
+      }
+      if (is_string($dir)) {
+        $dir = in_array(strtolower($dir), ['desc', 'sort_desc'], true) ? SORT_DESC : SORT_ASC;
+      }
+      $result[$field] = $dir === SORT_DESC ? SORT_DESC : SORT_ASC;
+    }
+
+    return $result;
   }
 
   /**
