@@ -586,8 +586,14 @@ class AssetController extends CrelishBaseController
         $previewUrl = $model->pathName . $model->src;
         break;
       case 'application/pdf':
-        $filename = $this->generatePdfThumbnail($model);
-        $previewUrl = '/uploads/thumbs/' . $filename;
+        // Render only when there is no thumbnail yet, not on every request
+        $filename = $model->thumbnail;
+        if (empty($filename) || !is_file(Yii::getAlias('@app') . '/web/uploads/thumbs/' . $filename)) {
+          $filename = $this->generatePdfThumbnail($model);
+        }
+        $previewUrl = $filename
+          ? '/uploads/thumbs/' . $filename
+          : '/crelish/asset/glide?path=placeholders/file.png&w=180&h=150&f=fit';
         break;
       default:
         // Default placeholder for unsupported file types
@@ -1023,14 +1029,37 @@ class AssetController extends CrelishBaseController
     ];
   }
 
+  /**
+   * Where the PDF of an asset lives on disk
+   *
+   * Older assets sit in month folders (pathName /uploads/2022-10/), newer ones
+   * directly in /uploads/. If pathName does not lead to the file, uploads + src
+   * is tried; if neither exists, the recorded location is returned.
+   *
+   * @param object $asset Asset with src, fileName and pathName
+   * @param string $webDir The web root, without trailing slash
+   * @return string
+   */
+  public static function pdfSourcePath($asset, string $webDir): string
+  {
+    $flat = $webDir . '/uploads/' . $asset->src;
+
+    if (empty($asset->pathName)) {
+      return $flat;
+    }
+
+    $recorded = $webDir . CrelishBaseHelper::getAssetUrl($asset->pathName, $asset->fileName ?: $asset->src);
+
+    return (!file_exists($recorded) && file_exists($flat)) ? $flat : $recorded;
+  }
+
   private function generatePdfThumbnail($asset, $save = true)
   {
     // Get the actual file path without relying on the filename string
     $uploadDir = Yii::getAlias('@app') . '/web/uploads/';
     $thumbsDir = Yii::getAlias('@app') . '/web/uploads/thumbs';
 
-    // Handle path encoding properly
-    $fileString = $uploadDir . $asset->src;
+    $fileString = self::pdfSourcePath($asset, Yii::getAlias('@app') . '/web');
     $thumbnailBaseName = 'thumb_' . $asset->uuid . '_' . pathinfo($asset->src, PATHINFO_FILENAME) . '.jpg';
     $fileStringDest = $thumbsDir . '/' . $thumbnailBaseName;
 
