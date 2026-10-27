@@ -31,20 +31,21 @@
 				return $response;
 			}
 
-			$server = ServerFactory::create([
-				'source' => Yii::getAlias('@app/web'),
-				'cache' => Yii::getAlias('@runtime/glide'),
-				'presets' => Yii::$app->params['crelish']['glide_presets']
-			]);
-
 			$checkFile = Yii::getAlias('@app/web') . (str_starts_with($path, '/') ? $path : '/' . $path);
 
-			if(!file_exists($checkFile)) {
+			// is_file, not file_exists: a folder such as /uploads/thumbs/ (PDF without thumbnail) is no image
+			if(!is_file($checkFile)) {
 				$response->statusCode = 404;
 				$response->format = Response::FORMAT_RAW;
 				$response->content = '';
 				return $response;
 			}
+
+			$server = ServerFactory::create([
+				'source' => Yii::getAlias('@app/web'),
+				'cache' => Yii::getAlias('@runtime/glide'),
+				'presets' => Yii::$app->params['crelish']['glide_presets']
+			]);
 
 			try {
 				$path = $server->makeImage($path, $params);
