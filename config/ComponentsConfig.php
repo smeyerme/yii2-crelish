@@ -280,6 +280,13 @@ class ComponentsConfig
           'fileMap' => ['widgets' => 'widgets.php'],
           'on missingTranslation' => $handler
         ],
+        // kartik input widgets register kvbase with their own folder; the files live in krajee-base.
+        // kartik merges this config over its own, so this folder wins.
+        'kvbase*' => [
+          'class' => 'yii\i18n\PhpMessageSource',
+          'basePath' => '@vendor/kartik-v/yii2-krajee-base/src/messages',
+          'forceTranslation' => true,
+        ],
         '*' => [
           'class' => 'yii\i18n\PhpMessageSource',
           'basePath' => '@app/messages',
