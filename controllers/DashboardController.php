@@ -176,12 +176,28 @@
 		 */
 		private function getContentStatistics(array $contentTypes): array
 		{
+			return self::contentStatistics($contentTypes, Yii::$app->db);
+		}
+
+		/**
+		 * Number of items per content type; types without a table (JSON storage) are skipped
+		 *
+		 * @param array $contentTypes Content types as returned by getContentTypes()
+		 * @param \yii\db\Connection $db
+		 * @return array Statistics for each content type
+		 */
+		public static function contentStatistics(array $contentTypes, \yii\db\Connection $db): array
+		{
 			$stats = [];
-			
+
 			foreach ($contentTypes as $type => $info) {
 				try {
+					if ($db->getTableSchema("{{%{$type}}}") === null) {
+						continue;
+					}
+
 					$query = new Query();
-					$count = $query->from("{{%{$type}}}")->count();
+					$count = $query->from("{{%{$type}}}")->count('*', $db);
 					
 					$stats[$type] = [
 						'count' => $count,
@@ -197,32 +213,52 @@
 		
 		/**
 		 * Get recent content items
-		 * 
+		 *
 		 * @param int $limit Maximum number of items to return
 		 * @return array Recent content items
 		 */
 		private function getRecentContent(int $limit = 10): array
 		{
-			$contentTypes = $this->getContentTypes();
+			return self::recentContent($this->getContentTypes(), $limit, Yii::$app->db);
+		}
+
+		/**
+		 * Most recently updated items across content types
+		 *
+		 * Types without a table (JSON storage) or without uuid, systitle and updated
+		 * columns are skipped.
+		 *
+		 * @param array $contentTypes Content types as returned by getContentTypes()
+		 * @param int $limit Maximum number of items to return
+		 * @param \yii\db\Connection $db
+		 * @return array Recent content items
+		 */
+		public static function recentContent(array $contentTypes, int $limit, \yii\db\Connection $db): array
+		{
 			$recentItems = [];
-			
+
 			foreach ($contentTypes as $type => $info) {
 				try {
+					$schema = $db->getTableSchema("{{%{$type}}}");
+					if ($schema === null || array_diff(['uuid', 'systitle', 'updated'], $schema->columnNames)) {
+						continue;
+					}
+
 					$query = new Query();
 					$items = $query->from("{{%{$type}}}")
-						->select(['id', 'title', 'created', 'updated'])
+						->select(['uuid', 'systitle', 'updated'])
 						->orderBy(['updated' => SORT_DESC])
 						->limit($limit)
-						->all();
-					
+						->all($db);
+
 					foreach ($items as $item) {
 						if (empty($item['updated'])) {
 							continue; // Skip items without updated timestamp
 						}
-						
+
 						$recentItems[] = [
-							'id' => $item['id'],
-							'title' => $item['title'] ?? ('Untitled ' . $info['label']),
+							'id' => $item['uuid'],
+							'title' => $item['systitle'] ?? ('Untitled ' . $info['label']),
 							'type' => $type,
 							'typeLabel' => $info['label'],
 							'updated' => $item['updated'],
