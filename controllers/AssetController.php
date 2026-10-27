@@ -192,7 +192,9 @@ class AssetController extends CrelishBaseController
               $preview = Html::img($model['pathName'] . $model['src'], ['style' => 'width: 80px; height: auto;']);
               break;
             case 'application/pdf':
-              $preview = Html::img('/crelish/asset/glide?path=/uploads/thumbs/' . $model['thumbnail'] . '&p=small', ['style' => 'width: 80px; height: auto;']);
+              if (!empty($model['thumbnail'])) {
+                $preview = Html::img('/crelish/asset/glide?path=/uploads/thumbs/' . $model['thumbnail'] . '&p=small', ['style' => 'width: 80px; height: auto;']);
+              }
               break;
           }
 
@@ -527,7 +529,9 @@ class AssetController extends CrelishBaseController
           $previewUrl = $model['pathName'] . $model['src'];
           break;
         case 'application/pdf':
-          $previewUrl = '/uploads/thumbs/' . $model['thumbnail'];
+          $previewUrl = !empty($model['thumbnail'])
+            ? '/uploads/thumbs/' . $model['thumbnail']
+            : '/crelish/asset/glide?path=placeholders/file.png&w=180&h=150&f=fit';
           break;
         default:
           // Default placeholder for unsupported file types
