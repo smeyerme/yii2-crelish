@@ -40,6 +40,12 @@ class CrelishSentryErrorHandler extends ErrorHandler
   public $errorView = '@giantbits/crelish/views/error/error.twig';
 
   /**
+   * @var string|null The id shown on the error page and sent to Sentry as the tag error_id,
+   * so an id from a screenshot leads to its event. One per request.
+   */
+  protected ?string $errorId = null;
+
+  /**
    * @var string Default error message for production
    */
   public $defaultErrorMessage = 'An error occurred while processing your request.';
@@ -185,6 +191,7 @@ class CrelishSentryErrorHandler extends ErrorHandler
     try {
       // Add error handler context
       $sentry->setTag('error_handler', 'crelish_sentry');
+      $sentry->setTag('error_id', $this->errorId());
       $sentry->setExtra('exception_class', get_class($exception));
 
       // Add HTTP context for web applications
@@ -226,6 +233,7 @@ class CrelishSentryErrorHandler extends ErrorHandler
 
       // Add error-specific context
       $sentry->setTag('error_handler', 'crelish_sentry');
+      $sentry->setTag('error_id', $this->errorId());
       $sentry->setTag('error_type', $this->getErrorTypeName($code));
       $sentry->setExtra('error_code', $code);
       $sentry->setExtra('error_file', $file);
@@ -372,8 +380,8 @@ class CrelishSentryErrorHandler extends ErrorHandler
       // Determine HTTP status code
       $statusCode = $exception instanceof HttpException ? $exception->statusCode : 500;
 
-      // Generate error ID for user reference
-      $errorId = $this->generateErrorId();
+      // The id this request's error went to Sentry with
+      $errorId = $this->errorId();
 
       // Get user-friendly message
       $userMessage = $this->getUserFriendlyMessage($exception, $statusCode);
@@ -384,6 +392,7 @@ class CrelishSentryErrorHandler extends ErrorHandler
         'statusCode' => $statusCode,
         'userMessage' => $userMessage,
         'errorId' => $errorId,
+        'logo' => $this->adminLogo(),
         'showDetails' => false, // Never show details in production
       ]);
 
@@ -392,6 +401,30 @@ class CrelishSentryErrorHandler extends ErrorHandler
       // Fallback to basic HTML if view rendering fails
       $this->renderBasicErrorPage($exception);
     }
+  }
+
+  /**
+   * The error id of this request, made on first use
+   */
+  protected function errorId(): string
+  {
+    return $this->errorId ??= $this->generateErrorId();
+  }
+
+  /**
+   * The Crelish logo as inline SVG on admin pages; empty on the sites' own pages, whose
+   * visitors know the site, not the CMS. Inline, as the error may come from the assets.
+   */
+  protected function adminLogo(): string
+  {
+    $route = (string)(Yii::$app->requestedRoute ?? '');
+    if (!str_starts_with($route, 'crelish/') || str_starts_with($route, 'crelish/frontend/')) {
+      return '';
+    }
+
+    $svg = @file_get_contents(dirname(__DIR__) . '/assets/img/Crelish-Logo-Light.svg');
+    $start = $svg === false ? false : strpos($svg, '<svg');
+    return $start === false ? '' : substr($svg, $start);
   }
 
   /**
@@ -494,7 +527,7 @@ class CrelishSentryErrorHandler extends ErrorHandler
   protected function renderBasicErrorPage(\Throwable $exception): void
   {
     $statusCode = $exception instanceof HttpException ? $exception->statusCode : 500;
-    $errorId = $this->generateErrorId();
+    $errorId = $this->errorId();
     $userMessage = $this->getUserFriendlyMessage($exception, $statusCode);
 
     $this->sendErrorPage($statusCode, $this->renderBasicErrorHtml([
