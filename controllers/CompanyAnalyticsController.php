@@ -897,13 +897,26 @@ class CompanyAnalyticsController extends CrelishBaseController
     margin-bottom: 1rem;
 }
 
-/* Dark mode compatibility */
-html[data-bs-theme="dark"] .company-analytics-dashboard .kpi-value {
+/* Dark mode: crelish switches with html[data-theme="dark"]. The view mirrors that onto the
+   dashboard as data-bs-theme, so Bootstrap's cards and tables turn dark; here their colours
+   are mapped to crelish's own, so the dashboard matches the rest of the admin. */
+[data-theme="dark"] .company-analytics-dashboard {
+    --bs-body-bg: var(--color-bg-main);
+    --bs-body-color: var(--color-text-dark);
+    --bs-emphasis-color: var(--color-text-dark);
+    --bs-secondary-color: var(--color-text-muted);
+    --bs-tertiary-bg: var(--color-bg-light);
+    --bs-border-color: var(--color-border);
+    --bs-border-color-translucent: var(--color-border);
+    color: var(--color-text-dark);
+}
+
+[data-theme="dark"] .company-analytics-dashboard .kpi-value {
     color: var(--bs-info);
 }
 
-html[data-bs-theme="dark"] .company-selector-card {
-    background: var(--bs-dark);
+[data-theme="dark"] .company-selector-card {
+    background: var(--color-bg-light);
 }
 CSS;
     }

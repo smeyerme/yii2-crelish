@@ -1,6 +1,23 @@
 {# Company Analytics Dashboard - Index View #}
 
 <div class="company-analytics-dashboard">
+    <script>
+        // Crelish's dark mode is html[data-theme]; Bootstrap's cards and tables follow
+        // data-bs-theme, so mirror it onto this dashboard, also when it is switched here.
+        (function (dashboard) {
+            var sync = function () {
+                var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+                dashboard.setAttribute('data-bs-theme', dark ? 'dark' : 'light');
+                // Charts drawn from now on get readable labels and grid lines
+                if (window.Chart) {
+                    Chart.defaults.color = dark ? '#bac6d6' : '#666';
+                    Chart.defaults.borderColor = dark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+                }
+            };
+            sync();
+            new MutationObserver(sync).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+        })(document.currentScript.parentElement);
+    </script>
     {# Header with Company Selector and Filters #}
     <div class="row mb-4">
         <div class="col-md-12">
@@ -64,7 +81,7 @@
         <div class="row mb-4">
             <div class="col-md-12">
                 <div class="card" style="border-left: 4px solid #3498db;">
-                    <div class="card-header bg-light">
+                    <div class="card-header bg-body-tertiary">
                         <h4 class="mb-0"><i class="fa-sharp fa-regular fa-building me-2"></i>{{ t('crelish', 'Company Profile Performance') }}</h4>
                         <small class="text-muted">{{ t('crelish', 'How often the company appears in lists and how often the profile is visited') }}</small>
                     </div>
@@ -258,7 +275,7 @@
         <div class="row mb-4">
             <div class="col-md-12">
                 <div class="card" style="border-left: 4px solid #8e44ad;">
-                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <div class="card-header bg-body-tertiary d-flex justify-content-between align-items-center">
                         <div>
                             <h4 class="mb-0"><i class="fa-sharp fa-regular fa-scale-balanced me-2"></i>{{ t('crelish', 'Benchmark Comparison') }}</h4>
                             <small class="text-muted" id="benchmark-subtitle">{{ t('crelish', 'Your performance compared to the anonymous average of the top companies per content type') }}</small>
