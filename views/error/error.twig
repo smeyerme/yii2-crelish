@@ -1,11 +1,14 @@
 {#
   Rendered by CrelishSentryErrorHandler, outside of any layout: the page stands on its own
-  so it renders even when the error came from the layout or its assets.
+  so it renders even when the error came from the layout or its assets. It wears the look
+  of the Crelish login (backdrop, card, teal), with everything inline.
   Yii's own error rendering (debug on) passes only the exception.
+  logo: the Crelish logo as inline SVG on admin pages, empty on the sites' own pages.
 #}
 {% set statusCode = statusCode ?? exception.statusCode ?? 500 %}
 {% set userMessage = userMessage ?? exception.message ?? '' %}
 {% set errorId = errorId ?? null %}
+{% set logo = logo ?? '' %}
 {% if statusCode == 404 %}
     {% set title = 'Page Not Found' %}
 {% elseif statusCode == 403 %}
@@ -23,44 +26,76 @@
     <meta name="robots" content="noindex">
     <title>{{ statusCode }} {{ title }}</title>
     <style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
         body {
             margin: 0;
             min-height: 100vh;
             display: grid;
             place-items: center;
             padding: 1rem;
-            box-sizing: border-box;
             font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-            background: #f4f5f7;
-            color: #1f2933;
+            line-height: 1.5;
+            color: #334155;
+            background-color: #f1f5f9;
+            position: relative;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(40deg, rgb(2, 0, 36) 0%, rgb(6, 104, 102) 55%);
+            opacity: 0.8;
         }
         .error {
-            max-width: 32rem;
+            position: relative;
             width: 100%;
-            padding: 2.5rem 2rem;
+            max-width: 30rem;
+            padding: 2.5rem;
             text-align: center;
             background: #fff;
-            border-radius: 1rem;
-            box-shadow: 0 0.5rem 2rem rgba(0, 0, 0, 0.08);
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+        .logo svg {
+            display: block;
+            width: 140px;
+            height: auto;
+            margin: 0 auto 2rem;
+        }
+        .code {
+            margin: 0;
+            font-size: 3.5rem;
+            font-weight: 700;
+            line-height: 1;
+            color: #066866;
         }
         h1 {
-            margin: 0 0 0.5rem;
-            font-size: 3.5rem;
-            color: #c53030;
-        }
-        h2 {
-            margin: 0 0 1.5rem;
+            margin: 0.75rem 0 0.5rem;
             font-size: 1.25rem;
-            font-weight: 500;
-            color: #52606d;
+            font-weight: 600;
+            color: #1e293b;
+        }
+        .message {
+            margin: 0 0 1.5rem;
+            color: #64748b;
         }
         .error-id {
-            margin: 0 0 1.5rem;
+            margin: 0 0 2rem;
             padding: 0.75rem 1rem;
-            border-radius: 0.5rem;
-            background: rgba(13, 110, 253, 0.1);
-            color: #0d6efd;
-            font-size: 0.9rem;
+            border-radius: 4px;
+            background: #f1f5f9;
+            font-size: 0.875rem;
+            color: #64748b;
+        }
+        .error-id code {
+            display: block;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #1e293b;
+            user-select: all;
         }
         .actions {
             display: flex;
@@ -70,36 +105,52 @@
         }
         .actions a {
             padding: 0.75rem 1.5rem;
-            border-radius: 0.5rem;
-            border: 1px solid #0d6efd;
-            color: #0d6efd;
+            border-radius: 4px;
+            border: 1px solid #cbd5e1;
             font-weight: 500;
+            color: #334155;
             text-decoration: none;
+            transition: background-color 0.2s ease, border-color 0.2s ease;
         }
-        .actions a:first-child {
-            background: #0d6efd;
+        .actions a:hover {
+            border-color: #066866;
+        }
+        .actions a.primary {
+            background: #066866;
+            border-color: #066866;
             color: #fff;
+        }
+        .actions a.primary:hover {
+            background: #054c4a;
+        }
+        .actions a:focus-visible {
+            outline: 2px solid #066866;
+            outline-offset: 2px;
         }
     </style>
 </head>
 <body>
 <main class="error">
-    <h1>{{ statusCode }}</h1>
-    <h2>{{ title }}</h2>
+    {% if logo %}
+    <div class="logo">{{ logo | raw }}</div>
+    {% endif %}
+
+    <p class="code">{{ statusCode }}</p>
+    <h1>{{ title }}</h1>
 
     {% if userMessage %}
-    <p>{{ userMessage }}</p>
+    <p class="message">{{ userMessage }}</p>
     {% endif %}
 
     {% if errorId %}
     <p class="error-id">
-        <strong>Error ID:</strong> {{ errorId }}<br>
-        <small>Please include this ID when contacting support</small>
+        Error ID <code>{{ errorId }}</code>
+        Please include this ID when contacting support
     </p>
     {% endif %}
 
     <div class="actions">
-        <a href="javascript:history.back()">Go Back</a>
+        <a class="primary" href="javascript:history.back()">Go Back</a>
         <a href="{{ app.homeUrl }}">Home Page</a>
     </div>
 </main>
