@@ -120,7 +120,8 @@ class ContentController extends CrelishBaseController
     if ($elementDefinition->storage === 'db' && $modelClass !== null) {
       $query = $modelClass::find();
 
-      // Apply filters
+      // Apply filters; columns are qualified with the model's table, which can differ from the ctype (ads → adbanner)
+      $tableName = $modelClass::getTableSchema()->name;
       if ($filter) {
         foreach ($filter as $key => $value) {
           if (is_array($value) && $value[0] === 'strict') {
@@ -135,7 +136,7 @@ class ContentController extends CrelishBaseController
                 // Create an AND condition for each field
                 $fieldCondition = ['and'];
                 foreach ($searchFragments as $fragment) {
-                  $fieldCondition[] = ['like', $this->ctype . '.' . $field->key, $fragment];
+                  $fieldCondition[] = ['like', $tableName . '.' . $field->key, $fragment];
                 }
                 // Add this field's AND condition to the overall OR conditions
                 $orConditions[] = $fieldCondition;
@@ -184,7 +185,7 @@ class ContentController extends CrelishBaseController
 
             $query->andWhere($orConditions);
           } else {
-            $query->andWhere(['like', $this->ctype . '.' . $key, $value]);
+            $query->andWhere(['like', $tableName . '.' . $key, $value]);
           }
         }
       }
