@@ -63,6 +63,30 @@ html {
   --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.3), 0 10px 10px -5px rgba(0,0,0,0.2);
 }
 
+/* Screens built from Bootstrap cards and tables (the analytics screens) add .crelish-bs-dark
+   to their outer element: in dark mode Bootstrap's colours then come from crelish's.
+   Bootstrap 5.3 components read these variables, so no data-bs-theme is needed. */
+[data-theme="dark"] .crelish-bs-dark {
+  color-scheme: dark;
+  color: var(--color-text-dark);
+  --bs-body-bg: var(--color-bg-main);
+  --bs-body-bg-rgb: 18, 25, 38;
+  --bs-body-color: var(--color-text-dark);
+  --bs-body-color-rgb: 226, 232, 240;
+  --bs-emphasis-color: var(--color-text-light);
+  --bs-emphasis-color-rgb: 255, 255, 255;
+  --bs-heading-color: var(--color-text-dark);
+  --bs-secondary-color: var(--color-text-muted);
+  --bs-secondary-bg: var(--color-bg-light);
+  --bs-tertiary-bg: var(--color-bg-light);
+  --bs-tertiary-bg-rgb: 30, 41, 59;
+  --bs-tertiary-color: var(--color-text-muted);
+  --bs-border-color: var(--color-border);
+  --bs-border-color-translucent: var(--color-border);
+  --bs-light: var(--color-bg-light);
+  --bs-light-rgb: 30, 41, 59;
+}
+
 .row {
   margin-block-end: 2.333rem;
   row-gap: 1.666rem;

@@ -36,7 +36,7 @@ class CompanyAnalyticsController extends CrelishBaseController
         ThemeKrajeeBs5Asset::register($this->view);
 
         // Make sure Chart.js is loaded
-        $this->view->registerJsFile('https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js', ['position' => \yii\web\View::POS_HEAD]);
+        \giantbits\crelish\helpers\CrelishAnalyticsTheme::registerChartJs($this->view);
 
         // Register dashboard-specific CSS
         $this->view->registerCss($this->getDashboardCss());
@@ -897,13 +897,13 @@ class CompanyAnalyticsController extends CrelishBaseController
     margin-bottom: 1rem;
 }
 
-/* Dark mode compatibility */
-html[data-bs-theme="dark"] .company-analytics-dashboard .kpi-value {
+/* Dark mode: the outer element uses .crelish-bs-dark (crelish-modern.css) */
+[data-theme="dark"] .company-analytics-dashboard .kpi-value {
     color: var(--bs-info);
 }
 
-html[data-bs-theme="dark"] .company-selector-card {
-    background: var(--bs-dark);
+[data-theme="dark"] .company-selector-card {
+    background: var(--color-bg-light);
 }
 CSS;
     }
