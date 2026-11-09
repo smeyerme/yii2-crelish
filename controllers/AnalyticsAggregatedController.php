@@ -32,7 +32,7 @@ class AnalyticsAggregatedController extends CrelishBaseController
     Yii::$app->view->title = 'Analytics Insights';
 
     // Make sure Chart.js is loaded
-    $this->view->registerJsFile('https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js', ['position' => \yii\web\View::POS_HEAD]);
+    \giantbits\crelish\helpers\CrelishAnalyticsTheme::registerChartJs($this->view);
 
     // Register dashboard-specific CSS
     $this->view->registerCss($this->getDashboardCss());
@@ -1073,11 +1073,11 @@ class AnalyticsAggregatedController extends CrelishBaseController
 }
 
 /* Dark mode compatibility */
-html[data-bs-theme="dark"] .kpi-value {
+[data-theme="dark"] .kpi-value {
     color: var(--bs-info);
 }
 
-html[data-bs-theme="dark"] .insights-table {
+[data-theme="dark"] .insights-table {
     color: var(--bs-body-color);
 }
 CSS;

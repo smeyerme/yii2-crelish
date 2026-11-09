@@ -36,7 +36,7 @@ class CompanyAnalyticsController extends CrelishBaseController
         ThemeKrajeeBs5Asset::register($this->view);
 
         // Make sure Chart.js is loaded
-        $this->view->registerJsFile('https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js', ['position' => \yii\web\View::POS_HEAD]);
+        \giantbits\crelish\helpers\CrelishAnalyticsTheme::registerChartJs($this->view);
 
         // Register dashboard-specific CSS
         $this->view->registerCss($this->getDashboardCss());
@@ -897,20 +897,7 @@ class CompanyAnalyticsController extends CrelishBaseController
     margin-bottom: 1rem;
 }
 
-/* Dark mode: crelish switches with html[data-theme="dark"]. The view mirrors that onto the
-   dashboard as data-bs-theme, so Bootstrap's cards and tables turn dark; here their colours
-   are mapped to crelish's own, so the dashboard matches the rest of the admin. */
-[data-theme="dark"] .company-analytics-dashboard {
-    --bs-body-bg: var(--color-bg-main);
-    --bs-body-color: var(--color-text-dark);
-    --bs-emphasis-color: var(--color-text-dark);
-    --bs-secondary-color: var(--color-text-muted);
-    --bs-tertiary-bg: var(--color-bg-light);
-    --bs-border-color: var(--color-border);
-    --bs-border-color-translucent: var(--color-border);
-    color: var(--color-text-dark);
-}
-
+/* Dark mode: the outer element uses .crelish-bs-dark (crelish-modern.css) */
 [data-theme="dark"] .company-analytics-dashboard .kpi-value {
     color: var(--bs-info);
 }

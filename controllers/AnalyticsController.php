@@ -24,7 +24,7 @@ class AnalyticsController extends CrelishBaseController
     Yii::$app->view->title = 'Website Analytics';
     
     // Make sure Chart.js is loaded
-    $this->view->registerJsFile('https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js', ['position' => \yii\web\View::POS_HEAD]);
+    \giantbits\crelish\helpers\CrelishAnalyticsTheme::registerChartJs($this->view);
     
     // Register dashboard-specific CSS
     $this->view->registerCss($this->getDashboardCss());
@@ -715,7 +715,7 @@ class AnalyticsController extends CrelishBaseController
 }
 
 /* Dark mode compatibility */
-html[data-bs-theme="dark"] .widget-loading {
+[data-theme="dark"] .widget-loading {
     background: rgba(0, 0, 0, 0.5);
 }
 
@@ -739,7 +739,7 @@ html[data-bs-theme="dark"] .widget-loading {
     background-color: rgba(13, 110, 253, 0.05);
 }
 
-html[data-bs-theme="dark"] .sessions-table tbody tr:hover {
+[data-theme="dark"] .sessions-table tbody tr:hover {
     background-color: rgba(77, 137, 249, 0.1) !important;
 }
 
@@ -767,7 +767,7 @@ html[data-bs-theme="dark"] .sessions-table tbody tr:hover {
     z-index: 100;
 }
 
-html[data-bs-theme="dark"] .chart-tooltip {
+[data-theme="dark"] .chart-tooltip {
     background-color: #1e2430;
     border-color: #2c3440;
     color: #e1e1e1;
