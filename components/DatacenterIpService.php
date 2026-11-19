@@ -31,6 +31,17 @@ class DatacenterIpService extends Component
   ];
 
   /**
+   * @var array Cloud ranges the public lists miss, always checked (CIDR => provider).
+   * ipcat only knows Alibaba's 47.91.0.0/19; a scraper on Alibaba Cloud's
+   * 47.74.0.0-47.87.255.255 (whois AL-3) passed as visitors in November 2026.
+   */
+  protected array $extraRanges = [
+    '47.74.0.0/15' => 'Alibaba Cloud',
+    '47.76.0.0/14' => 'Alibaba Cloud',
+    '47.80.0.0/13' => 'Alibaba Cloud',
+  ];
+
+  /**
    * @var array Known cloud provider CIDR ranges (fallback if fetch fails)
    */
   protected array $fallbackRanges = [
@@ -203,14 +214,17 @@ class DatacenterIpService extends Component
 
   /**
    * @var array Known hosting provider ASN org name patterns
+   *
+   * Not "Google LLC" or "Microsoft Corporation": those ASNs also carry people
+   * (offices, Chrome IP protection, cloud PCs). On holzkarriere (30 days to
+   * 2026-11-19) they matched 357 visitor sessions, 61 with real interaction.
+   * Google Cloud and Azure ranges come from ipcat.
    */
   protected array $hostingAsnPatterns = [
     'Amazon',
     'AWS',
     'Google Cloud',
-    'Google LLC',
     'Microsoft Azure',
-    'Microsoft Corporation',
     'DigitalOcean',
     'Linode',
     'Akamai Connected Cloud',
@@ -348,7 +362,7 @@ class DatacenterIpService extends Component
       $ranges = $this->parseFallbackRanges();
     }
 
-    return $ranges;
+    return array_merge($this->parseExtraRanges(), $ranges);
   }
 
   /**
@@ -387,7 +401,7 @@ class DatacenterIpService extends Component
         continue;
       }
 
-      $parts = str_getcsv($line);
+      $parts = str_getcsv($line, ',', '"', '\\');
       if (count($parts) >= 3) {
         $startIp = $parts[0];
         $endIp = $parts[1];
@@ -422,6 +436,26 @@ class DatacenterIpService extends Component
     foreach ($this->fallbackRanges as $cidr) {
       $parsed = $this->parseCidr($cidr);
       if ($parsed) {
+        $ranges[] = $parsed;
+      }
+    }
+
+    return $ranges;
+  }
+
+  /**
+   * Parse the ranges that are always checked, with their provider
+   *
+   * @return array Parsed ranges
+   */
+  protected function parseExtraRanges(): array
+  {
+    $ranges = [];
+
+    foreach ($this->extraRanges as $cidr => $provider) {
+      $parsed = $this->parseCidr($cidr);
+      if ($parsed) {
+        $parsed['provider'] = $provider;
         $ranges[] = $parsed;
       }
     }
@@ -540,6 +574,16 @@ class DatacenterIpService extends Component
   }
 
   /**
+   * Whether ASN lookups can run: a database file and the geoip2/geoip2 reader
+   */
+  public function asnAvailable(): bool
+  {
+    return $this->asnDatabasePath !== null
+      && file_exists($this->asnDatabasePath)
+      && class_exists('GeoIp2\Database\Reader');
+  }
+
+  /**
    * Check if an IP belongs to a known hosting provider via ASN lookup
    *
    * Requires geoip2/geoip2 package and a GeoLite2-ASN.mmdb database file.
@@ -550,11 +594,7 @@ class DatacenterIpService extends Component
    */
   public function isHostingAsn(string $ip): array|false
   {
-    if ($this->asnDatabasePath === null || !file_exists($this->asnDatabasePath)) {
-      return false;
-    }
-
-    if (!class_exists('GeoIp2\Database\Reader')) {
+    if (!$this->asnAvailable()) {
       return false;
     }
 
