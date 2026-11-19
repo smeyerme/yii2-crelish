@@ -107,27 +107,20 @@ Only include the keys you want to override. Everything has sensible defaults.
 
 ASN (Autonomous System Number) detection supplements the ipcat IP range list by looking up the organization that owns an IP address. This catches hosting providers that ipcat misses.
 
-**Requirements:**
-1. The `geoip2/geoip2` PHP package
-2. A GeoLite2-ASN database file (`.mmdb` format) from MaxMind
+Since 0.30.15 crelish requires `geoip2/geoip2` itself (before, it was only suggested and never installed on the portals, so the lookup silently did nothing while the log said "enabled"). What a portal needs is the GeoLite2-ASN database file (`.mmdb` format) from MaxMind.
 
 **Step-by-step:**
 
-1. Install the package:
-   ```bash
-   composer require geoip2/geoip2
-   ```
+1. Create a free MaxMind account at https://www.maxmind.com/en/geolite2/signup
 
-2. Create a free MaxMind account at https://www.maxmind.com/en/geolite2/signup
+2. Log in and download **GeoLite2-ASN** in `.mmdb` format from the "Download Databases" page.
 
-3. Log in and download **GeoLite2-ASN** in `.mmdb` format from the "Download Databases" page.
-
-4. Place the file on your server, e.g.:
+3. Place the file on your server, e.g.:
    ```
    /path/to/your/app/data/GeoLite2-ASN.mmdb
    ```
 
-5. Add the path to your config file (`@app/config/bot-detection-thresholds.php`):
+4. Add the path to your config file (`@app/config/bot-detection-thresholds.php`):
    ```php
    <?php
    return [
@@ -138,13 +131,16 @@ ASN (Autonomous System Number) detection supplements the ipcat IP range list by 
 That's it. The feature activates automatically when:
 - The `asn_database_path` config value is set
 - The file actually exists at that path
-- The `geoip2/geoip2` package is installed
+- The `geoip2/geoip2` package is installed (a crelish dependency since 0.30.15)
 
-If any of these conditions aren't met, ASN detection is silently skipped. The output during a run will tell you:
+If any of these conditions aren't met, ASN detection is skipped. The output during a run will tell you:
 ```
-ASN-based detection: enabled          (green = working)
-ASN-based detection: disabled (...)   (yellow = not configured)
+ASN-based detection: enabled                                        (green = working)
+ASN-based detection: NOT RUNNING, geoip2/geoip2 is not installed    (red = configured, reader missing)
+ASN-based detection: disabled (...)                                 (yellow = not configured)
 ```
+
+Next to ipcat, a few cloud ranges that the public lists miss are always checked (`DatacenterIpService::$extraRanges`), currently Alibaba Cloud 47.74.0.0 - 47.87.255.255.
 
 **Keeping the database current:** MaxMind updates GeoLite2 weekly. You can automate updates with their [`geoipupdate`](https://dev.maxmind.com/geoip/updating-databases) tool, or just re-download periodically.
 

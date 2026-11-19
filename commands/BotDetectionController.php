@@ -837,8 +837,10 @@ class BotDetectionController extends Controller
     $rangeCount = $service->refreshCache();
     $this->stdout(sprintf("Loaded %d IP ranges\n", $rangeCount));
 
-    if ($service->asnDatabasePath !== null) {
+    if ($service->asnAvailable()) {
       $this->stdout("ASN-based detection: enabled\n", Console::FG_GREEN);
+    } elseif ($service->asnDatabasePath !== null) {
+      $this->stdout("ASN-based detection: NOT RUNNING, geoip2/geoip2 is not installed\n", Console::FG_RED);
     } else {
       $this->stdout("ASN-based detection: disabled (set asn_database_path in config to enable)\n", Console::FG_YELLOW);
     }
