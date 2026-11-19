@@ -48,6 +48,7 @@ class BotDetectionController extends Controller
   const SCORE_SYSTEMATIC_CRAWL = 35;  // High URL diversity
   const SCORE_IP_VOLUME_ANOMALY = 30; // Many sessions from same IP
   const SCORE_SINGLE_PAGE_SESSION = 20; // Session with only 1 page view
+  const SCORE_BROWSER_UNCONFIRMED = 50; // No browser ever confirmed a page (suspected, never deleted by itself)
 
   /**
    * @var DatacenterIpService|null Datacenter IP detection service
@@ -124,6 +125,13 @@ class BotDetectionController extends Controller
     // Path to GeoLite2-ASN.mmdb for ASN-based datacenter detection
     // Set this to enable ASN lookups (requires geoip2/geoip2 package)
     'asn_database_path' => null,
+
+    // Browser confirmation as a rule: sessions created since this time (Y-m-d H:i:s)
+    // that no browser confirmed become suspected. Null = rule off. Set it only on a
+    // site with browserConfirmation enabled, to the time it was switched on.
+    'browser_confirmation_since' => null,
+    // Minutes a session gets to confirm before it is judged
+    'browser_confirmation_grace_minutes' => 30,
   ];
 
   /**
@@ -182,51 +190,56 @@ class BotDetectionController extends Controller
 
     // Phase 1: Collect scores from all detection methods
     // 1. Orphan sessions (sessions with no page views - definitely garbage)
-    $this->stdout("\n[1/11] Detecting orphan sessions...\n", Console::FG_CYAN);
+    $this->stdout("\n[1/12] Detecting orphan sessions...\n", Console::FG_CYAN);
     $this->scoreOrphanSessions();
 
     // 2. Spam referrer detection
-    $this->stdout("\n[2/11] Detecting spam referrers...\n", Console::FG_CYAN);
+    $this->stdout("\n[2/12] Detecting spam referrers...\n", Console::FG_CYAN);
     $this->scoreSpamReferrers();
 
     // 3. User agent based detection (known bots + outdated browsers)
-    $this->stdout("\n[3/11] Processing user agent-based detection...\n", Console::FG_CYAN);
+    $this->stdout("\n[3/12] Processing user agent-based detection...\n", Console::FG_CYAN);
     $this->scoreUserAgents();
 
     // 4. Volume-based anomaly detection
-    $this->stdout("\n[4/11] Detecting high-volume anomalies...\n", Console::FG_CYAN);
+    $this->stdout("\n[4/12] Detecting high-volume anomalies...\n", Console::FG_CYAN);
     $this->scoreVolumeAnomalies();
 
     // 5. Timing pattern detection
-    $this->stdout("\n[5/11] Analyzing timing patterns...\n", Console::FG_CYAN);
+    $this->stdout("\n[5/12] Analyzing timing patterns...\n", Console::FG_CYAN);
     $this->scoreTimingPatterns();
 
     // 6. Crawling pattern detection
-    $this->stdout("\n[6/11] Detecting crawling patterns...\n", Console::FG_CYAN);
+    $this->stdout("\n[6/12] Detecting crawling patterns...\n", Console::FG_CYAN);
     $this->scoreCrawlingPatterns();
 
     // 7. Single-page session detection
-    $this->stdout("\n[7/11] Scoring single-page sessions...\n", Console::FG_CYAN);
+    $this->stdout("\n[7/12] Scoring single-page sessions...\n", Console::FG_CYAN);
     $this->scoreSinglePageSessions();
 
     // 8. Datacenter IP detection
     if ($this->thresholds['enable_datacenter_ip_detection'] ?? true) {
-      $this->stdout("\n[8/11] Detecting datacenter IPs...\n", Console::FG_CYAN);
+      $this->stdout("\n[8/12] Detecting datacenter IPs...\n", Console::FG_CYAN);
       $this->scoreDatacenterIps();
     } else {
-      $this->stdout("\n[8/11] Datacenter IP detection disabled, skipping...\n", Console::FG_YELLOW);
+      $this->stdout("\n[8/12] Datacenter IP detection disabled, skipping...\n", Console::FG_YELLOW);
     }
 
+    // 9. Browser confirmation
+    $this->stdout("\n[9/12] Scoring sessions no browser confirmed...\n", Console::FG_CYAN);
+    $this->scoreUnconfirmedSessions();
+
     // Phase 2: Apply combination bonuses
-    $this->stdout("\n[9/11] Applying combination bonuses...\n", Console::FG_CYAN);
+    $this->stdout("\n[10/12] Applying combination bonuses...\n", Console::FG_CYAN);
     $this->applyComboBoosts();
+    $this->capUnconfirmedScores();
 
     // Phase 3: Commit scores to database
-    $this->stdout("\n[10/11] Committing confidence scores...\n", Console::FG_CYAN);
+    $this->stdout("\n[11/12] Committing confidence scores...\n", Console::FG_CYAN);
     $this->commitScores();
 
     // Phase 4: Delete only HIGH confidence bots
-    $this->stdout("\n[11/11] Deleting high-confidence bot traffic...\n", Console::FG_CYAN);
+    $this->stdout("\n[12/12] Deleting high-confidence bot traffic...\n", Console::FG_CYAN);
     $this->deleteHighConfidenceBots();
 
     // Show summary
@@ -820,6 +833,82 @@ class BotDetectionController extends Controller
 
     $this->stdout(sprintf("Single-page session scoring: %d sessions scored (+%d points each)\n",
       $scored, self::SCORE_SINGLE_PAGE_SESSION), Console::FG_YELLOW);
+  }
+
+  /**
+   * Score sessions no browser confirmed (browser_confirmation_since set)
+   *
+   * With the browser confirmation on, every page a browser shows reports back
+   * and stamps confirmed_at on its session; clients that never run the page's
+   * script (most scrapers, including residential-proxy ones no IP rule catches)
+   * leave it empty. Such a session gets SCORE_BROWSER_UNCONFIRMED, which makes
+   * it suspected: excluded from the statistics, raw data kept. It never leads
+   * to a deletion by itself (capUnconfirmedScores()).
+   */
+  protected function scoreUnconfirmedSessions(): void
+  {
+    $since = $this->thresholds['browser_confirmation_since'] ?? null;
+    if (empty($since)) {
+      $this->stdout("Browser confirmation rule: off (set browser_confirmation_since to enable)\n", Console::FG_YELLOW);
+      return;
+    }
+    if (strtotime((string)$since) === false) {
+      $this->stdout("Browser confirmation rule: NOT RUNNING, browser_confirmation_since is no date: $since\n", Console::FG_RED);
+      return;
+    }
+    if (!$this->hasColumn('analytics_sessions', 'confirmed_at')) {
+      $this->stdout("Browser confirmation rule: NOT RUNNING, analytics_sessions has no confirmed_at\n", Console::FG_RED);
+      return;
+    }
+
+    $db = Yii::$app->db;
+    $grace = max(0, (int)($this->thresholds['browser_confirmation_grace_minutes'] ?? 30));
+    $scored = 0;
+    $lastId = '';
+
+    do {
+      $sessions = $db->createCommand("
+        SELECT s.session_id
+        FROM analytics_sessions s
+        WHERE " . $this->candidateSql('s.is_bot') . "
+          AND s.session_id > :lastId" . $this->sessionWindowSql('s') . "
+          AND s.confirmed_at IS NULL
+          AND s.created_at >= :since
+          AND s.created_at < DATE_SUB(NOW(), INTERVAL :grace MINUTE)
+        ORDER BY s.session_id
+        LIMIT :limit
+      ")
+        ->bindValue(':lastId', $lastId)
+        ->bindValue(':since', date('Y-m-d H:i:s', strtotime((string)$since)))
+        ->bindValue(':grace', $grace)
+        ->bindValue(':limit', $this->batchSize)
+        ->queryColumn();
+
+      foreach ($sessions as $sessionId) {
+        $this->addScore($sessionId, self::SCORE_BROWSER_UNCONFIRMED, 'browser_unconfirmed');
+        $scored++;
+        $lastId = $sessionId;
+      }
+    } while (count($sessions) == $this->batchSize);
+
+    $this->stdout(sprintf("Browser confirmation rule (sessions since %s, %d minutes to confirm): %d sessions scored (+%d points each)\n",
+      $since, $grace, $scored, self::SCORE_BROWSER_UNCONFIRMED), Console::FG_YELLOW);
+  }
+
+  /**
+   * A missing confirmation makes a session suspected, never a deleted bot:
+   * a session that reaches the bot threshold only through it stays just below.
+   */
+  protected function capUnconfirmedScores(): void
+  {
+    foreach ($this->sessionScores as &$data) {
+      if (in_array('browser_unconfirmed', $data['reasons'], true)
+        && $data['score'] >= self::SCORE_HIGH_CONFIDENCE
+        && $data['score'] - self::SCORE_BROWSER_UNCONFIRMED < self::SCORE_HIGH_CONFIDENCE) {
+        $data['score'] = self::SCORE_HIGH_CONFIDENCE - 1;
+      }
+    }
+    unset($data);
   }
 
   /**

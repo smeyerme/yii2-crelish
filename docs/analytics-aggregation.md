@@ -650,14 +650,23 @@ For issues or questions:
 - Check logs: `/path/to/app/runtime/logs/app.log`
 - Run diagnostics: `php yii crelish/analytics-aggregation/stats`
 - Test queries: Use `--verbose` flag for detailed output
-## Browser confirmation (0.26, measurement only)
+## Browser confirmation (0.26; a bot rule since 0.30.16)
 
 Page views are recorded while a page is rendered, so a client that never shows
 the page is counted too. With the browser confirmation on, a rendered page
 carries a short inline script that reports its page view back to the site; the
 page view and its session get a `confirmed_at` time. Clients that do not run
-the script (most bots) leave it empty. Nothing reads `confirmed_at` yet:
-statistics, aggregation and bot detection are unchanged.
+the script (most bots) leave it empty.
+
+Since 0.30.16 the bot detection can use it: with `browser_confirmation_since`
+set in `config/bot-detection-thresholds.php` (the time the confirmation was
+switched on), a session created since then that no browser confirmed within
+`browser_confirmation_grace_minutes` (default 30) becomes suspected: excluded
+from every statistic, raw data kept. The rule never deletes by itself; a
+session is deleted only when the other signals reach 70 on their own. Set it
+only on a site with the confirmation on, or every visitor becomes suspected.
+This is what JavaScript-based tools (Google Analytics, Umami) do implicitly:
+they only count clients that run their script.
 
 Off by default. A site turns it on in its params:
 

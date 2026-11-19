@@ -18,9 +18,10 @@ use yii\db\Connection;
  * FLAG_* bits: a driven browser, no screen, ...), and the first real
  * interaction with the page is reported once more (engaged_at).
  *
- * Nothing reads these columns yet: statistics, aggregation and bot detection
- * are unchanged. They are recorded so a site can compare the counts and see
- * which signal separates people from bots on its own traffic.
+ * The bot detection reads confirmed_at when the site sets
+ * browser_confirmation_since (see BotDetectionController::scoreUnconfirmedSessions):
+ * an unconfirmed session then becomes suspected. The flags and engaged_at are
+ * recorded only, so a site can see which signal separates people from bots.
  *
  * Off by default. A site turns it on in its params:
  *
