@@ -1,6 +1,6 @@
 # Bot Detection System
 
-Retrospective, batch-based bot detection for Crelish Analytics with confidence scoring. Analyzes existing analytics data across 11 detection phases, assigns confidence scores, and removes high-confidence bot traffic.
+Retrospective, batch-based bot detection for Crelish Analytics with confidence scoring. Analyzes existing analytics data across 12 phases, assigns confidence scores, and removes high-confidence bot traffic.
 
 ## Quick Start
 
@@ -38,7 +38,7 @@ iOS in-app browsers (WKWebView: iPhone/iPad + AppleWebKit + `Mobile/`, no `Safar
 
 Run bot detection before the daily analytics aggregation (see `docs/analytics-aggregation.md`), so a day is aggregated without the bots and suspected bots found overnight.
 
-### Detection Phases (11 total)
+### Detection Phases (12 total)
 
 | # | Phase | Points | What it detects |
 |---|-------|--------|-----------------|
@@ -53,7 +53,8 @@ Run bot detection before the daily analytics aggregation (see `docs/analytics-ag
 | 6 | Crawling patterns | 40 | Sequential pagination crawling |
 | 7 | Single-page sessions | 20 | Sessions with only 1 page view (weak signal) |
 | 8 | Datacenter IPs | 35 | Cloud provider IPs via ipcat + optional ASN lookup |
-| 9 | Combination bonuses | 15-40 | Multiple signals reinforce each other |
+| 9 | Browser confirmation | 50 | No browser confirmed the session (only with `browser_confirmation_since`; suspected, never deleted by itself) |
+| 10 | Combination bonuses | 15-40 | Multiple signals reinforce each other |
 
 ### Combination Bonuses
 
