@@ -4,6 +4,8 @@ namespace giantbits\crelish\components\Analytics;
 
 use Yii;
 use yii\db\Connection;
+use yii\helpers\Html;
+use yii\web\View;
 
 /**
  * Browser confirmation of server-side page views.
@@ -103,6 +105,28 @@ final class BrowserConfirmation
       . 't.forEach(function(x){w.removeEventListener(x,h,o)});p(' . $touched . ')};'
       . 't.forEach(function(x){w.addEventListener(x,h,o)});'
       . '}catch(e){}})();';
+  }
+
+  /**
+   * Put the script into $view's page, in a <script> element of its own at the
+   * end of the body.
+   *
+   * Not through registerJs(): Yii joins every POS_END snippet into one block,
+   * so a snippet before it that throws, or ends without a semicolon, stopped
+   * the confirmation too (on forum-holzbranche a search form's
+   * "$(...).on(...)" followed by "(function(){...})()" became one call, and
+   * news, company and project pages never confirmed).
+   */
+  public static function register(View $view, ?int $pageViewId): void
+  {
+    $script = self::script($pageViewId);
+    if ($script === null) {
+      return;
+    }
+
+    $view->on(View::EVENT_END_BODY, static function () use ($script): void {
+      echo Html::script($script);
+    });
   }
 
   /**

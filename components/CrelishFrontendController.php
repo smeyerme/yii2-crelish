@@ -132,10 +132,7 @@
         Yii::$app->crelishAnalytics->trackPageView($this->entryPoint);
 
         // The page reports back that a browser showed it (off unless the site turns it on)
-        $confirmation = BrowserConfirmation::script(Yii::$app->crelishAnalytics->lastPageViewId);
-        if ($confirmation !== null) {
-          $this->view->registerJs($confirmation, \yii\web\View::POS_END, 'crelish-page-state');
-        }
+        BrowserConfirmation::register($this->view, Yii::$app->crelishAnalytics->lastPageViewId);
       }
 			
 			// Check if any widget returned a Response object (e.g., redirect)
