@@ -70,4 +70,47 @@ check('nor one without an id', null, BrowserConfirmation::script(0));
 shortLinkApp(on(['path' => 'site/hello']));
 check('a renamed endpoint is used', true, str_contains((string)BrowserConfirmation::script(1), '"/site/hello"'));
 
+echo "\nIn the page\n";
+/** A page with the layout's body markers, rendered the way a layout does */
+function renderPage(\yii\web\View $view): string
+{
+    ob_start();
+    $view->beginPage();
+    echo '<html><body>';
+    $view->beginBody();
+    echo '<p>content</p>';
+    $view->endBody();
+    echo '</body></html>';
+    $view->endPage();
+
+    return (string)ob_get_clean();
+}
+
+/** The contents of every inline <script> element, in order */
+function inlineScripts(string $html): array
+{
+    preg_match_all('#<script>(.*?)</script>#s', $html, $m);
+
+    return $m[1];
+}
+
+shortLinkApp(on());
+$view = new \yii\web\View();
+// What a site widget registered on forum-holzbranche: no semicolon at the end
+$view->registerJs("$('#search-form').on('submit',function(e){return!1})", \yii\web\View::POS_END);
+BrowserConfirmation::register($view, 4711);
+$blocks = inlineScripts(renderPage($view));
+$own = array_values(array_filter($blocks, static fn(string $b) => str_contains($b, 'v=4711')));
+check('the script is in the page once', 1, count($own));
+check('in a script element of its own', true, isset($own[0]) && str_starts_with($own[0], '(function(){') && !str_contains($own[0], 'search-form'));
+check('the site snippet keeps its own block', 1, count(array_filter($blocks, static fn(string $b) => str_contains($b, 'search-form'))));
+
+$view = new \yii\web\View();
+BrowserConfirmation::register($view, null);
+check('a page view that was not recorded puts nothing into the page', [], inlineScripts(renderPage($view)));
+shortLinkApp([]);
+$view = new \yii\web\View();
+BrowserConfirmation::register($view, 4711);
+check('an off site puts nothing into the page', [], inlineScripts(renderPage($view)));
+
 shortLinkDone();
